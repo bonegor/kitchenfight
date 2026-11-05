@@ -10,7 +10,6 @@ import { CHORDS_A, TAMB, THEME_1, THEME_2 } from './title';
 
 const END_A_TO_B = ' C5:2 B4:1 A4:2 G4:1 |';
 const END_B = ' C5:2 B4:1 A4:3 |'; // transposed with the theme (→ E♭ D C)
-const END_LOOP = ' C5:2 B4:1 A4:2 E4:1 |';
 const CHORDS_B = transposeChords(CHORDS_A, 3);
 
 const C_CH = 'Dm:6 | E7:6 | Am:6 | F:6 | Dm:6 | E7:6 | Bb:6 | E7:6 | Dm:6 | E7:6 | Am:6 | F:6 | Bb/D:6 | Bb/D:6 | E7:6 | E7:6';

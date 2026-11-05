@@ -314,6 +314,10 @@ export class Renderer {
       else if (e.state === 2) frame = e.timer < 0.12 ? 3 : 1;
     } else if (def.behavior === 'hopper') {
       frame = e.state === 1 ? 3 : e.squash > 0.3 ? 1 : 0;
+    } else if (def.behavior === 'burster' || def.behavior === 'ghost') {
+      frame = Math.floor(this.t * 11 + e.id) & 3; // spin / waving hem play on a timer
+    } else if (def.behavior === 'kamikaze' && e.state === 1) {
+      frame = Math.floor(this.t * 16) & 1 ? 1 : 3; // rattling fuse
     }
     if (e.boss && e.attackPose > 0 && hasSprite(sid + '.attack')) {
       sid = sid + '.attack';

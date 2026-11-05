@@ -9,8 +9,10 @@ import { streets } from './streets';
 import { foodcourt } from './foodcourt';
 import { boss } from './boss';
 import { finalboss } from './finalboss';
+import { victory } from './victory';
+import { gameover } from './gameover';
 
-export const SONGS: Partial<Record<MusicId, SongDef>> = {
+export const SONGS: Record<MusicId, SongDef> = {
   title,
   menu,
   kitchen,
@@ -19,4 +21,6 @@ export const SONGS: Partial<Record<MusicId, SongDef>> = {
   foodcourt,
   boss,
   finalboss,
+  victory,
+  gameover,
 };

@@ -274,7 +274,9 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
       e.timer -= dt;
       if (e.timer <= 0) {
         e.timer = P.interval ?? 2.5;
-        hazard(run, P.puddle ?? 'cream', e.x, e.y + e.r * 0.5, P.r ?? 26, P.life ?? 5, P.slow ?? 0.35);
+        const px = P.puddleAt ? e.x + P.puddleAt[0] * e.face : e.x;
+        const py = P.puddleAt ? e.y + P.puddleAt[1] : e.y + e.r * 0.5;
+        hazard(run, P.puddle ?? 'cream', px, py, P.r ?? 26, P.life ?? 5, P.slow ?? 0.35);
       }
       break;
     }
@@ -747,7 +749,7 @@ const PATTERNS: Record<string, Pattern> = {
       }
       if (first) {
         summon(run, e, 'hawaiana', 3);
-        summon(run, e, 'crosta', 2);
+        summon(run, e, 'polpetta', 2);
         e.attackPose = 0.5;
       }
       return t > 0.8;
@@ -890,7 +892,7 @@ const PATTERNS: Record<string, Pattern> = {
       }
       if (first) {
         summon(run, e, 'surgelata', 1);
-        summon(run, e, 'noodlecup', 4);
+        summon(run, e, 'scatoletta', 3);
         e.attackPose = 0.6;
       }
       return t > 0.8;

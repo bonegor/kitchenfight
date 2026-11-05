@@ -211,7 +211,7 @@ E({
 });
 E({
   id: 'smartphone', name: 'Il Telefonino Virale', en: 'The Viral Phone', sprite: 'enemy.smartphone',
-  radius: 13, hp: 18, speed: 50, damage: 6, xp: 3, behavior: 'ranged', params: { min: 180, max: 280, cd: 3.4, shot: 'proj.e_generic', shotSpeed: 160, count: 2, spread: 0.24 },
+  radius: 13, hp: 18, speed: 50, damage: 6, xp: 3, behavior: 'ranged', params: { min: 180, max: 280, cd: 3.4, shot: 'proj.e_generic', shotSpeed: 160, count: 2, spread: 0.24, muzzle: [0, -12] },
   color: 'pink', juice: '#9ad7ff', chunk: 'glass',
   info: { crime: 'Viral "Italian" recipe videos', why: 'Countertop spaghetti, oven-"boiled" raw spaghetti, gummy-candy pizza… every year a new video makes Italians reach for the comment box.', severity: 4, quote: 'A Michelin-starred Italian TV chef posted a horrified reaction video to a viral recipe that "boiled" raw spaghetti in the oven.' },
 });
@@ -241,7 +241,7 @@ E({
 });
 E({
   id: 'glassa', name: 'Glassa Balsamica', en: 'Balsamic Glaze', sprite: 'enemy.glassa',
-  radius: 13, hp: 20, speed: 54, damage: 6, xp: 3, behavior: 'puddler', params: { puddle: 'ketchup', interval: 1.6, r: 20, life: 4, slow: 0.25 },
+  radius: 13, hp: 20, speed: 54, damage: 6, xp: 3, behavior: 'puddler', params: { puddle: 'ketchup', interval: 1.6, r: 20, life: 4, slow: 0.25, puddleAt: [-13, 14] },
   color: 'brown', juice: '#4a1f1f', chunk: 'glass',
   info: { crime: 'Sugary balsamic glaze on everything', why: 'Real Aceto Balsamico Tradizionale is aged for at least 12 years and used a drop at a time. The bread-dipping saucer of oil and balsamic is an American restaurant custom.', severity: 2 },
 });

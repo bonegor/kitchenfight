@@ -4,7 +4,7 @@
  */
 import { defineSprite } from '../sprites';
 import {
-  Ctx, Pt, INK, shape, line, ellipsePath, circlePath, starPath, rgba, eye, brow, EyeOpts,
+  Ctx, Pt, INK, shape, line, ellipsePath, circlePath, starPath, eye, brow, EyeOpts,
 } from '../painter';
 
 export const TAU = Math.PI * 2;
@@ -220,4 +220,3 @@ export function clipTo(ctx: Ctx, build: (c: Ctx) => void, fn: () => void) {
   ctx.restore();
 }
 
-export { rgba };
