@@ -1,0 +1,22 @@
+{
+  "name": "kitchenfight",
+  "private": true,
+  "version": "1.0.0",
+  "description": "KITCHEN FIGHT — an Italian chef defends tradition against culinary crimes. A survivors-like arena game.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build --mode single",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@fontsource/lilita-one": "^5.2.5",
+    "@fontsource/lobster": "^5.2.5",
+    "@fontsource/playfair-display": "^5.2.5",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.7",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}
