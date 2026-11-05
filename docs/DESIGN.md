@@ -39,7 +39,7 @@ Dispensa** (the pantry).
 | sofia | **Sofia la Romana** — carbonara purist | Forchette | −8% Cooldown | win La Cucina |
 | tommaso | **Fra' Tommaso** — monk cheesemaker | Forma di Parmigiano | +25% Max HP, +0.2 Recovery | collect 1,000 coins (total) |
 | concetta | **Zia Concetta** — fiery Calabrian aunt | Peperoncino | +15% Luck, +10% Might | win La Trattoria |
-| micio | **Micio** — the trattoria cat (tiny toque) | Basilico | +20% Move speed, +30% Magnet | win I Vicoli |
+| micio | **Micio** — the trattoria cat (tiny toque) | Basilico | +20% Move speed, +30% Magnet, −15% Max HP | win I Vicoli |
 
 ## Weapons (max level 8) and evolutions
 | Weapon | Behaviour | + Passive | → Evolution |

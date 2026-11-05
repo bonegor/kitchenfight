@@ -268,7 +268,8 @@ export class FX {
 
   drawDecals(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
     for (const d of this.decals) {
-      if (d.x < x0 - 60 || d.x > x1 + 60 || d.y < y0 - 60 || d.y > y1 + 60) continue;
+      const m = 34 * d.scale + 8; // splats are ~31 units of radius per unit of scale
+      if (d.x < x0 - m || d.x > x1 + m || d.y < y0 - m || d.y > y1 + m) continue;
       const fade = Math.min(1, d.life / 3);
       ctx.globalAlpha = d.alpha * fade;
       drawSprite(ctx, d.sprite, d.frame, d.x, d.y, d.scale, d.scale * 0.8, d.rot);
@@ -298,7 +299,8 @@ export class FX {
         }
         case 1: {
           ctx.globalAlpha = Math.min(1, t * 2.2) * p.alpha;
-          drawSprite(ctx, p.sprite!, p.fps ? p.frame + Math.floor((p.max - p.life) * p.fps) : p.frame, p.x, p.y - p.z, size, size, p.rot);
+          // a negative size mirrors X only (e.g. a pigeon flying left), never Y
+          drawSprite(ctx, p.sprite!, p.fps ? p.frame + Math.floor((p.max - p.life) * p.fps) : p.frame, p.x, p.y - p.z, size, Math.abs(size), p.rot);
           break;
         }
         case 2: {

@@ -77,6 +77,7 @@ docs/        DESIGN.md (game design), RESEARCH.md (the food crimes), ART_GUIDE.m
 | `npm run dev` | dev server with hot reload |
 | `npm run build` | production build → `dist/` (static, any host) |
 | `npm run build:single` | one self-contained HTML file → `dist-single/index.html` |
+| `npm run build:play` | rebuilds the downloadable `play/kitchenfight.html` |
 | `npm run typecheck` | TypeScript check |
 | `/gallery.html` (dev) | sprite gallery & stage previews for art QA (`?prefix=enemy.&zoom=2`, `?stage=kitchen`) |
 

@@ -96,7 +96,7 @@ class App {
       r.fx.shakeEnabled = s.shake;
       r.fx.flashesEnabled = s.flashes;
       r.fx.numbersEnabled = s.damageNumbers;
-      r.fx.bubblesEnabled = s.bubbles;
+      r.fx.bubblesEnabled = r === this.attract ? false : s.bubbles;
     }
   }
 
@@ -108,7 +108,13 @@ class App {
 
   resetSave() {
     this.save = resetSave();
+    // tear down everything the old UI put on screen before replacing it
+    this.ui.closeOverlay();
+    this.ui.clearScreen();
+    this.ui.removeHud();
+    document.getElementById('ui')!.replaceChildren();
     this.ui = new UI(this);
+    this.attract = null; // the title background must not show now-locked chefs/stages
     this.applySettings();
     this.toTitle();
   }
@@ -141,6 +147,7 @@ class App {
       onToast: () => undefined,
     };
     r = new Run(st, ch, dummySave, hooks);
+    r.muted = true;
     r.fx.bubblesEnabled = false;
     // a little spectacle: a few extra weapons
     const extra = BASE_WEAPON_IDS.filter((id) => id !== ch.weapon).sort(() => Math.random() - 0.5).slice(0, 3);
@@ -197,11 +204,12 @@ class App {
       this.ui.buildHud(run);
       this.renderer.updateCamera(run, 0, true);
       audio.playMusic(st.music, { fade: 0.8 });
-      audio.preload(['boss', 'finalboss', 'victory', 'gameover']).catch(() => undefined);
+      audio.preload(['gameover', 'victory', 'boss', 'finalboss']).catch(() => undefined);
       setTimeout(() => {
         if (this.run === run) {
-          run.fx.bubble(run.player, ['Andiamo!', 'Forza!', 'Al lavoro!', 'Pronti!'][Math.floor(Math.random() * 4)], -78, '#fff3d6', 1.8);
-          audio.voice('Andiamo!', ch.voice);
+          const line = ['Andiamo!', 'Forza!', 'Al lavoro!', 'Pronti!'][Math.floor(Math.random() * 4)];
+          run.fx.bubble(run.player, line, -78, '#fff3d6', 1.8);
+          if (run.fx.bubblesEnabled) audio.voice(line, ch.voice);
         }
       }, 400);
       this.ui.banner(st.name, st.subtitle + ' — survive 15:00');
@@ -307,6 +315,7 @@ class App {
       onToast: () => undefined,
     };
     r = new Run(st, ch, save, hooks);
+    r.muted = true;
     r.fx.numbersEnabled = false;
     r.autopilot = (rr) => {
       const a = autopilot(rr);

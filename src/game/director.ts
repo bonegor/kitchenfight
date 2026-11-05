@@ -54,12 +54,15 @@ export class Director {
       else if (s === 2) { x = v.x0 + rng.next() * w; y = v.y1 + m; }
       else { x = v.x0 - m; y = v.y0 + rng.next() * h; }
       // bias slightly toward the direction the player is heading
+      // (projected onto the view rectangle grown by m, so it's off-screen in any aspect ratio)
       const p = this.run.player;
       if (rng.next() < 0.35 && (p.vx || p.vy)) {
         const a = Math.atan2(p.vy, p.vx) + (rng.next() - 0.5) * 1.2;
-        const d = Math.hypot(w, h) / 2 + m;
-        x = p.x + Math.cos(a) * d;
-        y = p.y + Math.sin(a) * d * 0.8;
+        const cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        const k = 1 / Math.max(Math.abs(ca) / (w / 2 + m), Math.abs(sa) / (h / 2 + m), 1e-6);
+        x = cx + ca * k;
+        y = cy + sa * k;
       }
       if (this.run.world.free(x, y, r)) return { x, y };
     }
@@ -142,7 +145,7 @@ export class Director {
     run.fx.shake(0.5);
     run.sfx('boss_roar');
     run.fx.bubble(e, def.boss?.taunt ?? '!!!', -e.r * 2.3, '#ffe1d6', 2.6, true);
-    if (run.fx.bubblesEnabled) audio.voice(def.boss?.taunt ?? '!!!', 'boss');
+    if (run.fx.bubblesEnabled && !run.muted) audio.voice(def.boss?.taunt ?? '!!!', 'boss');
     run.schedule(2.8, () => run.say(['MAMMA MIA!', 'Non si fa!', 'Vergogna!', 'Che orrore!'], true, '#ffd0c8'));
     run.hooks.onBoss(e, final);
   }

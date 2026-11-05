@@ -32,6 +32,7 @@ export class Input {
   private pressedQ = new Set<Action>();
   private padPrev: boolean[] = [];
   private padRepeat = new Map<Action, number>();
+  private padFromGame: boolean[] = [];
   // touch joystick
   touchActive = false;
   touchId: number | null = null;
@@ -65,19 +66,29 @@ export class Input {
     }
   }
 
+  /** keys whose press started during gameplay: their auto-repeat must not drive menus */
+  private heldFromGame = new Set<string>();
+
   private onKey(e: KeyboardEvent, down: boolean) {
     const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    // only real text fields keep the keyboard (range sliders etc. still navigate)
+    if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes((t as HTMLInputElement).type)))) return;
     if (down) {
-      if (!e.repeat || ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      if (!e.repeat) {
+        if (this.joystickEnabled) this.heldFromGame.add(e.code);
+        else this.heldFromGame.delete(e.code);
+      }
+      const navKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code);
+      if (!e.repeat || (navKey && !this.heldFromGame.has(e.code))) {
         const acts = KEYMAP[e.code];
         if (acts) for (const a of acts) this.pressedQ.add(a);
       }
       this.keys.add(e.code);
       this.setDevice('keyboard');
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter', 'NumpadEnter'].includes(e.code)) e.preventDefault();
     } else {
       this.keys.delete(e.code);
+      this.heldFromGame.delete(e.code);
     }
   }
 
@@ -171,7 +182,8 @@ export class Input {
           this.pressedQ.add(a);
           this.setDevice('gamepad');
           this.padRepeat.set(a, 0.38);
-        } else if (now && (a === 'up' || a === 'down' || a === 'left' || a === 'right')) {
+          this.padFromGame[i] = this.joystickEnabled;
+        } else if (now && !this.padFromGame[i] && (a === 'up' || a === 'down' || a === 'left' || a === 'right')) {
           const r = (this.padRepeat.get(a) ?? 0.38) - dt;
           if (r <= 0) { this.pressedQ.add(a); this.padRepeat.set(a, 0.12); } else this.padRepeat.set(a, r);
         }

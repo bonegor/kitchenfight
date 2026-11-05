@@ -41,7 +41,16 @@ export interface SaveData {
 
 const KEY = 'kitchenfight.save.v1';
 
+function prefersReducedMotion(): boolean {
+  try {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function defaultSave(): SaveData {
+  const calm = prefersReducedMotion();
   return {
     version: 1,
     coins: 0,
@@ -63,9 +72,9 @@ export function defaultSave(): SaveData {
       master: 0.8,
       music: 0.7,
       sfx: 0.8,
-      shake: true,
+      shake: !calm,
       damageNumbers: true,
-      flashes: true,
+      flashes: !calm,
       bubbles: true,
       quality: 'high',
       showFps: false,

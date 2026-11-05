@@ -79,7 +79,7 @@ function danger(run: Run, x: number, y: number, r: number, delay: number, dmg: n
   const a = run.addArea('warning', x, y, r, delay, { enemy: true });
   a.onEnd = () => {
     const p = run.player;
-    if ((p.x - x) ** 2 + ((p.y - y) / 0.8) ** 2 < r * r) run.hurtPlayer(dmg, x, y, 'danger');
+    if (dmg > 0 && (p.x - x) ** 2 + ((p.y - y) / 0.8) ** 2 < r * r) run.hurtPlayer(dmg, x, y, 'danger');
     run.fx.ring(x, y, r * 0.5, r * 1.1, 0.4, '#ff6b4a', 6);
     run.fx.burst(x, y, 10, { colors: ['#ffffff', '#ffd2c2'], speed: 220, size: 4, life: 0.4 });
     after?.();
@@ -523,8 +523,8 @@ function summon(run: Run, e: Enemy, id: string, n: number) {
 function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
   e.slamR = r;
   e.state = 50;
-  e.timer = time;
-  e.aux = time;
+  e.leapT = time;
+  e.leapDur = time;
   e.ax = tx;
   e.ay = ty;
   e.vx = (tx - e.x) / time;
@@ -533,13 +533,16 @@ function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
 
 /** generic leap update; returns true on landing */
 function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
-  const k = 1 - e.timer / e.aux;
+  const step = Math.min(dt, e.leapT); // never fly past the target
+  e.x += e.vx * step;
+  e.y += e.vy * step;
+  e.leapT -= dt;
+  const k = 1 - Math.max(0, e.leapT) / (e.leapDur || 1);
   e.z = Math.sin(k * Math.PI) * height;
-  e.x += e.vx * dt;
-  e.y += e.vy * dt;
-  e.timer -= dt;
-  if (e.timer <= 0) {
+  if (e.leapT <= 0) {
     e.z = 0;
+    e.vx = 0;
+    e.vy = 0;
     e.squash = 1;
     run.fx.shake(0.45);
     run.sfx('boss_slam', {}, e.x);
@@ -558,6 +561,7 @@ function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
  * state 0 = walk (timer until next attack). Attacks run in `bossAttack`.
  */
 function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: number, perform: (name: string, t: number, first: boolean) => boolean) {
+  if (dt <= 0) return; // hit-stop: don't re-run an attack's first frame
   // enrage under 50% HP
   const enraged = e.hp < e.maxHp * 0.5;
   if (enraged && e.bossPhase === 0) {
@@ -577,7 +581,7 @@ function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: numbe
     chase(run, e, dt, walkMul * (enraged ? 1.25 : 1));
     e.timer -= dt;
     if (e.timer <= 0) {
-      e.bossAttack = attacks[e.aux++ % attacks.length];
+      e.bossAttack = attacks[e.bossStep++ % attacks.length];
       e.bossT = 0;
     }
     return;
@@ -587,7 +591,7 @@ function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: numbe
   const done = perform(e.bossAttack, e.bossT, first);
   if (done) {
     e.bossAttack = '';
-    e.timer = (enraged ? 1.2 : 2) + Math.random() * 0.8;
+    if (e.state !== 50) e.timer = (enraged ? 1.2 : 2) + Math.random() * 0.8;
   }
 }
 

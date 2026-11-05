@@ -552,7 +552,8 @@ export class AudioEngine implements AudioAPI {
   private async renderTrack(id: MusicId, onProgress: (p: number) => void): Promise<Track | null> {
     const song = SONGS[id];
     if (!song) return null;
-    const sr = this.ctx?.sampleRate ?? DEFAULT_SR;
+    // never synthesize music above 48 kHz (192 kHz devices would quadruple memory and render time)
+    const sr = Math.min(this.ctx?.sampleRate ?? DEFAULT_SR, DEFAULT_SR);
     // 1) worker
     if (this.musicWorker.usable) {
       const msg = await this.workerRender(id, sr, onProgress);

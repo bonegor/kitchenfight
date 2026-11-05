@@ -50,6 +50,9 @@ export class UI {
   private selectedChar = 'enzo';
   private selectedStage = 'kitchen';
   private levelBanish = false;
+  /** armed while the 'press any key' gate is showing (gamepad confirm uses it) */
+  loadingStart: (() => void) | null = null;
+  private levelShownAt = 0;
   private bossTracked: Enemy | null = null;
   current = '';
 
@@ -63,6 +66,8 @@ export class UI {
 
   private show(el: HTMLElement, name: string, onBack: (() => void) | null = null) {
     this.screen?.remove();
+    this.overlay?.remove();
+    this.overlay = null;
     this.screen = el;
     this.current = name;
     this.root.appendChild(el);
@@ -91,6 +96,16 @@ export class UI {
 
   /** route edge-triggered input to the active screen */
   handleInput(inp: Input) {
+    if (this.current === 'loading') {
+      if (this.loadingStart && (inp.consume('confirm') || inp.consume('pause'))) this.loadingStart();
+      return;
+    }
+    if (this.current === 'pause' && inp.consume('pause')) {
+      audio.sfx('ui_back');
+      this.nav.onBack?.();
+      inp.consume('back');
+      return;
+    }
     if (inp.consume('up')) this.nav.move(0, -1);
     if (inp.consume('down')) this.nav.move(0, 1);
     if (inp.consume('left')) { if (!this.nav.adjust(-1)) this.nav.move(-1, 0); }
@@ -151,18 +166,33 @@ export class UI {
         const press = h('div', { class: 'press-start' }, 'Click, tap or press any key');
         el.appendChild(press);
         let fired = false;
-        const go = (ev?: Event) => {
+        // Start only once the gesture has finished (keyup / click / touchend), so the same
+        // press can't also activate a title-menu button that appears under the finger.
+        const start = () => {
           if (fired) return;
-          if (ev && ev instanceof KeyboardEvent && (ev.key === 'F5' || ev.key === 'F12')) return;
           fired = true;
-          window.removeEventListener('keydown', go);
-          window.removeEventListener('pointerdown', go);
-          window.removeEventListener('touchstart', go);
+          window.removeEventListener('keyup', onKey);
+          window.removeEventListener('click', onClick);
+          el.removeEventListener('touchend', onTouch);
+          this.loadingStart = null;
+          this.app.input.endFrame();
           onStart();
+          this.app.input.endFrame();
         };
-        window.addEventListener('keydown', go);
-        window.addEventListener('pointerdown', go);
-        window.addEventListener('touchstart', go);
+        const onKey = (ev: KeyboardEvent) => {
+          if (ev.key === 'F5' || ev.key === 'F12' || ev.key === 'Tab') return;
+          ev.preventDefault();
+          start();
+        };
+        const onClick = () => start();
+        const onTouch = (ev: TouchEvent) => {
+          ev.preventDefault(); // suppress the synthetic click
+          start();
+        };
+        window.addEventListener('keyup', onKey);
+        window.addEventListener('click', onClick);
+        el.addEventListener('touchend', onTouch, { passive: false });
+        this.loadingStart = start;
       },
     };
   }
@@ -208,7 +238,7 @@ export class UI {
       .map((id) => img(spriteURL(id)));
     const row = h('div', { class: 'story-lineup' }, lineup);
     const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel story', style: { width: 'min(720px,94vw)' } },
+      h('div', { class: 'paper panel story', style: { width: 'min(720px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-body' },
           h('div', { class: 'story-kicker' }, 'Napoli, oggi.'),
@@ -300,7 +330,7 @@ export class UI {
   }
 
   showStageSelect() {
-    audio.preload(STAGES.filter((st) => this.isStageUnlocked(st.id)).map((st) => st.music)).catch(() => undefined);
+    audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
     const grid = h('div', { class: 'stage-grid' });
     if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = 'kitchen';
     const char = charById(this.selectedChar);
@@ -477,11 +507,14 @@ export class UI {
   }
 
   private renderLevelUp(run: Run, choices: Choice[]) {
+    this.levelBanish = false;
+    this.levelShownAt = performance.now();
     const wrap = h('div', { class: 'choices' });
     choices.forEach((c, i) => {
       const card = this.choiceCard(run, c);
       if (i === 0) card.setAttribute('data-nav-default', '');
       card.addEventListener('click', () => {
+        if (performance.now() - this.levelShownAt < 320) return; // cards are still flying in
         if (this.levelBanish && c.type !== 'coins' && c.type !== 'heal') {
           run.banished.add(c.id);
           run.banishes--;
@@ -551,7 +584,7 @@ export class UI {
     } else if (c.type === 'coins') {
       name = 'Mancia';
       ico = 'icon.coin';
-      desc = 'A generous tip: +25 coins.';
+      desc = `A generous tip: +${Math.max(1, Math.round(25 * run.stats.greed))} coins.`;
       lvText = 'Tip';
     } else {
       name = 'Pranzo della Nonna';
@@ -594,36 +627,45 @@ export class UI {
     const items = h('div', { class: 'chest-items' });
     const title = h('div', { class: 'chest-title' }, gold ? 'Cesta d’Oro!' : 'Cesta da Picnic!');
     const cont = this.btn('Continua ▶', 'green', () => {
+      if (cont.style.visibility === 'hidden') return;
       this.closeOverlay();
       audio.setMusicMuffled(false);
       run.state = 'playing';
     }, 'Continue');
+    // not navigable until the rewards are shown (confirm first reveals the basket)
+    cont.removeAttribute('data-nav');
     cont.style.visibility = 'hidden';
-    const stage = h('div', { class: 'chest-stage' }, rays, title, basket, items, cont);
+    const stage = h('div', { class: 'chest-stage', 'data-nav': '', 'data-nav-default': '' }, rays, title, basket, items, cont);
     const el = h('div', { class: 'screen dim' }, stage);
     this.showOverlay(el, 'chest', null);
     audio.sfx('chest_open');
     let skipped = false;
     const reveal = () => {
-      if (skipped) return;
+      if (skipped || this.overlay !== el) return;
       skipped = true;
       basket.classList.remove('shake');
       if (hasSprite('ui.chest')) basket.src = spriteURL('ui.chest', 1);
       rays.classList.add('on');
       rewards.forEach((r, i) => {
         setTimeout(() => {
+          if (this.overlay !== el) return;
           items.appendChild(this.rewardCard(r));
           audio.sfx(r.kind === 'evolution' ? 'evolution' : 'chest_reward', { pitch: 1 + i * 0.08 });
           if (i === rewards.length - 1) {
             cont.style.visibility = 'visible';
+            cont.setAttribute('data-nav', '');
+            stage.removeAttribute('data-nav');
             this.nav.refresh();
             this.nav.focus(cont, false);
           }
         }, 350 + i * 420);
       });
     };
+    stage.addEventListener('click', (e) => {
+      if (e.target === cont || cont.contains(e.target as Node)) return;
+      reveal();
+    });
     setTimeout(reveal, 1100);
-    el.addEventListener('click', () => reveal());
   }
 
   private rewardCard(r: ChestReward): HTMLElement {
@@ -659,7 +701,7 @@ export class UI {
       this.app.resumeRun();
     };
     const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel', style: { width: 'min(640px,94vw)' } },
+      h('div', { class: 'paper panel', style: { width: 'min(640px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Pausa'), h('span', { class: 'sub' }, `${run.stage.name} · ${formatTime(run.time)} · LV ${run.level}`)),
         h('div', { class: 'panel-body' },
@@ -827,6 +869,10 @@ export class UI {
     mk('passives', '🧄 Ingredienti');
     mk('records', '🏆 Record');
     const sev = (n: number) => h('span', { class: 'sev' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= n ? '' : 'off' })));
+    // single-column (phone) layout: bring the entry into view when it's tapped
+    const revealDetail = () => {
+      if (matchMedia('(max-width: 720px)').matches) detail.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
     let body: HTMLElement;
     if (tab === 'crimes') {
       const ids = [...REGULAR_ENEMY_IDS, ...BOSS_IDS];
@@ -853,7 +899,7 @@ export class UI {
         const known = seen.has('e:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
         it.addEventListener('navfocus', () => showE(id));
-        it.addEventListener('click', () => showE(id));
+        it.addEventListener('click', () => { showE(id); revealDetail(); });
         list.appendChild(it);
       });
       showE(ids[0]);
@@ -884,7 +930,7 @@ export class UI {
         const known = seen.has('w:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.icon)));
         it.addEventListener('navfocus', () => showW(id));
-        it.addEventListener('click', () => showW(id));
+        it.addEventListener('click', () => { showW(id); revealDetail(); });
         list.appendChild(it);
       });
       showW(ids[0]);
@@ -913,7 +959,7 @@ export class UI {
         const known = seen.has('p:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.icon)));
         it.addEventListener('navfocus', () => showP(id));
-        it.addEventListener('click', () => showP(id));
+        it.addEventListener('click', () => { showP(id); revealDetail(); });
         list.appendChild(it);
       });
       showP(ids[0]);
@@ -989,7 +1035,7 @@ export class UI {
       audio.sfx('ui_click');
     });
     const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel', style: { width: 'min(640px,94vw)' } },
+      h('div', { class: 'paper panel', style: { width: 'min(640px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Opzioni'), h('span', { class: 'sub' }, 'Settings')),
         h('div', { class: 'panel-body' },
@@ -1023,7 +1069,7 @@ export class UI {
 
   showCredits() {
     const el = h('div', { class: 'screen dim credits' },
-      h('div', { class: 'paper panel', style: { width: 'min(700px,94vw)' } },
+      h('div', { class: 'paper panel', style: { width: 'min(700px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Crediti'), h('span', { class: 'sub' }, 'Credits')),
         h('div', { class: 'panel-body' },

@@ -2,7 +2,7 @@
  * RUN — one play session on a stage: simulation of player, enemies,
  * projectiles, pickups, areas, level-ups and chests.
  */
-import { Enemy, Projectile, EnemyShot, Pickup, Area, PickupKind, AreaKind } from './entities';
+import { Enemy, Projectile, EnemyShot, Pickup, Area, PickupKind, AreaKind, newId } from './entities';
 import { SpatialHash } from '../core/spatial';
 import { FX } from './fx';
 import { World, PropInst } from './world';
@@ -268,6 +268,7 @@ export class Run {
 
   spawnEnemy(def: EnemyDef, x: number, y: number, o: { elite?: boolean; boss?: boolean; hpMul?: number } = {}): Enemy {
     const e = this.enemyPool.pop() ?? new Enemy();
+    e.id = newId();
     e.def = def;
     e.alive = true;
     e.x = x;
@@ -300,6 +301,9 @@ export class Run {
     e.telegraph = 0;
     e.buff = 0;
     e.slamR = 0;
+    e.bossStep = 0;
+    e.leapT = 0;
+    e.leapDur = 0;
     e.lastHit = {};
     this.enemies.push(e);
     if (e.boss) this.bosses.push(e);
@@ -378,7 +382,7 @@ export class Run {
     let best: Enemy | null = null;
     let bd = maxD * maxD;
     for (const e of this.enemies) {
-      if (!e.alive || e.spawnT > 0.25) continue;
+      if (!e.alive || e.spawnT > 0.25 || (e.state === 1 && e.def.behavior === 'ghost')) continue;
       if (exclude && exclude.has(e.id)) continue;
       const d = (e.x - x) ** 2 + (e.y - y) ** 2;
       if (d < bd) {
@@ -447,6 +451,7 @@ export class Run {
   // ======================================================================
 
   sfx(id: SfxId, o: SfxOpts = {}, x?: number) {
+    if (this.muted) return;
     if (x !== undefined) {
       const cx = (this.view.x0 + this.view.x1) / 2;
       const hw = (this.view.x1 - this.view.x0) / 2;
@@ -478,6 +483,7 @@ export class Run {
       e.kx += (kx / l) * 210 * knock;
       e.ky += (ky / l) * 210 * knock;
     }
+    this.lastCrit = crit;
     if (!o.noNumber) this.fx.number(e.x, e.y - e.r - 6, dmg, crit);
     if (!o.silent) this.sfx(crit ? 'hit_crit' : 'hit', { volume: 0.55 }, e.x);
     // onion layer peel
@@ -563,7 +569,7 @@ export class Run {
     this.sayT = this.realTime + 5;
     const text = lines[Math.floor(this.rng.next() * lines.length)];
     this.fx.bubble(this.player, text, -78, color, 1.7, true);
-    if (this.fx.bubblesEnabled) audio.voice(text, this.char.voice);
+    if (this.fx.bubblesEnabled && !this.muted) audio.voice(text, this.char.voice);
   }
 
   heal(amount: number) {
@@ -578,6 +584,10 @@ export class Run {
   }
 
   dmgBy: Record<string, number> = {};
+  /** silent run (title-screen demo / headless sims): no sfx, voices or music changes */
+  muted = false;
+  /** whether the last hitEnemy() call was a critical hit */
+  lastCrit = false;
 
   hurtPlayer(dmg: number, sx: number, sy: number, src = '?') {
     const p = this.player;
@@ -624,7 +634,7 @@ export class Run {
     this.slowMo = 2;
     this.fx.screenFlash(0.6, '#ff3b3b');
     this.sfx('player_death');
-    audio.stopMusic(1.5);
+    if (!this.muted) audio.stopMusic(1.5);
     this.fx.bubble(p, 'MAMMA MIA!', -78, '#ffd0c8', 2.5, true);
   }
 
@@ -783,12 +793,12 @@ export class Run {
   rollChoices(n: number): Choice[] {
     const pool: { c: Choice; weight: number }[] = [];
     for (const w of this.weapons) {
-      if (w.def.evolution || w.level >= w.def.maxLevel) continue;
+      if (w.def.evolution || w.level >= w.def.maxLevel || this.banished.has(w.def.id)) continue;
       pool.push({ c: { type: 'weapon', id: w.def.id, level: w.level + 1, isNew: false }, weight: 10 });
     }
     for (const p of this.passives) {
       const d = PASSIVES[p.id];
-      if (p.level >= d.maxLevel) continue;
+      if (p.level >= d.maxLevel || this.banished.has(p.id)) continue;
       pool.push({ c: { type: 'passive', id: p.id, level: p.level + 1, isNew: false }, weight: 8 });
     }
     if (this.weapons.length < this.maxWeapons) {
@@ -855,9 +865,14 @@ export class Run {
     if (this.pendingLevels <= 0 && this.state === 'levelup') this.state = 'playing';
   }
 
-  addCoins(n: number) {
-    const v = Math.max(1, Math.round(n * this.stats.greed));
+  private coinFrac = 0;
+  /** Credit coins with Greed applied (fractions carry over). Returns the coins credited. */
+  addCoins(n: number): number {
+    this.coinFrac += n * this.stats.greed;
+    const v = Math.floor(this.coinFrac + 1e-9);
+    this.coinFrac -= v;
     this.coins += v;
+    return v;
   }
 
   // ======================================================================
@@ -892,8 +907,7 @@ export class Run {
       for (const w of this.weapons) if (!w.def.evolution && w.level < w.def.maxLevel) ups.push({ kind: 'upgrade', id: w.def.id, level: w.level + 1 });
       for (const p of this.passives) if (p.level < PASSIVES[p.id].maxLevel) ups.push({ kind: 'upgrade', id: p.id, level: p.level + 1 });
       if (!ups.length) {
-        out.push({ kind: 'coins', id: 'coins', amount: 50 });
-        this.addCoins(50);
+        out.push({ kind: 'coins', id: 'coins', amount: this.addCoins(50) });
         continue;
       }
       const u = ups[this.rng.int(0, ups.length - 1)];
@@ -907,8 +921,7 @@ export class Run {
       out.push(u);
     }
     const bonus = gold ? 60 + this.rng.int(0, 60) : 10 + this.rng.int(0, 20);
-    this.addCoins(bonus);
-    out.push({ kind: 'coins', id: 'coins', amount: bonus });
+    out.push({ kind: 'coins', id: 'coins', amount: this.addCoins(bonus) });
     return out;
   }
 
@@ -1034,7 +1047,7 @@ export class Run {
     this.fx.burst(p.x, p.y - 20, 22, { colors: ['#ffd34d', '#ffffff', '#7dff8a'], speed: 260, size: 4, life: 0.8, additive: true });
     this.fx.screenFlash(0.25, '#fff4c2');
     this.sfx('levelup');
-    audio.duckMusic(0.5, 1.2);
+    if (!this.muted) audio.duckMusic(0.5, 1.2);
   }
 
   updatePlayer(dt: number) {
@@ -1053,7 +1066,7 @@ export class Run {
     if (p.slowT > 0) {
       p.slowT -= dt;
       speed *= 1 - p.slowAmt;
-    }
+    } else p.slowAmt = 0;
     const tvx = mx * speed, tvy = my * speed;
     const k = 1 - Math.exp(-14 * dt);
     p.vx += (tvx - p.vx) * k;
@@ -1144,7 +1157,7 @@ export class Run {
       const isFrozen = (frozen && !e.boss) || e.freeze > 0;
       if (e.freeze > 0) e.freeze -= dt;
       if (e.stun > 0) e.stun -= dt;
-      if (!isFrozen && e.stun <= 0) {
+      if (!isFrozen && (e.stun <= 0 || e.boss)) {
         updateEnemy(this, e, dt * (1 - e.slowAmt) * (e.buff > 0 ? 1.35 : 1));
       }
       if (!e.alive) continue;
@@ -1211,7 +1224,10 @@ export class Run {
           if (p.faceVel && (p.vx || p.vy)) p.rot = Math.atan2(p.vy, p.vx);
           break;
         case 'homing': {
-          if (!p.target || !p.target.alive) p.target = this.nearestEnemy(p.x, p.y, 520);
+          const spent = !!p.target && p.hitDelay <= 0 && p.hits.includes(p.target.id);
+          if (!p.target || !p.target.alive || spent || (p.target as Enemy).state === 1 && (p.target as Enemy).def?.behavior === 'ghost') {
+            p.target = this.nearestEnemy(p.x, p.y, 520, p.hitDelay <= 0 && p.hits.length ? new Set(p.hits) : undefined);
+          }
           if (p.target) {
             const want = Math.atan2(p.target.y - p.y, p.target.x - p.x);
             const cur = Math.atan2(p.vy, p.vx);

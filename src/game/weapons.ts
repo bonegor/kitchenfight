@@ -84,9 +84,12 @@ export class WeaponInstance {
 // ---------------------------------------------------------------------------
 
 function volley(run: Run, w: WeaponInstance, n: number, interval: number, fn: (i: number) => void) {
+  const d = w.def;
   for (let i = 0; i < n; i++) {
     if (i === 0 || interval <= 0) fn(i);
-    else run.schedule(interval * i, () => fn(i));
+    else run.schedule(interval * i, () => {
+      if (w.def === d) fn(i); // the weapon may have evolved in between
+    });
   }
 }
 
@@ -257,7 +260,7 @@ def({
       p.faceVel = false;
       p.glow = '#ffcf3a';
       p.onHit = (_p, e) => {
-        e.stun = Math.max(e.stun, 0.6);
+        if (!e.boss) e.stun = Math.max(e.stun, 0.6);
         _p.target = null; // pick a new victim
       };
       run.sfx('w_ciabatta', { pitch: 1.15 });
@@ -622,6 +625,9 @@ def({
       p.trail = 'fx.spark';
       p.life = p.max = s.duration;
       p.crit = s.crit * run.stats.luck;
+      p.onHit = (_p, e) => {
+        if (run.lastCrit && Math.random() < 0.15) run.dropPickup('coin', e.x, e.y, 1);
+      };
     });
     run.sfx('w_rotella', { pitch: 1.2 });
   },
@@ -1058,7 +1064,7 @@ def({
   evolution: true,
   from: 'forno',
   sfx: 'w_forno',
-  base: S({ damage: 13, cooldown: 0.4, area: 1.55, pierce: Infinity, knockback: 0.4 }),
+  base: S({ damage: 13, cooldown: 0.4, area: 2.1, pierce: Infinity, knockback: 0.4 }),
   levels: [],
   fire(run, w) {
     const s = w.stats(run);

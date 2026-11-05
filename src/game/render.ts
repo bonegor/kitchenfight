@@ -414,7 +414,7 @@ export class Renderer {
     const bob = p.moving ? -Math.abs(Math.sin(p.anim * Math.PI * 0.5)) * 2 : 0;
     const tilt = p.moving ? Math.sin(p.anim * Math.PI * 0.5) * 0.04 + p.vx * 0.0003 : 0;
     let alpha = 1;
-    if (p.iframes > 0 && run.state === 'playing') alpha = Math.sin(this.t * 40) > 0 ? 1 : 0.45;
+    if (p.iframes > 0 && run.state === 'playing' && !run.autopilot) alpha = Math.sin(this.t * 40) > 0 ? 1 : 0.45;
     if (run.state === 'dying' || run.state === 'dead') {
       const k = clamp(1 - run.deathT / 2.2, 0, 1);
       ctx.globalAlpha = 1;

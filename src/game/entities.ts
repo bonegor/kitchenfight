@@ -57,6 +57,9 @@ export class Enemy {
   telegraph = 0; // red warning tint
   buff = 0; // speed buff timer (garlic aura)
   slamR = 0; // boss leap impact radius
+  bossStep = 0; // index into the boss attack rotation
+  leapT = 0; // remaining leap time
+  leapDur = 0; // total leap time
   /** last time hit per weapon slot (for persistent hitboxes) */
   lastHit: Record<number, number> = {};
 }

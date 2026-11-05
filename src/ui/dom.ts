@@ -82,8 +82,8 @@ export class Nav {
     el.classList.add('focus');
     if (sound) audio.sfx('ui_hover', { volume: 0.5 });
     el.dispatchEvent(new CustomEvent('navfocus'));
-    const sc = el.closest('.scroll, .panel-body, .coll-list');
-    if (sc) el.scrollIntoView({ block: 'nearest' });
+    // keep keyboard/gamepad focus visible, including content that overflows a screen
+    if (!sound || el.matches(':hover') === false) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   private items(): HTMLElement[] {
@@ -137,6 +137,7 @@ export class Nav {
       const step = parseFloat(this.cur.step || '0.05');
       this.cur.value = String(Math.min(parseFloat(this.cur.max), Math.max(parseFloat(this.cur.min), parseFloat(this.cur.value) + d * step)));
       this.cur.dispatchEvent(new Event('input'));
+      this.cur.dispatchEvent(new Event('change')); // persist (sliders save on change)
       return true;
     }
     return false;
