@@ -507,6 +507,25 @@ export class UI {
     setTimeout(() => t.remove(), 3700);
   }
 
+  /** Shown when audio is still locked (e.g. gamepad-only start); goes away once sound runs. */
+  soundHint() {
+    if (document.querySelector('.sound-hint')) return;
+    const el = h('div', { class: 'sound-hint' }, '🔇 Click, tap or press any key to turn the sound on');
+    document.body.appendChild(el);
+    const evs = ['pointerdown', 'keydown', 'touchend'];
+    const done = () => {
+      clearInterval(iv);
+      el.remove();
+      for (const ev of evs) document.removeEventListener(ev, onGesture);
+    };
+    const iv = window.setInterval(() => {
+      if (audio.ready) done();
+    }, 300);
+    // a gesture unlocks audio; if this browser still can't play sound, stop nagging
+    const onGesture = () => setTimeout(done, 1500);
+    for (const ev of evs) document.addEventListener(ev, onGesture, { passive: true });
+  }
+
   banner(text: string, sub = '', boss = false) {
     if (!this.hud) return;
     const b = h('div', { class: 'big-banner' + (boss ? ' boss' : '') }, text, sub ? h('small', {}, sub) : null);
@@ -888,7 +907,15 @@ export class UI {
     const sev = (n: number) => h('span', { class: 'sev' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= n ? '' : 'off' })));
     // single-column (phone) layout: bring the entry into view when it's tapped
     const revealDetail = () => {
-      if (matchMedia('(max-width: 720px)').matches) detail.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      if (!matchMedia('(max-width: 720px)').matches) return;
+      let sc: HTMLElement | null = detail.parentElement;
+      while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
+      if (!sc) return;
+      // keep the item strip in view: only scroll when too little of the entry is on screen
+      const sr = sc.getBoundingClientRect(), dr = detail.getBoundingClientRect();
+      const want = Math.min(dr.height, sr.height * 0.5);
+      const shown = sr.bottom - Math.max(dr.top, sr.top);
+      if (shown < want) sc.scrollBy({ top: want - shown, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     };
     let body: HTMLElement;
     if (tab === 'crimes') {

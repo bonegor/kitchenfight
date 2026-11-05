@@ -48,7 +48,10 @@ export class Input {
   constructor(touchSurface: HTMLElement) {
     window.addEventListener('keydown', (e) => this.onKey(e, true));
     window.addEventListener('keyup', (e) => this.onKey(e, false));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('blur', () => {
+      this.keys.clear();
+      this.heldFromGame.clear();
+    });
     window.addEventListener('mousemove', () => this.setDevice('mouse'), { passive: true });
     window.addEventListener('mousedown', () => this.setDevice('mouse'), { passive: true });
     const ts = touchSurface;
@@ -66,7 +69,7 @@ export class Input {
     }
   }
 
-  /** keys whose press started during gameplay: their auto-repeat must not drive menus */
+  /** keys held at some point during gameplay: their auto-repeat must not drive menus until released */
   private heldFromGame = new Set<string>();
 
   private onKey(e: KeyboardEvent, down: boolean) {
@@ -146,6 +149,8 @@ export class Input {
     if (this.key(MOVE_KEYS.right)) mx += 1;
     if (this.key(MOVE_KEYS.up)) my -= 1;
     if (this.key(MOVE_KEYS.down)) my += 1;
+    // anything held while gameplay runs counts as a movement hold from now on
+    if (this.joystickEnabled) for (const c of this.keys) this.heldFromGame.add(c);
     if (mx || my) {
       const l = Math.hypot(mx, my);
       mx /= l; my /= l;
@@ -177,6 +182,7 @@ export class Input {
       const map: [number, Action][] = [[0, 'confirm'], [1, 'back'], [9, 'pause'], [8, 'back'], [2, 'reroll'], [3, 'skip'], [12, 'up'], [13, 'down'], [14, 'left'], [15, 'right']];
       for (const [i, a] of map) {
         const now = b(i);
+        if (now && this.joystickEnabled) this.padFromGame[i] = true;
         const was = this.padPrev[i] ?? false;
         if (now && !was) {
           this.pressedQ.add(a);

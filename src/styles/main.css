@@ -258,6 +258,7 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .big-banner { position: absolute; top: 36%; left: 0; right: 0; text-align: center; font-family: var(--font-title); font-size: clamp(42px, 8vw, 92px); color: #fff3d6; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); animation: bannerIn 2.4s ease-out forwards; pointer-events: none; }
 .big-banner small { display: block; font-family: var(--font-ui); font-size: 0.32em; color: #ffd0c8; -webkit-text-stroke: 1.5px var(--ink); }
 .big-banner.boss { color: #ff6b5a; }
+@keyframes bannerFade { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bannerIn { 0% { transform: scale(2.2) rotate(-6deg); opacity: 0; } 12% { transform: scale(1) rotate(-3deg); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.95) rotate(-3deg); } }
 
 /* ------------------------------------------------------------------ level up */
@@ -439,6 +440,9 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .medal.got img { filter: none; }
 .medal .sub { font-size: 13px; }
 
+/* ------------------------------------------------------------------ sound hint (audio still locked) */
+.sound-hint { position: fixed; left: 50%; bottom: calc(14px + var(--safe-bottom)); transform: translateX(-50%); z-index: 20; max-width: calc(100vw - 32px); padding: 7px 16px; border-radius: 999px; border: 2px solid var(--gold); background: rgba(43, 23, 18, 0.9); color: #fff3d6; font-size: 16px; text-align: center; pointer-events: none; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
+
 /* ------------------------------------------------------------------ keyboard focus */
 .btn:focus-visible, [data-nav]:focus-visible, input[type=range]:focus-visible { outline: 4px solid var(--gold); outline-offset: 2px; }
 
@@ -447,7 +451,7 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .screen { padding-top: calc(8px + var(--safe-top)); padding-bottom: calc(8px + var(--safe-bottom)); }
   .lvl-title { font-size: 34px; }
   .levelup { gap: 6px; }
-  .choices { gap: 8px; }
+  .choices { flex-direction: row; align-items: stretch; gap: 8px; }
   .choice { width: min(320px, 46vw); min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; text-align: left; padding: 6px 10px 6px 8px; gap: 2px 10px; }
   .choice .checker-strip { display: none; }
   .choice .ico { width: 52px; height: 52px; margin-top: 0; flex: none; }
@@ -466,6 +470,12 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .hud-timer { font-size: 26px; }
 }
 
+/* too narrow for two cards side by side (split-screen phones): one full-width column */
+@media (max-width: 480px) and (max-height: 520px) {
+  .choices { flex-direction: column; }
+  .choice { width: 100%; }
+}
+
 /* ------------------------------------------------------------------ encyclopedia on phones */
 @media (max-width: 720px) {
   .coll-list { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 60px; grid-template-rows: 60px; max-height: none; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; padding-bottom: 8px; }
@@ -476,6 +486,8 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* ------------------------------------------------------------------ reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .logo .f, .emblem, .press-start, .chest-rays, .chest-img.shake, .story-lineup img { animation: none !important; }
-  .screen, .choice, .chest-item, .unlock, .toast, .big-banner, .lvl-title { animation-duration: 0.01ms !important; }
+  .screen, .choice, .chest-item, .unlock, .toast, .lvl-title { animation-duration: 0.01ms !important; }
+  /* the banner must stay readable: a plain fade instead of the zoom (its last keyframe is invisible) */
+  .big-banner { animation: bannerFade 2.4s linear forwards !important; transform: rotate(-3deg); }
   .btn, .char-card, .stage-card, .pu, .choice { transition: none !important; }
 }

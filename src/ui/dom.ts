@@ -46,6 +46,15 @@ export class Nav {
   cur: HTMLElement | null = null;
   onBack: (() => void) | null = null;
 
+  constructor() {
+    // Tab / Shift+Tab move DOM focus: let the highlight follow, so Enter activates what is outlined
+    document.addEventListener('focusin', (e) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || !this.root || t === this.cur || !this.root.contains(t) || !t.hasAttribute('data-nav')) return;
+      this.focus(t, true);
+    });
+  }
+
   setRoot(root: HTMLElement | null, onBack: (() => void) | null = null, focusFirst = true) {
     this.root = root;
     this.onBack = onBack;
@@ -72,7 +81,9 @@ export class Nav {
   private wire(el: HTMLElement) {
     if ((el as any)._navWired) return;
     (el as any)._navWired = true;
-    el.addEventListener('mouseenter', () => this.focus(el, true));
+    el.addEventListener('mouseenter', () => {
+      if (el.hasAttribute('data-nav')) this.focus(el, true);
+    });
   }
 
   focus(el: HTMLElement, sound = true, scroll = true) {
@@ -80,6 +91,11 @@ export class Nav {
     this.cur?.classList.remove('focus');
     this.cur = el;
     el.classList.add('focus');
+    // DOM focus follows the highlight, so the :focus-visible ring and Enter agree with it
+    const ae = document.activeElement as HTMLElement | null;
+    if (el.tabIndex >= 0) {
+      if (ae !== el) el.focus({ preventScroll: true });
+    } else if (ae && ae !== document.body && typeof ae.blur === 'function') ae.blur();
     if (sound) audio.sfx('ui_hover', { volume: 0.5 });
     el.dispatchEvent(new CustomEvent('navfocus'));
     // keep keyboard/gamepad focus visible, including content that overflows a screen

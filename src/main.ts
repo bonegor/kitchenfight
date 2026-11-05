@@ -76,7 +76,12 @@ class App {
       audio.unlock();
       this.applySettings();
       this.ui.showTitle();
-      audio.preload(['kitchen']).catch(() => undefined);
+      const st = STAGES.find((x) => x.id === this.save.lastStage && this.save.unlockedStages.includes(x.id)) ?? STAGES[0];
+      audio.preload([st.music]).catch(() => undefined);
+      // a gamepad press is not a user activation, so the browser may keep audio locked
+      setTimeout(() => {
+        if (!audio.ready) this.ui.soundHint();
+      }, 1200);
     });
   }
 
