@@ -7,7 +7,9 @@
  * songs use (or the instrument's range for new ids) with the synth InstDef and with the sampled
  * InstDef, measure K-weighted loudness of the note body, and print the gain (dB) that makes the
  * sampled one as loud as the synth one. New ids (no song usage) are matched to the median synth
- * loudness of the existing family. Paste the result into SAMPLED_SPECS[].gainDb in sampled.ts
+ * loudness of the existing family; for those the gain is capped so that no zone peaks above
+ * 0 dBFS for a single note at velocity 1.0 and unity channel gain (short clicks have a large
+ * crest factor). Paste the result into SAMPLED_SPECS[].gainDb in sampled.ts
  * (or run with --write to update the file in place).
  *
  * Usage: node scripts/audio/calibrate_instruments.mjs [--write]
@@ -97,19 +99,36 @@ for (const spec of A.SAMPLED_SPECS) {
   const trim = spec.gainDb ?? 0;
   const lSmp = mean(pitches.map((m) => noteLoudness(smp, m, sustain))) - trim;
   const lSyn = s ? mean(pitches.map((m) => noteLoudness(s, m, s.kind === 'sustain'))) : null;
-  rows.push({ id: spec.id, used: !!USED[spec.id], lSyn, lSmp, kind: smp.kind });
+  // loudest sample peak over every zone at v = 1.0 (without the current trim)
+  let peak = 0;
+  for (const z of set.zones) {
+    const vr = spec.rr === 'set' || spec.rr === 'art' ? z.r : 0;
+    let sm;
+    try {
+      sm = smp.make(SR, spec.unpitched ? 60 : Math.round(z.p), vr, 1.0, z.l);
+    } catch {
+      continue;
+    }
+    for (const ch of sm.r ? [sm.l, sm.r] : [sm.l]) for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]));
+  }
+  const peakRawDb = 20 * Math.log10(peak + 1e-12) - trim;
+  rows.push({ id: spec.id, used: !!USED[spec.id], lSyn, lSmp, kind: smp.kind, peakRawDb });
 }
 const med = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 const mPitched = med(rows.filter((r) => r.used && r.lSyn !== null && r.kind !== 'perc').map((r) => r.lSyn));
 const mPerc = med(rows.filter((r) => r.used && r.lSyn !== null && r.kind === 'perc').map((r) => r.lSyn));
 console.log(`median synth loudness the songs use: pitched ${mPitched.toFixed(1)} LU, percussion ${mPerc.toFixed(1)} LU (K-weighted dB)`);
-console.log('id            synth LU  sampled LU   gainDb');
+console.log('id            synth LU  sampled LU   gainDb  peak@v1');
 const gains = {};
 for (const r of rows) {
   const ref = r.used && r.lSyn !== null ? r.lSyn : r.kind === 'perc' ? mPerc : mPitched;
-  const g = Math.max(-24, Math.min(24, ref - r.lSmp));
+  let g = Math.max(-24, Math.min(24, ref - r.lSmp));
+  // new ids: sane default level (peak cap); ids the songs use: loudness parity with the synth they
+  // were mixed against (transient peaks are handled by the songs' channel gains + master soft clip)
+  const capped = !r.used && r.peakRawDb + g > 0;
+  if (capped) g = -r.peakRawDb;
   gains[r.id] = Math.round(g * 10) / 10;
-  console.log(`${r.id.padEnd(13)} ${r.lSyn === null ? '    -   ' : r.lSyn.toFixed(1).padStart(8)}  ${r.lSmp.toFixed(1).padStart(9)}  ${gains[r.id].toFixed(1).padStart(7)}${r.used ? '' : '  (new id: median)'}`);
+  console.log(`${r.id.padEnd(13)} ${r.lSyn === null ? '    -   ' : r.lSyn.toFixed(1).padStart(8)}  ${r.lSmp.toFixed(1).padStart(9)}  ${gains[r.id].toFixed(1).padStart(7)}  ${(r.peakRawDb + gains[r.id]).toFixed(1).padStart(6)} dBFS${r.used ? '' : '  (new id: median)'}${capped ? '  (peak-capped)' : ''}`);
 }
 if (WRITE) {
   const file = path.join(ROOT, 'src', 'audio', 'sampled.ts');

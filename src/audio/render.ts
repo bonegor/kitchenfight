@@ -55,6 +55,10 @@ export interface RenderOpts {
 export const LOOP_PAD = 4;
 /** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
 const TAIL_TAU = 3.6;
+/** a choked note fades out over this many seconds, ending at the next note's onset (the
+ *  plectrum touching the string damps it just before re-exciting it) */
+const CHOKE_SEC = 0.004;
+let CHOKE_FADE = 192;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -100,6 +104,10 @@ interface MixEv {
   gate: number; // samples
   inst: InstDef;
   key: string;
+  /** channel|pitch (choke groups) */
+  voice: string;
+  /** output sample where a later note on the same string stops this one (choke), or Infinity */
+  chokeAt: number;
   /** constant-power gains for mono samples */
   gl: number;
   gr: number;
@@ -174,6 +182,8 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
       gate: Math.max(1, Math.round(e.d * sr)),
       inst,
       key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}`,
+      voice: `${e.ch}|${e.m}`,
+      chokeAt: Infinity,
       gl: amp * Math.cos(a) * Math.SQRT2,
       gr: amp * Math.sin(a) * Math.SQRT2,
       bl: amp * (pan > 0 ? 1 - pan : 1),
@@ -198,6 +208,16 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     }
   }
   mixEvs.sort((a, b) => a.st - b.st);
+  // choke: a plucked string re-struck on the same channel/pitch stops the previous note (its
+  // fade ends at the new onset)
+  CHOKE_FADE = Math.max(16, Math.round(CHOKE_SEC * sr));
+  const lastOn = new Map<string, MixEv>();
+  for (const ev of mixEvs) {
+    if (!ev.inst.choke) continue;
+    const prev = lastOn.get(ev.voice);
+    if (prev && ev.st > prev.st + CHOKE_FADE) prev.chokeAt = ev.st - CHOKE_FADE;
+    lastOn.set(ev.voice, ev);
+  }
 
   // needed sample length per unique sample (seconds; 0 = natural length)
   const need = new Map<string, number>();
@@ -380,14 +400,18 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   // recorded samples start `pre` samples before their onset: start early so the onset is on time
   const pre = s.pre ?? 0;
   const st = ev.st - pre;
-  const gateEnd = ring ? slen : Math.min(slen, pre + ev.gate);
-  const total = ring ? slen : Math.min(slen, pre + ev.gate + ev.relN);
+  // choked by the next note on the same string: fade out over CHOKE_FADE samples from there
+  const choke = ev.chokeAt === Infinity ? Infinity : ev.chokeAt - st + CHOKE_FADE;
+  const gateEnd = Math.min(ring ? slen : Math.min(slen, pre + ev.gate), choke - CHOKE_FADE);
+  const total = Math.min(ring ? slen : Math.min(slen, pre + ev.gate + ev.relN), choke);
   const i0 = st < 0 ? -st : 0;
   const iEnd = Math.min(total, len - st);
   if (iEnd <= i0) return;
   const a = Math.max(i0, Math.min(gateEnd, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
+  // final linear fade: 64 samples after a release, CHOKE_FADE when the next note cuts it short
+  const fadeN = total === choke ? CHOKE_FADE : 64;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
@@ -403,7 +427,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
     let env = 1;
     for (let i = a; i < iEnd; i++) {
       env *= k;
-      const e = total - i < 64 ? (env * (total - i)) / 64 : env;
+      const e = total - i < fadeN ? (env * (total - i)) / fadeN : env;
       const j = st + i;
       const vl = sl[i] * e;
       const vr = sr2[i] * e;
@@ -434,7 +458,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   let env = 1;
   for (let i = a; i < iEnd; i++) {
     env *= k;
-    const v = sl[i] * (total - i < 64 ? (env * (total - i)) / 64 : env);
+    const v = sl[i] * (total - i < fadeN ? (env * (total - i)) / fadeN : env);
     const j = st + i;
     L[j] += v * gl;
     R[j] += v * gr;

@@ -68,6 +68,7 @@ export async function loadAudio() {
     `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice } from ${src('sampled.ts')};`,
     `export { SAMPLE_SETS } from ${src('assets/inst/manifest.ts')};`,
     `export { Slicer } from ${src('dsp.ts')};`,
+    `export { compileSong } from ${src('sequencer.ts')};`,
   ].join('\n');
   const res = await esbuild.build({
     stdin: { contents: entry, resolveDir: ROOT, loader: 'ts' },
@@ -201,7 +202,7 @@ function patternNotes(A, id) {
   keys.add(lo - 7);
   const sorted = [...keys].sort((a, b) => a - b);
   const vMid = layerVel[layerVel.length - 1];
-  for (const m of sorted) notes.push({ m, v: vMid, vr: 0 });
+  for (const m of sorted) notes.push({ m, v: vMid, vr: 0, fold: m < lo || m > hi });
   for (let l = 0; l < layerVel.length - 1; l++) for (const m of roots) notes.push({ m, v: layerVel[l], vr: 0 });
   for (let vr = 1; vr < nv; vr++) for (const m of roots) notes.push({ m, v: vMid, vr });
   return { notes, spec };
@@ -212,8 +213,9 @@ async function renderPattern(A, id) {
   if (!inst) throw new Error('unknown instrument ' + id);
   const { notes, spec } = patternNotes(A, id);
   const sustain = inst.kind === 'sustain';
-  const noteSec = sustain ? 1.2 : 1.0;
-  const gap = Math.max(inst.ring ? 2.5 : sustain ? 2.0 : 1.8, (spec?.maxLen ?? 0) + 0.5);
+  // sustained notes are long enough to reach the loop (tuning is measured there)
+  const noteSec = sustain ? 2.6 : 1.0;
+  const gap = Math.max(inst.ring ? 2.5 : sustain ? 3.4 : 1.8, (spec?.maxLen ?? 0) + 0.5);
   const steps = notes.length * gap + 3;
   const part = () =>
     notes.map((n, i) => ({ s: i * gap + 0.5, d: noteSec, m: n.m, v: n.v, ch: 'x', vr: n.vr, gate: 1 }));
@@ -237,7 +239,7 @@ async function renderPattern(A, id) {
     const t = i * gap + 0.5;
     const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, inst.layerOf ? inst.layerOf(n.v) : 0) : null;
     const set = choice ? A.SAMPLE_SETS.find((x) => x.name === choice.set) : null;
-    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, set_sr: set ? set.sr : null };
+    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0 };
   });
   const base = path.join(OUT, id);
   writeWav(base + '.wav', [r.left, r.right], SR);

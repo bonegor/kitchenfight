@@ -10,8 +10,8 @@
  * Playback of one (pitch, variant, layer) sample:
  *   zone = velocity layer → round robin → key range (octave fold beyond the playable range)
  *   1. unroll the zone at its own rate (loop wrap; decaying loops keep decaying at the measured
- *      rate; band-limit with a 6th-order low-pass if the shift up would alias)
- *   2. resample with an 8-tap Kaiser-windowed sinc (4096-phase table) to the output rate/pitch
+ *      rate; band-limit with a zero-phase 63-tap FIR if the shift up would alias)
+ *   2. resample with a 16-tap Kaiser-windowed sinc (4096-phase table) to the output rate/pitch
  *   3. zone gain (even loudness) × instrument gain, optional tone filter, attack ramp
  * The returned Sample carries `pre` (output samples before the onset) so the mixer can start
  * the note early and the attack lands on the beat.
@@ -100,9 +100,6 @@ export interface SampledSpec {
   layers?: number[];
   /** ignore the requested pitch (unpitched percussion) */
   unpitched?: boolean;
-  /** semitones a zone may be shifted beyond the outermost zones before folding by octaves */
-  up?: number;
-  down?: number;
   /** gain trim (dB) — calibrated against the synth instrument so song mixes keep their balance */
   gainDb?: number;
   /** tone shaping */
@@ -110,6 +107,8 @@ export interface SampledSpec {
   hp?: number;
   /** extra fade-in (s) on top of the recorded attack */
   attack?: number;
+  /** a new note on the same channel + pitch stops the previous one (plucked strings) */
+  choke?: boolean;
   /** natural length cap (s) for ringing samples */
   maxLen?: number;
   /** variant → articulation (round robin index in the set) for 'art' sets, e.g. tambourine */
@@ -124,68 +123,68 @@ const S = (id: string, set: string, kind: SampledSpec['kind'], release: number, 
  */
 export const SAMPLED_SPECS: SampledSpec[] = [
   // accordion family (one recorded instrument, three voicings)
-  S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, up: 9, gainDb: 6.4 }),
-  S('accordionDry', 'accordion', 'sustain', 0.05, { gate: 0.92, up: 9, lp: 4200, gainDb: 6.6 }),
-  S('accChord', 'accordion', 'sustain', 0.035, { gate: 0.92, up: 9, lp: 5200, hp: 160, gainDb: 6.4 }),
+  S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, gainDb: 6.2 }),
+  S('accordionDry', 'accordion', 'sustain', 0.05, { gate: 0.92, lp: 4200, gainDb: 6.2 }),
+  S('accChord', 'accordion', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, gainDb: 6.1 }),
   // plucked
-  S('mandolin', 'mandolin', 'pluck', 0.05, { gate: 1, variants: 2, rr: 'neighbor', layers: [0.62], gainDb: 0.7 }),
-  S('guitar', 'guitar', 'pluck', 0.12, { gate: 1, variants: 2, rr: 'neighbor', layers: [0.7], gainDb: 3.4 }),
-  S('steelGuitar', 'steelguitar', 'pluck', 0.12, { gate: 1, variants: 2, rr: 'neighbor', gainDb: 5 }),
-  S('piano', 'piano', 'pluck', 0.25, { gate: 1, layers: [0.72], gainDb: 4.4 }),
-  S('harpsi', 'harpsichord', 'pluck', 0.05, { gate: 1, variants: 2, rr: 'neighbor', gainDb: 1.1 }),
-  S('harp', 'harp', 'pluck', 0.3, { gate: 1, variants: 2, rr: 'neighbor', gainDb: 5.2 }),
+  S('mandolin', 'mandolin', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.5], gainDb: 0.7 }),
+  S('guitar', 'guitar', 'pluck', 0.12, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.7], gainDb: 3.4 }),
+  S('steelGuitar', 'steelguitar', 'pluck', 0.12, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 5 }),
+  S('piano', 'piano', 'pluck', 0.25, { gate: 1, layers: [0.72], gainDb: 0.6 }),
+  S('harpsi', 'harpsichord', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.1 }),
+  S('harp', 'harp', 'pluck', 0.3, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 2.7 }),
   // strings
-  S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, gainDb: 7.5 }),
-  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, gainDb: 7.4 }),
-  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', gainDb: 1.4 }),
-  S('pizz', 'pizz', 'pluck', 0.08, { gate: 1, variants: 2, rr: 'set', gainDb: 0.1 }),
-  S('ubass', 'ubass', 'pluck', 0.08, { gate: 0.9, variants: 2, rr: 'neighbor', gainDb: 1.3 }),
-  S('cello', 'cello', 'sustain', 0.16, { gate: 0.96, gainDb: 4.1 }),
-  S('contrabass', 'contrabass', 'sustain', 0.18, { gate: 0.95, gainDb: 5.7 }),
+  S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, gainDb: 6.3 }),
+  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, gainDb: 6.4 }),
+  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', gainDb: 1.3 }),
+  S('pizz', 'pizz', 'pluck', 0.08, { gate: 1, choke: true, variants: 2, rr: 'set', gainDb: 0.1 }),
+  S('ubass', 'ubass', 'pluck', 0.08, { gate: 0.9, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.2 }),
+  S('cello', 'cello', 'sustain', 0.16, { gate: 0.96, gainDb: 4.8 }),
+  S('contrabass', 'contrabass', 'sustain', 0.18, { gate: 0.95, gainDb: 4.9 }),
   // brass
-  S('brass', 'brass', 'sustain', 0.09, { gate: 0.92, gainDb: 5.3 }),
-  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, gainDb: 6.5 }),
-  S('tuba', 'tuba', 'sustain', 0.07, { gate: 0.85, gainDb: 3.5 }),
-  S('trumpet', 'trumpet', 'sustain', 0.09, { gate: 0.92, gainDb: 4.2 }),
-  S('trombone', 'trombone', 'sustain', 0.1, { gate: 0.92, gainDb: 4.8 }),
+  S('brass', 'brass', 'sustain', 0.09, { gate: 0.92, gainDb: 5.6 }),
+  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, gainDb: 6.3 }),
+  S('tuba', 'tuba', 'sustain', 0.07, { gate: 0.85, gainDb: 3.7 }),
+  S('trumpet', 'trumpet', 'sustain', 0.09, { gate: 0.92, gainDb: 4.8 }),
+  S('trombone', 'trombone', 'sustain', 0.1, { gate: 0.92, gainDb: 4.4 }),
   S('horn', 'horn', 'sustain', 0.12, { gate: 0.92, gainDb: 4.8 }),
   // woodwinds
-  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, gainDb: 6.1 }),
-  S('piccolo', 'piccolo', 'sustain', 0.07, { gate: 0.9, gainDb: 4.6 }),
-  S('clarinet', 'clarinet', 'sustain', 0.08, { gate: 0.9, gainDb: 4.2 }),
-  S('oboe', 'oboe', 'sustain', 0.08, { gate: 0.9, gainDb: 4.6 }),
-  S('bassoon', 'bassoon', 'sustain', 0.08, { gate: 0.9, gainDb: 5.2 }),
+  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, gainDb: 6 }),
+  S('piccolo', 'piccolo', 'sustain', 0.07, { gate: 0.9, gainDb: 4.8 }),
+  S('clarinet', 'clarinet', 'sustain', 0.08, { gate: 0.9, gainDb: 4.6 }),
+  S('oboe', 'oboe', 'sustain', 0.08, { gate: 0.9, gainDb: 4.4 }),
+  S('bassoon', 'bassoon', 'sustain', 0.08, { gate: 0.9, gainDb: 4.4 }),
   // voices / organ
-  S('choir', 'choir', 'sustain', 0.4, { gate: 0.98, gainDb: 5.6 }),
+  S('choir', 'choir', 'sustain', 0.4, { gate: 0.98, gainDb: 6.1 }),
   S('choirO', 'choir', 'sustain', 0.4, { gate: 0.98, lp: 1400, gainDb: 7.1 }),
-  S('organ', 'organ', 'sustain', 0.08, { gate: 0.95, gainDb: 4.7 }),
+  S('organ', 'organ', 'sustain', 0.08, { gate: 0.95, gainDb: 4.8 }),
   // mallets / bells
   S('glock', 'glock', 'pluck', 0.4, { ring: true, maxLen: 2.2, gainDb: 3.5 }),
-  S('xylophone', 'xylophone', 'pluck', 0.1, { ring: true, gainDb: 8.1 }),
+  S('xylophone', 'xylophone', 'pluck', 0.1, { ring: true, gainDb: 6.2 }),
   S('vibes', 'vibes', 'pluck', 0.3, { gate: 1, gainDb: 4.4 }),
   S('celesta', 'celesta', 'pluck', 0.3, { gate: 1, layers: [0.7], gainDb: 5 }),
   S('bell', 'chimes', 'pluck', 1, { ring: true, maxLen: 4, gainDb: -0.3 }),
   S('timp', 'timpani', 'pluck', 0.6, { ring: true, maxLen: 3.2, variants: 2, rr: 'set', layers: [0.55], gainDb: 3.8 }),
   // percussion (unpitched; variants keep the synth semantics)
-  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', gainDb: -6 }),
+  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', gainDb: -9.1 }),
   S('snare', 'snare', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.45, 0.65, 0.85], gainDb: 4.4 }),
-  S('crash', 'crash', 'perc', 0.5, { ring: true, unpitched: true, maxLen: 3, variants: 2, rr: 'set', layers: [0.75], gainDb: 3.3 }),
+  S('crash', 'crash', 'perc', 0.5, { ring: true, unpitched: true, maxLen: 3, variants: 2, rr: 'set', layers: [0.75], gainDb: 4.4 }),
   S('kick', 'kick', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.5, 0.85], gainDb: 9.6 }),
-  S('triangle', 'triangle', 'perc', 0.3, { ring: true, unpitched: true, maxLen: 2.5, variants: 2, rr: 'set', layers: [0.7], gainDb: -1.7 }),
-  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'art', art: [[0, 2], [1, 3]], gainDb: 2.5 }),
+  S('triangle', 'triangle', 'perc', 0.3, { ring: true, unpitched: true, maxLen: 2.5, variants: 2, rr: 'set', layers: [0.7], gainDb: -1 }),
+  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'art', art: [[0, 2], [1, 3]], gainDb: 1.5 }),
   S('pan', 'panclang', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 1.6, variants: 2, rr: 'set', layers: [0.8], gainDb: -0.3 }),
   S('anvil', 'anvil', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 2, variants: 2, rr: 'set', layers: [0.45, 0.8], gainDb: 0.1 }),
-  S('castanets', 'castanets', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'set', gainDb: 5.4 }),
-  S('slapstick', 'slapstick', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 5.3 }),
+  S('castanets', 'castanets', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'set', gainDb: 0.2 }),
+  S('slapstick', 'slapstick', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 0.2 }),
   S('woodblock', 'woodblock', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 5.2 }),
   S('vibraslap', 'vibraslap', 'perc', 0.1, { ring: true, unpitched: true, variants: 2, rr: 'set', gainDb: 1.8 }),
   S('flexatone', 'flexatone', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 4.5 }),
-  S('cymbal', 'cymbal', 'perc', 0.6, { unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 4.1 }),
-  S('bassDrum', 'bassdrum', 'perc', 0.4, { unpitched: true, variants: 2, rr: 'art', layers: [0.5, 0.85], gainDb: -0.4 }),
-  S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', gainDb: 3.9 }),
-  S('claves', 'claves', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.7], gainDb: 6.3 }),
-  S('ratchet', 'ratchet', 'perc', 0.1, { ring: true, unpitched: true, variants: 3, rr: 'art', gainDb: 3.9 }),
-  S('toyWhistle', 'toywhistle', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 0.9 }),
+  S('cymbal', 'cymbal', 'perc', 0.6, { unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 5.1 }),
+  S('bassDrum', 'bassdrum', 'perc', 0.4, { unpitched: true, variants: 2, rr: 'art', layers: [0.5, 0.85], gainDb: 0.4 }),
+  S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', gainDb: 4.4 }),
+  S('claves', 'claves', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.7], gainDb: 3.9 }),
+  S('ratchet', 'ratchet', 'perc', 0.1, { ring: true, unpitched: true, variants: 3, rr: 'art', gainDb: 2.6 }),
+  S('toyWhistle', 'toywhistle', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 2.1 }),
   S('orchHit', 'orchhit', 'pluck', 0.2, { ring: true, gainDb: 5.4 }),
 ];
 
@@ -296,29 +295,58 @@ export function addSampleSet(def: SampleSetDef, pcm: SetPcm): boolean {
   }
 }
 
-/** Register one InstDef per spec whose set arrived (plus the brief's long-name aliases). */
-export function finishSampleBank(register: (defs: InstDef[]) => void): BankReport {
+const registered = new Set<string>();
+
+/** InstDefs (plus the brief's long-name aliases) for every spec whose set is in the bank and
+ *  that was not registered yet; `all` re-creates every one. */
+function pendingDefs(all: boolean): { defs: InstDef[]; ids: string[] } {
   const defs: InstDef[] = [];
-  const instruments: string[] = [];
+  const ids: string[] = [];
   for (const spec of SAMPLED_SPECS) {
     const set = bank.get(spec.set);
-    if (!set || !set.def.zones.length) continue;
-    defs.push(makeSampledInst(spec, set));
-    instruments.push(spec.id);
+    if (!set || !set.def.zones.length || (!all && registered.has(spec.id))) continue;
+    const d = makeSampledInst(spec, set);
+    defs.push(d);
+    ids.push(spec.id);
+    registered.add(spec.id);
+    for (const [alias, id] of Object.entries(INSTRUMENT_ALIASES)) if (id === spec.id) defs.push({ ...d, id: alias });
   }
-  for (const [alias, id] of Object.entries(INSTRUMENT_ALIASES)) {
-    const d = defs.find((x) => x.id === id);
-    if (d) defs.push({ ...d, id: alias });
+  return { defs, ids };
+}
+
+/** Register the instruments whose sets have arrived since the last call (incremental install:
+ *  a track can render as soon as its own sets are in). Returns the newly registered ids. */
+export function registerArrivedSets(register: (defs: InstDef[]) => void): string[] {
+  const { defs, ids } = pendingDefs(false);
+  if (defs.length) {
+    try {
+      register(defs);
+    } catch (e) {
+      pendingWarnings.push('register failed: ' + String(e));
+    }
   }
-  try {
-    register(defs);
-  } catch (e) {
-    pendingWarnings.push('register failed: ' + String(e));
-  }
-  const rep: BankReport = { ok: defs.length > 0, sets: bank.size, instruments, shifts: pendingShifts, bytes: sampleBankBytes(), warnings: pendingWarnings };
+  return ids;
+}
+
+/** Register every sampled instrument whose set arrived; final report of the bank. */
+export function finishSampleBank(register: (defs: InstDef[]) => void): BankReport {
+  registerArrivedSets(register);
+  const instruments = SAMPLED_SPECS.filter((s) => registered.has(s.id)).map((s) => s.id);
+  const rep: BankReport = { ok: instruments.length > 0, sets: bank.size, instruments, shifts: pendingShifts, bytes: sampleBankBytes(), warnings: pendingWarnings };
   pendingWarnings = [];
   pendingShifts = {};
   return rep;
+}
+
+/** Sets stored so far (names). */
+export function bankSetNames(): string[] {
+  return [...bank.keys()];
+}
+
+/** Sample sets an instrument id plays (empty for synthesized-only ids). */
+export function setsOfInstrument(id: string): string[] {
+  const real = INSTRUMENT_ALIASES[id] ?? id;
+  return SAMPLED_SPECS.filter((s) => s.id === real).map((s) => s.set);
 }
 
 /** Align, convert and store every set, then register the sampled instruments. */
@@ -350,10 +378,11 @@ export function sampleBankBytes(): number {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Resampling kernel: 8-tap Kaiser-windowed sinc, 4096 phases (nearest phase)
+// Resampling kernel: 16-tap Kaiser-windowed sinc (β 7, cutoff 0.95 × source Nyquist),
+// 4096 phases (nearest phase: ≤ 1/8192 sample timing error)
 // ---------------------------------------------------------------------------------------------
 
-const TAPS = 8;
+const TAPS = 16;
 const HALF = TAPS / 2;
 const PHASES = 4096;
 let KERNEL: Float32Array | null = null;
@@ -372,8 +401,8 @@ function bessel0(x: number): number {
 function kernel(): Float32Array {
   if (KERNEL) return KERNEL;
   const k = new Float32Array((PHASES + 1) * TAPS);
-  const beta = 6.0;
-  const cutoff = 0.94; // of the source Nyquist
+  const beta = 7;
+  const cutoff = 0.95; // of the source Nyquist
   const i0b = bessel0(beta);
   for (let p = 0; p <= PHASES; p++) {
     const frac = p / PHASES;
@@ -415,7 +444,15 @@ function resampleInto(src: Float32Array, out: Float32Array, inc: number, gain: n
         src[base + 4] * K[kp + 4] +
         src[base + 5] * K[kp + 5] +
         src[base + 6] * K[kp + 6] +
-        src[base + 7] * K[kp + 7];
+        src[base + 7] * K[kp + 7] +
+        src[base + 8] * K[kp + 8] +
+        src[base + 9] * K[kp + 9] +
+        src[base + 10] * K[kp + 10] +
+        src[base + 11] * K[kp + 11] +
+        src[base + 12] * K[kp + 12] +
+        src[base + 13] * K[kp + 13] +
+        src[base + 14] * K[kp + 14] +
+        src[base + 15] * K[kp + 15];
     } else {
       for (let t = 0; t < TAPS; t++) {
         const j = base + t;
@@ -435,7 +472,7 @@ interface Choice {
   zone: ZoneDef;
   /** target pitch after octave folding */
   midi: number;
-  /** extra detune (cents) and gain for synthetic round robins */
+  /** extra detune (cents) and gain for alternate takes */
   cents: number;
   gain: number;
 }
@@ -459,17 +496,14 @@ function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: 
     const z = spec.art && spec.rr === 'art' ? pool[(variant >> 0) % pool.length] : pool[0];
     return { zone: z, midi: z.p, cents: 0, gain: 1 };
   }
-  // fold into the playable range by octaves (the outermost zones already extend by a fourth)
+  // fold into the playable range by octaves (the build extends the outermost zones' key ranges
+  // by a fourth, or more where the instrument tolerates it — see ext_up in the build script)
   let lo = Infinity;
   let hi = -Infinity;
   for (const z of pool) {
     lo = Math.min(lo, z.lo);
     hi = Math.max(hi, z.hi);
   }
-  const up = spec.up ?? 0;
-  const down = spec.down ?? 0;
-  lo -= Math.max(0, down - 5);
-  hi += Math.max(0, up - 5);
   let m = midiIn;
   while (m < lo) m += 12;
   while (m > hi) m -= 12;
@@ -500,8 +534,6 @@ function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: 
       }
     }
     if (alt) zone = alt;
-    cents = 3;
-    gain = 0.93;
   }
   return { zone, midi: m, cents, gain };
 }
@@ -560,10 +592,41 @@ function naturalSec(z: ZoneDef, sr: number): number {
   return z.n / sr;
 }
 
-function lowpassInPlace(x: Float32Array, sr: number, fc: number): void {
-  // 6th-order Butterworth (three biquads), run forward only (phase shift is fine for tone)
-  const qs = [0.5176, 0.7071, 1.9319];
-  for (const q of qs) Biquad.lp(sr, fc, q).run(x);
+/**
+ * Zero-phase anti-alias low-pass for large upward shifts: 63-tap Kaiser-windowed sinc (β 8,
+ * stopband ≈ -80 dB). `fc` is the cutoff as a fraction of the sample rate (0..0.5).
+ */
+const FIR_N = 63;
+const firCache = new Map<number, Float32Array>();
+function firLowpassInPlace(x: Float32Array, fc: number): void {
+  const key = Math.round(fc * 1e5);
+  let h = firCache.get(key);
+  if (!h) {
+    h = new Float32Array(FIR_N);
+    const M = (FIR_N - 1) / 2;
+    const i0b = bessel0(8);
+    let sum = 0;
+    for (let k = 0; k < FIR_N; k++) {
+      const x0 = k - M;
+      const sinc = x0 === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * x0) / (Math.PI * x0);
+      const r = x0 / M;
+      const v = sinc * (bessel0(8 * Math.sqrt(Math.max(0, 1 - r * r))) / i0b);
+      h[k] = v;
+      sum += v;
+    }
+    for (let k = 0; k < FIR_N; k++) h[k] /= sum;
+    firCache.set(key, h);
+  }
+  const n = x.length;
+  const M = (FIR_N - 1) / 2;
+  const src = x.slice();
+  for (let i = 0; i < n; i++) {
+    let acc = 0;
+    const k0 = Math.max(0, M - i);
+    const k1 = Math.min(FIR_N, n - i + M);
+    for (let k = k0; k < k1; k++) acc += h[k] * src[i + k - M];
+    x[i] = acc;
+  }
 }
 
 function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
@@ -576,6 +639,7 @@ function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
     release: spec.release,
     ring: spec.ring,
     gate: spec.gate,
+    choke: spec.choke,
     layerOf(v: number): number {
       let l = 0;
       for (const t of thresholds) if (v >= t) l++;
@@ -612,7 +676,8 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   const g = z.g * gain * ch.gain;
   for (let c = 0; c < chans; c++) {
     const tmp = unroll(set, z, c, nSrc);
-    if (inc > 1.0) lowpassInPlace(tmp, set.sr, Math.min(0.45 * set.sr, (0.45 * set.sr) / inc));
+    // shifting up so far that source content would land above the output Nyquist: band-limit first
+    if (inc > 0.98) firLowpassInPlace(tmp, 0.46 / inc);
     // margin of HALF-1 zeros before the data so tap 0 can reach index -3
     const padded = new Float32Array(tmp.length + TAPS);
     padded.set(tmp, HALF - 1);

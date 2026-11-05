@@ -79,7 +79,12 @@ export function sampleSetUrls(): Record<string, string> {
  * (and not kept here, so the decoded float PCM never piles up on the main thread); otherwise
  * everything is returned at the end. Resolves null when nothing could be decoded.
  */
-export async function loadSampleBank(concurrency = 2, onSet?: (def: SampleSetDef, pcm: SetPcm) => void): Promise<{ data: BankData; stats: BankLoadStats } | null> {
+export async function loadSampleBank(
+  concurrency = 2,
+  onSet?: (def: SampleSetDef, pcm: SetPcm) => void,
+  /** called whenever a decoder slot frees up: set names to decode first (e.g. the requested track's) */
+  priority?: () => string[],
+): Promise<{ data: BankData; stats: BankLoadStats } | null> {
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const stats: BankLoadStats = { ms: 0, sets: 0, failed: [], mp3Bytes: 0, pcmBytes: 0, rates: [] };
   try {
@@ -87,9 +92,21 @@ export async function loadSampleBank(concurrency = 2, onSet?: (def: SampleSetDef
     const urls = sampleSetUrls();
     const pcm: SetPcm[] = [];
     const queue = SAMPLE_SETS.slice();
+    const take = (): SampleSetDef | undefined => {
+      try {
+        const want = priority ? priority() : [];
+        for (const name of want) {
+          const i = queue.findIndex((d) => d.name === name);
+          if (i >= 0) return queue.splice(i, 1)[0];
+        }
+      } catch {
+        /* ignore */
+      }
+      return queue.shift();
+    };
     const worker = async () => {
       while (queue.length) {
-        const def = queue.shift();
+        const def = take();
         if (!def) break;
         try {
           const url = urls[def.name];

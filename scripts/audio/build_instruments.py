@@ -35,7 +35,7 @@ import numpy as np
 from scipy import signal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from instrument_dsp import (crossfade_loop, db, loop_corr, measure_pitch_narrow, decode_mp3, encode_mp3, envelope, fade, find_loop, ftom,  # noqa: E402
+from instrument_dsp import (crossfade_loop, db, loop_corr, max_short_loudness, measure_pitch_centroid, measure_pitch_hsum, measure_pitch_narrow, decode_mp3, encode_mp3, envelope, fade, find_loop, ftom,  # noqa: E402
                             load_audio, loudness, measure_pitch, mtof, note_name, onset_index, resample, rms,
                             seam_click, to_mono)
 from instrument_sources import REPOS, Region, Sources, parse_sfz  # noqa: E402
@@ -95,9 +95,12 @@ class SetSpec:
     max_sfz_end: float = 3.0  # use the SFZ loop only if it ends before this (s after onset)
     xfade: float = 0.06  # loop crossfade (s, capped at a third of the loop)
     loud_win: tuple[float, float] = (0.0, 0.4)  # loudness window after onset (s) when not looped
+    loud_max: bool = False  # normalise on the loudest 0.3 s window instead (one-shots that build up)
     fade_out: float = 0.08
-    pitch_harmonics: int = 2
-    pitch_win: tuple[float, float] = (0.06, 0.5)
+    pitch_harmonics: int = 2  # YIN fallback refinement
+    partials: int = 4  # partials combined by the centroid pitch (1 for inharmonic mallets/bells)
+    pitch_method: str = 'centroid'  # 'hsum' = harmonic-sum (voice ensembles)
+    pitch_win: tuple[float, float] = (0.05, 0.4)
     octave: float | None = None  # known octave correction (None = vote by measuring)
     min_decay: float = 3.0  # dB/s floor for decaying loops
     trust_below: float = -1  # zones with nominal pitch below / above these use the nominal pitch
@@ -334,8 +337,8 @@ SETS: list[SetSpec] = [
             note='Meta nylon guitar: fingerstyle + firm pick layers'),
     SetSpec('steelguitar', 'meta', meta_guitar_cands('steel', ['Vel02'], 3, 40, 84), 'decay',
             quality=5, octave=0, t_store=0.95, loop_len=0.16, loud_win=(0.0, 0.3), min_decay=4),
-    SetSpec('piano', 'meta', meta_piano_cands, 'decay', quality=4.5, octave=0, t_store=0.9, loop_len=0.2,
-            loud_win=(0.0, 0.4), min_decay=2, pitch_harmonics=1, ext_down=3, ext_up=3, trust_below=30, trust_above=100,
+    SetSpec('piano', 'meta', meta_piano_cands, 'decay', partials=2, quality=4.5, octave=0, t_store=0.9, loop_len=0.2,
+            loud_win=(0.0, 0.4), min_decay=2, pitch_harmonics=1, ext_down=3, ext_up=3, trust_below=40,
             note='Meta upright piano: mp + ff layers, a zone every major third'),
     SetSpec('harpsichord', 'vcsl', harpsichord_cands, 'decay', quality=5, t_store=0.8, loop_len=0.12,
             loud_win=(0.0, 0.3), min_decay=4, note='VCSL Italian harpsichord (stop 1)'),
@@ -354,13 +357,14 @@ SETS: list[SetSpec] = [
         sso_cands('1st Violins', r'1st-violins-stc-rr2-([a-g]#?\d)\.wav', rr=1),
         sso_cands('Celli', r'celli-stc-rr1-([a-g]#?\d)\.wav', rr=0, hi=54),
         sso_cands('Celli', r'celli-stc-rr2-([a-g]#?\d)\.wav', rr=1, hi=54)),
-            'oneshot', quality=5, t_store=0.42, fade_out=0.1, loud_win=(0.0, 0.15),
+            'oneshot', quality=5, t_store=0.42, fade_out=0.1, loud_win=(0.0, 0.15), pitch_win=(0.03, 0.2),
             note='SSO 1st violins + celli staccato, 2 round robins'),
     SetSpec('pizz', 'sso', join(sso_cands('1st Violins', r'1st-violins-piz-rr1-([a-g]#?\d)\.wav', rr=0),
                                 sso_cands('1st Violins', r'1st-violins-piz-rr2-([a-g]#?\d)\.wav', rr=1),
                                 sso_cands('Celli', r'celli-piz-rr1-([a-g]#?\d)\.wav', rr=0, hi=54),
                                 sso_cands('Celli', r'celli-piz-rr2-([a-g]#?\d)\.wav', rr=1, hi=54)),
-            'oneshot', quality=5, t_store=0.6, fade_out=0.15, loud_win=(0.0, 0.2)),
+            'oneshot', quality=5, t_store=0.6, fade_out=0.15, loud_win=(0.0, 0.2), pitch_win=(0.02, 0.15),
+            note='SSO 1st violins + celli pizzicato, 2 round robins (rr2 files are a semitone off their names: measured)'),
     SetSpec('ubass', 'sso', join(sso_cands('Bass', r'bass-piz-rr\d-([a-g]#?\d)\.flac')), 'decay', quality=5,
             t_store=0.85, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=4, pitch_harmonics=1,
             note='SSO solo double bass pizzicato'),
@@ -397,30 +401,31 @@ SETS: list[SetSpec] = [
     SetSpec('bassoon', 'sso', sso_cands('Bassoon', r'bassoon-([a-g]#?\d)\.wav'), 'sustain', quality=5.5,
             pre_ms=4, loop_min=0.35, loop_max=0.8, loop_len=0.4, xfade=0.08, pitch_harmonics=1),
     # --- voices / organ ------------------------------------------------------------------------
-    SetSpec('choir', 'sso', join(sso_cands('Chorus', r'chorus-female-([a-g]#?\d)\.wav', offset=40000, every=2),
-                                 sso_cands('Chorus', r'chorus-male-([a-g]#?\d)\.wav', offset=40000, every=2)),
+    SetSpec('choir', 'sso', sfz_cands('sso', f'{SSO}/Chorus - Performance/Mixed Chorus.sfz', every=2, use_volume=False),
             'sustain', quality=5, pre_ms=10, slow_onset=True, loop_min=0.35, loop_max=0.9, loop_len=0.6, xfade=0.15,
-            note='SSO mixed chorus "aah", every other semitone, attack offset as in the SFZ'),
+            octave=0, pitch_method='hsum',
+            note='SSO mixed chorus "aah", every other semitone, attack offset as in the SFZ; pitch by harmonic sum '
+                 '(the SFZ tune values are off by up to 45 cents on the male chorus)'),
     SetSpec('organ', 'sso', organ_cands, 'sustain', quality=5, pre_ms=3, octave=0, loop_min=0.3, loop_max=0.7,
             loop_len=0.3, xfade=0.05, note="SSO pipe organ: open diapason 8' + principal 4' + fifteenth 2'"),
     # --- mallets / bells -----------------------------------------------------------------------
-    SetSpec('glock', 'sso', sso_cands('Percussion', r'glockenspiel-([a-g]#?\d)\.wav'), 'decay', quality=5,
+    SetSpec('glock', 'sso', sso_cands('Percussion', r'glockenspiel-([a-g]#?\d)\.wav'), 'decay', partials=1, quality=5,
             t_store=0.7, loop_len=0.08, loud_win=(0.0, 0.3), min_decay=3, pitch_harmonics=1),
-    SetSpec('xylophone', 'sso', sso_cands('Percussion', r'xylophone-([a-g]#?\d)\.wav'), 'oneshot', quality=5,
+    SetSpec('xylophone', 'sso', sso_cands('Percussion', r'xylophone-([a-g]#?\d)\.wav'), 'oneshot', partials=1, quality=5,
             t_store=0.45, fade_out=0.1, loud_win=(0.0, 0.15), pitch_harmonics=1),
-    SetSpec('vibes', 'sso', sso_cands('Vibraphone', r'vibraphone-([a-g]#?\d)\.flac'), 'decay', quality=5,
+    SetSpec('vibes', 'sso', sso_cands('Vibraphone', r'vibraphone-([a-g]#?\d)\.flac'), 'decay', partials=1, quality=5,
             t_store=1.1, loop_len=0.2, loud_win=(0.0, 0.4), min_decay=2, pitch_harmonics=1),
     SetSpec('celesta', 'sso', join(sso_cands('Celeste', r'celeste-([a-g]#?\d)-hard\.flac', layer=1),
                                    sso_cands('Celeste', r'celeste-([a-g]#?\d)-soft\.flac', layer=0, every=2)),
-            'decay', quality=5, t_store=0.7, loop_len=0.1, loud_win=(0.0, 0.3), min_decay=3, pitch_harmonics=1),
-    SetSpec('chimes', 'sso', sso_cands('Percussion', r'chimes-([a-g]#?\d)\.wav', every=2), 'decay', quality=5.5,
+            'decay', partials=1, quality=5, t_store=0.7, loop_len=0.1, loud_win=(0.0, 0.3), min_decay=3, pitch_harmonics=1),
+    SetSpec('chimes', 'sso', sso_cands('Percussion', r'chimes-([a-g]#?\d)\.wav', every=2), 'decay', partials=1, quality=5.5,
             t_store=1.8, loop_len=0.3, loud_win=(0.0, 0.5), min_decay=2, pitch_harmonics=1, octave=0, trust_above=-1,
             note='SSO chimes (tubular bells); strike-tone pitch = SFZ mapping'),
     SetSpec('timpani', 'sso', sfz_cands('sso', f'{SSO}/Percussion/Timpani.sfz',
                                         keep=lambda r: re.search(r'timpani-(f-lh|f-rh|p-lh)-', r.sample) is not None,
                                         layer_of=lambda r: 1 if '-f-' in r.sample else 0,
                                         rr_of=lambda r: 1 if '-rh-' in r.sample else 0, use_volume=False),
-            'decay', quality=5.5, t_store=1.0, loop_len=0.25, loud_win=(0.0, 0.3), min_decay=4, pitch_harmonics=1,
+            'decay', partials=1, quality=5.5, t_store=1.0, loop_len=0.25, loud_win=(0.0, 0.3), min_decay=4, pitch_harmonics=1,
             octave=0, trust_above=-1,
             note='SSO timpani: forte (2 round robins) + piano layers; pitch = SFZ keycenter + tune (inharmonic)'),
     # --- unpitched percussion ------------------------------------------------------------------
@@ -430,17 +435,17 @@ SETS: list[SetSpec] = [
         vc(f'{VCSL_I}/Tambourine 1/Tamb1_Hit_v2_rr1_Mid.wav', rr=4), vc(f'{VCSL_I}/Tambourine 2/Tamb2_Hit_v2_rr2_Mid.wav', rr=5),
         vc(f'{VCSL_I}/Tambourine 1/Tamb1_Roll_v2_rr1_Mid.wav', rr=6, t_store=0.7),
         vc(f'{VCSL_I}/Tambourine 2/Tamb2_Roll_v2_rr1_Mid.wav', rr=7, t_store=0.7)]),
-            'oneshot', quality=5, t_store=0.45, fade_out=0.1, loud_win=(0.0, 0.12), octave=0,
+            'oneshot', sr=44100, quality=5, t_store=0.45, fade_out=0.1, loud_win=(0.0, 0.12), octave=0, loud_max=True,
             note='VCSL tambourines: hit, shake, accent, roll (2 takes each) = synth variant semantics'),
     SetSpec('snare', 'vcsl', fixed([
         vc(f'{VCSL_M}/Snare Drum, Rope Tension/Hi/RopeSnare_hi_sn_Main_vl{v}_rr{r}.wav', layer=v - 1, rr=i)
         for v, rrs in ((1, (1, 2)), (2, (1, 2)), (3, (1, 3)), (4, (1, 2))) for i, r in enumerate(rrs)]),
-            'oneshot', quality=5, t_store=0.5, fade_out=0.12, loud_win=(0.0, 0.1), octave=0,
+            'oneshot', sr=44100, quality=5, t_store=0.5, fade_out=0.12, loud_win=(0.0, 0.1), octave=0,
             note='VCSL rope-tension snare (high), 4 dynamics x 2 round robins'),
     SetSpec('crash', 'vcsl', fixed([
         vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_mf1.wav', 0, 0), vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_mf2.wav', 0, 1),
         vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_ff2.wav', 1, 0), vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_ff3.wav', 1, 1)]),
-            'decay', quality=5, t_store=1.4, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=4, octave=0,
+            'decay', sr=44100, quality=5, t_store=1.4, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=4, octave=0, loud_max=True,
             note='VCSL clash cymbals (piatti)'),
     SetSpec('kick', 'vcsl', fixed([
         vc(f'{VCSL_M}/Bass Drum 1/BDrumNew_hit_v{v}_rr{r}_Sum.wav', layer=li, rr=r - 1)
@@ -450,21 +455,21 @@ SETS: list[SetSpec] = [
     SetSpec('triangle', 'vcsl', fixed([
         vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v1_rr1_Mid.wav', 0, 0), vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v1_rr2_Mid.wav', 0, 1),
         vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v2_rr1_Mid.wav', 1, 0), vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v2_rr2_Mid.wav', 1, 1)]),
-            'decay', quality=5, t_store=0.9, loop_len=0.2, loud_win=(0.0, 0.4), min_decay=3, octave=0),
+            'decay', sr=44100, quality=5, t_store=0.9, loop_len=0.2, loud_win=(0.0, 0.4), min_decay=3, octave=0, loud_max=True),
     SetSpec('shaker', 'vcsl', fixed([
         vc(f'{VCSL_I}/Shaker, Small/Mid_ShakerHighFaster_Down_rr1.wav', rr=0),
         vc(f'{VCSL_I}/Shaker, Small/Mid_ShakerHighFaster_Up_rr1.wav', rr=1),
         vc(f'{VCSL_I}/Shaker, Small/Mid_ShakerHighFaster_Down_rr2.wav', rr=2),
         vc(f'{VCSL_I}/Shaker, Small/Mid_ShakerHighFaster_Up_rr2.wav', rr=3)]),
-            'oneshot', quality=5.5, t_store=0.3, fade_out=0.08, loud_win=(0.0, 0.12), octave=0),
+            'oneshot', sr=44100, quality=5.5, t_store=0.3, fade_out=0.08, loud_win=(0.0, 0.12), octave=0),
     SetSpec('panclang', 'vcsl', fixed([
         vc(f'{VCSL_I}/Brake Drum/BrakeDrum1_Hammer_v2_rr1_Mid.wav', 0, 0), vc(f'{VCSL_I}/Brake Drum/BrakeDrum2_Hammer3_v2_rr1_Mid.wav', 0, 1),
         vc(f'{VCSL_I}/Brake Drum/BrakeDrum1_Hammer_v3_rr1_Mid.wav', 1, 0), vc(f'{VCSL_I}/Brake Drum/BrakeDrum2_Hammer3_v3_rr1_Mid.wav', 1, 1)]),
-            'decay', quality=5, t_store=0.8, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=6, octave=0,
+            'decay', quality=5, t_store=0.8, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=6, octave=0, loud_max=True,
             note='VCSL brake drums struck with a hammer (frying-pan clang)'),
     SetSpec('anvil', 'vcsl', fixed([
         vc(f'{VCSL_I}/Anvil/Anvil_Hit{h}_v{v}_rr1_Mid.wav', layer=v - 1, rr=h - 1) for h in (1, 2) for v in (1, 2, 3)]),
-            'decay', quality=5, t_store=0.9, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=5, octave=0),
+            'decay', quality=5, t_store=0.9, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=5, octave=0, loud_max=True),
     SetSpec('castanets', 'worldperc', fixed([
         vc(f'samples/Castanets/{n:02d}.flac', rr=i) for i, n in enumerate((1, 4, 7, 10))]),
             'oneshot', quality=5.5, t_store=0.22, fade_out=0.05, loud_win=(0.0, 0.08), octave=0),
@@ -478,39 +483,39 @@ SETS: list[SetSpec] = [
             'oneshot', quality=5.5, t_store=0.3, fade_out=0.08, loud_win=(0.0, 0.08), octave=0),
     SetSpec('vibraslap', 'vcsl', fixed([
         vc(f'{VCSL_I}/Vibraslap/Legacy/vibraslap_rr{r}.wav', rr=r - 1) for r in (1, 2)]),
-            'oneshot', quality=5.5, t_store=1.2, fade_out=0.3, loud_win=(0.0, 0.3), octave=0),
+            'oneshot', quality=5.5, t_store=1.2, fade_out=0.3, loud_win=(0.0, 0.3), octave=0, loud_max=True),
     SetSpec('flexatone', 'vcsl', fixed([
         vc(f'{VCSL_I}/Flexatone/flexatone1.wav', rr=0), vc(f'{VCSL_I}/Flexatone/flexatone2.wav', rr=1),
         vc(f'{VCSL_I}/Flexatone/flexatone_fast.wav', rr=2), vc(f'{VCSL_I}/Flexatone/flexatone_long.wav', rr=3, t_store=2.2)]),
-            'oneshot', quality=5.5, t_store=1.4, fade_out=0.3, loud_win=(0.0, 0.4), octave=0),
+            'oneshot', quality=5.5, t_store=1.4, fade_out=0.3, loud_win=(0.0, 0.4), octave=0, loud_max=True),
     SetSpec('cymbal', 'vcsl', fixed([
         vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_hit_mp1.wav', 0, 0), vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_hit_f1.wav', 1, 0),
         vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_roll_f1_nloop.wav', 0, 1, mode='sustain', loop_len=0.6)]),
-            'decay', quality=5, t_store=1.5, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=3, octave=0,
+            'decay', sr=44100, quality=5, t_store=1.5, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=3, octave=0, loud_max=True,
             loop_min=0.9, loop_max=1.6, xfade=0.2, note='VCSL suspended cymbal: hits + looped roll (variant 1)'),
     SetSpec('bassdrum', 'vcsl', fixed([
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_mf1.wav', 0, 0), vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_f.wav', 1, 0),
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_ff.wav', 2, 0),
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_roll_mf.wav', 0, 1, mode='sustain', loop_len=0.5)]),
-            'decay', quality=5.5, t_store=1.2, loop_len=0.3, loud_win=(0.0, 0.4), min_decay=4, octave=0,
+            'decay', quality=5.5, t_store=1.2, loop_len=0.3, loud_win=(0.0, 0.4), min_decay=4, octave=0, loud_max=True,
             loop_min=0.8, loop_max=1.6, xfade=0.15, note='VCSL concert bass drum: hits + looped roll (variant 1)'),
     SetSpec('tamtam', 'sso', fixed([
         Cand(path=f'{SSOS}/Percussion/tamtam-a.wav', nominal=60, pitched=False, label='tamtam-a'),
         Cand(path=f'{SSOS}/Percussion/tamtam-b.wav', nominal=60, rr=1, pitched=False, label='tamtam-b')]),
-            'decay', quality=5.5, t_store=1.8, loop_len=0.5, loud_win=(0.0, 0.8), min_decay=1.5, octave=0),
+            'decay', quality=5.5, t_store=1.8, loop_len=0.5, loud_win=(0.0, 0.8), min_decay=1.5, octave=0, loud_max=True),
     SetSpec('claves', 'vcsl', fixed([
         vc(f'{VCSL_I}/Claves/Claves{c}_Hit_v{v}_rr1_Mid.wav', layer=li, rr=c - 1) for c in (1, 2) for li, v in enumerate((1, 3))]),
             'oneshot', quality=5.5, t_store=0.25, fade_out=0.06, loud_win=(0.0, 0.06), octave=0),
     SetSpec('ratchet', 'vcsl', fixed([
         vc(f'{VCSL_I}/Ratchet/Ratchet1_Fast_rr1_Mid.wav', rr=0), vc(f'{VCSL_I}/Ratchet/Ratchet1_Slow_rr1_Mid.wav', rr=1),
         vc(f'{VCSL_I}/Ratchet/Ratchet2_Crank_v1_rr1_Mid.wav', rr=2)]),
-            'oneshot', quality=5.5, t_store=1.2, fade_out=0.25, loud_win=(0.0, 0.4), octave=0),
+            'oneshot', quality=5.5, t_store=1.2, fade_out=0.25, loud_win=(0.0, 0.4), octave=0, loud_max=True),
     SetSpec('toywhistle', 'vcsl', fixed([
         vc(f'Aerophones/Edge-blown Aerophones/Train Whistle, Toy/Main_Train{n}-001.wav', rr=i)
         for i, n in enumerate(('Low_Short', 'Med_Short', 'Low_Double', 'Low_Fall'))]),
-            'oneshot', quality=5.5, t_store=1.4, fade_out=0.25, loud_win=(0.0, 0.4), octave=0),
+            'oneshot', quality=5.5, t_store=1.4, fade_out=0.25, loud_win=(0.0, 0.4), octave=0, loud_max=True),
     SetSpec('orchhit', 'gleitz', gleitz_cands('orchestra_hit', ['C3', 'Gb3', 'C4', 'Gb4', 'C5', 'Gb5']), 'oneshot',
-            quality=5, t_store=0.9, fade_out=0.25, loud_win=(0.0, 0.25), pitch_harmonics=1, octave=0,
+            partials=1, quality=5, t_store=0.9, fade_out=0.25, loud_win=(0.0, 0.25), pitch_harmonics=1, octave=0,
             note='MusyngKite GM orchestra hit (CC BY-SA 3.0)'),
 ]
 
@@ -594,17 +599,21 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
         elif mode == 'sustain':
             w0, w1 = pre + int(spec.loop_min * sr), min(x.shape[1], pre + int((spec.loop_max + 0.5) * sr))
         w1 = min(w1, x.shape[1])
-        pm = measure_pitch(x, sr, w0, w1, nominal_midi=nominal, harmonics=spec.pitch_harmonics)
+        # precise pitch: partial centroids near the expected (octave-corrected) pitch; the file
+        # name / SFZ key is only trusted to +-1.4 semitones (some sources are mislabelled)
+        if spec.pitch_method == 'hsum':
+            pm = measure_pitch_hsum(x, sr, w0, w1, nominal, span=1.0)
+        else:
+            pm = measure_pitch_centroid(x, sr, w0, w1, nominal, span=1.4, harmonics=spec.partials)
         info['measured'] = pm
-        if pm is None or abs(pm - nominal) > 1.5:
-            # detector picked another partial: search the fundamental near the expected pitch
-            pn = measure_pitch_narrow(x, sr, w0, w1, nominal)
-            info['narrow'] = pn
-            pm = pn
+        if pm is None:
+            # no clean partial: free detector restricted to the expected octave
+            pm = measure_pitch(x, sr, w0, w1, nominal_midi=nominal, harmonics=spec.pitch_harmonics)
+            info['yin'] = pm
         if pm is not None and abs(pm - nominal) <= 1.5:
             pitch = pm
-            if abs(pm - nominal) > 0.6:
-                info['relabeled'] = round(pm - nominal, 2)  # sample is off its file name/SFZ key
+            if abs(pitch - nominal) > 0.6:
+                info['relabeled'] = round(pitch - nominal, 2)  # sample is off its file name/SFZ key
         else:
             info['pitch_fallback'] = None if pm is None else round(pm, 2)
     info['nominal'] = nominal
@@ -624,10 +633,20 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
             L = int(loop_len * sr)
             if per:
                 L = int(round(max(1, round(L / per)) * per))
+            span = max(0.15 * L, 1.2 * per) if per else 0.15 * L
             ls, le, corr = find_loop(x, sr, pre + int(spec.loop_min * sr), pre + int(spec.loop_max * sr),
-                                     int(L * 0.85), int(L * 1.15))
+                                     int(L - span), int(L + span))
             info['loop'] = 'found'
         info['loop_corr'] = round(corr, 4)
+        # the loop is what long notes play: (re)measure the pitch over it
+        if c.pitched and not info.get('trusted') and 'pitch_fallback' not in info and le - ls > int(0.15 * sr):
+            if spec.pitch_method == 'hsum':
+                pl = measure_pitch_hsum(x, sr, ls, le, round(pitch * 2) / 2, span=0.6)
+            else:
+                pl = measure_pitch_centroid(x, sr, ls, le, pitch, span=0.6, harmonics=spec.partials)
+            if pl is not None and abs(pl - pitch) < 0.6:
+                info['pitch_attack'] = round(pitch, 3)
+                pitch = pl
         xf = int(min(spec.xfade * sr, (le - ls) / 3))
         x = crossfade_loop(x, ls, le, xf)
         loop = (ls, le)
@@ -640,7 +659,8 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
             L = int(round(max(1, round(L / per)) * per))
         ls_target = end - L
         if ls_target > pre + int(0.12 * sr) and end <= x.shape[1]:
-            ls, le, corr = find_loop(x, sr, ls_target - int(0.03 * sr), ls_target, int(L * 0.9), int(L * 1.1))
+            span = max(0.1 * L, 1.2 * per) if per else 0.1 * L  # at least a period either way
+            ls, le, corr = find_loop(x, sr, ls_target - int(0.03 * sr), ls_target, int(L - span), int(L + span))
             # decay rate from the envelope over the 0.5 s before the loop end
             a0 = max(pre + int(0.05 * sr), le - int(0.5 * sr))
             seg = env[a0:le]
@@ -668,8 +688,11 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     if pre > 0:
         x = fade(x, pre, 0)
     # loudness → gain
-    if loop and mode == 'sustain':
-        lu = loudness(x, sr, loop[0], loop[1])
+    if spec.loud_max:
+        lu = max_short_loudness(x, sr, pre, x.shape[1])
+    elif loop and mode == 'sustain':
+        # what a typical note plays: the early sustain and the loop (not the first 100 ms)
+        lu = loudness(x, sr, min(loop[0], pre + int(0.1 * sr)), loop[1])
     else:
         lu = loudness(x, sr, pre + int(spec.loud_win[0] * sr), pre + int(spec.loud_win[1] * sr))
     pk = float(np.max(np.abs(x))) + 1e-12
@@ -896,6 +919,24 @@ def write_credits(sets: list[dict]) -> None:
     for repo in sorted({s['repo'] for s in sets}):
         lic = REPOS[repo][1]
         L.append(f'- **{repo}** ({lic}): {SOURCE_NOTES.get(repo, REPOS[repo][2])}')
+    # arranger reference: playable range per instrument id
+    L += ['', '## Instrument reference (for arrangers)', '',
+          'Sounding pitch, MIDI (C4 = 60). "zones" = the recorded range; notes up to the "playable" edges are pitch-shifted',
+          'from the nearest recording; notes beyond fold by whole octaves into the playable range. Velocity selects the',
+          'layer (thresholds in `src/audio/sampled.ts`) and scales the gain; variants are round robins or articulations.', '',
+          '| ids | set | zones (recorded) | playable | layers | round robins |', '|---|---|---|---|---|---|']
+    for st in sets:
+        zs = st['zones']
+        roots = sorted(z['p'] for z in zs)
+        lo = min(z['lo'] for z in zs)
+        hi = max(z['hi'] for z in zs)
+        layers = len({z['l'] for z in zs})
+        rrs = len({z['r'] for z in zs})
+        ids = ', '.join(f'`{i}`' for i in users.get(st['name'], [])) or '—'
+        pitched = len({round(r) for r in roots}) > 1
+        rng = f"{note_name(round(roots[0]))}–{note_name(round(roots[-1]))} ({round(roots[0])}–{round(roots[-1])})" if pitched else 'unpitched'
+        play = f"{note_name(lo)}–{note_name(hi)} ({lo}–{hi})" if pitched else '—'
+        L.append(f"| {ids} | `{st['name']}` | {rng} | {play} | {layers} | {rrs} |")
     L += ['', 'Share-alike: the files derived from CC BY-SA 3.0 sources (`horns`, `orchhit`) are themselves CC BY-SA 3.0;',
           'the files derived from Sonatina Symphonic Orchestra are under CC Sampling Plus 1.0.', '',
           '## Sample sets (file → instruments → exact source files)', '']

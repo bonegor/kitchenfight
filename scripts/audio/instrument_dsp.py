@@ -95,10 +95,12 @@ def encode_mp3(x: np.ndarray, sr: int, path: str, quality: float = 4, abr: int |
             cmd += ['-b:a', f'{abr}k', '-abr', '1']
         else:
             cmd += ['-q:a', str(quality)]
-        cmd += ['-ar', str(sr), '-ac', str(y.shape[0]), '-id3v2_version', '0', '-write_xing', '1', path]
+        tmp = path + '.part.mp3'
+        cmd += ['-ar', str(sr), '-ac', str(y.shape[0]), '-id3v2_version', '0', '-write_xing', '1', tmp]
         r = subprocess.run(cmd, capture_output=True)
         if r.returncode != 0:
             raise RuntimeError(f'mp3 encode failed: {r.stderr[:300]}')
+        os.replace(tmp, path)  # atomic: readers never see a half-written file
     return os.path.getsize(path)
 
 
@@ -154,6 +156,19 @@ def loudness(x: np.ndarray, sr: int, start: int = 0, end: int | None = None) -> 
         return -120.0
     p = float(np.mean(np.sum(np.square(k), axis=0)))
     return 10 * math.log10(max(1e-14, p))
+
+
+def max_short_loudness(x: np.ndarray, sr: int, start: int = 0, end: int | None = None, win: float = 0.3) -> float:
+    """Loudest K-weighted `win`-second window between start and end (dB): the perceived peak
+    loudness of one-shots whose level builds up or varies (flexatone, ratchet, rolls)."""
+    x = np.atleast_2d(x)
+    end = x.shape[1] if end is None else min(end, x.shape[1])
+    k = k_weight(x[:, start:end], sr)
+    p = np.sum(np.square(k), axis=0)
+    n = max(1, min(len(p), int(win * sr)))
+    cs = np.concatenate([[0.0], np.cumsum(p)])
+    ms = (cs[n:] - cs[:-n]) / n
+    return 10 * math.log10(max(1e-14, float(np.max(ms)) if len(ms) else 1e-14))
 
 
 def envelope(x: np.ndarray, sr: int, win: float = 0.005) -> np.ndarray:
@@ -283,6 +298,76 @@ def measure_pitch(x: np.ndarray, sr: int, start: int, end: int, nominal_midi: fl
     if not (f > 0 and math.isfinite(f)):
         return None
     return ftom(f)
+
+
+def measure_pitch_centroid(x: np.ndarray, sr: int, start: int, end: int, expected_midi: float,
+                           span: float = 1.4, harmonics: int = 4, min_prom: float = 15.0) -> float | None:
+    """Precise pitch when the octave is known. For each of the first `harmonics` partials, the
+    strongest peak within +-span semitones of h * f(expected) is refined to the power-weighted
+    centroid of the spectrum within +-max(30 cents, 2.5 analysis bins) (split modes and two-reed
+    musette pairs give their perceived centre). Partials that stand out (>= min_prom dB above the
+    band median, within 25 dB of the strongest) are combined, weighted by h (a higher partial
+    resolves the pitch better); partials that disagree with the lowest one by > 35 cents
+    (inharmonic modes) are dropped. Returns fractional MIDI or None."""
+    seg = to_mono(x)[start:end]
+    n = len(seg)
+    if n < int(0.04 * sr):
+        return None
+    w = signal.windows.blackmanharris(n)
+    N = 1 << int(math.ceil(math.log2(n * 8)))
+    P = np.abs(np.fft.rfft((seg - np.mean(seg)) * w, N)) ** 2
+    f = np.fft.rfftfreq(N, 1 / sr)
+    fe = mtof(expected_midi)
+    cands = []
+    for h in range(1, harmonics + 1):
+        lo = np.searchsorted(f, h * fe * 2 ** (-span / 12))
+        hi = np.searchsorted(f, h * fe * 2 ** (span / 12))
+        if hi <= lo + 4 or hi >= len(P) - 2 or h * fe > 0.45 * sr:
+            continue
+        band = P[lo:hi]
+        k = lo + int(np.argmax(band))
+        prom = 10 * math.log10((P[k] + 1e-30) / (np.median(band) + 1e-30))
+        half = max(f[k] * (2 ** (30 / 1200) - 1), 2.5 * sr / n)
+        a = np.searchsorted(f, f[k] - half)
+        b = np.searchsorted(f, f[k] + half) + 1
+        fc = float(np.sum(f[a:b] * P[a:b]) / (np.sum(P[a:b]) + 1e-30))
+        cands.append((h, fc / h, prom, P[k]))
+    if not cands:
+        return None
+    top = max(c[3] for c in cands)
+    good = [c for c in cands if c[2] >= min_prom and c[3] >= top * 10 ** (-2.5)]
+    if not good:
+        return None
+    ref = good[0][1]
+    good = [c for c in good if abs(1200 * math.log2(c[1] / ref)) <= 35]
+    f0 = sum(c[0] * c[1] for c in good) / sum(c[0] for c in good)
+    return ftom(f0)
+
+
+def measure_pitch_hsum(x: np.ndarray, sr: int, start: int, end: int, expected_midi: float,
+                       span: float = 1.0, harmonics: int = 10) -> float | None:
+    """Harmonic-sum pitch: the f0 within +-span semitones of the expected pitch that maximises
+    the summed log magnitude at its first `harmonics` partials (0.5 cent grid). Robust for voice
+    ensembles, whose fundamental is weak and whose partials are broadened by vibrato and spread."""
+    seg = to_mono(x)[start:end]
+    if len(seg) < int(0.1 * sr):
+        return None
+    w = signal.windows.blackmanharris(len(seg))
+    N = 1 << int(math.ceil(math.log2(len(seg) * 8)))
+    L = np.log(np.abs(np.fft.rfft((seg - np.mean(seg)) * w, N)) + 1e-9)
+    f = np.fft.rfftfreq(N, 1 / sr)
+    hs = np.arange(1, harmonics + 1)
+    best = None
+    for c in np.arange(-span * 100, span * 100 + 0.25, 0.5):
+        f0 = mtof(expected_midi) * 2 ** (c / 1200)
+        idx = np.searchsorted(f, f0 * hs)
+        idx = idx[idx < len(L)]
+        if not len(idx):
+            continue
+        sc = float(np.sum(L[idx]))
+        if best is None or sc > best[0]:
+            best = (sc, c)
+    return expected_midi + best[1] / 100 if best else None
 
 
 def measure_pitch_narrow(x: np.ndarray, sr: int, start: int, end: int, nominal_midi: float,

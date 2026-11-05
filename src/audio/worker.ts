@@ -7,7 +7,7 @@ import type { MusicId, SfxId, VoiceMood } from './audio';
 import { Slicer } from './dsp';
 import { INSTRUMENTS } from './instruments';
 import { clearSampleCache, renderSong } from './render';
-import { addSampleSet, finishSampleBank, installSampleBank, type BankData, type SampleSetDef, type SetPcm } from './sampled';
+import { addSampleSet, finishSampleBank, installSampleBank, registerArrivedSets, type BankData, type SampleSetDef, type SetPcm } from './sampled';
 import { renderSfx } from './sfx';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
@@ -27,17 +27,20 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
   const req = e.data;
   const { seq } = req;
   try {
+    const register = (defs: Parameters<Parameters<typeof finishSampleBank>[0]>[0]) => {
+      for (const d of defs) INSTRUMENTS[d.id] = d;
+    };
     if (req.type === 'bankSet') {
-      // one decoded sample set (sent as soon as it is decoded)
+      // one decoded sample set (sent as soon as it is decoded); its instruments switch from the
+      // synthesized to the sampled version right away (renders already queued keep their order)
       const t0 = performance.now();
       const ok = addSampleSet(req.set, req.pcm);
-      post({ seq, ok, ms: performance.now() - t0 });
+      const ids = ok ? registerArrivedSets(register) : [];
+      if (ids.length) clearSampleCache();
+      post({ seq, ok, ids, ms: performance.now() - t0 });
     } else if (req.type === 'bankDone' || req.type === 'bank') {
       // recorded instrument samples: replace the synthesized instruments of the same ids
       const t0 = performance.now();
-      const register = (defs: Parameters<Parameters<typeof finishSampleBank>[0]>[0]) => {
-        for (const d of defs) INSTRUMENTS[d.id] = d;
-      };
       const rep = req.type === 'bank' ? installSampleBank(req.bank, register) : finishSampleBank(register);
       clearSampleCache();
       post({ seq, ok: rep.ok, report: { ...rep, ms: performance.now() - t0 } });

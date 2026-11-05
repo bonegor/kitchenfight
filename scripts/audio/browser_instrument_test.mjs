@@ -11,7 +11,9 @@
  * 2. index.html (the game): from navigation to "sample bank ready" and to the title track being
  *    rendered WITH samples (not the synth fallback); then a click unlocks audio and the title
  *    music must be playing. Console errors are collected.
- * 3. --single FILE: the same game check on the single-file build opened from file://.
+ * 3. the game again with every .mp3 request blocked: the bank must fail cleanly and the title
+ *    music must still render (synthesized fallback) and play — also the synth-only baseline latency.
+ * 4. --single FILE: the same game check on the single-file build opened from file://.
  * A dev server is started on the port if none answers (vite, scripts/vite.agent.config.ts).
  */
 import { createRequire } from 'module';
@@ -68,11 +70,15 @@ try {
     await page.close();
   }
   // ---------------------------------------------------------------- 2/3. the game (dev server, single file)
-  const gameCheck = async (url) => {
+  const gameCheck = async (url, blockMp3 = false) => {
     const page = await browser.newPage();
+    // block the sample files themselves (not Vite's `?url` module imports of them)
+    if (blockMp3) await page.route(/\.mp3$/, (r) => r.abort());
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    page.on('response', (res) => res.status() >= 400 && errors.push(`${res.status()} ${res.url()}`));
+    page.on('requestfailed', (req) => errors.push(`failed ${req.url().slice(0, 120)}`));
     const t0 = Date.now();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     const tDom = Date.now() - t0;
@@ -88,15 +94,26 @@ try {
       }
       await page.waitForTimeout(100);
     }
-    // user gesture: unlock + title music
+    // user gesture: unlock; the title music must start (poll up to 10 s)
+    const tClick = Date.now();
     await page.mouse.click(5, 5);
-    await page.waitForTimeout(1500);
-    const after = await page.evaluate(() => (window.__kfSampler ? window.__kfSampler.status() : null));
+    let after = null;
+    let playMs = null;
+    for (let i = 0; i < 100; i++) {
+      after = await page.evaluate(() => (window.__kfSampler ? window.__kfSampler.status() : null));
+      if (after && after.playing) {
+        playMs = Date.now() - tClick;
+        break;
+      }
+      await page.mouse.click(5, 5);
+      await page.waitForTimeout(100);
+    }
     const mem = await page.evaluate(() => (performance.memory ? performance.memory.usedJSHeapSize : null));
     await page.close();
-    return { url, domMs: tDom, bankReadyMs: tBank, titleReadyMs: tTitle, titleSampled: st?.tracks?.title ?? null, status: after, mainHeapMB: mem ? +(mem / 1048576).toFixed(1) : null, errors };
+    return { url, domMs: tDom, bankReadyMs: tBank, titleReadyMs: tTitle, titleSampled: st?.tracks?.title ?? null, playingAfterClickMs: playMs, status: after, mainHeapMB: mem ? +(mem / 1048576).toFixed(1) : null, errors: [...new Set(errors)] };
   };
   results.game = await gameCheck(base + '/');
+  results.gameNoSamples = await gameCheck(base + '/', true);
   if (SINGLE) results.single = await gameCheck(pathToFileURL(path.resolve(ROOT, SINGLE)).href);
 } finally {
   await browser.close();

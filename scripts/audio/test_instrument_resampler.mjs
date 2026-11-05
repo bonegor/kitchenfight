@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * Unit test of the sampler's pitch shifter (src/audio/sampled.ts) on a synthetic zone, no MP3:
- * a band-limited sawtooth (A4, harmonics up to 15 kHz at 32 kHz) looped like a real zone, played
+ * a band-limited sawtooth (A4, harmonics up to 13.6 kHz at 32 kHz — the 32 kHz MP3s are
+ * low-passed by LAME around 14-15 kHz) looped like a real zone, played
  * back through the real InstDef at shifts from -12 to +12 semitones into a 48 kHz output.
  *
- * Reports per shift: tuning error (cents), passband deviation of the harmonics that stay below
- * 12 kHz (dB), and the inharmonic residual = energy NOT at harmonic frequencies, i.e. aliasing +
+ * Reports per shift: tuning error (cents), passband deviation of the harmonics below 12 kHz in the
+ * output and 12.8 kHz (0.8 x Nyquist) in the source (dB), and the inharmonic residual = energy NOT at harmonic frequencies, i.e. aliasing +
  * interpolation error (dB re total). Fails (exit 1) on |cents| > 1, passband > 1 dB or residual
  * above -50 dB.
  *
@@ -24,7 +25,7 @@ const total = DATA0 + N + 4096;
 const pcm = new Float32Array(total);
 pcm[MARKER] = 0.9;
 // band-limited sawtooth, exact period so the loop below is seamless
-const H = Math.floor(15000 / F0);
+const H = Math.floor(13600 / F0);
 for (let i = 0; i < N; i++) {
   let v = 0;
   for (let h = 1; h <= H; h++) v += Math.sin((2 * Math.PI * F0 * h * i) / SR_SET) / h;
@@ -41,58 +42,83 @@ A.installSampleBank({ sets: [set], pcm: [{ name: 'violin', sr: SR_SET, data: [pc
 });
 if (!inst) throw new Error('no instrument');
 
-function dft(x, f, sr) {
-  let re = 0;
-  let im = 0;
-  const w = (2 * Math.PI * f) / sr;
-  for (let i = 0; i < x.length; i++) {
-    const hann = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (x.length - 1));
-    re += x[i] * hann * Math.cos(w * i);
-    im -= x[i] * hann * Math.sin(w * i);
+function fftMag(x) {
+  // Blackman-Harris windowed power spectrum (radix-2), |X|^2 per bin
+  const n = x.length;
+  const re = new Float64Array(n);
+  const im = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = (2 * Math.PI * i) / (n - 1);
+    const w = 0.35875 - 0.48829 * Math.cos(t) + 0.14128 * Math.cos(2 * t) - 0.01168 * Math.cos(3 * t);
+    re[i] = x[i] * w;
   }
-  return Math.hypot(re, im) / (x.length / 4);
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len;
+    for (let i = 0; i < n; i += len)
+      for (let k = 0; k < len / 2; k++) {
+        const c = Math.cos(ang * k);
+        const sn = Math.sin(ang * k);
+        const ur = re[i + k];
+        const ui = im[i + k];
+        const vr = re[i + k + len / 2] * c - im[i + k + len / 2] * sn;
+        const vi = re[i + k + len / 2] * sn + im[i + k + len / 2] * c;
+        re[i + k] = ur + vr;
+        im[i + k] = ui + vi;
+        re[i + k + len / 2] = ur - vr;
+        im[i + k + len / 2] = ui - vi;
+      }
+  }
+  const p = new Float64Array(n / 2);
+  for (let k = 0; k < n / 2; k++) p[k] = re[k] * re[k] + im[k] * im[k];
+  return p;
 }
 
 let bad = 0;
-console.log('shift  cents   passband(dB)  residual(dB)  [aliasing + interpolation error vs total]');
+console.log('shift  cents   passband(dB)  residual(dB)  [energy away from the harmonics = aliasing + interpolation error, re total]');
+const NF = 32768;
 for (const shift of [-12, -7, -5, -2, -1, 0, 1, 2, 5, 7, 9, 12]) {
   const s = inst.make(OUT_SR, 69 + shift, 0, 1.2, 0);
-  const x = s.l.subarray(Math.round(0.4 * OUT_SR), Math.round(0.4 * OUT_SR) + 8192 * 2);
+  const x = s.l.subarray(Math.round(0.3 * OUT_SR), Math.round(0.3 * OUT_SR) + NF);
   const f = F0 * Math.pow(2, shift / 12);
-  // tuning: refine the fundamental by a fine search around f
-  let bestF = f;
-  let bestM = 0;
-  for (let c = -20; c <= 20; c += 0.25) {
-    const ff = f * Math.pow(2, c / 1200);
-    const mm = dft(x, ff, OUT_SR);
-    if (mm > bestM) {
-      bestM = mm;
-      bestF = ff;
-    }
-  }
-  const cents = 1200 * Math.log2(bestF / f);
-  // passband: harmonic levels (relative to 1/h) for harmonics below 12 kHz
-  let dev = 0;
-  let harmE = 0;
-  for (let h = 1; h * f < OUT_SR / 2 && h <= H; h++) {
-    const a = dft(x, h * f, OUT_SR);
-    harmE += a * a;
-    if (h * f < 12000) {
-      const ref = 0.4 / h;
-      dev = Math.max(dev, Math.abs(20 * Math.log10(a / ref + 1e-12)));
-    }
-  }
-  // residual: total energy minus harmonic energy (Parseval with Hann: use time-domain power)
+  const P = fftMag(x);
+  const bin = OUT_SR / NF;
+  // tuning: parabolic peak of the fundamental
+  const k0 = Math.round(f / bin);
+  let kp = k0;
+  for (let k = k0 - 8; k <= k0 + 8; k++) if (P[k] > P[kp]) kp = k;
+  const a = Math.log(P[kp - 1]), b = Math.log(P[kp]), c = Math.log(P[kp + 1]);
+  const fk = (kp + (0.5 * (a - c)) / (a - 2 * b + c)) * bin;
+  const cents = 1200 * Math.log2(fk / f);
+  // harmonic energies (±6 bins around each harmonic) and the residual
   let tot = 0;
-  for (let i = 0; i < x.length; i++) tot += x[i] * x[i];
-  tot /= x.length;
-  const harmPow = harmE / 2 * 0.375 / 0.375; // a = amplitude → power a^2/2
-  const resid = Math.max(1e-14, tot - harmPow);
-  const residDb = 10 * Math.log10(resid / tot);
+  for (let k = 2; k < P.length; k++) tot += P[k];
+  let harm = 0;
+  const amp = [];
+  for (let h = 1; h * f < OUT_SR / 2 - 6 * bin; h++) {
+    const kc = Math.round((h * f) / bin);
+    let e = 0;
+    for (let k = kc - 6; k <= kc + 6; k++) e += P[k] ?? 0;
+    harm += e;
+    amp.push(Math.sqrt(e));
+  }
+  const residDb = 10 * Math.log10(Math.max(1e-16, tot - harm) / tot);
+  // passband: harmonic level relative to the fundamental vs the 1/h sawtooth law (below 12 kHz)
+  let dev = 0;
+  for (let h = 2; h <= amp.length && h * f < 12000 && h * F0 <= 0.8 * (SR_SET / 2) && h <= H; h++)
+    dev = Math.max(dev, Math.abs(20 * Math.log10((amp[h - 1] / amp[0]) * h)));
   const okC = Math.abs(cents) <= 1;
   const okP = dev <= 1;
   const okR = residDb <= -50;
   if (!okC || !okP || !okR) bad++;
-  console.log(`${String(shift).padStart(5)}  ${cents.toFixed(2).padStart(6)}   ${dev.toFixed(2).padStart(10)}   ${residDb.toFixed(1).padStart(11)}  ${okC && okP && okR ? 'ok' : 'FAIL'}`);
+  console.log(`${String(shift).padStart(5)}  ${cents.toFixed(3).padStart(6)}   ${dev.toFixed(2).padStart(10)}   ${residDb.toFixed(1).padStart(11)}  ${okC && okP && okR ? 'ok' : 'FAIL'}`);
 }
 process.exitCode = bad ? 1 : 0;

@@ -53,6 +53,9 @@ export interface InstDef {
   gate?: number;
   /** velocity → velocity layer (sampled instruments); part of the sample cache key */
   layerOf?(v: number): number;
+  /** re-striking the same pitch on the same channel stops the previous note (plucked strings:
+   *  the plectrum/finger damps the string — tremolo re-plucks stay distinct) */
+  choke?: boolean;
   make(sr: number, midi: number, variant: number, lenSec: number, layer?: number): Sample;
 }
 

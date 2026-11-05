@@ -15,7 +15,7 @@ import type { AudioAPI, MusicId, SfxId, SfxOpts, VoiceMood } from './audio';
 import { clamp, Slicer, yieldToLoop } from './dsp';
 import { renderSong } from './render';
 import { bankTransfer, loadSampleBank, type BankLoadStats } from './samplebank';
-import type { BankReport } from './sampled';
+import { setsOfInstrument, type BankReport } from './sampled';
 import { SFX, SFX_IDS, renderSfx } from './sfx';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
@@ -166,6 +166,12 @@ export class AudioEngine implements AudioAPI {
   // recorded instrument samples (decoded on the main thread, installed in the music worker)
   private bank: Promise<boolean> | null = null;
   private bankReady = false;
+  /** sample sets installed in the music worker so far, and waiters for more */
+  private setsIn = new Set<string>();
+  private bankDone = false;
+  private setWaiters: Array<() => void> = [];
+  /** track currently waiting for its sets / rendering (its sets are decoded first) */
+  private rendering: MusicId | null = null;
   private bankInfo: { state: string; load?: BankLoadStats; report?: BankReport; t0?: number; tReady?: number; error?: string } = { state: 'idle' };
 
   // sfx
@@ -213,14 +219,32 @@ export class AudioEngine implements AudioAPI {
       this.bankInfo.state = 'no-worker';
       return false;
     }
-    // stream every decoded set to the worker as soon as it is ready (no main-thread pile-up)
+    // stream every decoded set to the worker as soon as it is ready (no main-thread pile-up);
+    // the sets of the tracks waiting to render are decoded first
     let sent = 0;
-    const loaded = await loadSampleBank(2, (def, pcm) => {
-      const ok = this.musicWorker.request({ type: 'bankSet', set: def, pcm }, () => true, bankTransfer(pcm));
-      if (ok) sent++;
-    });
+    const loaded = await loadSampleBank(
+      2,
+      (def, pcm) => {
+        const ok = this.musicWorker.request(
+          { type: 'bankSet', set: def, pcm },
+          (m) => {
+            if (m && m.ok === true) this.setsIn.add(def.name);
+            this.wakeSetWaiters();
+            return true;
+          },
+          bankTransfer(pcm),
+        );
+        if (ok) sent++;
+      },
+      () => {
+        const ids = [...(this.rendering ? [this.rendering] : []), ...(this.wanted ? [this.wanted] : []), ...this.queue];
+        return ids.flatMap((id) => this.setsOf(id));
+      },
+    );
     if (!loaded || !sent) {
       this.bankInfo.state = 'decode-failed';
+      this.bankDone = true;
+      this.wakeSetWaiters();
       return false;
     }
     this.bankInfo.load = loaded.stats;
@@ -235,6 +259,8 @@ export class AudioEngine implements AudioAPI {
     });
     this.bankInfo.state = ok ? 'ready' : 'install-failed';
     this.bankInfo.tReady = performance.now();
+    this.bankDone = true;
+    this.wakeSetWaiters();
     if (ok) {
       this.bankReady = true;
       // tracks rendered with the synth fallback while we waited: re-render them on next use
@@ -243,20 +269,48 @@ export class AudioEngine implements AudioAPI {
     return ok;
   }
 
-  /** Wait for the sample bank (bounded): true when the worker has it. */
-  private async waitBank(): Promise<boolean> {
-    if (this.bankReady) return true;
+  private wakeSetWaiters(): void {
+    const w = this.setWaiters;
+    this.setWaiters = [];
+    for (const f of w) {
+      try {
+        f();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  /** Sample sets the instruments of a track play. */
+  private setsOf(id: MusicId): string[] {
+    const song = SONGS[id];
+    if (!song) return [];
+    const out = new Set<string>();
+    for (const ch of Object.values(song.channels)) for (const s of setsOfInstrument(ch.inst)) out.add(s);
+    return [...out];
+  }
+
+  /**
+   * Wait (bounded by BANK_WAIT_MS from the start of loading) until the music worker has every
+   * sample set this track uses — not the whole bank. True when the track will render sampled.
+   */
+  private async waitBank(id: MusicId): Promise<boolean> {
+    void this.ensureBank();
+    const need = this.setsOf(id);
+    const have = () => need.every((n) => this.setsIn.has(n));
+    if (have()) return true;
     const started = this.bankInfo.t0 ?? performance.now();
-    const left = Math.max(0, BANK_WAIT_MS - (performance.now() - started));
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const ok = await Promise.race([
-      this.ensureBank(),
-      new Promise<boolean>((r) => {
-        timer = setTimeout(() => r(false), left);
-      }),
-    ]);
-    if (timer) clearTimeout(timer);
-    return ok && this.bankReady;
+    const deadline = started + BANK_WAIT_MS;
+    while (!have() && !this.bankDone && performance.now() < deadline) {
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, Math.max(1, deadline - performance.now()));
+        this.setWaiters.push(() => {
+          clearTimeout(t);
+          resolve();
+        });
+      });
+    }
+    return have();
   }
 
   // ------------------------------------------------------------------------------- lifecycle
@@ -641,7 +695,9 @@ export class AudioEngine implements AudioAPI {
     const sr = Math.min(this.ctx?.sampleRate ?? DEFAULT_SR, DEFAULT_SR);
     // 1) worker (with the recorded instrument samples once they are installed there)
     if (this.musicWorker.usable) {
-      const sampled = await this.waitBank();
+      this.rendering = id;
+      const sampled = await this.waitBank(id);
+      this.rendering = null;
       const msg = this.musicWorker.usable ? await this.workerRender(id, sr, onProgress) : null;
       if (msg) {
         const track: Track = {
