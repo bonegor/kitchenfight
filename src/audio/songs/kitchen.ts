@@ -60,9 +60,9 @@ export const kitchen: SongDef = {
   stepsPerBeat: 3,
   barSteps: 6,
   scale: 'D harmonic minor',
-  gainDb: 0,
+  gainDb: -2.1,
   humanize: 0.003,
-  reverb: { rt60: 1.1, size: 0.8, damp: 0.55, predelay: 0.012, er: 0.35, hp: 300, lp: 7500, wet: 0.8 },
+  reverb: { rt60: 1.1, size: 0.8, damp: 0.55, predelay: 0.012, er: 0.35, hp: 300, lp: 7500, wet: 1.3 },
   channels: {
     acc: { inst: 'accordion', gain: -2, pan: 0.05, send: 0.15 },
     accH: { inst: 'accordionDry', gain: -11, pan: -0.3, send: 0.18 },

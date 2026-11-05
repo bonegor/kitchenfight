@@ -38,9 +38,9 @@ export const finalboss: SongDef = {
   stepsPerBeat: 3,
   barSteps: 6,
   scale: 'A harmonic minor',
-  gainDb: 0,
+  gainDb: -3.3,
   humanize: 0.003,
-  reverb: { rt60: 2.0, size: 1.3, damp: 0.5, predelay: 0.025, er: 0.4, hp: 300, lp: 7000, wet: 0.9 },
+  reverb: { rt60: 2.0, size: 1.3, damp: 0.5, predelay: 0.025, er: 0.4, hp: 300, lp: 7000, wet: 1.4 },
   channels: {
     brass: { inst: 'brass', gain: -3, pan: 0.08, send: 0.25 },
     acc: { inst: 'accordion', gain: -5, pan: -0.12, send: 0.2 },

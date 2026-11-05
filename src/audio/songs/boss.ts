@@ -39,9 +39,9 @@ export const boss: SongDef = {
   stepsPerBeat: 4,
   barSteps: 16,
   scale: 'G harmonic minor',
-  gainDb: 0,
+  gainDb: -1.4,
   humanize: 0.003,
-  reverb: { rt60: 2.1, size: 1.35, damp: 0.5, predelay: 0.03, er: 0.4, hp: 300, lp: 6500, wet: 0.9 },
+  reverb: { rt60: 2.1, size: 1.35, damp: 0.5, predelay: 0.03, er: 0.4, hp: 300, lp: 6500, wet: 1.45 },
   channels: {
     brass: { inst: 'brass', gain: -3, pan: 0.05, send: 0.25 },
     brassL: { inst: 'brassSoft', gain: -9, pan: -0.3, send: 0.25 },

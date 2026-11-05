@@ -51,9 +51,9 @@ export const title: SongDef = {
   stepsPerBeat: 3,
   barSteps: 6,
   scale: 'A harmonic minor',
-  gainDb: 0,
+  gainDb: -2.6,
   humanize: 0.004,
-  reverb: { rt60: 1.5, size: 1.0, damp: 0.5, predelay: 0.018, er: 0.3, hp: 260, lp: 7000, wet: 0.85 },
+  reverb: { rt60: 1.5, size: 1.0, damp: 0.5, predelay: 0.018, er: 0.3, hp: 260, lp: 7000, wet: 1.55 },
   channels: {
     acc: { inst: 'accordion', gain: -2, pan: 0.06, send: 0.17 },
     accH: { inst: 'accordionDry', gain: -11, pan: -0.28, send: 0.2 },

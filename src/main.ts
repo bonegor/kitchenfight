@@ -49,14 +49,16 @@ class App {
     });
     // the canvas swallows touches for the joystick; UI elements sit above it
     document.addEventListener('contextmenu', (e) => e.preventDefault());
-    document.addEventListener('pointerdown', () => audio.unlock(), { passive: true });
-    document.addEventListener('keydown', () => audio.unlock());
+    // (re)unlock audio on any user gesture — iOS Safari needs touchend/click
+    for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(ev, () => audio.unlock(), { passive: true });
     requestAnimationFrame((t) => this.frame(t));
     this.boot();
   }
 
   async boot() {
     const loading = this.ui.showLoading();
+    // music renders in a worker and can start before the first gesture
+    audio.preload(['title', 'menu']).catch(() => undefined);
     try {
       await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
       await Promise.all([
@@ -73,8 +75,8 @@ class App {
     loading.done(() => {
       audio.unlock();
       this.applySettings();
-      audio.preload(['title', 'menu']).catch(() => undefined);
       this.ui.showTitle();
+      audio.preload(['kitchen']).catch(() => undefined);
     });
   }
 

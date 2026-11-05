@@ -32,9 +32,9 @@ export const trattoria: SongDef = {
   stepsPerBeat: 3,
   barSteps: 12,
   scale: 'E harmonic minor',
-  gainDb: 0,
+  gainDb: -0.6,
   humanize: 0.006,
-  reverb: { rt60: 1.6, size: 1.05, damp: 0.45, predelay: 0.02, er: 0.3, hp: 260, lp: 6500, wet: 0.95 },
+  reverb: { rt60: 1.6, size: 1.05, damp: 0.45, predelay: 0.02, er: 0.3, hp: 260, lp: 6500, wet: 1.5 },
   channels: {
     mand: { inst: 'mandolin', gain: -1, pan: -0.22, send: 0.22 },
     mandH: { inst: 'mandolin', gain: -7, pan: 0.3, send: 0.22 },

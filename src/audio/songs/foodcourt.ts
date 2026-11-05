@@ -48,9 +48,9 @@ export const foodcourt: SongDef = {
   stepsPerBeat: 4,
   barSteps: 16,
   scale: 'Bb harmonic minor',
-  gainDb: 0,
+  gainDb: 1.4,
   humanize: 0.002,
-  reverb: { rt60: 1.9, size: 1.3, damp: 0.6, predelay: 0.03, er: 0.45, hp: 320, lp: 7500, wet: 0.85 },
+  reverb: { rt60: 1.9, size: 1.3, damp: 0.6, predelay: 0.03, er: 0.45, hp: 320, lp: 7500, wet: 1.5 },
   channels: {
     ep: { inst: 'epiano', gain: -8, pan: -0.1, send: 0.25, hum: 0.3 },
     vibes: { inst: 'vibes', gain: -7, pan: 0.2, send: 0.3 },

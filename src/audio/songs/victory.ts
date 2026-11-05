@@ -16,10 +16,10 @@ export const victory: SongDef = {
   stepsPerBeat: 2,
   barSteps: 6,
   scale: 'D major',
-  gainDb: 0,
+  gainDb: -2.7,
   humanize: 0.003,
   tail: 2.6,
-  reverb: { rt60: 1.8, size: 1.2, damp: 0.5, predelay: 0.02, er: 0.35, hp: 260, lp: 7500, wet: 0.95 },
+  reverb: { rt60: 1.8, size: 1.2, damp: 0.5, predelay: 0.02, er: 0.35, hp: 260, lp: 7500, wet: 1.5 },
   channels: {
     brass: { inst: 'brass', gain: -3, pan: 0.1, send: 0.25 },
     acc: { inst: 'accordion', gain: -3, pan: -0.1, send: 0.2 },

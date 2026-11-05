@@ -300,6 +300,7 @@ export class UI {
   }
 
   showStageSelect() {
+    audio.preload(STAGES.filter((st) => this.isStageUnlocked(st.id)).map((st) => st.music)).catch(() => undefined);
     const grid = h('div', { class: 'stage-grid' });
     if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = 'kitchen';
     const char = charById(this.selectedChar);

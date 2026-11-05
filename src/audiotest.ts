@@ -184,11 +184,31 @@ const at = {
         if (m.progress !== undefined) return;
         resolve({ ok: !!m.ok, ms: m.ms ?? -1 });
       };
-      w.postMessage({ seq: 1, id, sr });
+      w.postMessage({ type: 'music', seq: 1, id, sr });
     });
     const wall = performance.now() - t0;
     w.terminate();
     return { id, ...res, wall, longestFrameGap: lastLong };
+  },
+  /** All tracks through ONE persistent worker (warm JIT + shared sample cache), like the game. */
+  async renderAllWarm(sr = 48000) {
+    const w = new RenderWorker();
+    const out: Array<{ id: MusicId; ms: number; wall: number }> = [];
+    lastLong = 0;
+    for (const id of TRACKS) {
+      const t0 = performance.now();
+      const ms = await new Promise<number>((resolve) => {
+        w.onmessage = (e: MessageEvent) => {
+          const m = e.data as { ms?: number; progress?: number };
+          if (m.progress !== undefined) return;
+          resolve(m.ms ?? -1);
+        };
+        w.postMessage({ type: 'music', seq: 1, id, sr });
+      });
+      out.push({ id, ms: Math.round(ms), wall: Math.round(performance.now() - t0) });
+    }
+    w.terminate();
+    return { tracks: out, longestFrameGap: lastLong };
   },
   renderSfx(id: SfxId, variant = 0, sr = 48000) {
     const t0 = performance.now();
@@ -248,5 +268,6 @@ const at = {
     return { readyBefore, readyAfter, preloadMs, switchMs, longestFrameGap: lastLong, errors };
   },
 };
-(window as unknown as { __at: typeof at }).__at = at;
+(window as unknown as { __at: typeof at; __audio: unknown }).__at = at;
+(window as unknown as { __audio: unknown }).__audio = audio;
 log('audio test ready — tracks: ' + TRACKS.join(', '));

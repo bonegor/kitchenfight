@@ -398,7 +398,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       g.tone(0, 0.3, glide(110, 52, 0.05), ad(0.002, 0.11), 'sine');
       g.noise(0, 0.08, ad(0.001, 0.025, 0.8), 'lp', () => 380, 0.8);
-      g.crackle(0.005, 0.12, (t) => 600 * Math.exp(-t / 0.05), 0.4, 1800);
+      g.crackle(0.005, 0.12, (t) => 900 * Math.exp(-t / 0.05), 0.7, 1800);
+      g.noise(0, 0.05, ad(0.001, 0.012, 0.35), 'bp', () => 1100, 1.2);
       g.bell(0.13, glockParts(note(100), 0.5), 0.25);
       g.bell(0.21, glockParts(note(95), 0.6), 0.2);
     },
@@ -448,7 +449,7 @@ export const SFX: Record<SfxId, SfxDef> = {
       g.noise(0, 1.4, (t) => 0.35 * (t / 1.4) ** 2, 'bp', expSweep(300, 5000, 1.4), 2, -0.2);
       g.noise(0, 1.4, (t) => 0.35 * (t / 1.4) ** 2, 'bp', expSweep(330, 5200, 1.4), 2, 0.2);
       // choir swell (C add9)
-      const chord = [48, 55, 60, 64, 67, 74];
+      const chord = [48, 55, 64, 74];
       chord.forEach((m, i) =>
         g.formant(
           0,
@@ -458,7 +459,7 @@ export const SFX: Record<SfxId, SfxDef> = {
           () => (m < 60 ? [700, 1100, 2600] : [800, 1150, 2900]),
           0.004,
           0,
-          -0.5 + i * 0.2,
+          -0.45 + i * 0.3,
         ),
       );
       // bell hit + sparkle
@@ -486,7 +487,7 @@ export const SFX: Record<SfxId, SfxDef> = {
   // ---------------------------------------------------------------- pickups
   pickup_xp: {
     len: 0.08,
-    gain: -15,
+    gain: -13,
     maxVoices: 4,
     minGap: 0.022,
     pitchVar: 0.015,
@@ -574,9 +575,9 @@ export const SFX: Record<SfxId, SfxDef> = {
     pitchVar: 0.05,
     gen(g) {
       const v = g.variant;
-      g.tone(0, 0.12, glide(170 + v * 10, 85, 0.03), ad(0.002, 0.04), 'sine');
-      g.noise(0, 0.04, ad(0.001, 0.012, 0.5), 'lp', () => 700, 0.8);
-      g.formant(0.005, 0.15, glide(150 - v * 8, 112, 0.08), (t) => 0.5 * Math.min(1, t / 0.01) * Math.exp(-t / 0.05), () => [460, 820, 2400], 0.01);
+      g.tone(0, 0.12, glide(230 + v * 12, 120, 0.03), ad(0.002, 0.035, 0.7), 'sine');
+      g.noise(0, 0.04, ad(0.001, 0.012, 0.6), 'bp', () => 900, 1.0);
+      g.formant(0.005, 0.16, glide(160 - v * 8, 118, 0.08), (t) => 0.9 * Math.min(1, t / 0.01) * Math.exp(-t / 0.055), () => [500, 850, 2450], 0.01);
     },
   },
   player_death: {
@@ -607,21 +608,25 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   low_hp: {
     len: 0.5,
-    gain: -9,
+    gain: -6,
     maxVoices: 1,
     minGap: 0.35,
     gen(g) {
-      g.tone(0, 0.16, glide(72, 46, 0.04), ad(0.004, 0.05), 'sine');
-      g.tone(0.21, 0.18, glide(62, 42, 0.05), ad(0.004, 0.055, 0.75), 'sine');
-      g.noise(0, 0.05, ad(0.003, 0.015, 0.15), 'lp', () => 300);
-      g.noise(0.21, 0.05, ad(0.003, 0.015, 0.12), 'lp', () => 260);
+      [
+        [0, 1],
+        [0.21, 0.78],
+      ].forEach(([t, a]) => {
+        g.tone(t, 0.16, glide(95, 55, 0.04), ad(0.004, 0.05, a), 'sine');
+        g.tone(t, 0.1, glide(190, 120, 0.03), ad(0.003, 0.03, 1.1 * a), 'sine');
+        g.noise(t, 0.05, ad(0.002, 0.012, 0.9 * a), 'bp', () => 420, 1.2);
+      });
     },
   },
 
   // ---------------------------------------------------------------- enemies
   hit: {
     len: 0.09,
-    gain: -15,
+    gain: -12,
     variants: 4,
     maxVoices: 4,
     minGap: 0.03,
@@ -629,10 +634,10 @@ export const SFX: Record<SfxId, SfxDef> = {
     volVar: 0.15,
     gen(g) {
       const v = g.variant;
-      const f0 = 250 + v * 25;
-      g.tone(0, 0.07, glide(f0, 115, 0.014), ad(0.0008, 0.024), 'sine');
-      g.noise(0, 0.035, ad(0.0005, 0.008, 0.55), 'bp', glide(1300 + v * 150, 650, 0.015), 1.2);
-      g.tone(0.004, 0.045, (t) => glide(620 - v * 30, 300, 0.02)(t) * (1 + 0.25 * Math.sin(TAU * 70 * t)), ad(0.002, 0.012, 0.25), 'sine');
+      const f0 = 380 + v * 30;
+      g.tone(0, 0.07, glide(f0, 165, 0.012), ad(0.0008, 0.02, 0.75), 'sine');
+      g.noise(0, 0.045, ad(0.0005, 0.011, 0.95), 'bp', glide(1700 + v * 150, 800, 0.015), 1.3);
+      g.tone(0.003, 0.05, (t) => glide(760 - v * 40, 360, 0.02)(t) * (1 + 0.3 * Math.sin(TAU * 70 * t)), ad(0.002, 0.014, 0.4), 'sine');
     },
   },
   hit_crit: {
@@ -656,7 +661,7 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   enemy_death: {
     len: 0.28,
-    gain: -11,
+    gain: -10,
     variants: 4,
     maxVoices: 4,
     minGap: 0.035,
@@ -664,8 +669,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     volVar: 0.1,
     gen(g) {
       const v = g.variant;
-      g.noise(0, 0.12, ad(0.001, 0.03, 0.8), 'lp', glide(3200 - v * 200, 380, 0.03), 0.9);
-      g.tone(0, 0.11, glide(360 - v * 20, 90, 0.03), ad(0.001, 0.035, 0.8), 'sine');
+      g.noise(0, 0.12, ad(0.001, 0.03, 0.9), 'lp', glide(3200 - v * 200, 450, 0.03), 0.9);
+      g.tone(0, 0.11, glide(420 - v * 20, 120, 0.03), ad(0.001, 0.03, 0.7), 'sine');
       for (let k = 0; k < 4; k++) {
         const t = 0.03 + g.rng.next() * 0.13;
         g.tone(t, 0.02, glide(1500 + g.rng.next() * 1600, 900, 0.006), ad(0.0005, 0.005, 0.18), 'sine');
@@ -683,6 +688,7 @@ export const SFX: Record<SfxId, SfxDef> = {
       g.tone(0, 0.3, glide(85, 40, 0.06), ad(0.002, 0.1), 'sine');
       g.noise(0, 0.35, ad(0.001, 0.08, 0.9), 'lp', glide(2400, 220, 0.08), 0.9);
       g.tone(0.01, 0.25, glide(200 - g.variant * 20, 60, 0.06), ad(0.002, 0.07, 0.6), 'sine');
+      g.noise(0, 0.22, ad(0.001, 0.05, 1.1), 'bp', glide(1500, 700, 0.04), 1.1);
       for (let k = 0; k < 7; k++) {
         const t = 0.04 + g.rng.next() * 0.3;
         g.tone(t, 0.025, glide(1200 + g.rng.next() * 1800, 700, 0.008), ad(0.0005, 0.006, 0.15), 'sine');
@@ -751,11 +757,11 @@ export const SFX: Record<SfxId, SfxDef> = {
     minGap: 0.05,
     pitchVar: 0.07,
     gen(g) {
-      g.tone(0, 0.09, glide(130, 70, 0.025), ad(0.001, 0.03), 'sine');
-      for (let k = 0; k < 10 + g.variant * 2; k++) {
+      g.tone(0, 0.09, glide(170, 85, 0.025), ad(0.001, 0.03, 0.6), 'sine');
+      for (let k = 0; k < 12 + g.variant * 2; k++) {
         const t = g.rng.next() ** 1.5 * 0.16;
         const f = 800 + g.rng.next() * 1800;
-        g.noise(t, 0.012, ad(0.0005, 0.003 + g.rng.next() * 0.004, 0.5 + g.rng.next() * 0.5), 'bp', () => f, 2.5);
+        g.noise(t, 0.012, ad(0.0005, 0.003 + g.rng.next() * 0.004, 0.9 + g.rng.next() * 0.6), 'bp', () => f, 2.5);
       }
       g.noise(0.01, 0.3, ad(0.01, 0.08, 0.3), 'lp', () => 1100, 0.7);
     },
@@ -813,7 +819,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       g.tone(0, 0.7, glide(115, 36, 0.07), ad(0.001, 0.25), 'sine');
       g.noise(0, 0.6, ad(0.001, 0.12, 0.9), 'lp', glide(2600, 260, 0.12), 0.8);
-      g.crackle(0.02, 0.5, (t) => 500 * Math.exp(-t / 0.15), 0.5, 1200);
+      g.crackle(0.02, 0.5, (t) => 700 * Math.exp(-t / 0.15), 0.8, 1200);
+      g.noise(0, 0.3, ad(0.001, 0.06, 0.6), 'bp', glide(1400, 500, 0.08), 1.0);
       g.tone(0, 0.2, glide(60, 45, 0.1), ad(0.001, 0.08, 0.5), 'square');
       g.filter(() => Biquad.lp(g.sr, 5000, 0.7));
     },
@@ -827,6 +834,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       g.noise(0, 0.32, (t) => ad(0.01, 0.09, 0.9)(t) * (0.75 + 0.25 * Math.sin(TAU * 36 * t)), 'bp', expSweep(300, 1600, 0.2), 2.5);
       g.tone(0, 0.16, glide(150, 70, 0.04), ad(0.002, 0.05, 0.7), 'sine');
+      g.noise(0.01, 0.25, (t) => ad(0.01, 0.06, 0.7)(t) * (0.7 + 0.3 * Math.sin(TAU * 40 * t)), 'bp', expSweep(800, 2500, 0.15), 2.5);
     },
   },
   boss_death: {
@@ -847,7 +855,7 @@ export const SFX: Record<SfxId, SfxDef> = {
       [48, 55, 60, 64, 67, 72].forEach((m, i) =>
         g.tone(t0, 2.3, () => note(m), (t) => 0.13 * Math.min(1, t / 0.03) * Math.exp(-t / 0.9), 'saw', -0.5 + i * 0.2),
       );
-      for (let k = 0; k < 18; k++) g.pluck(t0 + k * 0.07, 84 + (k % 3 === 2 ? 4 : 0), k ? 0.4 : 0.8, 0.4, 6000, 0.3);
+      for (let k = 0; k < 12; k++) g.pluck(t0 + k * 0.07, 84 + (k % 3 === 2 ? 4 : 0), k ? 0.4 : 0.8, 0.3, 6000, 0.3);
       g.bell(t0, glockParts(note(96), 1.4), 0.4, -0.3);
       g.bell(t0 + 0.12, glockParts(note(100), 1.4), 0.35, 0);
       g.bell(t0 + 0.24, glockParts(note(103), 1.4), 0.3, 0.3);
@@ -864,7 +872,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     pitchVar: 0.06,
     gen(g) {
       g.noise(0, 0.28, (t) => 0.8 * Math.sin(Math.PI * Math.min(1, t / 0.27)) ** 2, 'bp', lin([0, 260], [0.13, 950], [0.27, 380]), 1.6);
-      g.tone(0, 0.26, () => 92, (t) => 0.4 * Math.sin(Math.PI * Math.min(1, t / 0.25)) ** 2, 'sine');
+      g.tone(0, 0.26, () => 120, (t) => 0.22 * Math.sin(Math.PI * Math.min(1, t / 0.25)) ** 2, 'sine');
     },
   },
   w_ciabatta: {
@@ -926,6 +934,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       g.noise(0, 0.25, (t) => 0.7 * Math.min(1, t / 0.02) * Math.exp(-t / 0.07), 'lp', glide(900, 380, 0.08), 0.8);
       g.tone(0, 0.2, glide(175, 105, 0.05), (t) => 0.5 * Math.min(1, t / 0.015) * Math.exp(-t / 0.06), 'sine');
+      g.noise(0, 0.18, (t) => 0.55 * Math.min(1, t / 0.012) * Math.exp(-t / 0.05), 'bp', glide(900, 500, 0.06), 1.0);
     },
   },
   w_rotella: {
@@ -1010,6 +1019,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       const roll = (t: number) => 0.6 + 0.25 * Math.sin(TAU * 6.3 * t) + 0.15 * Math.sin(TAU * 9.7 * t + 1);
       g.noise(0, 1.1, (t) => 0.8 * Math.min(1, t / 0.08) * (t > 0.8 ? Math.max(0, 1 - (t - 0.8) / 0.3) : 1) * roll(t), 'lp', () => 190, 0.9);
+      g.noise(0, 1.1, (t) => 0.55 * Math.min(1, t / 0.08) * (t > 0.8 ? Math.max(0, 1 - (t - 0.8) / 0.3) : 1) * roll(t + 0.05), 'bp', () => 420, 1.1);
+      g.crackle(0, 1.0, (t) => 160 * (t < 0.85 ? 1 : 0), 0.35, 900);
       g.tone(0, 1.1, (t) => 55 * (1 + 0.04 * Math.sin(TAU * 6.3 * t)), (t) => 0.35 * Math.min(1, t / 0.08) * (t > 0.8 ? Math.max(0, 1 - (t - 0.8) / 0.3) : 1), 'sine');
     },
   },
@@ -1033,6 +1044,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     pitchVar: 0.05,
     gen(g) {
       g.noise(0, 0.6, (t) => 0.7 * Math.min(1, t / 0.06) * (t > 0.4 ? Math.max(0, 1 - (t - 0.4) / 0.2) : 1) * (0.75 + 0.25 * Math.sin(TAU * 11 * t)), 'lp', () => 520, 0.8);
+      g.noise(0, 0.6, (t) => 0.45 * Math.min(1, t / 0.06) * (t > 0.4 ? Math.max(0, 1 - (t - 0.4) / 0.2) : 1) * (0.7 + 0.3 * Math.sin(TAU * 7 * t + 1)), 'bp', () => 850, 1.0);
       g.tone(0, 0.6, () => 72, (t) => 0.3 * Math.min(1, t / 0.06) * (t > 0.4 ? Math.max(0, 1 - (t - 0.4) / 0.2) : 1), 'sine');
       g.crackle(0.05, 0.5, () => 120, 0.25, 3000);
     },
@@ -1047,7 +1059,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     gen(g) {
       g.tone(0, 0.5, glide(95, 34, 0.07), ad(0.001, 0.16), 'sine');
       g.noise(0, 0.8, ad(0.001, 0.15, 0.95), 'lp', expSweep(5200 - g.variant * 600, 240, 0.6), 0.8);
-      g.crackle(0.02, 0.6, (t) => 700 * Math.exp(-t / 0.15), 0.35, 1500);
+      g.noise(0, 0.4, ad(0.001, 0.08, 0.5), 'bp', glide(1200, 450, 0.1), 1.0);
+      g.crackle(0.02, 0.6, (t) => 900 * Math.exp(-t / 0.15), 0.6, 1500);
     },
   },
   burn: {

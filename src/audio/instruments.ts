@@ -24,6 +24,13 @@ import {
   trimTail,
 } from './dsp';
 
+const SINE_N = 4096;
+const SINE = (() => {
+  const t = new Float32Array(SINE_N);
+  for (let i = 0; i < SINE_N; i++) t[i] = Math.sin((TAU * i) / SINE_N);
+  return t;
+})();
+
 export interface Sample {
   l: Float32Array;
   r: Float32Array | null;
@@ -160,7 +167,98 @@ function oscMulti(outL: Float32Array, outR: Float32Array | null, tbl: Float32Arr
       }
       inc[k] = k0 * ratio;
     }
-    if (outR) {
+    if (outR && nv === 3) {
+      // unrolled hot path (musette accordion, pads)
+      let p0 = ph[0];
+      let p1 = ph[1];
+      let p2 = ph[2];
+      const i0c = inc[0];
+      const i1c = inc[1];
+      const i2c = inc[2];
+      const l0 = gl[0];
+      const l1 = gl[1];
+      const l2 = gl[2];
+      const r0 = gr[0];
+      const r1 = gr[1];
+      const r2 = gr[2];
+      for (let i = b; i < be; i++) {
+        let ip = p0 | 0;
+        let j = ip & mask;
+        let a = tbl[j];
+        const v0 = a + (tbl[j + 1] - a) * (p0 - ip);
+        ip = p1 | 0;
+        j = ip & mask;
+        a = tbl[j];
+        const v1 = a + (tbl[j + 1] - a) * (p1 - ip);
+        ip = p2 | 0;
+        j = ip & mask;
+        a = tbl[j];
+        const v2 = a + (tbl[j + 1] - a) * (p2 - ip);
+        const e = env[i];
+        outL[i] += (v0 * l0 + v1 * l1 + v2 * l2) * e;
+        outR[i] += (v0 * r0 + v1 * r1 + v2 * r2) * e;
+        p0 += i0c;
+        if (p0 >= N) p0 -= N;
+        p1 += i1c;
+        if (p1 >= N) p1 -= N;
+        p2 += i2c;
+        if (p2 >= N) p2 -= N;
+      }
+      ph[0] = p0;
+      ph[1] = p1;
+      ph[2] = p2;
+    } else if (outR && nv === 4) {
+      // unrolled hot path (strings, choir)
+      let p0 = ph[0];
+      let p1 = ph[1];
+      let p2 = ph[2];
+      let p3 = ph[3];
+      const i0c = inc[0];
+      const i1c = inc[1];
+      const i2c = inc[2];
+      const i3c = inc[3];
+      const l0 = gl[0];
+      const l1 = gl[1];
+      const l2 = gl[2];
+      const l3 = gl[3];
+      const r0 = gr[0];
+      const r1 = gr[1];
+      const r2 = gr[2];
+      const r3 = gr[3];
+      for (let i = b; i < be; i++) {
+        let ip = p0 | 0;
+        let j = ip & mask;
+        let a = tbl[j];
+        const v0 = a + (tbl[j + 1] - a) * (p0 - ip);
+        ip = p1 | 0;
+        j = ip & mask;
+        a = tbl[j];
+        const v1 = a + (tbl[j + 1] - a) * (p1 - ip);
+        ip = p2 | 0;
+        j = ip & mask;
+        a = tbl[j];
+        const v2 = a + (tbl[j + 1] - a) * (p2 - ip);
+        ip = p3 | 0;
+        j = ip & mask;
+        a = tbl[j];
+        const v3 = a + (tbl[j + 1] - a) * (p3 - ip);
+        const e = env[i];
+        outL[i] += (v0 * l0 + v1 * l1 + v2 * l2 + v3 * l3) * e;
+        outR[i] += (v0 * r0 + v1 * r1 + v2 * r2 + v3 * r3) * e;
+        p0 += i0c;
+        if (p0 >= N) p0 -= N;
+        p1 += i1c;
+        if (p1 >= N) p1 -= N;
+        p2 += i2c;
+        if (p2 >= N) p2 -= N;
+        p3 += i3c;
+        if (p3 >= N) p3 -= N;
+      }
+      ph[0] = p0;
+      ph[1] = p1;
+      ph[2] = p2;
+      ph[3] = p3;
+    } else if (outR) {
       for (let i = b; i < be; i++) {
         let sl = 0;
         let sr2 = 0;
@@ -272,7 +370,7 @@ const reedTimbre = (bright: number): Timbre => (k, f) =>
   (f < 200 ? f / 200 : 1);
 
 const stringTimbre: Timbre = (k, f) =>
-  (1 / k) * (0.55 + 0.9 * bump(f, 450, 0.5) + 0.55 * bump(f, 1100, 0.45) + 0.75 * bump(f, 2800, 0.4)) * rolloff(f, 5200, 4) * (f < 180 ? (f / 180) ** 2 : 1);
+  (1 / k) * (0.55 + 0.8 * bump(f, 450, 0.5) + 0.6 * bump(f, 1100, 0.45) + 1.0 * bump(f, 2800, 0.45)) * rolloff(f, 6500, 4) * (f < 180 ? (f / 180) ** 2 : 1);
 
 const tubaTimbre = (fc: number): Timbre => (k, f) =>
   (1 / Math.pow(k, 0.55)) * (0.55 + 1.1 * bump(f, 190, 0.8) + 0.45 * bump(f, 1000, 0.5)) * (f > 260 && f < 600 ? 0.6 : 1) * rolloff(f, fc, 4);
@@ -399,7 +497,7 @@ function choir(id: string, vowel: 'a' | 'o'): InstDef {
     id,
     kind: 'sustain',
     variants: 1,
-    release: 0.45,
+    release: 0.38,
     sustainLen: 3.6,
     gate: 0.98,
     make(sr, midi, _v, lenSec) {
@@ -428,12 +526,13 @@ function choir(id: string, vowel: 'a' | 'o'): InstDef {
           driftRate: 0.3 + 0.13 * i,
         };
       }));
-      // breath: band-limited noise around F2 for air
+      // breath: band-limited noise around F2 for air (onset only — cheap)
       const nr = new Rng(seedOf(id, midi, 3));
       const bp = new Svf(sr, vowel === 'a' ? 1200 : 800, 2.5);
-      for (let i = 0; i < len; i++) {
+      const nb = Math.min(len, Math.round(0.45 * sr));
+      for (let i = 0; i < nb; i++) {
         bp.lp(nr.bi());
-        const v = bp.bp * env[i] * 0.025;
+        const v = bp.bp * env[i] * 0.03 * (1 - i / nb);
         l[i] += v;
         r[i] += v;
       }
@@ -494,7 +593,7 @@ function brass(id: string, bright: number): InstDef {
       const fr = new Svf(sr, 500, 0.8);
       for (let b = 0; b < len; b += 16) {
         const t = b / sr;
-        const c = (t < 0.05 ? 450 + (2800 * bright - 450) * (t / 0.05) : 2800 * bright * (0.5 + 0.5 * Math.exp(-(t - 0.05) / 0.25))) * kt;
+        const c = (t < 0.05 ? 450 + (3500 * bright - 450) * (t / 0.05) : 3500 * bright * (0.58 + 0.42 * Math.exp(-(t - 0.05) / 0.25))) * kt;
         fl.set(c, 0.85);
         fr.set(c, 0.85);
         const be = Math.min(len, b + 16);
@@ -597,7 +696,7 @@ function synthPad(id: string, cutoff: number, wobble: number): InstDef {
     id,
     kind: 'sustain',
     variants: 1,
-    release: 0.5,
+    release: 0.38,
     sustainLen: 3.8,
     gate: 0.98,
     make(sr, midi, _v, lenSec) {
@@ -608,8 +707,8 @@ function synthPad(id: string, cutoff: number, wobble: number): InstDef {
       const l = new Float32Array(len);
       const r = new Float32Array(len);
       const rng = new Rng(seedOf(id, midi, 0));
-      oscMulti(l, r, tbl, sr, f0, env, [-12, -4, 4, 12].map((c, i) => {
-        const [gl, gr] = panGains(((i / 3) * 2 - 1) * 0.9);
+      oscMulti(l, r, tbl, sr, f0, env, [-11, 1, 12].map((c, i) => {
+        const [gl, gr] = panGains((i - 1) * 0.85);
         return { gl, gr, detune: c, phase: rng.next(), drift: 3 + wobble, driftRate: 0.2 + 0.11 * i, vibPhase: rng.next() * 6 };
       }));
       return normalizeRms({ l, r }, sr, 0.15, 1.0);
@@ -824,24 +923,39 @@ const epiano: InstDef = {
     const len = Math.round(want(2.6, lenSec) * sr);
     const l = new Float32Array(len);
     const r = new Float32Array(len);
+    const S = SINE;
+    const N = SINE_N;
+    const mask = N - 1;
+    const sin = (x: number): number => {
+      // x in cycles
+      const p = (x - Math.floor(x)) * N;
+      const i = p | 0;
+      const a = S[i & mask];
+      return a + (S[(i + 1) & mask] - a) * (p - i);
+    };
     let pc = 0;
-    let pm = 0;
     let pt = 0;
-    const wc = (TAU * f) / sr;
-    const wt = (TAU * f * 14) / sr;
+    const fc = f / sr;
+    const ft = (f * 14) / sr;
     const t60 = clamp(3.0 * Math.pow(262 / f, 0.4), 0.8, 5);
+    const kIdx = Math.exp(-1 / (0.35 * sr));
+    const kTine = Math.exp(-1 / (0.012 * sr));
+    const kAmp = Math.exp(-6.9 / (t60 * sr));
+    let idxE = 1.9;
+    let tineE = 0.9;
+    let amp = 1;
     for (let i = 0; i < len; i++) {
       const t = i / sr;
-      const idx = 0.35 + 1.9 * Math.exp(-t / 0.35);
-      const tine = Math.sin(pt) * 0.9 * Math.exp(-t / 0.012);
-      const v = Math.sin(pc + idx * Math.sin(pm) + tine) * Math.exp((-6.9 * t) / t60) * Math.min(1, t / 0.002);
-      pc += wc;
-      pm += wc;
-      pt += wt;
-      if (pc > TAU) pc -= TAU;
-      if (pm > TAU) pm -= TAU;
-      if (pt > TAU) pt -= TAU;
-      const pan = 0.3 * Math.sin(TAU * 3.2 * t);
+      const tine = tineE > 1e-4 ? sin(pt) * tineE : 0;
+      const v = sin(pc + ((0.35 + idxE) * sin(pc) + tine) / TAU) * amp * (i < 96 ? i / 96 : 1);
+      pc += fc;
+      pt += ft;
+      if (pc > 1) pc -= 1;
+      if (pt > 1) pt -= 1;
+      idxE *= kIdx;
+      tineE *= kTine;
+      amp *= kAmp;
+      const pan = 0.3 * sin(3.2 * t);
       l[i] = v * (1 - pan);
       r[i] = v * (1 + pan);
     }

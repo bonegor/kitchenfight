@@ -53,8 +53,8 @@ export interface RenderOpts {
 
 /** seconds of material repeated after the loop end */
 export const LOOP_PAD = 4;
-/** release tails are mixed for this many time constants (≈ -40 dB) */
-const TAIL_TAU = 4.6;
+/** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
+const TAIL_TAU = 3.6;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -392,12 +392,21 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   }
   const gl = ev.gl;
   const gr = ev.gr;
-  for (let i = i0; i < a; i++) {
-    const v = sl[i];
-    const j = st + i;
-    L[j] += v * gl;
-    R[j] += v * gr;
-    S[j >> 1] += v * gs;
+  if (gs === 0) {
+    for (let i = i0; i < a; i++) {
+      const v = sl[i];
+      const j = st + i;
+      L[j] += v * gl;
+      R[j] += v * gr;
+    }
+  } else {
+    for (let i = i0; i < a; i++) {
+      const v = sl[i];
+      const j = st + i;
+      L[j] += v * gl;
+      R[j] += v * gr;
+      S[j >> 1] += v * gs;
+    }
   }
   let env = 1;
   for (let i = a; i < iEnd; i++) {

@@ -26,6 +26,9 @@ const MAX_SFX_VOICES = 40;
 /** cached music budget (seconds of stereo audio) */
 const MUSIC_CACHE_SECONDS = 280;
 const DEFAULT_SR = 48000;
+const MOODS: VoiceMood[] = ['angry', 'happy', 'surprised', 'nonna', 'boss', 'cat'];
+/** finite number or default */
+const num = (x: unknown, def: number): number => (typeof x === 'number' && Number.isFinite(x) ? x : def);
 /** TS 5.9 typed-array generics: Web Audio wants ArrayBuffer-backed arrays (ours always are). */
 const f32 = (a: Float32Array): Float32Array<ArrayBuffer> => a as Float32Array<ArrayBuffer>;
 
@@ -59,10 +62,77 @@ interface Pending {
   progress: number;
 }
 
-type WorkerMsg =
-  | { seq: number; progress: number }
-  | { seq: number; ok: true; left: Float32Array; right: Float32Array; loop: boolean; loopStart: number; loopEnd: number; length: number; sr: number; ms: number }
-  | { seq: number; ok: false; error: string };
+type MusicDone = { seq: number; ok: true; left: Float32Array; right: Float32Array; loop: boolean; loopStart: number; loopEnd: number; length: number; sr: number; ms: number };
+type WorkerMsg = { seq: number; [k: string]: unknown };
+
+/** One render worker with request/response routing; marks itself broken on any failure. */
+class WorkerPort {
+  private w: Worker | null = null;
+  private broken = false;
+  private seq = 0;
+  private jobs = new Map<number, (m: WorkerMsg | null) => boolean>();
+  get usable(): boolean {
+    return !this.broken;
+  }
+  private ensure(): Worker | null {
+    if (this.broken) return null;
+    if (this.w) return this.w;
+    try {
+      const w = new RenderWorker();
+      w.onmessage = (e: MessageEvent<WorkerMsg>) => {
+        const m = e.data;
+        const h = this.jobs.get(m.seq);
+        if (!h) return;
+        let done = true;
+        try {
+          done = h(m);
+        } catch {
+          /* never throw into the game */
+        }
+        if (done) this.jobs.delete(m.seq);
+      };
+      w.onerror = () => this.fail();
+      this.w = w;
+      return w;
+    } catch {
+      this.fail();
+      return null;
+    }
+  }
+  fail(): void {
+    this.broken = true;
+    const jobs = [...this.jobs.values()];
+    this.jobs.clear();
+    for (const h of jobs) {
+      try {
+        h(null);
+      } catch {
+        /* ignore */
+      }
+    }
+    try {
+      this.w?.terminate();
+    } catch {
+      /* ignore */
+    }
+    this.w = null;
+  }
+  /** handler gets each reply (null on failure) and returns true when the job is finished */
+  request(msg: Record<string, unknown>, handler: (m: WorkerMsg | null) => boolean): boolean {
+    const w = this.ensure();
+    if (!w) return false;
+    const seq = ++this.seq;
+    this.jobs.set(seq, handler);
+    try {
+      w.postMessage({ ...msg, seq });
+      return true;
+    } catch {
+      this.jobs.delete(seq);
+      this.fail();
+      return false;
+    }
+  }
+}
 
 export class AudioEngine implements AudioAPI {
   private ctx: AudioContext | null = null;
@@ -84,10 +154,8 @@ export class AudioEngine implements AudioAPI {
   private current: Playing | null = null;
   private wanted: MusicId | null = null;
   private wantedFade = 1;
-  private worker: Worker | null = null;
-  private workerBroken = false;
-  private seq = 0;
-  private workerJobs = new Map<number, { resolve: (m: WorkerMsg | null) => void; onProgress: (p: number) => void }>();
+  private musicWorker = new WorkerPort();
+  private fxWorker = new WorkerPort();
 
   // sfx
   private sfxBufs = new Map<string, AudioBuffer>();
@@ -96,6 +164,7 @@ export class AudioEngine implements AudioAPI {
   private sfxPrerendering = false;
   private speech: Voice | null = null;
   private lastSpeech = 0;
+  private speechToken = 0;
   private voiceCache = new Map<string, AudioBuffer>();
 
   private suspendedByVisibility = false;
@@ -198,7 +267,7 @@ export class AudioEngine implements AudioAPI {
   // ------------------------------------------------------------------------------- volumes
 
   setVolumes(master: number, music: number, sfx: number): void {
-    this.vol = { master: clamp(+master || 0, 0, 1), music: clamp(+music || 0, 0, 1), sfx: clamp(+sfx || 0, 0, 1) };
+    this.vol = { master: clamp(num(master, 1), 0, 1), music: clamp(num(music, 0.8), 0, 1), sfx: clamp(num(sfx, 0.9), 0, 1) };
     this.applyVolumes(0.06);
   }
 
@@ -254,7 +323,7 @@ export class AudioEngine implements AudioAPI {
   playMusic(id: MusicId, opts?: { fade?: number; restart?: boolean }): void {
     try {
       if (!SONGS[id]) return;
-      const fade = Math.max(0, opts?.fade ?? 1);
+      const fade = clamp(num(opts?.fade, 1), 0, 30);
       if (!opts?.restart) {
         if (this.current?.id === id) {
           this.wanted = null; // cancel any other pending request, keep playing
@@ -284,7 +353,7 @@ export class AudioEngine implements AudioAPI {
   stopMusic(fade = 1): void {
     try {
       this.wanted = null;
-      if (this.current && this.ctx) this.fadeOut(this.current, Math.max(0.01, fade));
+      if (this.current && this.ctx) this.fadeOut(this.current, clamp(num(fade, 1), 0.01, 30));
       this.current = null;
     } catch {
       /* ignore */
@@ -313,8 +382,8 @@ export class AudioEngine implements AudioAPI {
     try {
       const g = this.duck.gain;
       const now = ctx.currentTime;
-      const target = clamp(1 - clamp(amount, 0, 1), 0.0001, 1);
-      const hold = Math.max(0, seconds);
+      const target = clamp(1 - clamp(num(amount, 0), 0, 1), 0.0001, 1);
+      const hold = clamp(num(seconds, 0), 0, 600);
       const anyG = g as AudioParam & { cancelAndHoldAtTime?: (t: number) => void };
       if (anyG.cancelAndHoldAtTime) anyG.cancelAndHoldAtTime(now);
       else {
@@ -485,10 +554,9 @@ export class AudioEngine implements AudioAPI {
     if (!song) return null;
     const sr = this.ctx?.sampleRate ?? DEFAULT_SR;
     // 1) worker
-    const w = this.getWorker();
-    if (w) {
-      const msg = await this.workerRender(w, id, sr, onProgress);
-      if (msg && 'ok' in msg && msg.ok) {
+    if (this.musicWorker.usable) {
+      const msg = await this.workerRender(id, sr, onProgress);
+      if (msg) {
         const track: Track = {
           id,
           sr: msg.sr,
@@ -503,7 +571,7 @@ export class AudioEngine implements AudioAPI {
         if (this.ctx) await this.toBufferChunked(track);
         return track;
       }
-      this.workerBroken = true;
+      this.musicWorker.fail();
     }
     // 2) main thread, time-sliced, rendering straight into an AudioBuffer when possible
     let buffer: AudioBuffer | null = null;
@@ -530,71 +598,34 @@ export class AudioEngine implements AudioAPI {
     };
   }
 
-  private getWorker(): Worker | null {
-    if (this.workerBroken) return null;
-    if (this.worker) return this.worker;
-    try {
-      const w = new RenderWorker();
-      w.onmessage = (e: MessageEvent<WorkerMsg>) => {
-        const m = e.data;
-        const job = this.workerJobs.get(m.seq);
-        if (!job) return;
-        if ('progress' in m) {
-          job.onProgress(m.progress);
-          return;
-        }
-        this.workerJobs.delete(m.seq);
-        job.resolve(m);
-      };
-      w.onerror = () => {
-        this.workerBroken = true;
-        for (const j of this.workerJobs.values()) j.resolve(null);
-        this.workerJobs.clear();
-        try {
-          w.terminate();
-        } catch {
-          /* ignore */
-        }
-        this.worker = null;
-      };
-      this.worker = w;
-      return w;
-    } catch {
-      this.workerBroken = true;
-      return null;
-    }
-  }
-
-  private workerRender(w: Worker, id: MusicId, sr: number, onProgress: (p: number) => void): Promise<WorkerMsg | null> {
+  private workerRender(id: MusicId, sr: number, onProgress: (p: number) => void): Promise<MusicDone | null> {
     return new Promise((resolve) => {
-      const seq = ++this.seq;
-      let done = false;
       let heard = false;
-      const finish = (m: WorkerMsg | null) => {
+      let done = false;
+      const finish = (m: MusicDone | null) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
         resolve(m);
       };
-      // if the worker never answers at all (blocked by CSP etc.), fall back
+      // a worker that never answers (blocked by CSP etc.) → fall back to the main thread
       const timer = setTimeout(() => {
-        if (!heard) {
-          this.workerJobs.delete(seq);
-          finish(null);
-        }
+        if (!heard) finish(null);
       }, 8000);
-      this.workerJobs.set(seq, {
-        resolve: finish,
-        onProgress: (p) => {
-          heard = true;
-          onProgress(p);
-        },
+      const ok = this.musicWorker.request({ type: 'music', id, sr }, (m) => {
+        if (!m) {
+          finish(null);
+          return true;
+        }
+        heard = true;
+        if (typeof m.progress === 'number') {
+          onProgress(m.progress);
+          return false;
+        }
+        finish(m.ok === true ? (m as unknown as MusicDone) : null);
+        return true;
       });
-      try {
-        w.postMessage({ seq, id, sr });
-      } catch {
-        finish(null);
-      }
+      if (!ok) finish(null);
     });
   }
 
@@ -622,19 +653,53 @@ export class AudioEngine implements AudioAPI {
     }
   }
 
+  private storeSfx(id: SfxId, v: number, l: Float32Array, r: Float32Array | null): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const key = this.sfxKey(id, v);
+    if (this.sfxBufs.has(key)) return;
+    try {
+      const b = ctx.createBuffer(r ? 2 : 1, l.length, ctx.sampleRate);
+      b.copyToChannel(f32(l), 0);
+      if (r) b.copyToChannel(f32(r), 1);
+      this.sfxBufs.set(key, b);
+    } catch {
+      /* ignore */
+    }
+  }
+
   private async prerenderSfx(): Promise<void> {
-    if (this.sfxPrerendering) return;
+    if (this.sfxPrerendering || !this.ctx) return;
     this.sfxPrerendering = true;
-    const sl = new Slicer(5);
     // most frequent first
-    const first: SfxId[] = ['hit', 'pickup_xp', 'enemy_death', 'player_hurt', 'ui_hover', 'ui_click', 'pickup_coin', 'hit_crit'];
+    const first: SfxId[] = ['hit', 'pickup_xp', 'enemy_death', 'player_hurt', 'ui_hover', 'ui_click', 'pickup_coin', 'hit_crit', 'enemy_shoot'];
     const order = [...first, ...SFX_IDS.filter((id) => !first.includes(id))];
-    for (const id of order) {
-      const n = SFX[id].variants ?? 1;
-      for (let v = 0; v < n; v++) {
-        this.makeSfxBuffer(id, v);
-        if (sl.due()) await sl.yield();
-      }
+    const list: Array<[SfxId, number]> = [];
+    for (const id of order) for (let v = 0; v < (SFX[id].variants ?? 1); v++) list.push([id, v]);
+    const sr = this.ctx.sampleRate;
+    const viaWorker = await new Promise<boolean>((resolve) => {
+      let any = false;
+      const ok = this.fxWorker.request({ type: 'sfx', sr, list }, (m) => {
+        if (!m) {
+          resolve(any);
+          return true;
+        }
+        if (typeof m.sfx === 'string') {
+          any = true;
+          this.storeSfx(m.sfx as SfxId, m.v as number, m.l as Float32Array, (m.r as Float32Array | null) ?? null);
+          return false;
+        }
+        resolve(m.ok === true);
+        return true;
+      });
+      if (!ok) resolve(false);
+    });
+    if (viaWorker && list.every(([id, v]) => this.sfxBufs.has(this.sfxKey(id, v)))) return;
+    // fallback: main thread, time-sliced
+    const sl = new Slicer(5);
+    for (const [id, v] of list) {
+      this.makeSfxBuffer(id, v);
+      if (sl.due()) await sl.yield();
     }
   }
 
@@ -667,8 +732,8 @@ export class AudioEngine implements AudioAPI {
       if (!buf) return;
       const pv = def.pitchVar ?? 0.03;
       const vv = def.volVar ?? 0.06;
-      const rate = clamp((opts?.pitch ?? 1) * (1 + (Math.random() * 2 - 1) * pv), 0.25, 4);
-      const vol = clamp(opts?.volume ?? 1, 0, 2) * (1 + (Math.random() * 2 - 1) * vv);
+      const rate = clamp(num(opts?.pitch, 1) * (1 + (Math.random() * 2 - 1) * pv), 0.25, 4);
+      const vol = clamp(num(opts?.volume, 1), 0, 2) * (1 + (Math.random() * 2 - 1) * vv);
       if (vol <= 0.001) return;
       const src = ctx.createBufferSource();
       src.buffer = buf;
@@ -677,7 +742,7 @@ export class AudioEngine implements AudioAPI {
       g.gain.value = vol;
       src.connect(g);
       let pan: StereoPannerNode | null = null;
-      const p = opts?.pan ?? 0;
+      const p = num(opts?.pan, 0);
       if (Math.abs(p) > 0.01 && typeof ctx.createStereoPanner === 'function') {
         pan = ctx.createStereoPanner();
         pan.pan.value = clamp(p, -1, 1);
@@ -717,41 +782,81 @@ export class AudioEngine implements AudioAPI {
 
   // ------------------------------------------------------------------------------- speech
 
-  voice(text: string, mood: VoiceMood): void {
+  voice(text: string, moodIn: VoiceMood): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running' || !this.voiceGain) return;
+    const mood: VoiceMood = MOODS.includes(moodIn) ? moodIn : 'happy';
     try {
       const now = ctx.currentTime;
       if (now - this.lastSpeech < 0.08) return;
       this.lastSpeech = now;
-      const key = mood + '|' + String(text ?? '').slice(0, 64);
-      let buf = this.voiceCache.get(key);
-      if (!buf) {
-        const data = renderVoice(ctx.sampleRate, String(text ?? ''), mood);
-        buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
-        buf.copyToChannel(f32(data), 0);
-        this.voiceCache.set(key, buf);
-        if (this.voiceCache.size > 24) this.voiceCache.delete(this.voiceCache.keys().next().value as string);
+      const line = String(text ?? '').slice(0, 64);
+      const key = mood + '|' + line;
+      const cached = this.voiceCache.get(key);
+      if (cached) {
+        this.playSpeech(cached);
+        return;
       }
-      if (this.speech && this.speech.end > now) this.killVoice(this.speech, now);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      const g = ctx.createGain();
-      g.gain.value = 1;
-      src.connect(g);
-      g.connect(this.voiceGain);
-      src.onended = () => {
-        try {
-          src.disconnect();
-          g.disconnect();
-        } catch {
-          /* ignore */
+      const token = ++this.speechToken;
+      const asked = performance.now();
+      const viaWorker = this.fxWorker.request({ type: 'voice', sr: ctx.sampleRate, text: line, mood }, (m) => {
+        if (m && m.ok === true && m.data instanceof Float32Array) {
+          const buf = this.cacheVoice(key, m.data);
+          // play only if this is still the latest line and it isn't stale
+          if (buf && token === this.speechToken && performance.now() - asked < 600) this.playSpeech(buf);
+        } else if (token === this.speechToken) {
+          try {
+            const buf = this.cacheVoice(key, renderVoice(ctx.sampleRate, line, mood));
+            if (buf) this.playSpeech(buf);
+          } catch {
+            /* ignore */
+          }
         }
-      };
-      src.start(now);
-      this.speech = { src, gain: g, end: now + buf.duration };
+        return true;
+      });
+      if (!viaWorker) {
+        const buf = this.cacheVoice(key, renderVoice(ctx.sampleRate, line, mood));
+        if (buf) this.playSpeech(buf);
+      }
     } catch {
       /* ignore */
     }
+  }
+
+  private cacheVoice(key: string, data: Float32Array): AudioBuffer | null {
+    const ctx = this.ctx;
+    if (!ctx) return null;
+    try {
+      const buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
+      buf.copyToChannel(f32(data), 0);
+      this.voiceCache.set(key, buf);
+      if (this.voiceCache.size > 24) this.voiceCache.delete(this.voiceCache.keys().next().value as string);
+      return buf;
+    } catch {
+      return null;
+    }
+  }
+
+  private playSpeech(buf: AudioBuffer): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.voiceGain) return;
+    const now = ctx.currentTime;
+    if (this.speech && this.speech.end > now) this.killVoice(this.speech, now);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = 1;
+    src.connect(g);
+    g.connect(this.voiceGain);
+    src.onended = () => {
+      try {
+        src.disconnect();
+        g.disconnect();
+      } catch {
+        /* ignore */
+      }
+    };
+    src.start(now);
+    this.speech = { src, gain: g, end: now + buf.duration };
   }
 }

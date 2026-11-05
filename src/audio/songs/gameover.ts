@@ -10,10 +10,10 @@ export const gameover: SongDef = {
   stepsPerBeat: 2,
   barSteps: 8,
   scale: 'A harmonic minor',
-  gainDb: 0,
+  gainDb: -0.6,
   humanize: 0.006,
   tail: 2.4,
-  reverb: { rt60: 1.5, size: 1.0, damp: 0.45, predelay: 0.02, er: 0.3, hp: 250, lp: 6500, wet: 0.9 },
+  reverb: { rt60: 1.5, size: 1.0, damp: 0.45, predelay: 0.02, er: 0.3, hp: 250, lp: 6500, wet: 1.4 },
   channels: {
     acc: { inst: 'accordion', gain: -3, pan: 0, send: 0.22 },
     accC: { inst: 'accChord', gain: -12, pan: -0.2, send: 0.2, hum: 0.5 },

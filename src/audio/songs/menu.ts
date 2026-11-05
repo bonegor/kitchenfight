@@ -29,9 +29,9 @@ export const menu: SongDef = {
   stepsPerBeat: 2,
   barSteps: 6,
   scale: 'G major',
-  gainDb: 0,
+  gainDb: 2.5,
   humanize: 0.006,
-  reverb: { rt60: 1.7, size: 1.1, damp: 0.45, predelay: 0.022, er: 0.3, hp: 240, lp: 6500, wet: 0.9 },
+  reverb: { rt60: 1.7, size: 1.1, damp: 0.45, predelay: 0.022, er: 0.3, hp: 240, lp: 6500, wet: 1.6 },
   channels: {
     mand: { inst: 'mandolin', gain: -1, pan: -0.12, send: 0.22 },
     acc: { inst: 'accordion', gain: -4, pan: 0.1, send: 0.2 },
