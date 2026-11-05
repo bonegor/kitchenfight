@@ -14,6 +14,8 @@
 import type { AudioAPI, MusicId, SfxId, SfxOpts, VoiceMood } from './audio';
 import { clamp, Slicer, yieldToLoop } from './dsp';
 import { renderSong } from './render';
+import { bankTransfer, loadSampleBank, type BankLoadStats } from './samplebank';
+import { setsOfInstrument, type BankReport } from './sampled';
 import { SFX, SFX_IDS, renderSfx } from './sfx';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
@@ -26,6 +28,8 @@ const MAX_SFX_VOICES = 40;
 /** cached music budget (seconds of stereo audio) */
 const MUSIC_CACHE_SECONDS = 280;
 const DEFAULT_SR = 48000;
+/** music renders wait this long for the recorded instrument samples, then fall back to synth */
+const BANK_WAIT_MS = 12000;
 const MOODS: VoiceMood[] = ['angry', 'happy', 'surprised', 'nonna', 'boss', 'cat'];
 /** finite number or default */
 const num = (x: unknown, def: number): number => (typeof x === 'number' && Number.isFinite(x) ? x : def);
@@ -42,6 +46,8 @@ interface Track {
   loopEnd: number;
   seconds: number;
   used: number;
+  /** rendered with the recorded instrument samples (false = synthesized fallback) */
+  sampled: boolean;
 }
 
 interface Playing {
@@ -118,13 +124,14 @@ class WorkerPort {
     this.w = null;
   }
   /** handler gets each reply (null on failure) and returns true when the job is finished */
-  request(msg: Record<string, unknown>, handler: (m: WorkerMsg | null) => boolean): boolean {
+  request(msg: Record<string, unknown>, handler: (m: WorkerMsg | null) => boolean, transfer?: Transferable[]): boolean {
     const w = this.ensure();
     if (!w) return false;
     const seq = ++this.seq;
     this.jobs.set(seq, handler);
     try {
-      w.postMessage({ ...msg, seq });
+      if (transfer && transfer.length) w.postMessage({ ...msg, seq }, transfer);
+      else w.postMessage({ ...msg, seq });
       return true;
     } catch {
       this.jobs.delete(seq);
@@ -156,6 +163,16 @@ export class AudioEngine implements AudioAPI {
   private wantedFade = 1;
   private musicWorker = new WorkerPort();
   private fxWorker = new WorkerPort();
+  // recorded instrument samples (decoded on the main thread, installed in the music worker)
+  private bank: Promise<boolean> | null = null;
+  private bankReady = false;
+  /** sample sets installed in the music worker so far, and waiters for more */
+  private setsIn = new Set<string>();
+  private bankDone = false;
+  private setWaiters: Array<() => void> = [];
+  /** track currently waiting for its sets / rendering (its sets are decoded first) */
+  private rendering: MusicId | null = null;
+  private bankInfo: { state: string; load?: BankLoadStats; report?: BankReport; t0?: number; tReady?: number; error?: string } = { state: 'idle' };
 
   // sfx
   private sfxBufs = new Map<string, AudioBuffer>();
@@ -172,6 +189,128 @@ export class AudioEngine implements AudioAPI {
 
   get ready(): boolean {
     return !!this.ctx && this.ctx.state === 'running';
+  }
+
+  /** Diagnostics for tests/dev tools (sample bank state, which tracks used recorded samples). */
+  samplerStatus(): Record<string, unknown> {
+    const tracks: Record<string, boolean> = {};
+    for (const t of this.tracks.values()) tracks[t.id] = t.sampled;
+    return { ...this.bankInfo, bankReady: this.bankReady, tracks, playing: this.current?.id ?? null, ctx: this.ctx?.state ?? 'none' };
+  }
+
+  // ------------------------------------------------------------------------------- sample bank
+
+  /** Start (once) decoding the instrument samples and installing them in the music worker. */
+  private ensureBank(): Promise<boolean> {
+    if (!this.bank) {
+      try {
+        (globalThis as unknown as { __kfSampler?: unknown }).__kfSampler = { status: () => this.samplerStatus() };
+      } catch {
+        /* ignore */
+      }
+      this.bank = this.loadBank().catch(() => false);
+    }
+    return this.bank;
+  }
+
+  private async loadBank(): Promise<boolean> {
+    this.bankInfo = { state: 'loading', t0: performance.now() };
+    if (!this.musicWorker.usable) {
+      this.bankInfo.state = 'no-worker';
+      return false;
+    }
+    // stream every decoded set to the worker as soon as it is ready (no main-thread pile-up);
+    // the sets of the tracks waiting to render are decoded first
+    let sent = 0;
+    const loaded = await loadSampleBank(
+      2,
+      (def, pcm) => {
+        const ok = this.musicWorker.request(
+          { type: 'bankSet', set: def, pcm },
+          (m) => {
+            if (m && m.ok === true) this.setsIn.add(def.name);
+            this.wakeSetWaiters();
+            return true;
+          },
+          bankTransfer(pcm),
+        );
+        if (ok) sent++;
+      },
+      () => {
+        const ids = [...(this.rendering ? [this.rendering] : []), ...(this.wanted ? [this.wanted] : []), ...this.queue];
+        return ids.flatMap((id) => this.setsOf(id));
+      },
+    );
+    if (!loaded || !sent) {
+      this.bankInfo.state = 'decode-failed';
+      this.bankDone = true;
+      this.wakeSetWaiters();
+      return false;
+    }
+    this.bankInfo.load = loaded.stats;
+    this.bankInfo.state = 'installing';
+    const ok = await new Promise<boolean>((resolve) => {
+      const req = this.musicWorker.request({ type: 'bankDone' }, (m) => {
+        if (m && m.report) this.bankInfo.report = m.report as BankReport;
+        resolve(!!m && m.ok === true);
+        return true;
+      });
+      if (!req) resolve(false);
+    });
+    this.bankInfo.state = ok ? 'ready' : 'install-failed';
+    this.bankInfo.tReady = performance.now();
+    this.bankDone = true;
+    this.wakeSetWaiters();
+    if (ok) {
+      this.bankReady = true;
+      // tracks rendered with the synth fallback while we waited: re-render them on next use
+      for (const t of [...this.tracks.values()]) if (!t.sampled && t.id !== this.current?.id && t.id !== this.wanted) this.tracks.delete(t.id);
+    }
+    return ok;
+  }
+
+  private wakeSetWaiters(): void {
+    const w = this.setWaiters;
+    this.setWaiters = [];
+    for (const f of w) {
+      try {
+        f();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  /** Sample sets the instruments of a track play. */
+  private setsOf(id: MusicId): string[] {
+    const song = SONGS[id];
+    if (!song) return [];
+    const out = new Set<string>();
+    for (const ch of Object.values(song.channels)) for (const s of setsOfInstrument(ch.inst)) out.add(s);
+    return [...out];
+  }
+
+  /**
+   * Wait (bounded by BANK_WAIT_MS from the start of loading) until the music worker has every
+   * sample set this track uses — not the whole bank. True when the track will render sampled.
+   */
+  private async waitBank(id: MusicId): Promise<boolean> {
+    void this.ensureBank();
+    const need = this.setsOf(id);
+    const have = () => need.every((n) => this.setsIn.has(n));
+    if (have()) return true;
+    const started = this.bankInfo.t0 ?? performance.now();
+    const deadline = started + BANK_WAIT_MS;
+    while (!have() && !this.bankDone && performance.now() < deadline) {
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, Math.max(1, deadline - performance.now()));
+        this.setWaiters.push(() => {
+          clearTimeout(t);
+          resolve();
+        });
+      });
+    }
+    return have();
   }
 
   // ------------------------------------------------------------------------------- lifecycle
@@ -554,9 +693,12 @@ export class AudioEngine implements AudioAPI {
     if (!song) return null;
     // never synthesize music above 48 kHz (192 kHz devices would quadruple memory and render time)
     const sr = Math.min(this.ctx?.sampleRate ?? DEFAULT_SR, DEFAULT_SR);
-    // 1) worker
+    // 1) worker (with the recorded instrument samples once they are installed there)
     if (this.musicWorker.usable) {
-      const msg = await this.workerRender(id, sr, onProgress);
+      this.rendering = id;
+      const sampled = await this.waitBank(id);
+      this.rendering = null;
+      const msg = this.musicWorker.usable ? await this.workerRender(id, sr, onProgress) : null;
       if (msg) {
         const track: Track = {
           id,
@@ -568,6 +710,7 @@ export class AudioEngine implements AudioAPI {
           loopEnd: msg.loopEnd / msg.sr,
           seconds: msg.length / msg.sr,
           used: performance.now(),
+          sampled,
         };
         if (this.ctx) await this.toBufferChunked(track);
         return track;
@@ -596,6 +739,7 @@ export class AudioEngine implements AudioAPI {
       loopEnd: r.loopEnd / sr,
       seconds: r.length / sr,
       used: performance.now(),
+      sampled: false,
     };
   }
 

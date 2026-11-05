@@ -55,6 +55,10 @@ export interface RenderOpts {
 export const LOOP_PAD = 4;
 /** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
 const TAIL_TAU = 3.6;
+/** a choked note fades out over this many seconds, ending at the next note's onset (the
+ *  plectrum touching the string damps it just before re-exciting it) */
+const CHOKE_SEC = 0.004;
+let CHOKE_FADE = 192;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -100,6 +104,10 @@ interface MixEv {
   gate: number; // samples
   inst: InstDef;
   key: string;
+  /** channel|pitch (choke groups) */
+  voice: string;
+  /** output sample where a later note on the same string stops this one (choke), or Infinity */
+  chokeAt: number;
   /** constant-power gains for mono samples */
   gl: number;
   gr: number;
@@ -163,11 +171,19 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     const pan = clamp((chDef.pan ?? 0) + e.pan, -1, 1);
     const a = ((pan + 1) * Math.PI) / 4;
     const vr = Math.max(0, e.vr) % Math.max(1, inst.variants);
+    let layer = 0;
+    try {
+      layer = inst.layerOf ? inst.layerOf(e.v) | 0 : 0;
+    } catch {
+      layer = 0;
+    }
     mixEvs.push({
       st,
       gate: Math.max(1, Math.round(e.d * sr)),
       inst,
-      key: `${inst.id}|${e.m}|${vr}|${sr}`,
+      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}`,
+      voice: `${e.ch}|${e.m}`,
+      chokeAt: Infinity,
       gl: amp * Math.cos(a) * Math.SQRT2,
       gr: amp * Math.sin(a) * Math.SQRT2,
       bl: amp * (pan > 0 ? 1 - pan : 1),
@@ -192,10 +208,22 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     }
   }
   mixEvs.sort((a, b) => a.st - b.st);
+  // choke: a plucked string re-struck on the same channel/pitch stops the previous note (its
+  // fade ends at the new onset)
+  CHOKE_FADE = Math.max(16, Math.round(CHOKE_SEC * sr));
+  const lastOn = new Map<string, MixEv>();
+  for (const ev of mixEvs) {
+    if (!ev.inst.choke) continue;
+    const prev = lastOn.get(ev.voice);
+    if (prev && ev.st > prev.st + CHOKE_FADE) prev.chokeAt = ev.st - CHOKE_FADE;
+    lastOn.set(ev.voice, ev);
+  }
 
   // needed sample length per unique sample (seconds; 0 = natural length)
   const need = new Map<string, number>();
+  const keyInst = new Map<string, InstDef>();
   for (const ev of mixEvs) {
+    keyInst.set(ev.key, ev.inst);
     if (ev.inst.ring) {
       need.set(ev.key, 0);
       continue;
@@ -222,23 +250,24 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const prof: RenderStats['prof'] = {};
   let made = 0;
   for (const [key, n] of need) {
-    const [id, midiS, vrS] = key.split('|');
-    const inst = INSTRUMENTS[id];
+    const [id, midiS, vrS, layerS] = key.split('|');
+    const inst = keyInst.get(key) ?? INSTRUMENTS[id];
     const lenSec = n === 0 ? 0 : Math.max(0.5, Math.ceil(n * 4) / 4);
     const tt = performance.now();
     if (inst.kind === 'sustain') {
-      local.set(key, inst.make(sr, +midiS, +vrS, Math.max(lenSec, 0.5)));
+      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings));
       track(prof, id, performance.now() - tt);
       made++;
     } else {
       const have = globalCache.get(key);
-      const ok = !!have && (naturalKeys.has(key) || (n !== 0 && have.l.length / sr >= lenSec - 0.001));
+      const ok = !!have && (naturalKeys.has(key) || (n !== 0 && (have.l.length - (have.pre ?? 0)) / sr >= lenSec - 0.001));
       if (have && ok) {
         globalCache.delete(key);
         globalCache.set(key, have);
       } else {
-        const smp = inst.make(sr, +midiS, +vrS, lenSec);
-        cachePut(key, smp, n === 0 || smp.l.length / sr < lenSec - 0.01);
+        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings);
+        const pre = smp.pre ?? 0;
+        cachePut(key, smp, n === 0 || (smp.l.length - pre) / sr < lenSec - 0.01);
         track(prof, id, performance.now() - tt);
         made++;
       }
@@ -344,6 +373,18 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   };
 }
 
+/** Instrument sample, never throwing (a broken instrument renders silence + a warning). */
+function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[]): Sample {
+  try {
+    const s = inst.make(sr, midi, vr, lenSec, layer);
+    if (s && s.l && s.l.length) return s;
+    warnings.push(`empty sample ${inst.id} ${midi}`);
+  } catch (e) {
+    warnings.push(`instrument ${inst.id} failed: ${String(e)}`);
+  }
+  return { l: new Float32Array(Math.max(1, Math.round(0.01 * sr))), r: null };
+}
+
 function track(prof: RenderStats['prof'], id: string, ms: number): void {
   const p = (prof[id] = prof[id] ?? { synth: 0, n: 0, mixed: 0 });
   p.synth += ms;
@@ -356,15 +397,21 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const sr2 = s.r;
   const slen = sl.length;
   const ring = !!ev.inst.ring;
-  const gateEnd = ring ? slen : Math.min(slen, ev.gate);
-  const total = ring ? slen : Math.min(slen, ev.gate + ev.relN);
-  const i0 = ev.st < 0 ? -ev.st : 0;
-  const iEnd = Math.min(total, len - ev.st);
+  // recorded samples start `pre` samples before their onset: start early so the onset is on time
+  const pre = s.pre ?? 0;
+  const st = ev.st - pre;
+  // choked by the next note on the same string: fade out over CHOKE_FADE samples from there
+  const choke = ev.chokeAt === Infinity ? Infinity : ev.chokeAt - st + CHOKE_FADE;
+  const gateEnd = Math.min(ring ? slen : Math.min(slen, pre + ev.gate), choke - CHOKE_FADE);
+  const total = Math.min(ring ? slen : Math.min(slen, pre + ev.gate + ev.relN), choke);
+  const i0 = st < 0 ? -st : 0;
+  const iEnd = Math.min(total, len - st);
   if (iEnd <= i0) return;
-  const st = ev.st;
   const a = Math.max(i0, Math.min(gateEnd, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
+  // final linear fade: 64 samples after a release, CHOKE_FADE when the next note cuts it short
+  const fadeN = total === choke ? CHOKE_FADE : 64;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
@@ -380,7 +427,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
     let env = 1;
     for (let i = a; i < iEnd; i++) {
       env *= k;
-      const e = total - i < 64 ? (env * (total - i)) / 64 : env;
+      const e = total - i < fadeN ? (env * (total - i)) / fadeN : env;
       const j = st + i;
       const vl = sl[i] * e;
       const vr = sr2[i] * e;
@@ -411,7 +458,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   let env = 1;
   for (let i = a; i < iEnd; i++) {
     env *= k;
-    const v = sl[i] * (total - i < 64 ? (env * (total - i)) / 64 : env);
+    const v = sl[i] * (total - i < fadeN ? (env * (total - i)) / fadeN : env);
     const j = st + i;
     L[j] += v * gl;
     R[j] += v * gr;
