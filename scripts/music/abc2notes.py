@@ -349,6 +349,8 @@ class CleanState:
 
 
 NOTE_TOKEN = re.compile(r"(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)")
+# variant ending numbers after a bar line or [ (|1 :|2 [1,3 |2-4)
+ENDING_RE = re.compile(r'(?:\||\[)\s*([1-9](?:\s*[,-]\s*[1-9])*)(?![\d/])')
 
 
 def carry_double_accidentals(line: str, st: CleanState, mode: str) -> str:
@@ -877,7 +879,9 @@ def build_notes(bars: list[Bar], order: list[int], shift: int) -> tuple[list[dic
             if open_tie is not None:
                 warns.append(f'bar {b.number}: tie from {midi_name(open_tie["midi"])} not continued by the same pitch')
                 open_tie = None
-            name = spelled if shift == 0 and spelled else midi_name(m, b.key_sharps)
+            # transposed voices (clarinet in Bb, tenor -8) are spelled in the sounding key
+            sharps = None if b.key_sharps is None else ((b.key_sharps + 7 * shift + 6) % 12) - 6
+            name = spelled if shift == 0 and spelled else midi_name(m, sharps)
             nd = {'midi': m, 'name': name, 'onsetQ': round(on, 6), 'durQ': round(ql, 6),
                   'bar': b.number, 'seq': seq, 'beatQ': round(off, 6), 'tied': False}
             notes.append(nd)
@@ -972,6 +976,13 @@ def parse_voice(tune: Tune, voice: VoiceDef, keep_cs: bool = True) -> dict:
             pass
     if st.dropped_cs:
         warns.append(f'{st.dropped_cs} chord symbol(s) music21 cannot read were dropped')
+    # music21 drops the bracket of a 3rd (4th...) ending, so --expand-repeats cannot play it
+    late = sorted({int(x) for _, t in voice.lines for g in ENDING_RE.findall(t.split('%')[0]) for x in re.findall(r'\d+', g) if int(x) >= 3})
+    if late:
+        warns.append(f'endings for pass {", ".join(map(str, late))} found: --expand-repeats only handles 1st/2nd endings; '
+                     'spell the playing order out with --bars (e.g. 1-8,1-6,9)')
+    if re.search(r'D\.\s?[CS]\.|Da Capo|Dal Segno|!(?:D\.[CS]\.|dacapo|dacoda|segno|coda)!', '\n'.join(t for _, t in voice.lines), re.I):
+        warns.append('D.C. / D.S. / segno / coda markings are not expanded: spell the playing order out with --bars')
     for ln, s in skipped:
         warns.append(f'line {ln} skipped (not music): {s}')
     return {'bars': bars, 'warnings': warns + msgs, 'abc': text}

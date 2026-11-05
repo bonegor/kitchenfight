@@ -51,7 +51,7 @@ const BROKEN = `
   F#5:2 E5:2 r:2 | F#5:3 D5:1 r:2 | G5:1 r:1 F#5:1 E5:1 r:1 G5:1 | F#5:3 r:3 |
   A5:3 E5:1 r:2 | F#5:1 E5:3 r:2 | G5:1 r:1 A5:1 B5:1 r:1 G5:1 | D5:2 B4:1 B4:1 B4:1 r:1 |`;
 
-const base = (id: string, melody: string): SongDef => ({
+const base = (id: string, melody: string, nb = 8): SongDef => ({
   id,
   bpm: 132,
   stepsPerBeat: 3,
@@ -66,8 +66,8 @@ const base = (id: string, melody: string): SongDef => ({
   },
   sections: {
     refrain: {
-      bars: 8,
-      chords: CHORDS,
+      bars: nb,
+      chords: CHORDS + ' | G:6'.repeat(nb - 8),
       parts: [
         mel('mel', melody, { vel: 0.85 }),
         comp('accC', 'r:2 c:1 r:2 c:1', { lo: 'E4', hi: 'D5', vel: 0.55 }),
@@ -83,6 +83,28 @@ const base = (id: string, melody: string): SongDef => ({
 export const funiculiRefrain = base('funiculiRefrain', REFRAIN);
 export const funiculiOrnamented = base('funiculiOrnamented', ORNAMENTED);
 export const funiculiBroken = base('funiculiBroken', BROKEN);
+
+// one musical error each: every one of these must FAIL with a clear diff
+const BARS = REFRAIN.split('|').map((b) => b.trim()).filter(Boolean);
+const J = (bars: string[]): string => bars.join(' | ') + ' |';
+const withBar = (k: number, bar: string): string => J(BARS.map((b, i) => (i === k ? bar : b)));
+/** bar 1 played an eighth late (a shifted bar) */
+export const funiculiShifted = base('funiculiShifted', withBar(0, 'r:1 F#5:3 E5:1 r:1'));
+/** bar 5 with its rhythm swapped (dotted quarter + eighth -> eighth + dotted quarter) */
+export const funiculiSwapped = base('funiculiSwapped', withBar(4, 'F#5:1 E5:3 r:2'));
+/** bar 7 a step too high (a transposed bar) */
+export const funiculiStepUp = base('funiculiStepUp', withBar(6, 'A5:1 r:1 G5:1 F#5:1 r:1 A5:1'));
+/** 2 wrong notes of 21 (about 10 %) */
+export const funiculiTwoWrong = base('funiculiTwoWrong', J(BARS.map((b, i) => (i === 1 ? 'F#5:3 D5:1 r:2' : i === 5 ? 'G5:3 E5:1 r:2' : b))));
+/** the short notes left out (held notes instead): they are melody notes, not ornaments */
+export const funiculiDropped = base('funiculiDropped', J(BARS.map((b) => b.replace('F#5:3 E5:1 r:2', 'F#5:4 r:2'))));
+/** every other note an octave lower: isolated octave jumps break the line (a whole phrase may move) */
+let nth = 0;
+export const funiculiJumpy = base('funiculiJumpy', REFRAIN.replace(/([A-G]#?)(\d)/g, (_m, n: string, o: string) => n + (nth++ % 2 ? Number(o) - 1 : o)));
+/** a leaping foreign note squeezed into every dotted quarter: not an ornament */
+export const funiculiLeaps = base('funiculiLeaps', REFRAIN.replace(/F#5:3/g, 'F#5:2 B5:1'));
+/** an empty bar inserted after bar 4: everything after it is a bar late (FAIL; PASS with --resync) */
+export const funiculiInserted = base('funiculiInserted', J([...BARS.slice(0, 4), 'r:6', ...BARS.slice(4)]), 9);
 
 // doubled note values: 6 steps per beat (sixteenth steps), 12 steps per bar
 const DOUBLED = REFRAIN.replace(/:(\d+)/g, (_m, d: string) => ':' + 2 * Number(d));
@@ -159,6 +181,17 @@ GREP='Located: .*bars 38..45' check 'locate in wf_funiculi (no --ref-bars)' 0 $P
 GREP='Located: .*bars 38..45' check 'locate in bb_funiculi (1927 print, Eb)' 0 $PY scripts/music/compare.py --abc "$REFS/bb_funiculi.abc" --song-file $FIX --export funiculiRefrain --channel mel
 GREP='Located: .*bars 30..37' check 'locate in jc_funiculi_201278317 (piffero, G)' 0 $PY scripts/music/compare.py --abc "$REFS/jc_funiculi_201278317.abc" --song-file $FIX --export funiculiRefrain --channel mel
 GREP='Located' check 'broken variant located but FAIL' 1 $PY scripts/music/compare.py --abc "$W" --song-file $FIX --export funiculiBroken --channel mel
+C="$PY scripts/music/compare.py --abc $W --ref-bars 38-45 --song-file $FIX --channel mel"
+GREP='E5 starts 1/2q late.*|Broken bars: 38 ' check 'one bar shifted an eighth -> FAIL (broken bar 38)' 1 $C --export funiculiShifted
+GREP='Broken bars: 42 ' check 'one bar with swapped rhythm -> FAIL (broken bar 42)' 1 $C --export funiculiSwapped
+GREP='wrong note: ref F5 -> cand G5' check 'one bar a step too high -> FAIL' 1 $C --export funiculiStepUp
+GREP='RESULT: PASS' check 'same bar, declared with --allow-bars 44 -> PASS' 0 $C --export funiculiStepUp --allow-bars 44
+GREP='pitch 90.5 % < 95 %' check '2 wrong notes of 21 (~10 %) -> FAIL' 1 $C --export funiculiTwoWrong
+GREP='missing: ref D5' check 'short melody notes left out -> FAIL (not ornaments)' 1 $C --export funiculiDropped
+GREP='isolated note out of the line' check 'every other note an octave off -> FAIL' 1 $C --export funiculiJumpy
+GREP='extra: cand A5' check 'leaping extra notes are not ornaments -> FAIL' 1 $C --export funiculiLeaps
+GREP='starts 3q (early|late)' check 'empty bar inserted -> FAIL (displaced)' 1 $C --export funiculiInserted
+GREP='timing shift' check 'inserted bar declared with --resync -> PASS' 0 $C --export funiculiInserted --resync
 
 echo "== 3. abc2notes on awkward files"
 GREP='V:1 Piano: 140 notes' check 'escaped quotes in annotations (bb_funiculi)' 0 $PY scripts/music/abc2notes.py "$REFS/bb_funiculi.abc" --list
@@ -174,9 +207,114 @@ GREP='V:1 Sopran: 170 notes.*bar problems 0' check 'chord tie before duration [B
 GREP='bar  36 \| ' check 'labelled variant ending ["Coda" (jc_solemio_201318418)' 0 $PY scripts/music/abc2notes.py "$REFS/jc_solemio_201318418.abc" --tune 1 --text
 check 'closing :| after a 2nd ending terminates (jc_santalucia_201333973)' 0 bash -c "[ \$($PY scripts/music/abc2notes.py '$REFS/jc_santalucia_201333973.abc' --expand-repeats --text | grep -c '^bar ') = 32 ]"
 
+echo "== 3b. repeat structures and voices (synthetic ABC written below)"
+cat > "$T/rep.abc" <<'ABC'
+X:1
+T:AABB
+M:2/4
+L:1/8
+K:C
+|: C D E F | G A B c :|: c B A G | F E D C :|
+
+X:2
+T:first and second endings
+M:2/4
+L:1/8
+K:C
+|: C D E F | G A B c |1 c B A G :|2 c2 c2 || d e f g | a4 |]
+
+X:3
+T:stray repeat sign closing the 2nd ending
+M:2/4
+L:1/8
+K:C
+|: C D E F |1 G A B c :|2 c B A G :| d e f g | a4 |]
+
+X:4
+T:repeat without a start sign
+M:2/4
+L:1/8
+K:C
+C D E F | G A B c :| d e f g | a4 |]
+
+X:5
+T:pickup, repeat, endings
+M:2/4
+L:1/8
+K:C
+G |: c B A G | F E D C |1 E F G :|2 E D C ||
+
+X:6
+T:three endings (not expandable)
+M:2/4
+L:1/8
+K:C
+|: C D E F |1 G4 :|2 A4 :|3 B4 |]
+
+X:7
+T:two-bar first ending
+M:2/4
+L:1/8
+K:C
+|: C D E F |1 G A B c | c B A G :|2 E E E E | C4 |]
+
+X:8
+T:double-colon repeat
+M:2/4
+L:1/8
+K:C
+|: C D E F | G A B c :: c B A G | F E D C :|
+
+X:9
+T:voices in blocks, tenor treble-8, bass clef
+M:3/4
+L:1/4
+V:S clef=treble name="Soprano"
+V:T clef=treble-8 name="Tenor"
+V:B clef=bass name="Bass"
+K:F
+[V:S] A B c | d2 c |]
+w: la la la la la
+[V:T] c d e | f2 e |]
+[V:B] F, G, A, | B,2 A, |]
+
+X:10
+T:voice lines, transposing clarinet, overlay
+M:4/4
+L:1/8
+K:G
+V:1
+G2 A2 B2 c2 & E2 F2 G2 A2 | d8 |
+V:2 transpose=-2 name="Clarinet in Bb"
+A2 B2 c2 d2 | e8 |
+ABC
+order() { $PY scripts/music/abc2notes.py "$T/rep.abc" --tune "$1" --expand-repeats --text 2>&1 | grep '^bar' | awk '{printf "%s ", $2}'; }
+exp_order() { check "repeats X:$1 $2 -> $3" 0 bash -c "[ \"\$(echo \$($(declare -f order); PY=$PY T=$T order $1))\" = '$3' ]"; }
+exp_order 1 'AABB' '1 2 1 2 3 4 3 4'
+exp_order 2 '1st/2nd endings' '1 2 3 1 2 4 5 6'
+exp_order 3 'stray :| after the 2nd ending' '1 2 1 3 4 5'
+exp_order 4 'no start sign' '1 2 1 2 3 4'
+exp_order 5 'pickup + endings' '0 1 2 3 1 2 4'
+exp_order 7 'two-bar 1st ending' '1 2 3 1 4 5'
+exp_order 8 'double colon ::' '1 2 1 2 3 4 3 4'
+GREP='endings for pass 3 found' check 'repeats X:6 3rd ending -> warning' 0 $PY scripts/music/abc2notes.py "$T/rep.abc" --tune 6 --expand-repeats --text
+GREP='bar   1 \| C4:1 D4:1 E4:1' check 'voice T treble-8 sounds an octave down' 0 $PY scripts/music/abc2notes.py "$T/rep.abc" --tune 9 --voice T --text
+GREP='bar   1 \| F3:1 G3:1 A3:1' check 'voice B bass clef, absolute pitch' 0 $PY scripts/music/abc2notes.py "$T/rep.abc" --tune 9 --voice 3 --text
+GREP='bar   1 \| G4:1 A4:1 Bb4:1 C5:1' check 'transposing voice at concert pitch, sounding-key spelling' 0 $PY scripts/music/abc2notes.py "$T/rep.abc" --tune 10 --voice 2 --text
+GREP='bar   1 \| G4:1 A4:1 B4:1 C5:1' check 'voice overlay (&): first voice kept' 0 $PY scripts/music/abc2notes.py "$T/rep.abc" --tune 10 --voice 1 --text
+
+echo "== 3c. export-song reproduces the sequencer (all game tracks: events, form, loop window)"
+GREP='^ok +title' check 'export-song == compileSong for all 10 tracks' 0 node scripts/music/selftest/formcheck.mjs
+
 echo "== 4. render-song"
 GREP='SKIPPED \(unknown instrument ids\): mel=clarinet' check 'unknown instrument listed as skipped (exit 1)' 1 node scripts/music/render-song.mjs --file $FIX --export funiculiNewInstruments "$T/x.wav" --no-channels
 GREP='seam mismatch -1[0-9][0-9]' check 'game track renders, seamless loop (menu)' 0 node scripts/music/render-song.mjs menu "$T/m.wav" --no-channels
+GREP='^ok$' check 'K-weighting = ITU-R BS.1770 coefficients at 48 kHz' 0 node -e "import('./scripts/music/render-song.mjs').then(({ kWeightCoefs }) => {
+  const { shelf, rlb } = kWeightCoefs(48000);
+  const want = [[1.53512485958697, -2.69169618940638, 1.19839281085285, 1, -1.69065929318241, 0.73248077421585], [1, -2, 1, 1, -1.99004745483398, 0.99007225036621]];
+  const ok = [shelf, rlb].every((c, k) => c.every((x, i) => Math.abs(x - want[k][i]) < 1e-9));
+  console.log(ok ? 'ok' : 'BAD ' + JSON.stringify([shelf, rlb]));
+})"
 
 echo
 echo "selftest: $pass passed, $fail failed"

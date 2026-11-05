@@ -27,15 +27,23 @@ REFS=/home/user/kitchenfight-refs/abc        # reference ABC files (reference on
    $PY scripts/music/compare.py --abc $REFS/bb_funiculi.abc --voice 1 --ref-bars 38-53 \
        --song <id> --channel <melody channel> --section <section>
    ```
-   Exit code 0 means PASS (pitch ≥ 90 %, rhythm ≥ 80 %). The thresholds are a floor. Read the
-   bar-by-bar list and fix every difference that is not an intentional liberty. Ornaments, passing
-   tones, repeated-note splits and octave changes are already tolerated and reported with `-v`.
-   Several channels can carry the tune together (`--channel acc,mand`), and the highest note per
-   onset is compared.
+   Exit code 0 means PASS: pitch ≥ 95 %, rhythm ≥ 90 % and no **broken bar** (a reference bar
+   with more than half of its notes wrong). Read the bar-by-bar list and fix every difference that
+   is not an intentional liberty. Octave changes of a whole phrase, re-struck long notes,
+   articulation, song grace notes and short ornaments or passing tones inside a melody note are
+   already tolerated (listed with `-v`). Several channels can carry the tune together
+   (`--channel acc,mand`), and the highest note per onset is compared.
+   - A bar changed **on purpose** (a new cadence for the loop seam, say): name it with
+     `--allow-bars 53`. It is then left out of the scores and checks but still listed, and the
+     command line documents the liberty.
+   - A phrase **shifted on purpose** (a fermata held longer, a bar inserted for a break): add
+     `--resync`, which re-anchors the timing at the shift for one rhythm error, or compare the two
+     parts separately with `--ref-bars`/`--bars`.
+   - A **key change inside the excerpt**: compare each key's part separately.
 5. **Render and measure.** `node scripts/music/render-song.mjs <id> /tmp/<id>.wav` renders the
    song through the real renderer and reports loudness, peak, loop seam, per-channel levels and
    instruments the renderer does not know (those are skipped).
-6. **After changing the tools**, run `bash scripts/music/selftest.sh` (29 checks, about 20 s).
+6. **After changing the tools**, run `bash scripts/music/selftest.sh` (53 checks, about 35 s).
 
 ## Tools
 
@@ -84,12 +92,19 @@ It parses with music21, after its own pre-processing, which:
 - reads a missing `L:` the LOTRO/Maestro way when only then do the bars fit;
 - cuts bar-less MIDI dumps into pseudo-bars.
 
-`--expand-repeats` plays `|: :|` and numbered endings. A stray `:|` after the last ending is
-treated as a closing bar line. `--bars` uses the file's bar numbers: pickup = 0, else the first
-bar is 1, and every bar line counts. The output is JSON with `notes` (`midi`, `name`, `onsetQ`,
-`durQ`, `bar`, `beatQ`, `tied`) in quarter notes from the start of the selection, plus `bars`,
-`chordSymbols`, `key`, `meter`, `voices`, `barProblems` and `warnings`. `--tune '#3'` selects by
-position, for files whose X: numbers repeat.
+`--expand-repeats` plays `|: :|` (also `::` and a `:|` with no start sign, which repeats from the
+top, pickup included) and 1st/2nd endings, also endings longer than one bar. A stray `:|` after
+the last ending is treated as a closing bar line. It does **not** expand endings for a 3rd or later
+pass (music21 drops their brackets) or D.C./D.S./segno/coda; the tool warns about both, and you
+spell the playing order out with `--bars` instead, e.g. `--bars 1-8,1-6,9`.
+
+`--bars` uses the file's bar numbers: pickup = 0, else the first bar is 1, and every bar line
+counts. The output is JSON with `notes` (`midi`, `name`, `onsetQ`, `durQ`, `bar`, `beatQ`,
+`tied`) in quarter notes from the start of the selection, plus `bars`, `chordSymbols`, `key`,
+`meter`, `voices`, `barProblems` and `warnings`. `--tune '#3'` selects by position, for files
+whose X: numbers repeat. Transposed voices (`transpose=-2`, `treble-8`) are spelled in the
+sounding key. A clef or `middle=` given on the `K:` line is not applied (only `V:` clefs are);
+compare.py is octave-blind anyway.
 
 ### `compare.py`: is the song faithful?
 
@@ -97,59 +112,91 @@ position, for files whose X: numbers repeat.
 $PY scripts/music/compare.py --abc REF.abc [--tune X|--title S] [--voice V] [--expand-repeats] [--ref-bars R]
       (--song ID | --song-file F.ts [--export N]) --channel CH[,CH2] [--section NAME] [--bars R]
       | --cand-abc OTHER.abc [--cand-tune/--cand-title/--cand-voice/--cand-expand-repeats/--cand-bars]
-      [--pitch-min 90] [--rhythm-min 80] [--shift N] [--scale R] [--tol 0.02] [--strict-octave]
+      [--pitch-min 95] [--rhythm-min 90] [--allow-bars R] [--no-bar-check] [--resync]
+      [--shift N] [--scale R] [--tol 0.02] [--strict-octave]
       [--locate | --locate-cand | --global] [--json] [-v] [--max-bars 40]
 ```
 
 How it matches:
 
 - **Transposition.** All 12 pitch-class shifts are scored by a fast pitch-only alignment. The
-  global transposition is the most common interval between aligned notes. Notes in another octave
-  are listed as octave displacements; they still count as pitch matches unless `--strict-octave`.
+  global transposition is the most common interval between aligned notes.
 - **Time scale.** Song beats are converted to reference quarter notes by the ratio that aligns
-  best: 3/2 for a 6/8 song with 3 steps per beat, ½ or 2 for halved or doubled note values, and
-  so on. Force it with `--scale`.
-- **Alignment.** Dynamic programming over (pitch, duration) tokens, with these moves:
+  best: 3/2 for a 6/8 song with 3 steps per beat, ½ or 2 for halved or doubled note values, the
+  measured ratio itself when it is a simple fraction such as 9/4. Force it with `--scale`.
+- **Alignment.** Dynamic programming over the two note lines, with these moves:
   - match, and wrong note;
   - missing note, and extra note;
   - one reference note played as repeated notes (*split*), and repeated reference notes merged
     into one (*merge*).
 
-  Short notes beside longer ones (ornaments, written-out graces) and stepwise notes that
-  subdivide a longer reference note (passing tones) are *excused* on either side. A missing
-  note next to an extra note is always a wrong note, never two excused ornaments, and extra notes
-  outside the aligned span are never excused. A second pass prefers anchors that keep the
-  dominant time offset.
-- **Rhythm** is judged by the onset distance between consecutive aligned notes. Articulation
-  (staccato, rest against held note) is ignored, and a local slip does not cascade.
+  A first pass finds the dominant time offset between the lines. A second pass anchors the
+  alignment to it, so each reference note is paired with what the song plays at the same place:
+  a wrong note in its own time slot is reported as a wrong note, not hidden by borrowing a
+  same-pitch note from elsewhere.
+- **Tolerated liberties** (no penalty):
+  - an octave displacement of a **phrase**, i.e. 3 or more consecutive notes. An isolated note in
+    another octave breaks the line and counts as a wrong note;
+  - a long note re-struck as repeated notes (*split*), and tremolo, which is compared as one note;
+  - articulation: staccato, or a rest against a held note;
+  - an extra note that decorates the reference note it starts in. It must start inside that
+    note's time span and be either stepwise (passing or neighbour tone, re-strike) or a quick grace
+    (at most a sixteenth and a quarter of the note). A slower note that leaps is an extra note;
+  - a written-out ornament of the reference left out: a note of at most a sixteenth and at most a
+    quarter of its longer neighbour. The short note of a dotted figure and running sixteenths are
+    melody, so leaving them out counts;
+  - song grace notes (`{G5}`) and mordent auxiliaries, which are ignored.
+
+  Extra notes before the first or after the last aligned note are never excused; the report says
+  how many and where (trim with `--bars`/`--section` or widen `--ref-bars`).
 - **Locating.** If the reference is much longer than the song excerpt and no `--ref-bars` are
   given, the excerpt is found inside it; the report says "Located: … bars 38..45". If the song
   side is much longer, the reference is located in it.
 
-The scores are:
+The scores share one denominator: reference notes − excused ornaments + unexplained extra song
+notes.
 
-- **pitch %** = reference notes matched in pitch / (reference notes − excused ornaments +
-  unexplained extra song notes);
-- **rhythm %** = aligned notes with the right onset distance / the same denominator.
+- **pitch %**: reference notes present with the right pitch.
+- **rhythm %**: reference notes that start at the right time. A note must sit at the dominant time
+  offset **and** keep the right distance to the next aligned note. So a swapped dotted figure costs
+  two notes, a bar played late costs every note in it, and repeated notes merged into one held
+  note keep only their first onset. Without `--resync` everything after an inserted or dropped
+  beat or bar is displaced. `--resync` re-anchors at each deliberate shift (one rhythm error per
+  shift, reported as "timing shift"); a displaced stretch shorter than 2 bars is never
+  re-anchored, so a shifted bar still fails.
 
-Exit code 0 means pass, 1 fail, 2 error. The report lists, per reference bar, the reference and
-the song (transposed into the reference key) side by side, with each wrong note, rhythm error and
-missing or extra note. `--cand-abc` compares two references with each other; REFERENCES.md was
-triaged that way.
+**Verdict.** PASS needs pitch ≥ `--pitch-min` (95), rhythm ≥ `--rhythm-min` (90) and no broken
+bar. A broken bar is a reference bar with more than half of its notes wrong, or a one-note bar
+whose note is wrong or missing. Rhythm only counts there when `--rhythm-min` > 0. So a single bar
+played late, a step too high or with its rhythm swapped fails even when the totals pass.
+`--allow-bars LIST` removes reference bars that were changed on purpose from all scores and checks.
+They are still listed, marked "(allowed)". `--no-bar-check` turns the bar check off.
+
+Exit code 0 means pass, 1 fail, 2 error. The report lists, per reference bar (in order; a bar
+played again in expanded repeats is labelled "5 (2nd time)"), the reference and what the song plays
+in the same time span (transposed into the reference key), with each wrong note, displaced or
+mistimed note, merge, missing and extra note. `--cand-abc` compares two references with each
+other; REFERENCES.md was triaged that way.
 
 Caveats:
 
-- An unrelated tune still "locates" at about 50–65 % pitch, so only results above 90 % mean
-  the right tune.
+- An unrelated tune still "locates" at about 25–55 % pitch, and its rhythm can score high when
+  the meter matches, so only results above 90 % pitch mean the right tune.
 - MIDI-derived references (`lotro_*`) have performance timing. Use `--tol 0.1` to `0.15`, or
   `--rhythm-min 0` with a pitch-only reading.
-- Grace notes and mordent auxiliaries in the song are ignored. Tremolo is compared as one note.
+- A reference with a defective bar (one a sixteenth short, say) displaces everything after it:
+  REFERENCES.md names the known ones. Use `--resync` across them, or compare the parts on either
+  side separately.
+- One key per comparison: a modulation inside the excerpt fails, so compare each key's part
+  separately.
+- The song side is the highest note per onset over the selected channels: a harmony line above
+  the tune, or an accompaniment channel included by mistake, reads as wrong notes.
 
 ### `render-song.mjs`: render and measure
 
 ```text
 node scripts/music/render-song.mjs <songId> out.wav [--sr 48000] [--loops N] [--float] [--no-channels]
-                                   [--target -16.6] [--tol-lu 1.5] [--json]
+                                   [--target -16.4] [--tol-lu 1.5] [--json]
 node scripts/music/render-song.mjs --file scratch.ts [--export name] out.wav
 node scripts/music/render-song.mjs --all outdir/          # every game track + summary table
 ```
@@ -158,8 +205,10 @@ It renders through the real `src/audio/render.ts` in Node and writes a 16-bit WA
 32-bit). `--loops N` appends N−1 passes of the loop body. The report covers:
 
 - duration and loop window: seconds, bars, and the section the loop starts at;
-- integrated loudness (BS.1770 K-weighted and gated, "LUFS-ish", no true-peak) over the loop
-  body, plus the whole file and the short-term maximum;
+- integrated loudness in LUFS over the loop body, plus the whole file and the short-term maximum.
+  It uses ITU-R BS.1770 K-weighting and gating; the filter coefficients equal the standard's at
+  48 kHz, and the result agrees with ffmpeg's `ebur128` within 0.1 LU. The peak is a sample peak
+  (no true-peak oversampling);
 - RMS, sample peak and soft-clipper activity;
 - spectral balance: energy share below 250 Hz, 250 Hz–4 kHz and above 4 kHz;
 - the loop-seam check: the audio before the loop end must equal the audio before the loop start.
@@ -172,8 +221,9 @@ Warnings cover:
 - **instrument ids the renderer does not know**: those channels are skipped, and the exit code
   is 1;
 - clipping;
-- loudness more than 1.5 LU off the target. All current tracks measure −16.6 LUFS, so that is the
-  default target;
+- loudness more than 1.5 LU off the target. The current tracks measure −16.3 to −16.5 LUFS
+  (loop body), so the default target is −16.4. Before this fix the tool read about 0.2 LU low and
+  reported −16.6;
 - seam mismatch;
 - channels whose loudest 3 s are more than 30 LU below the mix.
 
@@ -182,11 +232,11 @@ fallback. The sampler team will provide a sampled renderer.
 
 ### `selftest.sh`: check the tools
 
-`bash scripts/music/selftest.sh` runs these checks:
+`bash scripts/music/selftest.sh` runs 53 checks:
 
 - a song against an ABC export of itself (100 %);
-- mutated copies of that export. 10 wrong notes and 8 rhythm swaps must FAIL; 2 wrong notes are
-  listed but pass, and FAIL with `--pitch-min 100`; an octave transposition and halved note
+- mutated copies of that export. 10 wrong notes and 8 rhythm swaps must FAIL; 2 wrong notes of 72
+  are listed but pass, and FAIL with `--pitch-min 100`; an octave transposition and halved note
   values must PASS;
 - the hand-transcribed Funiculì refrain (a scratch song that `selftest.sh` writes into a temp dir, bars
   38–45 of `wf_funiculi.abc`, written a tone higher in G):
@@ -198,9 +248,20 @@ fallback. The sampler team will provide a sampled renderer.
   | doubled note values (`stepsPerBeat` 6) | PASS |
   | deliberately broken | FAIL |
   | located in three independent references (`wf_funiculi`, `bb_funiculi`, the piffero part) | PASS |
+  | one bar played an eighth late; one bar's rhythm swapped; one bar a step too high | FAIL (broken bar) |
+  | the step-too-high bar declared with `--allow-bars` | PASS |
+  | 2 wrong notes of 21 (about 10 %) | FAIL |
+  | the short melody notes left out (held notes instead) | FAIL |
+  | every other note an octave off; a leaping extra note in every bar | FAIL |
+  | an empty bar inserted | FAIL; PASS with `--resync` |
 
 - the awkward ABC cases met in the corpus;
-- render-song's skipped-instrument report and seam check.
+- synthetic repeat structures (AABB, 1st/2nd endings, a stray `:|`, no start sign, pickup with
+  endings, a two-bar ending, `::`, a 3rd ending that must warn) and voices (blocks, `treble-8`,
+  bass clef, a transposing voice, an overlay);
+- `selftest/formcheck.mjs`: export-song reproduces the sequencer for all 10 game tracks (every
+  event, the form and the loop window, against `compileSong`);
+- render-song's skipped-instrument report, seam check, and the BS.1770 filter coefficients.
 
 ## Conventions
 

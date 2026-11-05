@@ -12,13 +12,14 @@
  *   --loops N         write the intro + N passes of the loop (default 1 = the rendered buffer)
  *   --float           32-bit float WAV (default 16-bit PCM)
  *   --no-channels     skip the per-channel solo renders (faster)
- *   --target -16.6    loudness target in LUFS (default -16.6 = what all current tracks measure)
+ *   --target -16.4    loudness target in LUFS (default -16.4 = what the current tracks measure, -16.3..-16.5)
  *   --tol-lu 1.5      allowed deviation from the target before warning (LU)
  *   --json            machine-readable report on stdout
  *
  * Report: duration, loop window (intro / loop body, seconds and bars), sample peak (dBFS),
- * RMS (dBFS), integrated loudness (BS.1770 K-weighted, gated — "LUFS-ish": no true-peak
- * oversampling), max short-term (3 s) loudness, soft-clipper activity, spectral balance
+ * RMS (dBFS), integrated loudness (ITU-R BS.1770 K-weighting and gating, LUFS; agrees with
+ * ffmpeg's ebur128 within 0.1 LU; the peak is a sample peak, no true-peak oversampling), max
+ * short-term (3 s) loudness, soft-clipper activity, spectral balance
  * (<250 Hz / 250 Hz-4 kHz / >4 kHz energy shares), loop-seam check (difference between the audio
  * just before the loop end and just before the loop start, which must be identical), per-channel
  * solo levels (LUFS, peak, share of the mix) and warnings — sequencer warnings (bad bar lengths),
@@ -29,6 +30,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { extractSong } from './export-song.mjs';
 import { loadAudio, parseArgs, resolveSong } from './lib/bundle.mjs';
 
@@ -55,14 +57,6 @@ function biquad(b0, b1, b2, a0, a1, a2) {
     return out;
   };
 }
-function highShelf(sr, fc, gainDb, q) {
-  const A = Math.pow(10, gainDb / 40);
-  const w0 = (2 * Math.PI * fc) / sr;
-  const alpha = Math.sin(w0) / (2 * q);
-  const c = Math.cos(w0);
-  const s = 2 * Math.sqrt(A) * alpha;
-  return biquad(A * (A + 1 + (A - 1) * c + s), -2 * A * (A - 1 + (A + 1) * c), A * (A + 1 + (A - 1) * c - s), A + 1 - (A - 1) * c + s, 2 * (A - 1 - (A + 1) * c), A + 1 - (A - 1) * c - s);
-}
 function highPass(sr, fc, q) {
   const w0 = (2 * Math.PI * fc) / sr;
   const alpha = Math.sin(w0) / (2 * q);
@@ -75,11 +69,28 @@ function lowPass(sr, fc, q) {
   const c = Math.cos(w0);
   return biquad((1 - c) / 2, 1 - c, (1 - c) / 2, 1 + alpha, -2 * c, 1 - alpha);
 }
-/** BS.1770 K-weighting (pyloudnorm's parameterisation, valid at any sample rate) */
+/**
+ * BS.1770 K-weighting at any sample rate: Brecht De Man's bilinear formulation, which reproduces
+ * the ITU-R BS.1770 48 kHz coefficients exactly (shelf b = 1.53512, -2.69170, 1.19839,
+ * a = -1.69066, 0.73248; RLB high-pass b = 1, -2, 1, a = -1.99005, 0.99007). (The RBJ cookbook
+ * shelf with the same parameters is a different filter: it read about 0.2 LU low.)
+ */
+export function kWeightCoefs(sr) {
+  let K = Math.tan((Math.PI * 1681.974450955533) / sr);
+  let Q = 0.7071752369554196;
+  const Vh = Math.pow(10, 3.999843853973347 / 20);
+  const Vb = Math.pow(Vh, 0.4996667741545416);
+  let a0 = 1 + K / Q + K * K;
+  const shelf = [(Vh + (Vb * K) / Q + K * K) / a0, (2 * (K * K - Vh)) / a0, (Vh - (Vb * K) / Q + K * K) / a0, 1, (2 * (K * K - 1)) / a0, (1 - K / Q + K * K) / a0];
+  K = Math.tan((Math.PI * 38.13547087602444) / sr);
+  Q = 0.5003270373238773;
+  a0 = 1 + K / Q + K * K;
+  const rlb = [1, -2, 1, 1, (2 * (K * K - 1)) / a0, (1 - K / Q + K * K) / a0];
+  return { shelf, rlb };
+}
 function kWeight(x, sr) {
-  const s1 = highShelf(sr, 1681.974450955533, 3.999843853973347, 0.7071752369554196);
-  const s2 = highPass(sr, 38.13547087602444, 0.5003270373238773);
-  return s2(s1(x));
+  const { shelf, rlb } = kWeightCoefs(sr);
+  return biquad(...rlb)(biquad(...shelf)(x));
 }
 /** gated integrated loudness of [a, b) plus max short-term (3 s) loudness */
 function loudness(L, R, sr, a, b) {
@@ -282,7 +293,7 @@ export async function analyseSong(mods, song, o = {}) {
   }
   if (whole.peak > 0.891) warnings.push(`peak ${fmt(db(whole.peak), 2)} dBFS is above -1 dBFS`);
   if (rep.softClipPct > 0.1) warnings.push(`soft clipper active on ${rep.softClipPct.toFixed(2)} % of samples (master too hot: lower gainDb)`);
-  const target = o.target ?? -16.6;
+  const target = o.target ?? -16.4;
   const tolLu = o.tolLu ?? 1.5;
   if (Number.isFinite(ld.lufs) && Math.abs(ld.lufs - target) > tolLu) warnings.push(`loudness ${fmt(ld.lufs)} LUFS is ${fmt(ld.lufs - target)} LU off the ${target} LUFS target (adjust gainDb)`);
   if (Math.abs(st.dc) > 0.002) warnings.push(`DC offset ${st.dc.toFixed(4)}`);
@@ -349,7 +360,7 @@ async function main() {
   }
   const sr = opt.sr ? Number(opt.sr) : 48000;
   const loops = opt.loops ? Number(opt.loops) : 1;
-  const o = { sr, channels: !opt['no-channels'], target: opt.target !== undefined ? Number(opt.target) : -16.6, tolLu: opt['tol-lu'] !== undefined ? Number(opt['tol-lu']) : 1.5 };
+  const o = { sr, channels: !opt['no-channels'], target: opt.target !== undefined ? Number(opt.target) : -16.4, tolLu: opt['tol-lu'] !== undefined ? Number(opt['tol-lu']) : 1.5 };
   const mods = await loadAudio({ render: true, songFile: opt.file });
   const jobs = [];
   if (opt.all) {
@@ -385,7 +396,9 @@ async function main() {
   process.exit(worst);
 }
 
-main().catch((e) => {
-  process.stderr.write(`render-song: ${e.stack || e.message}\n`);
-  process.exit(2);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((e) => {
+    process.stderr.write(`render-song: ${e.stack || e.message}\n`);
+    process.exit(2);
+  });
+}

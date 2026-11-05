@@ -7,7 +7,8 @@ Usage (PY=/home/user/.venv-audio/bin/python, run from the repo root):
         [--expand-repeats] [--ref-bars 37-44]
         (--song ID | --song-file scratch.ts [--export NAME]) --channel CH[,CH2]
         [--section NAME] [--bars 1-8]
-        [--pitch-min 90] [--rhythm-min 80] [--shift N] [--scale R] [--strict-octave]
+        [--pitch-min 95] [--rhythm-min 90] [--allow-bars 53] [--no-bar-check] [--resync]
+        [--shift N] [--scale R] [--strict-octave] [--tol 0.02]
         [--locate | --locate-cand | --global] [--json] [--verbose]
   Reference vs reference (triage): replace the song options by
         --cand-abc OTHER.abc [--cand-tune X | --cand-title S] [--cand-voice V]
@@ -23,22 +24,35 @@ How it matches:
   * transposition-invariant: all 12 pitch-class shifts are tried, the global shift is the most
     common interval of the aligned notes; notes in another octave are reported as octave
     displacements (they still count as pitch matches unless --strict-octave);
-  * time-scale tolerant: song beats are scaled to reference quarter notes by the ratio (1/4 ...
+  * time-scale tolerant: song beats are scaled to reference quarter notes by the ratio (1/6 ...
     6, e.g. 3/2 for a 6/8 song against 6/8 eighths, x2 / x1/2 for doubled or halved values)
-    that aligns best; rhythm is judged by onset distances between consecutive matched notes, so
-    articulation (staccato, rests vs. held notes) and local slips don't cascade;
-  * alignment = dynamic programming over (pitch, duration) tokens with: matches, wrong notes,
-    missing / extra notes, split (one ref note played as repeated notes) and merged repeated
-    notes; short notes next to longer ones (ornaments, passing tones) are excused on both sides;
+    that aligns best;
+  * alignment = dynamic programming over the two note lines with matches, wrong notes, missing /
+    extra notes, split (one ref note played as repeated notes) and merged repeated notes. A first
+    pass finds the dominant time offset between the lines; a second pass anchors the alignment to
+    it, so each reference note is paired with what the candidate plays at the same place;
+  * tolerated liberties (no penalty): octave displacements, a long note re-struck as repeated
+    notes (split), articulation (staccato, rests vs. held notes), short extra notes that decorate
+    the reference note they start in (ornaments, passing / neighbour tones), written-out
+    ornaments of the reference left out (a note of at most a sixteenth and at most a quarter of
+    its longer neighbour), song grace notes and mordents;
   * when the reference is much longer than the song excerpt and no --ref-bars are given, the
-    excerpt is located inside the reference (semi-global alignment; --locate / --global force);
-    when the candidate is much longer than the reference, the reference is located inside the
-    candidate (--locate-cand forces it) and candidate notes outside that span are ignored.
-    Extra candidate notes before the first / after the last aligned note are never excused.
+    excerpt is located inside the reference (--locate / --global force); when the candidate is
+    much longer than the reference, the reference is located inside the candidate (--locate-cand
+    forces it) and candidate notes outside that span are ignored.
 
-Scores: pitch % = ref notes matched in pitch / (ref notes - excused ornaments + unexplained extra
-song notes); rhythm % = aligned ref notes with the right onset distance / same denominator.
-Exit code 0 when pitch >= --pitch-min (90) and rhythm >= --rhythm-min (80); 1 = fail; 2 = error.
+Scores, over the reference notes (minus excused ornaments, plus unexplained extra song notes):
+  pitch %  = notes present with the right pitch;
+  rhythm % = notes that start at the right time, i.e. at the dominant offset AND at the right
+             distance from the next aligned note. Repeated notes merged into one keep only their
+             first onset. Everything after an inserted or dropped beat / bar is displaced, unless
+             --resync re-anchors there (one error per shift; segments shorter than 2 bars are
+             never re-anchored).
+Verdict: PASS needs pitch >= --pitch-min (95), rhythm >= --rhythm-min (90) and no broken bar: a
+reference bar with more than half of its notes wrong (pitch or rhythm; rhythm only counts when
+--rhythm-min > 0), or a one-note bar whose note is wrong or missing. --allow-bars LIST excludes
+reference bars that were changed on purpose from all scores and checks (they stay listed).
+Exit code 0 = pass, 1 = fail, 2 = error.
 """
 from __future__ import annotations
 
@@ -48,6 +62,7 @@ import math
 import os
 import subprocess
 import sys
+from bisect import bisect_right
 from collections import Counter
 from fractions import Fraction
 
@@ -59,12 +74,29 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 EXPORT = os.path.join(HERE, 'export-song.mjs')
 SCALES = [Fraction(1, 6), Fraction(1, 4), Fraction(1, 3), Fraction(3, 8), Fraction(1, 2), Fraction(2, 3), Fraction(3, 4), Fraction(1),
           Fraction(4, 3), Fraction(3, 2), Fraction(2), Fraction(8, 3), Fraction(3), Fraction(4), Fraction(6)]
-NAMES = abc2notes.COMMON_NAMES
 EPS = 1e-4  # time comparisons, in reference quarter notes
+ALIGNED = ('match', 'sub', 'split', 'merge')
+
+
+SPELL = {'sharps': None}  # key signature of the reference (report spelling: G#/Ab)
 
 
 def nm(m: int) -> str:
-    return f'{NAMES[m % 12]}{m // 12 - 1}'
+    return abc2notes.midi_name(m, SPELL['sharps'])
+
+
+def bar_labels(R: list[dict]) -> dict:
+    """seq -> printable bar label; a bar played again (expanded repeats, ranges like 1-8,1-6)
+    is labelled "5 (2nd time)"."""
+    seen: Counter = Counter()
+    out = {}
+    for n in R:
+        if n['seq'] in out:
+            continue
+        seen[n['bar']] += 1
+        k = seen[n['bar']]
+        out[n['seq']] = f'{n["bar"]}' + ('' if k == 1 else f' ({k}{"nd" if k == 2 else "rd" if k == 3 else "th"} time)')
+    return out
 
 
 def fq(x: float) -> str:
@@ -90,8 +122,9 @@ def load_abc_side(path, tune, title, voice, expand, bars) -> dict:
     if expand:
         desc += ', repeats expanded'
     bar_len = {b['seq']: (b['startQ'], b['lenQ'], b['n']) for b in ref['bars']}
+    nominal = sorted(b['nominalQ'] or b['lenQ'] for b in ref['bars']) or [4.0]
     return {'notes': notes, 'desc': desc, 'unit': 'q', 'meter': ref['meter'], 'key': ref['keyField'], 'bars': bar_len,
-            'barLabel': lambda n: f'{n["bar"]}', 'raw': ref, 'kind': 'abc'}
+            'barQ': nominal[len(nominal) // 2], 'barLabel': lambda n: f'{n["bar"]}', 'raw': ref, 'kind': 'abc'}
 
 
 def mono(evs: list[dict]) -> list[dict]:
@@ -203,10 +236,19 @@ def pitch_dp_score(rp: list[int], sp: list[int], semiglobal: bool) -> float:
 
 
 class Aligner:
+    """DP alignment of the reference line R with the candidate line S.
+
+    Pass 1 (offset None) scores pitch-class agreement and equal note lengths. Pass 2 gets the
+    dominant time offset (candidate onset - reference onset, in reference quarters) and rewards
+    pairs at that offset, so a wrong note is paired with the reference note it replaces instead of
+    with a same-pitch note elsewhere, and extra notes only count as ornaments when they start
+    inside the reference note they decorate.
+    """
+
     def __init__(self, R, S, shift_pc, scale, semiglobal, tol, offset=None, semi_cand=False):
         self.R, self.S = R, S
         self.semi_cand = semi_cand  # free leading/trailing candidate notes (excerpt inside a long candidate)
-        self.offset = offset  # expected (cand onset - ref onset); None = ignore timing
+        self.offset = offset
         self.k = shift_pc
         self.r = float(scale)
         self.semi = semiglobal
@@ -219,11 +261,15 @@ class Aligner:
         self.spc = [(n['midi'] - shift_pc) % 12 for n in S]
 
     def orn_ref(self, i):
+        """Written-out ornament in the reference: at most a sixteenth and at most a quarter of its
+        longer neighbour (a 32nd turn, a sixteenth before a half note; not the short note of a
+        dotted figure, not running sixteenths)."""
         L = self.rlen
         nb = max(L[i - 1] if i > 0 else 0, L[i + 1] if i + 1 < len(L) else 0)
-        return L[i] <= 0.5 + EPS and L[i] <= 0.5 * nb + EPS
+        return L[i] <= 0.25 + EPS and L[i] <= 0.25 * nb + EPS
 
     def orn_song(self, j):
+        """Short candidate note beside a longer one (ornament, written-out grace)."""
         L = self.slen
         nb = max(L[j - 1] if j > 0 else 0, L[j + 1] if j + 1 < len(L) else 0)
         return L[j] <= 0.5 + EPS and L[j] <= 0.5 * nb + EPS
@@ -260,9 +306,20 @@ class Aligner:
         ron, son, off = self.ron, self.son, self.offset
         smidi = [x['midi'] for x in S]
         rmidi = [x['midi'] for x in R]
+        if off is None:
+            on_time = None
+        else:
+            def on_time(i0, j0):
+                return abs(son[j0] - ron[i0] - off) <= tol
 
-        def tb(i0, j0):  # bonus for a time-consistent anchor (second pass only)
-            return 0.45 if off is not None and abs(son[j0] - ron[i0] - off) <= tol else 0.0
+        def tb(i0, j0):
+            """pass 2: a pair at the dominant offset earns a bonus, a displaced pair a penalty that
+            grows with the displacement (so a wrong note in its own time slot beats a same-pitch
+            note borrowed from elsewhere, but a consistently displaced phrase still aligns)"""
+            if on_time is None:
+                return 0.0
+            dev = abs(son[j0] - ron[i0] - off)
+            return 0.45 if dev <= tol else -min(2.0, 1.0 + 2.0 * dev)
 
         for i in range(1, n + 1):
             Di, Dp = D[i], D[i - 1]
@@ -275,18 +332,21 @@ class Aligner:
                     best = Dp[j - 1] + 2.0 + (0.3 if abs(rl[ri] - sl[sj]) <= tol else 0.0) + tb(ri, sj)
                     bm = ('match', 1, 1, False)
                 else:
-                    best = Dp[j - 1] - 1.0
+                    best = Dp[j - 1] + (-1.0 if on_time is None else (-0.2 if on_time(ri, sj) else -1.2))
                     bm = ('sub', 1, 1, False)
                 v = Dp[j] + dcost[ri]
                 if v > best:
                     best, bm = v, ('del', 1, 0, orn_r[ri])
                 # extra candidate note: excused when ornamental in its own line, or when it
-                # subdivides the longer ref note just consumed and moves stepwise (passing tone)
+                # subdivides the longer ref note just consumed and moves stepwise (passing tone);
+                # in pass 2 it must also start inside that ref note's time span
                 exc = orn_s[sj] or (sl[sj] <= 0.5 * rl[ri] + EPS and step_s[sj])
+                if exc and on_time is not None:
+                    t = son[sj] - off
+                    exc = ron[ri] - tol < t < ron[ri] + rl[ri] - tol
                 v = Di[j - 1] + (-0.35 if exc else -1.2)
                 if v > best:
                     best, bm = v, ('ins', 0, 1, exc)
-                # split: one ref note <- k song notes of the same pitch class
                 # split: one ref note <- k repeated candidate notes (same pitch)
                 for k in (2, 3, 4):
                     if j - k < 0:
@@ -333,14 +393,33 @@ class Aligner:
             i -= di
             j -= dj
         ops.reverse()
-        return score, ops, end_i, orn_r, orn_s
+        return score, ops
 
 
-def analyse_ops(al: Aligner, ops, orn_r, orn_s, strict_octave: bool):
+def densest(vals: list[float], tol: float) -> float:
+    """The offset shared by the most values (within +-tol): the median of the densest window."""
+    if not vals:
+        return 0.0
+    v = sorted(vals)
+    best, lo, hi = 0, 0, 0
+    a = 0
+    for b in range(len(v)):
+        while v[b] - v[a] > 2 * tol + 1e-9:
+            a += 1
+        if b - a + 1 > best:
+            best, lo, hi = b - a + 1, a, b
+    w = v[lo:hi + 1]
+    return w[len(w) // 2]
+
+
+def analyse(al: Aligner, ops, opts, bar_q: float, semi: bool, allow: set) -> dict:
+    """Turn the alignment into units, diff events, per-note statuses, scores and broken bars."""
     R, S = al.R, al.S
-    units = []  # aligned units in order
-    events = []  # diff events
-    dels, inss = [], []
+    tol = al.tol
+    units: list[dict] = []
+    events: list[dict] = []
+    dels: list = []
+    inss: list = []
 
     def flush():
         # a missing ref note next to an extra candidate note is a wrong note, never two excused
@@ -349,96 +428,231 @@ def analyse_ops(al: Aligner, ops, orn_r, orn_s, strict_octave: bool):
             units.append({'kind': 'sub', 'i0': d[0], 'i1': d[0] + 1, 'j0': ins[1], 'j1': ins[1] + 1})
         for i0, j0, exc in dels[len(inss):]:
             events.append({'type': 'missing', 'i': i0, 'j': j0, 'excused': exc})
-        for i0, j0, exc in inss[len(dels):]:
-            events.append({'type': 'extra', 'i': i0, 'j': j0, 'excused': exc})
+        for i0, j0, inner in inss[len(dels):]:
+            events.append({'type': 'extra', 'i': i0, 'j': j0, 'inner': inner})
         dels.clear()
         inss.clear()
 
-    aligned = [k for k, op in enumerate(ops) if op[0] in ('match', 'sub', 'split', 'merge')]
+    aligned = [k for k, op in enumerate(ops) if op[0] in ALIGNED]
     first_a = aligned[0] if aligned else len(ops)
     last_a = aligned[-1] if aligned else -1
     for k, (kind, i0, i1, j0, j1, exc) in enumerate(ops):
-        if kind in ('match', 'sub', 'split', 'merge'):
+        if kind in ALIGNED:
             flush()
             units.append({'kind': kind, 'i0': i0, 'i1': i1, 'j0': j0, 'j1': j1})
         elif kind == 'del':
             dels.append((i0, j0, exc))
         elif kind == 'ins':
             # only notes between aligned notes can be ornaments / passing tones
-            inss.append((i0, j0, exc and first_a < k < last_a))
+            inss.append((i0, j0, first_a < k < last_a))
     flush()
-    # global transposition from matched units
-    diffs = Counter()
-    for u in units:
-        if u['kind'] != 'sub':
-            diffs[S[u['j0']]['midi'] - R[u['i0']]['midi']] += 1
+    units.sort(key=lambda u: (u['i0'], u['j0']))
+
+    # global transposition from the aligned notes
+    diffs = Counter(S[u['j0']]['midi'] - R[u['i0']]['midi'] for u in units if u['kind'] != 'sub')
     T = diffs.most_common(1)[0][0] if diffs else al.k
-    # rhythm by onset distance between consecutive units
-    prev = None
+
+    # dominant time offset, and the expected offset of every unit (--resync: piecewise)
     for u in units:
-        ro = al.ron[u['i0']]
-        so = al.son[u['j0']]
-        u['rhythm'] = True
-        if prev is not None:
-            dr = ro - al.ron[prev['i0']]
-            ds = so - al.son[prev['j0']]
-            if abs(dr - ds) > al.tol:
-                u['rhythm'] = False
-                u['dr'], u['ds'] = dr, ds
-        prev = u
+        u['off'] = al.son[u['j0']] - al.ron[u['i0']]
+    base = [u['off'] for u in units if u['kind'] != 'sub'] or [u['off'] for u in units]
+    Doff = densest(base, tol)
+    exp = [Doff] * len(units)
+    shift_at: dict[int, float] = {}
+    if opts.resync and units:
+        segs: list[dict] = []
+        for idx, u in enumerate(units):
+            if segs and abs(u['off'] - segs[-1]['off']) <= tol:
+                segs[-1]['end'] = idx
+            else:
+                segs.append({'start': idx, 'end': idx, 'off': u['off']})
+        for s, nxt in zip(segs, segs[1:] + [None]):
+            t0 = al.ron[units[s['start']]['i0']]
+            last = units[s['end']]['i1'] - 1
+            t1 = al.ron[units[nxt['start']]['i0']] if nxt else al.ron[last] + al.rlen[last]
+            s['anchored'] = t1 - t0 >= 2 * bar_q - tol
+        cur = next((s['off'] for s in segs if s['anchored']), Doff)
+        for s in segs:
+            if s['anchored']:
+                if abs(s['off'] - cur) > tol:
+                    shift_at[s['start']] = s['off'] - cur
+                cur = s['off']
+            for idx in range(s['start'], s['end'] + 1):
+                exp[idx] = cur
+
+    for idx, u in enumerate(units):
+        u['exp'] = exp[idx]
+        u['dev'] = u['off'] - exp[idx]
+        u['onset_ok'] = abs(u['dev']) <= tol
+        u['shift'] = shift_at.get(idx)
+        if idx + 1 < len(units):
+            v = units[idx + 1]
+            dr = al.ron[v['i0']] - al.ron[u['i0']]
+            ds = al.son[v['j0']] - al.son[u['j0']]
+            u['dr'], u['ds'] = dr, ds
+            # the distance to the next aligned note (a re-anchoring shift is charged once, there)
+            u['ioi_ok'] = abs(dr - (ds - (exp[idx + 1] - exp[idx]))) <= 2 * tol
+        else:
+            u['ioi_ok'] = True
+        u['rhythm'] = u['onset_ok'] and u['ioi_ok'] and u['shift'] is None
         u['nref'] = u['i1'] - u['i0']
         d = S[u['j0']]['midi'] - R[u['i0']]['midi']
         u['oct'] = (d - T) // 12 if u['kind'] != 'sub' and (d - T) % 12 == 0 else 0
-        u['pitch'] = u['kind'] != 'sub' and not (strict_octave and u['oct'] != 0)
-    return units, events, T
+    # octave displacements are accepted for a phrase (a run of >= 3 consecutive matched notes in the
+    # same octave; wrong notes inside the run do not break it); an isolated note in another octave
+    # breaks the melodic line: a wrong note
+    pitched = [u for u in units if u['kind'] != 'sub']
+    for u in units:
+        u['octJump'] = False
+    idx = 0
+    while idx < len(pitched):
+        end = idx
+        while end + 1 < len(pitched) and pitched[end + 1]['oct'] == pitched[idx]['oct']:
+            end += 1
+        if pitched[idx]['oct'] != 0 and end - idx + 1 < 3:
+            for x in range(idx, end + 1):
+                pitched[x]['octJump'] = True
+        idx = end + 1
+    for u in units:
+        u['pitch'] = u['kind'] != 'sub' and not u['octJump'] and not (opts.strict_octave and u['oct'] != 0)
 
+    # extra candidate notes: excused only when short (ornament / passing tone), between two aligned
+    # notes, and starting inside the reference note before them (at the expected offset). Notes
+    # before the first / after the last aligned note are never excused ('outer': not tied to a bar).
+    ujs = [u['j0'] for u in units]
+    for e in events:
+        if e['type'] != 'extra':
+            continue
+        j = e['j']
+        e['excused'] = False
+        k = bisect_right(ujs, j) - 1  # unit starting before this note
+        if not e['inner'] or k < 0 or k + 1 >= len(units):
+            if k < 0 or k + 1 >= len(units):
+                e['outer'] = 'before' if k < 0 else 'after'
+            continue
+        u, v = units[k], units[k + 1]
+        if not (u['j1'] <= j < v['j0']):
+            continue
+        span = al.ron[v['i0']] - al.ron[u['i0']]
+        t = al.son[j] - u['exp']
+        inside = al.ron[u['i0']] - tol < t < al.ron[v['i0']] - tol
+        # a passing / neighbour tone or re-strike (within 2 semitones of a neighbour), or a quick
+        # written-out grace (at most a sixteenth and a quarter of the note it decorates); a slower
+        # note that leaps is not an ornament
+        quick = al.slen[j] <= 0.25 + EPS and al.slen[j] <= 0.25 * span + EPS
+        short = al.slen[j] <= 0.5 * span + EPS and (al.stepwise(j) or quick)
+        e['excused'] = inside and short
+        e['unit'] = k
 
-def evaluate(R, S, k, scale, semi, strict_octave, tol, offset=None, semi_cand=False):
-    al = Aligner(R, S, k, scale, semi, tol, offset, semi_cand)
-    score, ops, end_i, orn_r, orn_s = al.run()
-    units, events, T = analyse_ops(al, ops, orn_r, orn_s, strict_octave)
-    covered_i = [u for u in units]
-    if semi and covered_i:
+    # located span (semi-global): only reference notes inside it count
+    if semi and units:
         i_lo = min(u['i0'] for u in units)
         i_hi = max(u['i1'] for u in units)
     else:
         i_lo, i_hi = 0, len(R)
-    # in semi-global mode only ref notes inside the located span count
-    ev_in = [e for e in events if not (e['type'] == 'missing' and not (i_lo <= e['i'] < i_hi))]
-    excused_missing = sum(1 for e in ev_in if e['type'] == 'missing' and e['excused'])
-    unexplained_extra = sum(1 for e in ev_in if e['type'] == 'extra' and not e['excused'])
-    n_ref = i_hi - i_lo
-    denom = max(1, n_ref - excused_missing + unexplained_extra)
-    pitch_ok = sum(u['nref'] for u in units if u['pitch'])
-    rhythm_ok = sum(u['nref'] for u in units if u['rhythm'])
+    events = [e for e in events if not (e['type'] == 'missing' and not (i_lo <= e['i'] < i_hi))]
+
+    # per reference note: counted / pitch ok / rhythm ok
+    allowed = lambda i: R[i]['bar'] in allow
+    counted = {i: True for i in range(i_lo, i_hi)}
+    p_ok = {i: False for i in range(i_lo, i_hi)}
+    r_ok = {i: False for i in range(i_lo, i_hi)}
+    for u in units:
+        for x in range(u['i0'], u['i1']):
+            p_ok[x] = u['pitch']
+            r_ok[x] = u['rhythm'] and x == u['i0']  # merged repeated notes lose their own onsets
+    for e in events:
+        if e['type'] == 'missing' and e['excused']:
+            counted[e['i']] = False
+    for i in list(counted):
+        if allowed(i):
+            counted[i] = False
+
+    def extra_bar(e):
+        """seq/bar of the reference note an extra candidate note sits after (or before)"""
+        if 'unit' in e:
+            i = units[e['unit']]['i0']
+        else:
+            i = min(max(e['i'] - 1, 0), len(R) - 1)
+        return R[i]['seq'], R[i]['bar']
+
+    extra_by_seq: Counter = Counter()
+    unexplained = 0
+    outer = Counter()
+    for e in events:
+        if e['type'] == 'extra' and not e['excused']:
+            if e.get('outer'):
+                # before the first / after the last aligned note: in the denominator, not in a bar
+                outer[e['outer']] += 1
+                unexplained += 1
+                continue
+            sq, bar = extra_bar(e)
+            e['seq'], e['bar'] = sq, bar
+            if bar in allow:
+                continue
+            extra_by_seq[sq] += 1
+            unexplained += 1
+    n_counted = sum(1 for i in counted if counted[i])
+    denom = max(1, n_counted + unexplained)
+    pitch_ok = sum(1 for i in counted if counted[i] and p_ok[i])
+    rhythm_ok = sum(1 for i in counted if counted[i] and r_ok[i])
+
+    # broken bars: more than half of a bar's notes wrong (or a one-note bar with a wrong note)
+    use_rhythm = opts.rhythm_min > 0
+    per_seq: dict[int, list[int]] = {}
+    for i in range(i_lo, i_hi):
+        if counted[i]:
+            per_seq.setdefault(R[i]['seq'], []).append(i)
+    broken = []
+    if not opts.no_bar_check:
+        for sq in sorted(set(per_seq) | set(extra_by_seq)):
+            notes = per_seq.get(sq, [])
+            nb = len(notes)
+            err = sum(1 for i in notes if not p_ok[i] or (use_rhythm and not r_ok[i])) + extra_by_seq.get(sq, 0)
+            if (nb >= 2 and 2 * err > nb) or (nb == 1 and not p_ok[notes[0]]):
+                bar = R[notes[0]]['bar'] if notes else next(e['bar'] for e in events if e.get('seq') == sq)
+                broken.append((sq, bar, err, nb))
     j_lo = min((u['j0'] for u in units), default=0)
     j_hi = max((u['j1'] for u in units), default=0)
     return {
-        'al': al, 'score': score, 'units': units, 'events': ev_in, 'T': T, 'scale': scale, 'k': k, 'jLo': j_lo, 'jHi': j_hi,
-        'semiCand': semi_cand,
+        'al': al, 'units': units, 'events': events, 'T': T, 'D': Doff, 'jLo': j_lo, 'jHi': j_hi, 'iLo': i_lo, 'iHi': i_hi,
         'pitch': 100.0 * pitch_ok / denom, 'rhythm': 100.0 * rhythm_ok / denom,
-        'pitchOk': pitch_ok, 'rhythmOk': rhythm_ok, 'denom': denom, 'nRef': n_ref, 'iLo': i_lo, 'iHi': i_hi,
-        'excusedMissing': excused_missing, 'excusedExtra': sum(1 for e in ev_in if e['type'] == 'extra' and e['excused']),
-        'unexplainedExtra': unexplained_extra,
+        'pitchOk': pitch_ok, 'rhythmOk': rhythm_ok, 'denom': denom, 'nRef': i_hi - i_lo,
+        'excusedMissing': sum(1 for e in events if e['type'] == 'missing' and e['excused']),
+        'excusedExtra': sum(1 for e in events if e['type'] == 'extra' and e['excused']),
+        'unexplainedExtra': unexplained,
         'splits': sum(1 for u in units if u['kind'] == 'split'), 'merges': sum(1 for u in units if u['kind'] == 'merge'),
         'octaves': [u for u in units if u['oct'] != 0 and u['kind'] != 'sub'],
+        'octJumps': sum(1 for u in units if u.get('octJump')),
+        'displaced': sum(1 for u in units if not u['onset_ok']), 'shifts': len(shift_at), 'broken': broken,
+        'allowed': sorted(allow), 'outer': outer,
     }
 
 
-def choose_scale_candidates(R, S, k, semi):
-    """Estimate the time ratio from the pitch-only alignment, return candidate ratios."""
-    # crude estimate: median IOI ratio over notes of equal pitch-class sequences is fragile; use
-    # total-duration ratio and the IOI medians, then keep candidates within a factor 2.2
+def evaluate(R, S, k, scale, semi, opts, bar_q, allow, offset=None, semi_cand=False):
+    al = Aligner(R, S, k, scale, semi, opts.tol, offset, semi_cand)
+    score, ops = al.run()
+    res = analyse(al, ops, opts, bar_q, semi, allow)
+    res.update({'score': score, 'scale': scale, 'k': k, 'semiCand': semi_cand})
+    return res
+
+
+def choose_scale_candidates(R, S):
+    """Candidate time ratios: the ones near the ratio of median note lengths, plus the usual ones."""
     def med(x):
         x = sorted(v for v in x if v > EPS)
         return x[len(x) // 2] if x else 1.0
     est = med(iois(R)) / max(EPS, med(iois(S)))
     cands = sorted(SCALES, key=lambda c: abs(math.log(float(c) / est)))
     keep = [c for c in cands if abs(math.log(float(c) / est)) <= math.log(2.2)][:5]
-    # the usual notational ratios are always tried (median IOIs can mislead on short excerpts)
+    # the usual notational ratios are always tried (median IOIs can mislead on short excerpts),
+    # and the measured ratio itself when it is a simple fraction outside the list (e.g. 9/4)
     for c in (Fraction(1), Fraction(3, 2), Fraction(1, 2), Fraction(2), Fraction(3, 4), Fraction(2, 3)):
         if c not in keep:
             keep.append(c)
+    fe = Fraction(est).limit_denominator(8)
+    if fe > 0 and fe not in keep and abs(float(fe) - est) < 1e-3 * est:
+        keep.append(fe)
     return keep
 
 
@@ -446,6 +660,10 @@ def compare(ref, cand, opts) -> dict:
     R, S = ref['notes'], cand['notes']
     if not R or not S:
         raise SystemExit('compare: empty reference or candidate')
+    bar_q = ref.get('barQ') or 4.0
+    allow = set()
+    for a, b in parse_bars(opts.allow_bars) or []:
+        allow.update(range(a, b + 1))
     semi = opts.locate or (not opts.global_ and not opts.ref_bars_given and len(R) > 1.5 * len(S) + 8)
     semi_cand = not semi and (opts.locate_cand or (not opts.global_ and len(S) > 1.5 * len(R) + 8))
     # 1) transposition by fast pitch-only DP
@@ -461,30 +679,23 @@ def compare(ref, cand, opts) -> dict:
         scores.sort(reverse=True)
         ks = [scores[0][1]] + [k for s, k in scores[1:3] if s >= scores[0][0] - 2]
     # 2) time scale candidates
-    if opts.scale:
-        scales = [Fraction(opts.scale)]
-    else:
-        scales = choose_scale_candidates(R, S, ks[0], semi)
+    scales = [Fraction(opts.scale)] if opts.scale else choose_scale_candidates(R, S)
     best = None
     # time scale with the best transposition, then the runner-up transpositions at that scale
     for sc in scales:
-        res = evaluate(R, S, ks[0], sc, semi, opts.strict_octave, opts.tol, None, semi_cand)
+        res = evaluate(R, S, ks[0], sc, semi, opts, bar_q, allow, None, semi_cand)
         key = (res['pitch'] + res['rhythm'], res['score'])
         if best is None or key > best[0]:
             best = (key, res)
     for k in ks[1:]:
-        res = evaluate(R, S, k, best[1]['scale'], semi, opts.strict_octave, opts.tol, None, semi_cand)
+        res = evaluate(R, S, k, best[1]['scale'], semi, opts, bar_q, allow, None, semi_cand)
         key = (res['pitch'] + res['rhythm'], res['score'])
         if key > best[0]:
             best = (key, res)
     res = best[1]
-    # second pass: prefer anchors that keep the dominant time offset (stops ornaments or
-    # octave-displaced repeats from stealing the alignment)
-    al = res['al']
-    offs = sorted(round(al.son[u['j0']] - al.ron[u['i0']], 4) for u in res['units'] if u['kind'] != 'sub')
-    if offs:
-        mode = Counter(offs).most_common(1)[0][0]
-        res2 = evaluate(R, S, res['k'], res['scale'], semi, opts.strict_octave, opts.tol, mode, semi_cand)
+    # 3) second pass anchored at the dominant offset (pairs notes by metric position)
+    if res['units']:
+        res2 = evaluate(R, S, res['k'], res['scale'], semi, opts, bar_q, allow, res['D'], semi_cand)
         if (res2['pitch'] + res2['rhythm']) >= (res['pitch'] + res['rhythm']) - 1e-9:
             res = res2
     res['semi'] = semi
@@ -514,10 +725,24 @@ def fmt_bar_tokens(notes, on0, on1, scale=1.0, transpose=0):
     return ' '.join(toks)
 
 
+def verdict(res, opts) -> tuple[bool, list[str]]:
+    lab = bar_labels(res['al'].R)
+    why = []
+    if res['pitch'] < opts.pitch_min - 1e-9:
+        why.append(f'pitch {res["pitch"]:.1f} % < {opts.pitch_min:g} %')
+    if res['rhythm'] < opts.rhythm_min - 1e-9:
+        why.append(f'rhythm {res["rhythm"]:.1f} % < {opts.rhythm_min:g} %')
+    if res['broken']:
+        why.append('broken bar' + ('s' if len(res['broken']) > 1 else '') + ' ' + ', '.join(lab.get(b[0], str(b[1])) for b in res['broken']))
+    return not why, why
+
+
 def report(ref, cand, res, opts) -> tuple[str, bool]:
     al = res['al']
     R, S = al.R, al.S
     T = res['T']
+    SPELL['sharps'] = (ref.get('raw') or {}).get('keySignatureSharps')
+    lab = bar_labels(R)
     lines = []
     lines.append(f'Reference: {ref["desc"]}')
     lines.append(f'           K:{ref.get("key")} M:{ref.get("meter")}, {len(R)} notes')
@@ -540,42 +765,70 @@ def report(ref, cand, res, opts) -> tuple[str, bool]:
         for u in res['octaves']:
             oc[R[u['i0']]['bar']] += 1
         lines.append(f'Octave displacements: {len(res["octaves"])} note(s) in ref bars ' + ', '.join(f'{b}' for b in sorted(oc)) +
-                     (' (counted as wrong: --strict-octave)' if opts.strict_octave else ' (accepted; --strict-octave to count them)'))
+                     (' (counted as wrong: --strict-octave)' if opts.strict_octave else
+                      ' (phrases of 3+ notes accepted; --strict-octave to count them' +
+                      (f'; {res["octJumps"]} isolated note(s) counted as wrong' if res['octJumps'] else '') + ')'))
     else:
         lines.append('Octave displacements: none')
     lines.append(f'Tolerated: {res["excusedExtra"]} ornament/passing note(s) in candidate, {res["excusedMissing"]} ornamental ref note(s) skipped, '
-                 f'{res["splits"]} split + {res["merges"]} merged repeated note(s)')
-    ok = res['pitch'] >= opts.pitch_min - 1e-9 and res['rhythm'] >= opts.rhythm_min - 1e-9
+                 f'{res["splits"]} repeated-note split(s)')
+    if res['allowed']:
+        lines.append(f'Allowed (not scored): ref bars {opts.allow_bars}')
+    ok, why = verdict(res, opts)
     lines.append(f'PITCH  match: {res["pitch"]:5.1f} %  ({res["pitchOk"]}/{res["denom"]})   threshold {opts.pitch_min:g} %')
     lines.append(f'RHYTHM match: {res["rhythm"]:5.1f} %  ({res["rhythmOk"]}/{res["denom"]})   threshold {opts.rhythm_min:g} %')
     if res['unexplainedExtra']:
         lines.append(f'  ({res["unexplainedExtra"]} extra candidate note(s) not explained as ornaments are in the denominator)')
+    if res['pitch'] >= 80 and res['rhythm'] < 40 and not opts.scale:
+        lines.append('  (pitches agree but almost no onsets do: the note values may relate by an unusual ratio; try --scale, e.g. --scale 9/4)')
+    if res['displaced']:
+        lines.append(f'  ({res["displaced"]} note(s) displaced from the dominant time offset' +
+                     ('' if opts.resync else '; if a phrase was shifted on purpose (held fermata, inserted bar) use --resync or compare the parts separately') + ')')
+    if res['shifts']:
+        lines.append(f'  ({res["shifts"]} timing shift(s) re-anchored by --resync, one rhythm error each)')
+    for side, cnt in sorted(res['outer'].items()):
+        js = [e['j'] for e in res['events'] if e['type'] == 'extra' and e.get('outer') == side]
+        lines.append(f'  ({cnt} extra candidate note(s) {side} the aligned span, cand bars {cand["barLabel"](S[min(js)])}..{cand["barLabel"](S[max(js)])}: '
+                     'trim the song side with --bars / --section, or widen --ref-bars)')
+    if not opts.no_bar_check:
+        lines.append('Broken bars: ' + (', '.join(f'{lab.get(sq, b)} ({e} of {n} wrong)' for sq, b, e, n in res['broken']) if res['broken'] else 'none') +
+                     '   (more than half of a bar wrong fails the check; --allow-bars for intended changes)')
 
-    # per ref bar issues
+    # per ref bar issues, keyed by the bar's position in the selection (seq)
     issues: dict = {}
-    order_bars = []
 
-    def add(rb, msg):
-        if rb not in issues:
-            issues[rb] = []
-            order_bars.append(rb)
-        issues[rb].append(msg)
+    def add(sq, msg):
+        issues.setdefault(sq, []).append(msg)
 
     cb = cand['barLabel']
+    allow = set(res['allowed'])
+    tag = lambda i: ' (allowed)' if R[i]['bar'] in allow else ''
     for u in res['units']:
         rn = R[u['i0']]
         sn = S[u['j0']]
+        sq = rn['seq']
         where = f'cand bar {cb(sn)}'
+        a = tag(u['i0'])
         if u['kind'] == 'sub':
-            add(rn['bar'], f'wrong note: ref {nm(rn["midi"])} -> cand {nm(sn["midi"] - T)}' + (f' (sounding {nm(sn["midi"])})' if T else '') + f' [{where}]')
+            add(sq, f'wrong note: ref {nm(rn["midi"])} -> cand {nm(sn["midi"] - T)}' + (f' (sounding {nm(sn["midi"])})' if T else '') + f' [{where}]{a}')
+        elif u.get('octJump'):
+            add(sq, f'octave jump: ref {nm(rn["midi"])} -> cand {nm(sn["midi"] - T)} ({u["oct"]:+d} oct, an isolated note out of the line) [{where}]{a}')
         elif not u['pitch']:
-            add(rn['bar'], f'octave: ref {nm(rn["midi"])} -> cand {nm(sn["midi"] - T)} ({u["oct"]:+d} oct) [{where}]')
-        if not u['rhythm']:
-            add(rn['bar'], f'rhythm: {nm(rn["midi"])} starts {fq(u["dr"])}q after the previous match in ref, {fq(u["ds"])}q in cand [{where}]')
-        if opts.verbose and u['kind'] in ('split', 'merge'):
-            add(rn['bar'], f'(ok) {u["kind"]}: ref {" ".join(nm(R[i]["midi"]) for i in range(u["i0"], u["i1"]))} ~ cand {" ".join(nm(S[j]["midi"] - T) for j in range(u["j0"], u["j1"]))} [{where}]')
+            add(sq, f'octave: ref {nm(rn["midi"])} -> cand {nm(sn["midi"] - T)} ({u["oct"]:+d} oct) [{where}]{a}')
+        if u['shift'] is not None:
+            add(sq, f'rhythm: timing shift, from {nm(rn["midi"])} on the candidate is {fq(abs(u["shift"]))}q {"later" if u["shift"] > 0 else "earlier"} '
+                    f'(re-anchored by --resync) [{where}]{a}')
+        elif not u['onset_ok']:
+            add(sq, f'rhythm: {nm(rn["midi"])} starts {fq(abs(u["dev"]))}q {"late" if u["dev"] > 0 else "early"} [{where}]{a}')
+        elif not u['ioi_ok']:
+            add(sq, f'rhythm: {nm(rn["midi"])} lasts {fq(u["ds"])}q to the next aligned note, {fq(u["dr"])}q in ref [{where}]{a}')
+        if u['kind'] == 'merge':
+            add(sq, f'rhythm: merged, ref {" ".join(nm(R[i]["midi"]) for i in range(u["i0"], u["i1"]))} ({u["nref"]} onsets) played as one note '
+                    f'(only the first onset counts) [{where}]{a}')
+        if opts.verbose and u['kind'] == 'split':
+            add(sq, f'(ok) split: ref {nm(rn["midi"])} ~ cand {" ".join(nm(S[j]["midi"] - T) for j in range(u["j0"], u["j1"]))} [{where}]')
         if opts.verbose and u['pitch'] and u['oct']:
-            add(rn['bar'], f'(ok) octave: ref {nm(rn["midi"])} -> cand {u["oct"]:+d} oct [{where}]')
+            add(sq, f'(ok) octave: ref {nm(rn["midi"])} -> cand {u["oct"]:+d} oct [{where}]')
     for e in res['events']:
         if e['type'] == 'missing':
             rn = R[e['i']]
@@ -583,48 +836,49 @@ def report(ref, cand, res, opts) -> tuple[str, bool]:
             msg = f'missing: ref {nm(rn["midi"])} ({fq(rn["dur"])}q) not in candidate' + (f' [near cand bar {cb(near)}]' if near else '')
             if e['excused']:
                 if opts.verbose:
-                    add(rn['bar'], '(ok, ornament) ' + msg)
+                    add(rn['seq'], '(ok, ornament) ' + msg)
             else:
-                add(rn['bar'], msg)
+                add(rn['seq'], msg + tag(e['i']))
         else:
             sn = S[e['j']]
-            rb = R[min(max(e['i'] - 1, 0), len(R) - 1)]['bar']
+            if 'seq' in e:
+                sq = e['seq']
+            else:
+                k = e['unit'] if 'unit' in e else None
+                sq = R[res['units'][k]['i0']]['seq'] if k is not None else R[min(max(e['i'] - 1, 0), len(R) - 1)]['seq']
             msg = f'extra: cand {nm(sn["midi"] - T)} ({fq(sn["dur"] * al.r)}q) not in reference [cand bar {cb(sn)}]'
             if e['excused']:
                 if opts.verbose:
-                    add(rb, '(ok, ornament/passing) ' + msg)
+                    add(sq, '(ok, ornament/passing) ' + msg)
             else:
-                add(rb, msg)
-    if order_bars:
+                add(sq, msg + (' (allowed)' if e.get('bar') in allow else ''))
+    if issues:
         lines.append('')
-        lines.append('Bar-by-bar differences (ref bar numbers as in `abc2notes.py --text`; candidate pitches shown transposed into the reference key):')
+        lines.append('Bar-by-bar differences (ref bar numbers as in `abc2notes.py --text`; candidate pitches shown transposed into the reference key,')
+        lines.append('the cand line shows what the candidate plays in the same time span):')
         bars_ref = ref.get('bars') or {}
-        shown = 0
-        seq_of_bar = {}
+        bar_of_seq = {}
         for n in R:
-            seq_of_bar.setdefault(n['bar'], n['seq'])
-        # map ref bar -> aligned candidate span for the side-by-side view
-        for rb in order_bars:
+            bar_of_seq.setdefault(n['seq'], n['bar'])
+        exp_of_seq = {}
+        for u in res['units']:
+            exp_of_seq.setdefault(R[u['i0']]['seq'], u['exp'])
+        order = sorted(issues)
+        for shown, sq in enumerate(order):
             if shown >= opts.max_bars:
-                lines.append(f'  ... {len(order_bars) - shown} more bar(s) with differences (use --max-bars)')
+                lines.append(f'  ... {len(order) - shown} more bar(s) with differences (use --max-bars)')
                 break
-            shown += 1
-            msgs = issues[rb]
-            lines.append(f'  ref bar {rb}:')
-            sq = seq_of_bar.get(rb)
+            lines.append(f'  ref bar {lab.get(sq, bar_of_seq.get(sq, "?"))}:')
             if sq in bars_ref:
                 st, ln, _ = bars_ref[sq]
                 lines.append(f'      ref : {fmt_bar_tokens(R, st, st + ln)}')
-                # candidate notes aligned into this bar's time span (via the unit anchors)
-                anchors = [u for u in res['units'] if R[u['i0']]['seq'] == sq]
-                if anchors:
-                    a = anchors[0]
-                    off = al.son[a['j0']] - al.ron[a['i0']]
-                    lines.append(f'      cand: {fmt_bar_tokens(S, st + off, st + ln + off, al.r, T)}')
-            for msg in msgs:
+                off = exp_of_seq.get(sq, res['D'])
+                lines.append(f'      cand: {fmt_bar_tokens(S, st + off, st + ln + off, al.r, T)}')
+            for msg in issues[sq]:
                 lines.append(f'      - {msg}')
     lines.append('')
-    lines.append('RESULT: ' + ('PASS' if ok else 'FAIL') + f'  (pitch {res["pitch"]:.1f} % / rhythm {res["rhythm"]:.1f} %)')
+    lines.append('RESULT: ' + ('PASS' if ok else 'FAIL') + f'  (pitch {res["pitch"]:.1f} % / rhythm {res["rhythm"]:.1f} %' +
+                 ('' if ok else '; ' + '; '.join(why)) + ')')
     return '\n'.join(lines), ok
 
 
@@ -648,8 +902,11 @@ def main(argv=None) -> int:
     ap.add_argument('--cand-voice')
     ap.add_argument('--cand-expand-repeats', action='store_true')
     ap.add_argument('--cand-bars')
-    ap.add_argument('--pitch-min', type=float, default=90.0)
-    ap.add_argument('--rhythm-min', type=float, default=80.0)
+    ap.add_argument('--pitch-min', type=float, default=95.0)
+    ap.add_argument('--rhythm-min', type=float, default=90.0)
+    ap.add_argument('--allow-bars', help='reference bars changed on purpose: listed, but not scored and not bar-checked (e.g. "53" or "52-53")')
+    ap.add_argument('--no-bar-check', action='store_true', help='do not fail on broken bars (more than half of a bar wrong)')
+    ap.add_argument('--resync', action='store_true', help='re-anchor the timing after a deliberate shift (held fermata, inserted bar); one error per shift')
     ap.add_argument('--shift', type=int, help='force the transposition (semitones, mod 12 used for matching)')
     ap.add_argument('--scale', help='force the time ratio: 1 candidate beat = SCALE reference quarters (e.g. 3/2)')
     ap.add_argument('--strict-octave', action='store_true')
@@ -663,6 +920,8 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     a.ref_bars_given = bool(a.ref_bars)
     try:
+        if a.allow_bars:
+            parse_bars(a.allow_bars)
         ref = load_abc_side(a.abc, a.tune, a.title, a.voice, a.expand_repeats, a.ref_bars)
         if a.cand_abc:
             cand = load_abc_side(a.cand_abc, a.cand_tune, a.cand_title, a.cand_voice, a.cand_expand_repeats, a.cand_bars)
@@ -672,6 +931,9 @@ def main(argv=None) -> int:
                 ap.error('give --song ID (or --song-file F.ts) and --channel CH, or --cand-abc FILE')
             cand = load_song_side(a.song, a.song_file, a.export, a.channel, a.section, a.bars)
         res = compare(ref, cand, a)
+    except (ValueError, OSError) as e:
+        print(f'compare: {e}', file=sys.stderr)
+        return 2
     except SystemExit as e:
         if isinstance(e.code, str):
             print(e.code, file=sys.stderr)
@@ -679,12 +941,15 @@ def main(argv=None) -> int:
         raise
     text, ok = report(ref, cand, res, a)
     if a.json:
+        R = ref['notes']
         out = {
             'pass': ok, 'pitch': round(res['pitch'], 2), 'rhythm': round(res['rhythm'], 2), 'transpose': res['T'],
             'scale': str(res['scale']), 'octaveDisplacements': len(res['octaves']), 'located': res['semi'], 'locatedInCandidate': bool(res.get('semiCand')),
-            'refBars': [al_bar for al_bar in sorted({ref['notes'][u['i0']]['bar'] for u in res['units']})],
-            'tolerated': {'extra': res['excusedExtra'], 'missing': res['excusedMissing'], 'split': res['splits'], 'merge': res['merges']},
-            'unexplainedExtra': res['unexplainedExtra'], 'reference': ref['desc'], 'candidate': cand['desc'], 'report': text,
+            'refBars': sorted({R[u['i0']]['bar'] for u in res['units']}),
+            'brokenBars': [b for _, b, _, _ in res['broken']], 'displaced': res['displaced'], 'timingShifts': res['shifts'],
+            'allowedBars': res['allowed'],
+            'tolerated': {'extra': res['excusedExtra'], 'missing': res['excusedMissing'], 'split': res['splits']},
+            'merged': res['merges'], 'unexplainedExtra': res['unexplainedExtra'], 'reference': ref['desc'], 'candidate': cand['desc'], 'report': text,
         }
         text = json.dumps(out, indent=1)
     try:
