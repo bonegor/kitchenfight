@@ -230,3 +230,14 @@ export class SfxSamples {
     this.finish();
   }
 }
+
+/** A SfxSamples that starts decoding on the next tick (OfflineAudioContext: no user gesture needed). */
+export function startSfxSamples(): SfxSamples {
+  const s = new SfxSamples();
+  try {
+    setTimeout(() => s.load(), 0);
+  } catch {
+    /* retried by load(ctx) at unlock */
+  }
+  return s;
+}

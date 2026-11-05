@@ -15,7 +15,7 @@ import type { AudioAPI, MusicId, SfxId, SfxOpts, VoiceMood } from './audio';
 import { clamp, Slicer, yieldToLoop } from './dsp';
 import { renderSong } from './render';
 import { SFX, SFX_IDS, renderSfx } from './sfx';
-import { SfxSamples } from './sfxsamples';
+import { startSfxSamples } from './sfxsamples';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
 import RenderWorker from './worker?worker&inline';
@@ -160,8 +160,8 @@ export class AudioEngine implements AudioAPI {
   private musicWorker = new WorkerPort();
   private fxWorker = new WorkerPort();
 
-  // sfx: recorded MP3 variants (sfxsamples.ts) when decoded, else the synthesized buffers
-  private rec = new SfxSamples();
+  // sfx: recorded MP3 variants (sfxsamples.ts, decoding starts right away) when decoded, else the synthesized buffers
+  private rec = startSfxSamples();
   private sfxBufs = new Map<string, AudioBuffer>();
   private sfxState = new Map<SfxId, { last: number; voices: Voice[]; lastVariant: number }>();
   private activeVoices = 0;
@@ -173,15 +173,6 @@ export class AudioEngine implements AudioAPI {
 
   private suspendedByVisibility = false;
   private listening = false;
-
-  constructor() {
-    // decode the recorded sfx in the background right away (OfflineAudioContext: no user gesture needed)
-    try {
-      setTimeout(() => this.rec.load(), 0);
-    } catch {
-      /* ignore: retried at unlock */
-    }
-  }
 
   get ready(): boolean {
     return !!this.ctx && this.ctx.state === 'running';
@@ -209,7 +200,6 @@ export class AudioEngine implements AudioAPI {
           /* ignore */
         }
         void this.prerenderSfx();
-        this.rec.load(this.ctx); // no-op unless it could not start without a context
         // tracks rendered before unlock become AudioBuffers lazily; start a wanted track now
         if (this.wanted) {
           const id = this.wanted;
@@ -685,6 +675,7 @@ export class AudioEngine implements AudioAPI {
 
   private async prerenderSfx(): Promise<void> {
     if (this.sfxPrerendering || !this.ctx) return;
+    this.rec.load(this.ctx); // recorded sfx: no-op unless decoding could not start without a context
     this.sfxPrerendering = true;
     // most frequent first
     const first: SfxId[] = ['hit', 'pickup_xp', 'enemy_death', 'player_hurt', 'ui_hover', 'ui_click', 'pickup_coin', 'hit_crit', 'enemy_shoot'];

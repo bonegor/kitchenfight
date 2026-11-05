@@ -171,6 +171,14 @@ await page.evaluate(() => {
    * Decoded recordings and synthesized buffers are shared between engines (AudioBuffers are context-free).
    */
   let shared = null;
+  // engines after the first share its decoded buffers: stop their own background decoding (startSfxSamples)
+  window.__noLoad = false;
+  window.__mods.then(({ SfxSamples }) => {
+    const load = SfxSamples.prototype.load;
+    SfxSamples.prototype.load = function (ctx) {
+      if (!window.__noLoad) load.call(this, ctx);
+    };
+  });
   window.__offlineEngine = async (seconds, { music = null, hideRec = null, noRec = false, noSfx = false } = {}) => {
     const { AudioEngine, SFX, SFX_IDS } = await window.__mods;
     const off = new OfflineAudioContext(4, Math.ceil(seconds * SR), SR);
@@ -219,6 +227,7 @@ await page.evaluate(() => {
       const t0 = performance.now();
       while (eng.sfxBufs.size < total && performance.now() - t0 < 30000) await new Promise((r) => setTimeout(r, 50));
       shared = { rec: eng.rec, sfxBufs: eng.sfxBufs };
+      window.__noLoad = true;
       if (hideRec) eng.rec = { get: (i) => (i === hideRec ? null : shared.rec.get(i)), load() {}, lead: shared.rec.lead };
     }
     if (noRec) eng.rec = { get: () => null, load() {}, lead: {} };
@@ -591,6 +600,7 @@ if (!onlyIds.length) {
 if (!onlyIds.length) {
   const rt = await page.evaluate(async () => {
     const { AudioEngine, SFX_IDS } = await window.__mods;
+    window.__noLoad = false;
     const eng = new AudioEngine();
     eng.unlock();
     const t0 = performance.now();

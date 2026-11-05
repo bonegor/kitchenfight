@@ -370,14 +370,14 @@ Each asset re-encoded without the LAME/Xing header (no gapless info: the decoder
 
 | | recorded set | synthesized set | music only |
 |---|---|---|---|
-| mix loudness (LUFS, integrated) | -14.5 | -14.7 | -23.1 |
-| loudest 400 ms (LK) | -10.4 | -11.0 | -21.7 |
-| output peak (dBFS) / clipped samples | -1.4 / 0 | -2.7 / 0 | -10.8 / 0 |
+| mix loudness (LUFS, integrated) | -14.5 | -14.6 | -23.1 |
+| loudest 400 ms (LK) | -10.3 | -10.9 | -21.7 |
+| output peak (dBFS) / clipped samples | -1.6 / 0 | -2.5 / 0 | -10.8 / 0 |
 | max simultaneous sfx voices (cap 40) | 36 | 37 | - |
-| render CPU (offline, % of one core) | 5.5 | 5.3 | - |
+| render CPU (offline, % of one core) | 6.1 | 5.7 | - |
 | important cues played | 16/16 | | |
-| main-thread cost of sfx() | 42 us/call avg, 0.6 ms max per frame | | |
+| main-thread cost of sfx() | 43 us/call avg, 0.4 ms max per frame | | |
 
 ### Realtime AudioContext (headless Chromium)
 
-Context 44100 Hz. 105 MP3s decoded in 511 ms (0 failures); decoder delay trimmed at runtime: 0..0 samples (Chromium strips the LAME encoder delay itself). Recorded buffer played for every id: true. sfx() call cost: max 0.30 ms; 1000 calls in a burst: 1.7 ms.
+Context 44100 Hz. 105 MP3s decoded in 712 ms (0 failures); decoder delay trimmed at runtime: 0..0 samples (Chromium strips the LAME encoder delay itself). Recorded buffer played for every id: true. sfx() call cost: max 0.30 ms; 1000 calls in a burst: 2.3 ms.
