@@ -303,35 +303,38 @@ export const bass =
     const out: Ev[] = [];
     let prevRoot: number | undefined;
     walk(ctx, pattern, o, (tok, s, c, v) => {
-      const root = placeInRange(c.bass, lo, hi - 7 >= lo ? hi - 5 : hi, prevRoot);
-      prevRoot = root;
+      const bassNote = placeInRange(c.bass, lo, hi - 7 >= lo ? hi - 5 : hi, prevRoot);
+      prevRoot = bassNote;
+      // chord root placed at or just below the bass note (slash chords: Em/G → root E under G)
+      const root = bassNote - ((((c.bass - c.root) % 12) + 12) % 12);
       let m: number;
       const third = c.ivs.includes(3) ? 3 : 4;
+      const fifth = c.ivs.includes(6) && !c.ivs.includes(7) ? 6 : c.ivs.includes(8) && !c.ivs.includes(7) ? 8 : 7;
       const sev = c.ivs.includes(10) ? 10 : c.ivs.includes(11) ? 11 : 10;
       switch (tok.sym) {
         case '1':
         case 'b':
-          m = root;
+          m = bassNote;
           break;
         case '3':
           m = root + third;
           break;
         case '5':
-          m = root + 7 <= hi ? root + 7 : root - 5;
+          m = root + fifth <= hi ? root + fifth : root + fifth - 12;
           break;
         case '5-':
-          m = root - 5 >= lo - 5 ? root - 5 : root + 7;
+          m = root + fifth - 12 >= lo - 5 ? root + fifth - 12 : root + fifth;
           break;
         case '7':
           m = root + sev;
           break;
         case '8':
-          m = root + 12;
+          m = bassNote + 12;
           break;
         case 'a': {
           // chromatic approach to the next chord's bass from below
           const nx = ctx.nextChordAfter(s);
-          const target = placeInRange(nx.bass, lo, hi, root);
+          const target = placeInRange(nx.bass, lo, hi, bassNote);
           m = target - 1;
           break;
         }

@@ -696,10 +696,11 @@ const PATTERNS: Record<string, Pattern> = {
         }
         if (t > 0.6) {
           const tp = toPlayer(run, e);
-          e.ax += (tp.dx - e.ax) * dt * 1.2;
-          e.ay += (tp.dy - e.ay) * dt * 1.2;
-          e.x += e.ax * 380 * dt;
-          e.y += e.ay * 380 * dt;
+          e.ax += (tp.dx - e.ax) * dt * 0.6;
+          e.ay += (tp.dy - e.ay) * dt * 0.6;
+          const l = Math.hypot(e.ax, e.ay) || 1;
+          e.x += (e.ax / l) * 320 * dt;
+          e.y += (e.ay / l) * 320 * dt;
           e.anim += dt * 20;
           e.attackPose = 0.1;
         } else steer(e, 0, 0, dt, 6);

@@ -688,7 +688,7 @@ export class UI {
 
   // ------------------------------------------------------------------ results
 
-  showResults(run: Run, victory: boolean, unlocks: { icon: string; text: string }[]) {
+  showResults(run: Run, victory: boolean, unlocks: { icon: string; text: string }[], newRecord = false) {
     this.removeHud();
     this.overlay?.remove();
     this.overlay = null;
@@ -715,7 +715,7 @@ export class UI {
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-body' },
           h('div', { class: 'stats-row' },
-            h('div', { class: 'stat-box' }, h('div', { class: 'v' }, formatTime(run.time)), h('div', { class: 'k' }, 'Survived')),
+            h('div', { class: 'stat-box' + (newRecord ? ' record' : '') }, h('div', { class: 'v' }, formatTime(run.time)), h('div', { class: 'k' }, newRecord ? '★ New record!' : 'Survived')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, String(run.level)), h('div', { class: 'k' }, 'Level')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, run.kills.toLocaleString()), h('div', { class: 'k' }, 'Crimes stopped')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, '+' + run.coins), h('div', { class: 'k' }, 'Coins')),

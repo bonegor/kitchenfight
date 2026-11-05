@@ -45,7 +45,7 @@ export const menu: SongDef = {
     intro: {
       bars: 2,
       chords: 'G:6 | D7:6',
-      parts: [arp('gtr', GTR_ARP, { lo: 'G3', hi: 'G4', vel: 0.7, n: 4 }), bass('bass', BASS, { lo: 'D2', hi: 'D3', vel: 0.75 }), mel('mand', 'r:6 | r:2 B4:2 C5:2 |', { vel: 0.7 })],
+      parts: [arp('gtr', GTR_ARP, { lo: 'G3', hi: 'G4', vel: 0.7, n: 4 }), bass('bass', BASS, { lo: 'D2', hi: 'D3', vel: 0.75 }), mel('mand', 'r:6 | r:2 A4:2 C5:2 |', { vel: 0.7 })],
     },
     A: {
       bars: 16,

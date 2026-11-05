@@ -169,7 +169,7 @@ E({
 });
 E({
   id: 'polpetta', name: 'Polpetta Rotolante', en: 'Rolling Meatball', sprite: 'enemy.polpetta',
-  radius: 14, hp: 26, speed: 160, damage: 9, xp: 3, behavior: 'roller', params: { accel: 260, turn: 2.2 }, knockResist: 0.4,
+  radius: 14, hp: 26, speed: 140, damage: 7, xp: 3, behavior: 'roller', params: { accel: 220, turn: 2.2 }, knockResist: 0.4,
   color: 'brown', juice: '#8a4a2a', chunk: 'bread',
   info: { crime: 'Spaghetti and meatballs', why: 'An Italian-American invention from around 1900. In Italy polpette are a main course on their own — never piled on spaghetti.', severity: 2, quote: '"You\'ll never find spaghetti and meatballs in Italy, at least outside of the most obvious tourist traps." — Tasting Table' },
 });
@@ -205,13 +205,13 @@ E({
 });
 E({
   id: 'frappe', name: 'Frappè Zuccheroso', en: 'Sugar-Rush Frappé', sprite: 'enemy.frappe',
-  radius: 14, hp: 22, speed: 64, damage: 9, xp: 3, behavior: 'charger', params: { range: 260, windup: 0.55, dash: 420, dashTime: 0.4, cd: 1.8 },
+  radius: 14, hp: 22, speed: 62, damage: 8, xp: 3, behavior: 'charger', params: { range: 250, windup: 0.62, dash: 380, dashTime: 0.4, cd: 2.4 },
   color: 'pink', juice: '#f5b8c8', chunk: 'plastic',
   info: { crime: 'Giant whipped-cream "coffee" drinks', why: 'An Italian coffee is an espresso drunk standing at the bar in about a minute. A litre of syrup and whipped cream is a dessert in disguise.', severity: 2 },
 });
 E({
   id: 'smartphone', name: 'Il Telefonino Virale', en: 'The Viral Phone', sprite: 'enemy.smartphone',
-  radius: 13, hp: 18, speed: 50, damage: 6, xp: 3, behavior: 'ranged', params: { min: 180, max: 280, cd: 3.0, shot: 'proj.e_generic', shotSpeed: 175, count: 2, spread: 0.2 },
+  radius: 13, hp: 18, speed: 50, damage: 6, xp: 3, behavior: 'ranged', params: { min: 180, max: 280, cd: 3.4, shot: 'proj.e_generic', shotSpeed: 160, count: 2, spread: 0.24 },
   color: 'pink', juice: '#9ad7ff', chunk: 'glass',
   info: { crime: 'Viral "Italian" recipe videos', why: 'Countertop spaghetti, oven-"boiled" raw spaghetti, gummy-candy pizza… every year a new video makes Italians reach for the comment box.', severity: 4, quote: 'Michelin-starred chef Bruno Barbieri posted his horrified reaction to TikTok\'s oven-baked raw spaghetti.' },
 });
@@ -229,7 +229,7 @@ E({
 });
 E({
   id: 'surgelata', name: 'Lasagna Surgelata', en: 'Frozen Lasagna', sprite: 'enemy.surgelata',
-  radius: 23, hp: 110, speed: 34, damage: 13, xp: 6, behavior: 'chase', knockResist: 0.75,
+  radius: 23, hp: 110, speed: 32, damage: 10, xp: 6, behavior: 'chase', knockResist: 0.75,
   color: 'red', juice: '#d9532e', chunk: 'glass',
   info: { crime: 'Frozen microwave lasagna', why: 'Lasagna is a Sunday ritual: fresh egg-pasta sheets, slow-cooked ragù, béchamel and hours in the oven — not a frozen brick nuked for six minutes.', severity: 2 },
 });

@@ -52,28 +52,29 @@ function drawAlfredo(ctx: Ctx, f: number) {
   const { ph, s, c: co } = cyc(f);
 
   // far noodle arm (left), dangling to the floor
-  ribbon(ctx, [[-14, 0], [-19.6 - s * 0.8, 4], [-21 - s, 10.6], [-18.4, 15.4]], 2.6);
-  shape(ctx, (c) => blobPath(c, -18.2, 15.6, 2.8, 1.8, 0.15, 7, 3), { fill: ALF, ink: 1.4, shadow: ALF_SH, shadowOffset: [-0.6, -0.6] });
+  ribbon(ctx, [[-14.6, 1], [-19.4 - s * 0.8, 4.4], [-20.6 - s, 10.4], [-18.6, 15]], 2.6);
+  shape(ctx, (c) => blobPath(c, -18.4, 15.4, 2.6, 1.7, 0.15, 7, 3), { fill: ALF, ink: 1.4, shadow: ALF_SH, shadowOffset: [-0.6, -0.6] });
+
+  // side noodle loops poking out of the sauce (behind the body edge)
+  ribbon(ctx, [[-14.6, -5.4], [-18.8, -2.4], [-18.4, 2.6], [-15, 4]], 2.5);
+  ribbon(ctx, [[14.8, -7], [18.6, -4.6], [18.4, 0.4], [15.2, 1.6]], 2.5);
 
   // body: a sagging, melting heap with a puddle base
   const base: Pt[] = [
     [-21, 16.4], [-14, 18], [-5, 18.3], [5, 18.3], [14, 18], [21.2, 16.2],
-    [19.2, 12.2], [16.2, 8.6], [15.6, 2], [14.6, -5], [12.2, -11.4], [7.4, -16.6], [1, -18.6], [-6, -17.6], [-11.6, -13], [-14.6, -6], [-15.6, 1.4], [-16.6, 8.6], [-19.4, 12.6],
+    [19, 12.4], [16.4, 9.4], [16.6, 3.6], [16.2, -2.6], [14.6, -8.8], [11.2, -13.2], [6, -15.8], [0, -16.6], [-6, -15.8], [-11.2, -13], [-14.6, -8.4], [-16, -2.2], [-16.4, 3.8], [-17, 9.4], [-19.6, 12.6],
   ];
   const pts = base.map(([x, y], i): Pt => (i < 6 ? [x, y] : [x + Math.sin(ph + i * 0.9) * 0.45, y + Math.cos(ph + i * 0.7) * 0.4]));
   const body = (c: Ctx) => smoothPath(c, pts, true);
   shape(ctx, body, {
     fill: ALF, shadow: ALF_SH, shadowOffset: [-3.4, -3], ink: 2.3,
-    gloss: [{ x: -7.6, y: -11.2, rx: 3.6, ry: 2, rot: -0.6, alpha: 0.9 }, { x: -11.4, y: 1, rx: 1.1, ry: 2.6, rot: 0.2, alpha: 0.6 }],
+    gloss: [{ x: -8.4, y: -10.2, rx: 3.6, ry: 2, rot: -0.6, alpha: 0.9 }, { x: -12.6, y: 2, rx: 1, ry: 2.4, rot: 0.2, alpha: 0.6 }, { x: -3.6, y: -13.4, rx: 1, ry: 0.6, alpha: 0.9 }],
   });
 
   clipTo(ctx, body, () => {
-    // fettuccine draped down the sides, half-drowned
-    ribbon(ctx, [[-6, -16], [-11.6, -9], [-13.8, -1], [-12.6, 6]], 2.7);
-    ribbon(ctx, [[6.2, -15.4], [11.6, -9.6], [13.6, -2.4]], 2.7);
-    ribbon(ctx, [[-14, 10], [-6, 13.6], [4, 14.6], [13, 12.4]], 2.4);
-    // cream glazing over the ribbons
-    for (const [x, y, rx, ry] of [[-12.6, -4.2, 2.6, 1.6], [12.2, -6.4, 2.4, 1.4], [-2, 14.6, 3.2, 1.6], [8.4, 13.8, 2.6, 1.4]] as [number, number, number, number][]) {
+    // a drowned fettuccine loop showing low on the belly
+    ribbon(ctx, [[-14, 11], [-7, 14.4], [2, 15], [10, 13.8], [15, 10.6]], 2.4);
+    for (const [x, y, rx, ry] of [[-6, 14.6, 3, 1.5], [6.6, 14.6, 2.6, 1.4]] as [number, number, number, number][]) {
       shape(ctx, (c) => ellipsePath(c, x, y, rx, ry), { fill: ALF, ink: 0, shadow: 'none' });
     }
     // pepper + parsley
@@ -82,17 +83,21 @@ function drawAlfredo(ctx: Ctx, f: number) {
   });
 
   // fettuccine nest on top
-  ribbon(ctx, [[-9.4, -14.6], [-6.6, -20.4], [1, -22.2], [7.6, -19.8], [9.6, -14.8]], 2.8);
-  ribbon(ctx, [[-6.2, -15.8], [-1.4, -19.2], [4.6, -18.6], [6.6, -15.6]], 2.6);
-  shape(ctx, (c) => dripPath(c, -3.4, -18.4, 2, 3 + co * 0.8), { fill: ALF, ink: 1, shadow: 'none' });
-  chickenCube(ctx, 1.4, -23.4, 4.6, -0.12);
+  ribbon(ctx, [[-10, -12.6], [-8.4, -18], [-1, -20.8], [7, -19], [10.2, -13.4]], 2.8);
+  ribbon(ctx, [[-6.6, -14.6], [-2.2, -18.2], [4, -17.8], [7.2, -14.2]], 2.6);
+  // cream smothering the nest
+  shape(ctx, (c) => blobPath(c, 0.4, -15.6, 6.4, 2.2, 0.2, 8, 13), { fill: ALF, ink: 0, shadow: 'none' });
+  chickenCube(ctx, 0.6, -21.4, 4.6, -0.12);
+  // wet speculars
+  for (const [gx, gy, gr] of [[-11.8, -6.4, 0.7], [10.8, -9.6, 0.6], [-14.2, 9, 0.6], [12.6, 4.4, 0.5]] as [number, number, number][]) glint(ctx, gx, gy, gr, gr * 0.6, -0.6, 0.85);
+  void co;
 
-  // chicken cubes floating in the sauce
-  chickenCube(ctx, -12, 8.6, 4.2, 0.2);
-  chickenCube(ctx, 12.2, 9.4, 3.8, -0.15);
+  // chicken cubes bobbing in the sauce
+  chickenCube(ctx, -11.6, 8.4 + s * 0.3, 4.2, 0.2);
+  chickenCube(ctx, 12, 9.2 - s * 0.3, 3.8, -0.15);
 
   // face: noodle brows, glaring eyes
-  const fx = 0.8, fy = -6;
+  const fx = 0.8, fy = -5.4;
   eye(ctx, fx - 4.8, fy, 3.8, { look: [0.32, 0.14], lid: 'angry-l', pupil: 0.5 });
   eye(ctx, fx + 5, fy - 0.2, 4.1, { look: [0.32, 0.14], lid: 'angry-r', pupil: 0.5 });
   ribbon(ctx, [[fx - 8.8, fy - 6.8], [fx - 4.6, fy - 5.6], [fx - 1.4, fy - 4.4]], 2);
@@ -128,13 +133,10 @@ function drawAlfredo(ctx: Ctx, f: number) {
   });
   cheeks(ctx, [[fx - 9, fy + 4.4], [fx + 10, fy + 4]], 2, 1.1, '#f08a6a', 0.35);
 
-  // near noodle arm reaching forward (the tether)
-  const ax = 22 + s * 0.8, ay = 6.6 - s * 1.4;
-  ribbon(ctx, [[13.6, 0], [18.6, 0.6], [21, 3.2 - s * 0.6], [ax, ay]], 2.6);
-  shape(ctx, (c) => {
-    blobPath(c, ax, ay + 1, 3, 2.6, 0.18, 8, 5);
-    dripPath(c, ax + 0.4, ay + 2.6, 1.6, 3 + (1 - s) * 0.9);
-  }, { fill: ALF, ink: 1.4, shadow: ALF_SH, shadowOffset: [-0.8, -0.8], gloss: [{ x: ax - 1.2, y: ay, rx: 0.9, ry: 0.5, alpha: 0.9 }] });
+  // near noodle arm reaching forward (the tether), its sticky tip curling
+  const ax = 21.2 + s * 0.8, ay = 4.2 - s * 1.4;
+  ribbon(ctx, [[14.6, 0.6], [18.6, -0.6], [21.4, 1 - s * 0.6], [ax + 0.6, ay + 1.4], [ax - 1.4, ay + 2.6], [ax - 2.2, ay + 0.8]], 2.5);
+  shape(ctx, (c) => dripPath(c, ax + 0.2, ay + 2.6, 1.5, 3.4 + (1 - s) * 1.1), { fill: ALF, ink: 1.1, shadow: 'none', gloss: [{ x: ax - 0.2, y: ay + 4, rx: 0.4, ry: 0.6, alpha: 0.9 }] });
 }
 
 enemySprite('alfredo', 52, 58, 38, drawAlfredo);

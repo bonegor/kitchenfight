@@ -119,7 +119,13 @@ function drawCappuccino(ctx: Ctx, f: number) {
 
   // face
   eyePair(ctx, 1.6, -4.4, 3.1, { sp: 8.4, look: [0.32, 0.12], near: 1.08, brow: 0.46, browDy: 1.42, browTh: 1.5, lidL: 'angry-l', lidR: 'angry-r' });
-  mouth(ctx, 2.2, 2.4, 6.6, 'snarl', { open: 0.9 });
+  // grumpy downturned mouth under the milk moustache
+  shape(ctx, (c) => {
+    c.moveTo(-1.6, 3.6);
+    c.quadraticCurveTo(2.2, 0.4, 6.2, 3.4);
+    c.quadraticCurveTo(2.2, 2, -1.6, 3.6);
+    c.closePath();
+  }, { fill: '#5b1320', ink: 1.1, shadow: 'none' });
   // milk-foam moustache
   shape(ctx, (c) => {
     c.moveTo(2.2, 0.2);
@@ -136,7 +142,7 @@ function drawCappuccino(ctx: Ctx, f: number) {
   steamCurl(ctx, 4.6, -26.8, 7, ph + 2.2, 1.3, 0.45);
 }
 
-enemySprite('cappuccino', 44, 52, 34, drawCappuccino, 23);
+enemySprite('cappuccino', 48, 52, 34, drawCappuccino, 25);
 
 // ---------------------------------------------------------------------------
 // 6. FRAPPÈ ZUCCHEROSO — r14. A sugar-rushing iced coffee cup: whipped-cream
@@ -156,7 +162,7 @@ function drawFrappe(ctx: Ctx, f: number) {
   const jit = f % 2 ? 0.4 : -0.4;
 
   // far arm (pumping)
-  hoseArm(ctx, -8.2, -3, -14.5 - s * 2, 2.5 - s * 2.5, { bend: -0.2, thick: 1.9, handR: 2.4 });
+  hoseArm(ctx, -9.6, -1, -15.4 - s * 2, 3.6 - s * 2.4, { bend: -0.2, thick: 1.9, handR: 2.4 });
   // legs (sprinting)
   legs(ctx, 0, 8, f, { len: 5.2, spread: 8, thick: 2.3, color: LIMB, shoe: '#ff5aa5', stride: 7 });
 
@@ -248,9 +254,9 @@ function drawFrappe(ctx: Ctx, f: number) {
   line(ctx, [[-9.5, -12.6], [-3, -13.4], [3, -13.4], [9.8, -12.4]], 0.9, CREAM_SH, true, 0.9);
   line(ctx, [[-6.8, -17.4], [0, -18.2], [7.6, -17.2]], 0.9, CREAM_SH, true, 0.9);
   // caramel zig-zag drizzle
-  const zz: Pt[] = [[-9.8, -13.2], [-5.6, -19.2], [-3.4, -13.8], [0.4, -22.6], [2.8, -15.8], [6.4, -21.4], [9.4, -13.6]];
-  inkLine(ctx, zz, 1.3, CARAMEL, false, 0.7);
-  line(ctx, zz.slice(0, 3), 0.45, '#ffe0a0', false, 0.9);
+  const zz: Pt[] = [[-9.8, -13.6], [-7, -17.4], [-4.8, -14.4], [-2, -20.6], [0.6, -16.6], [3.4, -22], [5.8, -17.2], [8.2, -19.4], [10, -14]];
+  inkLine(ctx, zz, 1.2, CARAMEL, true, 0.7);
+  line(ctx, zz.slice(0, 4), 0.42, '#ffe0a0', true, 0.9);
   // sprinkles
   const R = rng(5);
   const cols = ['#ff5f9e', '#5cc8ff', '#ffd23f', '#7be06a', '#b07cff'];
@@ -278,7 +284,7 @@ function drawFrappe(ctx: Ctx, f: number) {
   shakeLines(ctx, 13.2 - jit, -5, 1, 3, 2.6, 2.8, INK, 0.65, 0.9);
 
   // near arm
-  hoseArm(ctx, 8.6, -2.5, 15 + s * 2.2, 2.4 + s * 2, { bend: 0.25, thick: 1.9, handR: 2.5 });
+  hoseArm(ctx, 9.8, -1, 15.6 + s * 2.2, 3.6 + s * 2, { bend: 0.25, thick: 1.9, handR: 2.5 });
 }
 
 enemySprite('frappe', 42, 56, 38, drawFrappe);
@@ -288,29 +294,29 @@ enemySprite('frappe', 42, 56, 38, drawFrappe);
 //     glaze, hands on hips, trailing a glossy zig-zag drizzle.
 // ---------------------------------------------------------------------------
 
-const GLAZE = '#4f1d2c';
-const GLAZE_SH = '#2c0d18';
-const GLAZE_HI = '#b0607a';
-const LABEL = '#f3e6c6';
+const GLAZE = '#5a2131';
+const GLAZE_SH = '#33101d';
+const GLAZE_HI = '#c06f88';
+const LABEL = '#f6ead0';
 
 function drawGlassa(ctx: Ctx, f: number) {
   const { s } = cyc(f);
 
-  // zig-zag drizzle ribbon trailing behind (to the left) from the nozzle
+  // glossy zig-zag drizzle trailing behind from the nozzle (leaves sticky trails)
   const zig = f % 2 === 0 ? 1 : -1;
   const rib: Pt[] = [
-    [-0.4, -26.2], [-5.5, -28.4], [-11, -25], [-13.4, -19.5],
-    [-9.4 - zig * 0.5, -15.6], [-15.2 + zig * 0.5, -10.6], [-10.2 - zig * 0.5, -5.8], [-15.6 + zig * 0.5, -0.8], [-11 - zig * 0.4, 4], [-15.2, 9.5], [-12.4, 13.6],
+    [-0.4, -26.4], [-5.2, -28.4], [-10, -25.6], [-12.4, -20.4],
+    [-9.4 - zig * 0.4, -15.6], [-14 + zig * 0.4, -9.6], [-10.4 - zig * 0.4, -3.6], [-14.4 + zig * 0.4, 2.6], [-11.4, 8.4], [-13.4, 13.4],
   ];
-  inkLine(ctx, rib, 2.2, GLAZE, true, 1.1);
-  line(ctx, rib.slice(1, 5), 0.6, GLAZE_HI, true, 0.9);
-  shape(ctx, (c) => ellipsePath(c, -12.6, 14.4, 3.2, 1.1), { fill: GLAZE, ink: 1, shadow: 'none', gloss: [{ x: -13.4, y: 14, rx: 1, ry: 0.3, alpha: 0.6 }] });
+  inkLine(ctx, rib, 1.6, GLAZE, true, 0.95);
+  line(ctx, rib.slice(1, 6), 0.45, GLAZE_HI, true, 0.9);
+  shape(ctx, (c) => ellipsePath(c, -13, 14.2, 3, 1), { fill: GLAZE, ink: 0.9, shadow: 'none', gloss: [{ x: -13.8, y: 13.9, rx: 0.9, ry: 0.3, alpha: 0.7 }] });
 
-  // legs
+  // legs (spats!)
   legs(ctx, 0, 8.5, f, { len: 4.6, spread: 8, thick: 2, color: LIMB, shoe: '#1d1418', stride: 3.6 });
 
-  // arms akimbo (hands on hips)
-  hoseArm(ctx, -8.6, -5, -9.4, 2.4, { bend: 0.55, thick: 1.8, handR: 2.2 });
+  // far arm akimbo (hand on hip, elbow out)
+  hoseArm(ctx, -8.6, -5.4, -9.2, 2.6, { bend: -0.62, thick: 1.8, handR: 2.2 });
 
   // bottle
   const bottle = (c: Ctx) => {
@@ -329,13 +335,11 @@ function drawGlassa(ctx: Ctx, f: number) {
   };
   shape(ctx, bottle, {
     fill: GLAZE, shadow: GLAZE_SH, shadowOffset: [-2.4, -1.2], ink: 2, rim: GLAZE_HI,
-    gloss: [{ x: -6.4, y: -2.5, rx: 1.15, ry: 6.4, rot: 0.02, alpha: 0.7 }, { x: -5.4, y: -11.6, rx: 1.4, ry: 0.8, rot: -0.6, alpha: 0.8 }, { x: 6.6, y: 4, rx: 0.6, ry: 2.6, alpha: 0.35 }],
+    gloss: [{ x: -7, y: -3, rx: 1.05, ry: 6.6, rot: 0.02, alpha: 0.75 }, { x: -5.6, y: -12, rx: 1.4, ry: 0.8, rot: -0.6, alpha: 0.85 }, { x: 7.2, y: 2, rx: 0.55, ry: 3, alpha: 0.4 }],
   });
 
   // cap + nozzle (gold, posh)
-  shape(ctx, (c) => {
-    roundRectPath(c, -5.4, -21.2, 10.8, 5, 1.4);
-  }, { fill: GOLD, ink: 1.6, shadow: GOLD_SH, shadowOffset: [-1.2, -0.8], gloss: [{ x: -3.2, y: -19.8, rx: 1, ry: 1.6, alpha: 0.7 }] });
+  shape(ctx, (c) => roundRectPath(c, -5.4, -21.2, 10.8, 5, 1.4), { fill: GOLD, ink: 1.6, shadow: GOLD_SH, shadowOffset: [-1.2, -0.8], gloss: [{ x: -3.2, y: -19.8, rx: 1, ry: 1.6, alpha: 0.7 }] });
   for (let i = -3; i <= 3; i += 1.5) line(ctx, [[i, -20.4], [i, -16.9]], 0.5, GOLD_SH, false, 0.8);
   shape(ctx, (c) => {
     c.moveTo(-2.6, -21);
@@ -344,35 +348,34 @@ function drawGlassa(ctx: Ctx, f: number) {
     c.lineTo(2.6, -21);
     c.closePath();
   }, { fill: GOLD, ink: 1.4, shadow: GOLD_SH, shadowOffset: [-0.7, -0.4] });
+  shape(ctx, (c) => dripPath(c, 1.2, -25.6, 1.1, 3.6 + (s + 1) * 0.6), { fill: GLAZE, ink: 0.8, shadow: 'none' });
 
   // label (cream, gold border) carrying the face
-  const label = (c: Ctx) => roundRectPath(c, -7.4, -10.2, 14.8, 15.4, [4, 4, 5, 5]);
-  shape(ctx, label, { fill: LABEL, ink: 1.2, shadow: '#dcc9a0', shadowOffset: [-1.4, -1] });
+  const label = (c: Ctx) => roundRectPath(c, -7.6, -11, 15.2, 16.4, [4.4, 4.4, 5.4, 5.4]);
+  shape(ctx, label, { fill: LABEL, ink: 1.2, shadow: '#dfcca4', shadowOffset: [-1.4, -1] });
   ctx.save();
   ctx.setLineDash([0.8, 0.8]);
   ctx.beginPath();
-  roundRectPath(ctx, -6.2, -9, 12.4, 13, [3.2, 3.2, 4, 4]);
+  roundRectPath(ctx, -6.4, -9.8, 12.8, 14, [3.4, 3.4, 4.4, 4.4]);
   ctx.strokeStyle = GOLD_SH;
   ctx.lineWidth = 0.6;
   ctx.stroke();
   ctx.restore();
   // tiny grape crest
-  for (const [gx, gy] of [[-0.9, 2.2], [0.9, 2.2], [0, 3.6], [-1.8, 0.9], [0, 0.9], [1.8, 0.9]] as Pt[]) {
-    shape(ctx, (c) => circlePath(c, gx + 0.4, gy, 0.8), { fill: '#7b3a7a', ink: 0, shadow: 'none' });
+  for (const [gx, gy] of [[-0.7, 3.2], [0.7, 3.2], [0, 4.2], [-1.4, 2.2], [0, 2.2], [1.4, 2.2]] as Pt[]) {
+    shape(ctx, (c) => circlePath(c, gx + 0.4, gy, 0.62), { fill: '#7b3a7a', ink: 0, shadow: 'none' });
   }
-  line(ctx, [[0.4, 0], [1.2, -1.1]], 0.5, '#3f8f3a');
 
-  // smug aristocratic face
-  eye(ctx, -2.4, -5, 2.5, { look: [0.42, 0.3], lid: 'half', pupil: 0.52 });
-  eye(ctx, 3.8, -5.1, 2.7, { look: [0.42, 0.3], lid: 'half', pupil: 0.52 });
-  brow(ctx, -2.6, -9.1, 4, -0.38, 1.15);
-  brow(ctx, 4, -8.2, 4, -0.08, 1.15);
-  // monocle (right eye) + chain
-  shape(ctx, (c) => ringPath(c, 3.8, -5, 3.7, 3.7, 2.9, 2.9), { fill: GOLD, ink: 0.8, shadow: 'none' });
-  line(ctx, [[6.6, -2.8], [7.6, 0.6], [7, 4]], 0.5, GOLD_SH, true);
-  glint(ctx, 2.4, -6.6, 0.8, 0.4, -0.7, 0.8);
-  moustache(ctx, 0.9, -0.6, 4.6, '#3b1e14');
-  line(ctx, [[-0.4, 2.6], [1.5, 2.9], [3.4, 2.1]], 0.9, INK, true);
+  // smug aristocratic face: nose in the air, monocle, waxed moustache
+  eye(ctx, -2.5, -5.4, 2.6, { look: [0.45, 0.32], lid: 'half', pupil: 0.52 });
+  eye(ctx, 3.9, -5.5, 2.85, { look: [0.45, 0.32], lid: 'half', pupil: 0.52 });
+  brow(ctx, -2.7, -9.4, 4, -0.4, 1.2);
+  brow(ctx, 4.2, -8.8, 4.2, -0.06, 1.2);
+  shape(ctx, (c) => ringPath(c, 3.9, -5.4, 3.85, 3.85, 3.05, 3.05), { fill: GOLD, ink: 0.8, shadow: 'none' });
+  line(ctx, [[6.8, -3], [7.9, 0.4], [7.2, 4]], 0.5, GOLD_SH, true);
+  glint(ctx, 2.4, -7, 0.8, 0.4, -0.7, 0.8);
+  moustache(ctx, 0.9, -1.2, 5.2, '#3b1e14');
+  line(ctx, [[-0.6, 1.8], [1.5, 2.2], [3.6, 1.2]], 0.9, INK, true);
 
   // bow tie at the neck
   shape(ctx, (c) => {
@@ -387,11 +390,8 @@ function drawGlassa(ctx: Ctx, f: number) {
   }, { fill: '#e2383f', ink: 1.1, shadow: '#a51f31', shadowOffset: [-0.6, -0.6] });
   shape(ctx, (c) => roundRectPath(c, -1.1, -15.2, 2.2, 2.4, 0.6), { fill: '#e2383f', ink: 0.9, shadow: 'none' });
 
-  // drip running down the nozzle
-  shape(ctx, (c) => dripPath(c, 1.3, -25.4, 1.1, 3.6 + (s + 1) * 0.6), { fill: GLAZE, ink: 0.8, shadow: 'none' });
-
   // near arm akimbo
-  hoseArm(ctx, 8.6, -5, 9.4, 2.4, { bend: -0.55, thick: 1.8, handR: 2.2 });
+  hoseArm(ctx, 8.6, -5.4, 9.2, 2.6, { bend: 0.62, thick: 1.8, handR: 2.2 });
 }
 
 enemySprite('glassa', 40, 54, 35, drawGlassa, 21);
@@ -413,16 +413,16 @@ function drawSmartphone(ctx: Ctx, f: number) {
 
   // ring light halo (behind)
   ctx.save();
-  ctx.globalAlpha = 0.22;
+  ctx.globalAlpha = 0.3;
   ctx.fillStyle = '#fff3c4';
   ctx.beginPath();
-  ringPath(ctx, 0, -12.6, 16.4, 16.4, 10.6, 10.6);
+  ringPath(ctx, 0, -12.6, 18, 18, 12.6, 12.6);
   ctx.fill();
   ctx.restore();
-  shape(ctx, (c) => ringPath(c, 0, -12.6, 14.2, 14.2, 11.6, 11.6), { fill: '#fff6dc', ink: 1.3, shadow: '#e8cf8e', shadowOffset: [-0.8, -0.8] });
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * TAU;
-    shape(ctx, (c) => circlePath(c, Math.cos(a) * 12.9, -12.6 + Math.sin(a) * 12.9, 0.55), { fill: '#ffffff', ink: 0, shadow: 'none' });
+  shape(ctx, (c) => ringPath(c, 0, -12.6, 16.4, 16.4, 13.8, 13.8), { fill: '#fff6dc', ink: 1.3, shadow: '#e8cf8e', shadowOffset: [-0.8, -0.8] });
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * TAU;
+    shape(ctx, (c) => circlePath(c, Math.cos(a) * 15.1, -12.6 + Math.sin(a) * 15.1, 0.55), { fill: '#ffffff', ink: 0, shadow: 'none' });
   }
 
   // tripod (selfie-stick legs)

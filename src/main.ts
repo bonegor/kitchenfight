@@ -223,6 +223,8 @@ class App {
     const run = this.run;
     if (!run) return;
     run.state = victory ? 'victory' : 'dead';
+    const prev = this.save.records[run.stage.id];
+    const newRecord = !prev || run.time > prev.bestTime + 0.5;
     run.commitResults(victory);
     const unlocks: { icon: string; text: string }[] = [];
     if (victory) {
@@ -242,7 +244,7 @@ class App {
     }
     this.persist();
     audio.playMusic(victory ? 'victory' : 'gameover', { fade: 0.3, restart: true });
-    this.ui.showResults(run, victory, unlocks);
+    this.ui.showResults(run, victory, unlocks, newRecord && run.time > 30);
     this.mode = 'menu';
     this.run = null;
     this.startAttract();

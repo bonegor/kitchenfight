@@ -86,7 +86,7 @@ function ball(ctx: Ctx, x: number, y: number, r: number, fill: string, sh: strin
 
 /** Squeezed-shut cartoon eye "> <" (effort / wind-up). side −1 = left eye. */
 function squeezeEye(ctx: Ctx, x: number, y: number, r: number, side: number) {
-  line(ctx, [[x - side * r, y - r * 0.8], [x + side * r * 0.7, y], [x - side * r, y + r * 0.8]], r * 0.42, INK);
+  line(ctx, [[x + side * r, y - r * 0.8], [x - side * r * 0.7, y], [x + side * r, y + r * 0.8]], r * 0.42, INK);
 }
 
 /** Small motion/effort tick marks radiating from a point. */
@@ -293,7 +293,15 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
     effortMarks(ctx, -2, -40, 40, -2.6, -0.6, 4, 7, 2.4);
   } else {
     // haughty: smug half-lid left eye, wide monocled right eye
-    eye(ctx, -15, -33, 7, { look: atk ? [0.2, -0.2] : [0.42, 0.1], lid: atk ? 'none' : 'half', lidColor: K_RED_SH, pupil: atk ? 0.34 : 0.5, iris: '#3f86d6', ink: 2.2 });
+    eye(ctx, -15, -33, 7, { look: atk ? [0.2, -0.2] : [0.42, 0.1], lid: atk ? 'none' : 'half', lidColor: '#c62632', pupil: atk ? 0.34 : 0.5, iris: '#3f86d6', ink: 2.2 });
+    if (!atk) {
+      ctx.save();
+      ctx.beginPath();
+      ellipsePath(ctx, -15, -33, 7.6, 8.6);
+      ctx.clip();
+      line(ctx, [[-23, -35.2], [-15, -34.4], [-7, -35.6]], 2.4, INK, true);
+      ctx.restore();
+    }
     eye(ctx, 10, -34, 8.2, { look: atk ? [0.2, -0.2] : [0.4, 0.1], pupil: atk ? 0.34 : 0.48, iris: '#3f86d6', ink: 2.2 });
     brow(ctx, -15.6, atk ? -47 : -45.4, 14, atk ? -0.3 : -0.28, 3.6);
     brow(ctx, 10.6, atk ? -49 : -47, 14, atk ? 0.1 : 0.24, 3.6);
@@ -379,7 +387,7 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
       { build: (c) => smoothPath(c, ribbon(jet, [9, 12, 14, 16, 18]), true, 0.5), style: { fill: K_SAUCE, shadow: K_SAUCE_SH, shadowOffset: [-2.6, -2.6], gloss: [{ x: 14, y: topY - 36, rx: 7, ry: 1.6, rot: -0.7, alpha: 0.45 }] } },
       { build: (c) => circlePath(c, 58, topY - 44, 11), style: { fill: K_SAUCE, shadow: K_SAUCE_SH, shadowOffset: [-2.4, -2.4] } },
     ], BI * 0.8);
-    for (const [dx, dy, r] of [[68, -60, 3.6], [44, -64, 2.8], [66, -30, 2.6], [30, -56, 2]] as [number, number, number][]) {
+    for (const [dx, dy, r] of [[66, -54, 3.6], [42, -58, 2.8], [66, -24, 2.6], [28, -50, 2]] as [number, number, number][]) {
       shape(ctx, (c) => circlePath(c, dx, topY + dy + 8, r), { fill: K_SAUCE, ink: 2, shadow: 'none', gloss: [{ x: dx - r * 0.3, y: topY + dy + 8 - r * 0.3, rx: r * 0.35, ry: r * 0.2, alpha: 0.6 }] });
     }
   }
@@ -439,7 +447,7 @@ function alfredoJar(c: Ctx) {
 
 /** One flat fettuccine ribbon along a centre line. */
 function fettuccine(ctx: Ctx, pts: Pt[], w: number, seed: number) {
-  const ws = pts.map((_, i) => (i === pts.length - 1 ? w * 0.85 : i % 2 ? w * 0.86 : w));
+  const ws = pts.map((_, i) => (i === pts.length - 1 ? w * 0.8 : w * (0.5 + 0.5 * Math.abs(Math.cos(i * 1.35 + seed * 0.7)))));
   const build = (c: Ctx) => smoothPath(c, ribbon(pts, ws), true, 0.5);
   shape(ctx, build, { fill: A_PASTA, ink: 2.2, shadow: A_PASTA_SH, shadowOffset: [-1.8, -1.8] });
   clipped(ctx, build, () => {
@@ -461,8 +469,8 @@ function noodleArm(ctx: Ctx, pts: Pt[], seed: number) {
     const fa = a + k * 0.55;
     fettuccine(ctx, [prev, end, [end[0] + Math.cos(fa) * 8, end[1] + Math.sin(fa) * 8], [end[0] + Math.cos(fa) * 13, end[1] + Math.sin(fa) * 13 + 2]], 4.6, seed + k);
   }
-  fettuccine(ctx, pts.map(([x, y], i) => [x - 3.4 + i * 0.4, y + 2.4] as Pt), 7.6, seed + 7);
-  fettuccine(ctx, pts, 8.2, seed + 11);
+  fettuccine(ctx, pts.map(([x, y], i) => [x - 3.6 + i * 0.4, y + 2.6] as Pt), 9, seed + 7);
+  fettuccine(ctx, pts, 9.6, seed + 11);
 }
 
 function crownLid(ctx: Ctx, x: number, y: number, rot: number) {
@@ -538,7 +546,7 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
 
   // --- far noodle arm (behind the jar, seen through the glass)
   const wv = idle ? s * 3 : 0;
-  if (wind) noodleArm(ctx, [[-36, -52], [-50, -66], [-58, -84], [-52, -104], [-38, -114]], 3);
+  if (wind) noodleArm(ctx, [[-36, -52], [-50, -64], [-56, -80], [-50, -96], [-38, -104]], 3);
   else if (atk) noodleArm(ctx, [[-36, -52], [-52, -58], [-62, -46], [-66, -28], [-70, -14]], 3);
   else noodleArm(ctx, [[-36, -52], [-52, -58], [-60, -46], [-62 - wv * 0.3, -26], [-63 - wv, -10], [-64 - wv * 1.2, 2]], 3);
 
@@ -609,8 +617,8 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   const fy = idle ? s * 1.2 : wind ? -2 : 2;
   const fx = atk ? 4 : wind ? -3 : 0;
   if (wind) {
-    eye(ctx, -19 + fx, -2 + fy, 10, { look: [-0.1, -0.3], lid: 'angry-l', pupil: 0.32, ink: 2.4 });
-    eye(ctx, 16 + fx, -4 + fy, 10, { look: [-0.1, -0.3], lid: 'angry-r', pupil: 0.32, ink: 2.4 });
+    eye(ctx, -19 + fx, -2 + fy, 10, { look: [0.35, 0.05], lid: 'angry-l', pupil: 0.36, iris: '#7d9a3a', ink: 2.4 });
+    eye(ctx, 16 + fx, -4 + fy, 10, { look: [0.35, 0.05], lid: 'angry-r', pupil: 0.36, iris: '#7d9a3a', ink: 2.4 });
   } else {
     eye(ctx, -19 + fx, -2 + fy, 10, { look: [0.35, 0.12], lid: 'angry-l', pupil: 0.46, iris: '#7d9a3a', ink: 2.4 });
     eye(ctx, 16 + fx, -4 + fy, 10, { look: [0.35, 0.12], lid: 'angry-r', pupil: 0.46, iris: '#7d9a3a', ink: 2.4 });
@@ -618,7 +626,22 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   brow(ctx, -19 + fx, -16 + fy, 20, 0.45, 5);
   brow(ctx, 16 + fx, -18 + fy, 20, -0.45, 5);
   if (idle) bossMouth(ctx, -1 + fx, 22 + fy, 36, 11, { frown: 0.5, bottomTeeth: true, ink: 2.8 });
-  else mouth(ctx, -1 + fx, 24 + fy, 34, 'shout', { teeth: true, tongue: true, open: wind ? 0.8 : 1.15 });
+  else if (wind) {
+    // gritted teeth
+    const gm = (c: Ctx) => roundRectPath(c, -17 + fx, 18 + fy, 32, 11, 5);
+    shape(ctx, gm, { fill: '#fff8ea', ink: 2.8, shadow: 'none' });
+    clipped(ctx, gm, () => {
+      line(ctx, [[-17 + fx, 23.5 + fy], [15 + fx, 23.5 + fy]], 1.6, INK);
+      for (let i = 1; i < 6; i++) line(ctx, [[-17 + fx + i * 5.4, 18 + fy], [-17 + fx + i * 5.4, 29 + fy]], 1.2, 'rgba(90,40,30,0.6)');
+    });
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#9fd8ff';
+    ctx.beginPath();
+    dropPath(ctx, 34 + fx, -18 + fy, 3);
+    ctx.fill();
+    ctx.restore();
+  } else mouth(ctx, -1 + fx, 24 + fy, 34, 'shout', { teeth: true, tongue: true, open: 1.15 });
 
   // --- glass: reflections, outline, rim light
   clipped(ctx, alfredoJar, () => {
@@ -674,12 +697,12 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
     crownLid(ctx, 0, -55 + rattle, (wind ? 0.06 : -0.09) + (idle ? c4 * 0.015 : 0));
     if (wind) {
       for (const [px, py, r] of [[-50, -64, 7], [-60, -74, 5], [50, -66, 7], [60, -77, 5]] as [number, number, number][]) puff(ctx, px, py, r, 0.7);
-      effortMarks(ctx, 0, -78, 52, -2.7, -0.45, 5, 8, 2.6);
+      effortMarks(ctx, 0, -78, 44, -2.7, -0.45, 5, 7, 2.6);
     }
   }
 
   // --- near noodle arm
-  if (wind) noodleArm(ctx, [[36, -52], [50, -66], [60, -86], [56, -108], [42, -120]], 5);
+  if (wind) noodleArm(ctx, [[36, -52], [50, -64], [58, -78], [54, -92], [43, -100]], 5);
   else if (atk) noodleArm(ctx, [[36, -52], [50, -50], [58, -38], [60, -22], [62, -8]], 5);
   else noodleArm(ctx, [[36, -52], [52, -58], [60, -46], [62 + wv * 0.3, -26], [63 + wv, -10], [64 + wv * 1.2, 2]], 5);
 
@@ -687,8 +710,8 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
 
   if (atk) {
     // lid flips off; a geyser of Alfredo erupts forward
-    crownLid(ctx, -30, -92, -0.55);
-    effortMarks(ctx, -30, -100, 40, 2.2, 3.3, 3, 8, 2.4);
+    crownLid(ctx, -30, -84, -0.55);
+    effortMarks(ctx, -30, -92, 40, 2.2, 3.3, 3, 8, 2.4);
     const g: Pt[] = [[14, -60], [20, -76], [32, -88], [48, -92], [64, -88]];
     group(ctx, [
       { build: (c) => smoothPath(c, ribbon(g, [42, 34, 28, 24, 20]), true, 0.5), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-4, -4], gloss: [{ x: 22, y: -84, rx: 9, ry: 2, rot: -0.5, alpha: 0.8 }] } },
@@ -834,7 +857,7 @@ const P_CREAM = '#fffdf5', P_CREAM_SH = '#e2dccb';
 const P_SKY = '#d8ecfb';
 
 function cowLeg(ctx: Ctx, hip: Pt, foot: Pt, patch: boolean) {
-  inkLine(ctx, [hip, foot], 11, '#f7f5f0', false, BI * 0.75);
+  inkLine(ctx, [hip, [foot[0], foot[1] - 4]], 11, '#f7f5f0', false, BI * 0.75);
   if (patch) {
     ctx.save();
     ctx.beginPath();
@@ -1057,21 +1080,21 @@ function drawPanna(ctx: Ctx, f: number, pose: Pose) {
   if (atk) {
     // the cap rockets off; a geyser of cream arcs forward
     const topY = B - (B - (T - 7)) * sy;
-    const g: Pt[] = [[capX, topY], [capX + 4, topY - 13], [capX + 20, topY - 23], [capX + 44, topY - 26], [capX + 70, topY - 20]];
+    const g: Pt[] = [[capX, topY + 2], [capX + 4, topY - 10], [capX + 18, topY - 19], [capX + 42, topY - 22], [capX + 66, topY - 16]];
     group(ctx, [
-      { build: (c) => smoothPath(c, ribbon(g, [18, 22, 24, 22, 20]), true, 0.5), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3.4, -3.4], gloss: [{ x: capX + 18, y: topY - 23, rx: 8, ry: 2, rot: -0.4, alpha: 0.9 }] } },
-      { build: (c) => circlePath(c, capX + 72, topY - 20, 12), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3, -3] } },
+      { build: (c) => smoothPath(c, ribbon(g, [10, 14, 18, 22, 24]), true, 0.5), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3.4, -3.4], gloss: [{ x: capX + 16, y: topY - 18, rx: 7, ry: 1.8, rot: -0.4, alpha: 0.9 }] } },
+      { build: (c) => { circlePath(c, capX + 70, topY - 22, 9); circlePath(c, capX + 76, topY - 10, 9.6); circlePath(c, capX + 68, topY - 4, 7); }, style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3, -3] } },
     ], BI * 0.85);
-    for (const [ddx, ddy, r] of [[86, -38, 4.4], [64, -40, 3.2], [92, -6, 3.4], [40, -40, 2.6]] as [number, number, number][]) {
+    for (const [ddx, ddy, r] of [[88, -30, 4.2], [60, -34, 3], [92, 0, 3.4], [38, -32, 2.4], [84, 10, 2.6]] as [number, number, number][]) {
       shape(ctx, (c) => circlePath(c, capX + ddx, topY + ddy, r), { fill: P_CREAM, ink: 2, shadow: 'none' });
     }
     ctx.save();
-    ctx.translate(capX - 22, topY - 24);
+    ctx.translate(capX - 24, topY - 17);
     ctx.rotate(-0.7);
     shape(ctx, (c) => roundRectPath(c, -12, -9, 24, 10, 3), { fill: '#ffffff', ink: BI * 0.8, shadow: P_WHITE_SH, shadowOffset: [-3, -1] });
     shape(ctx, (c) => ellipsePath(c, 0, -9, 12, 4.4), { fill: '#ffffff', ink: BI * 0.8, shadow: 'none' });
     ctx.restore();
-    effortMarks(ctx, capX - 22, topY - 24, 16, 0.4, 2.0, 3, 6, 2.2);
+    effortMarks(ctx, capX - 24, topY - 17, 16, 0.4, 2.0, 3, 6, 2.2);
   }
 }
 
@@ -1412,7 +1435,7 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
   // --- stubby legs (back pair first)
   const legLift = (k: number) => (idle ? Math.max(0, Math.sin(ph + k * Math.PI)) * 6 : 0);
   const stubLeg = (hx: number, hy: number, fx: number, fy: number, back: boolean) => {
-    inkLine(ctx, [[hx, hy], [fx, fy - 4]], 17, back ? '#8c4e22' : '#a35d28', false, BI);
+    inkLine(ctx, [[hx, hy], [fx, fy - 9]], 17, back ? '#8c4e22' : '#a35d28', false, BI);
     shape(ctx, (c) => {
       c.moveTo(fx - 13, fy + 4);
       c.quadraticCurveTo(fx - 13, fy - 8, fx, fy - 8);
@@ -1420,21 +1443,20 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
       c.closePath();
     }, { fill: back ? '#4a2812' : '#5c3218', ink: BI, shadow: '#2f180a', shadowOffset: [-2.4, -2], gloss: [{ x: fx - 4, y: fy - 4, rx: 4, ry: 1.4, alpha: 0.35 }] });
   };
-  if (wind) {
-    stubLeg(-64, 38, -68, 66, true);
-    stubLeg(64, 38, 68, 66, true);
-  } else {
-    stubLeg(-66, 40, -70 + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 64 - legLift(1), true);
-    stubLeg(64, 40, 70 + (idle ? Math.cos(ph) * 3 : 0), 64 - legLift(0), true);
+  if (!wind) {
+    stubLeg(-66, 40, -70 + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 62 - legLift(1), true);
+    stubLeg(64, 40, 70 + (idle ? Math.cos(ph) * 3 : 0), 62 - legLift(0), true);
   }
 
-  // body transform: rear up (wind-up), slam squash (attack), heavy idle bob
+  // body transform: rear up on the back foot (wind-up), slam squash (attack), heavy idle bob
   ctx.save();
   if (wind) {
-    ctx.translate(74, 66);
+    ctx.translate(-72, 64);
     ctx.rotate(-0.12);
-    ctx.translate(-74, -66);
-    ctx.translate(2, -6);
+    ctx.translate(72, -64);
+    ctx.translate(4, -2);
+    stubLeg(-64, 38, -68, 64, true);
+    stubLeg(64, 38, 72, 62, true);
   } else {
     const sx = atk ? 1.08 : 1 + 0.01 * c4;
     const sy = atk ? 0.86 : 1 - 0.012 * c4;
@@ -1445,11 +1467,11 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
 
   // --- front legs
   if (wind) {
-    stubLeg(-44, 52, -54, 70, false);
-    stubLeg(38, 52, 36, 72, false);
+    stubLeg(-44, 52, -50, 68, false);
+    stubLeg(38, 52, 50, 64, false);
   } else {
-    stubLeg(-44, 54, -48 + (idle ? Math.cos(ph) * 4 : 0) - (atk ? 8 : 0), 70 - legLift(0), false);
-    stubLeg(40, 54, 44 + (idle ? Math.cos(ph + Math.PI) * 4 : 0) + (atk ? 8 : 0), 70 - legLift(1), false);
+    stubLeg(-44, 54, -48 + (idle ? Math.cos(ph) * 4 : 0) - (atk ? 8 : 0), 68 - legLift(0), false);
+    stubLeg(40, 54, 44 + (idle ? Math.cos(ph + Math.PI) * 4 : 0) + (atk ? 8 : 0), 68 - legLift(1), false);
   }
 
   // --- crust wall
@@ -1578,7 +1600,7 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
   if (wind) {
     eye(ctx, -38, EY, 12.4, { look: [0.45, 0.05], lid: 'angry-l', pupil: 0.34, iris: '#7a3a12', ink: 2.8 });
     eye(ctx, 26, EY - 2, 12.4, { look: [0.45, 0.05], lid: 'angry-r', pupil: 0.34, iris: '#7a3a12', ink: 2.8 });
-    bossMouth(ctx, -6, 46, 64, 9, { frown: 0.2, tongue: true, bottomTeeth: true });
+    bossMouth(ctx, -6, 42, 60, 15, { frown: 0.15, tongue: true, bottomTeeth: true });
   } else if (atk) {
     eye(ctx, -38, EY + 1, 12.4, { look: [0.3, 0.2], lid: 'angry-l', pupil: 0.3, iris: '#7a3a12', ink: 2.8 });
     eye(ctx, 26, EY - 1, 12.4, { look: [0.3, 0.2], lid: 'angry-r', pupil: 0.3, iris: '#7a3a12', ink: 2.8 });

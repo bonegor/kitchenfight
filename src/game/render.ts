@@ -291,7 +291,7 @@ export class Renderer {
   private drawProp(p: PropInst, overhead = false) {
     const ctx = this.ctx;
     let frame = p.frame ?? 0;
-    if (p.animFps) frame = Math.floor(this.t * p.animFps + (p.x * 0.01)) ;
+    if (p.animFps) frame = Math.floor(this.t * p.animFps + Math.abs(p.x * 0.013)) + frame;
     const shake = p.shake > 0 ? Math.sin(this.t * 70) * p.shake * 2.5 : 0;
     if (overhead) ctx.globalAlpha = 0.92;
     drawSprite(ctx, p.sprite, frame, p.x + shake, p.y, p.flip ? -1 : 1, 1);

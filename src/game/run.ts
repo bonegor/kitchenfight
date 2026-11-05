@@ -921,6 +921,17 @@ export class Run {
     w.state = {};
     this.evolutionsDone.push(into);
     this.markSeen('w:' + into);
+    // celebrate in the world once the chest closes
+    this.schedule(0.05, () => {
+      const p = this.player;
+      this.fx.ring(p.x, p.y, 10, 260, 0.9, '#ffd34d', 10);
+      this.fx.ring(p.x, p.y, 10, 160, 0.6, '#ffffff', 6);
+      this.fx.burst(p.x, p.y - 20, 40, { colors: ['#ffd34d', '#ffffff', '#ffb02e'], speed: 380, size: 4, life: 0.9, additive: true });
+      this.fx.text(p.x, p.y - 90, def.name + '!', '#ffd34d', 20, 2);
+      this.fx.screenFlash(0.5, '#fff1b8');
+      this.fx.shake(0.3);
+      this.slowMo = 0.6;
+    });
   }
 
   // ======================================================================

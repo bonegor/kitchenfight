@@ -915,16 +915,22 @@ function drawTommaso(ctx: Ctx, f: number) {
     c.closePath();
   }, { fill: T_ROPE, ink: 1.3, shadow: T_ROPE_SH, shadowOffset: [-0.8, -0.9] });
   for (let i = -6; i <= 6; i++) line(ctx, [[i * 2.8 - 0.8, 0.4 + Math.abs(i) * -0.35 + 1.6], [i * 2.8 + 0.6, -0.6 + Math.abs(i) * -0.35 + 1.6]], 0.5, T_ROPE_SH, false, 0.9);
+  // cord ends with the three Franciscan knots, swinging with the walk
   const sway = -sw * 1.2;
-  for (const [ox, len] of [[-6.2, 13], [-3.6, 11]] as Pt[]) {
+  for (const [ox, len] of [[-6.4, 13.4], [-3.4, 11]] as Pt[]) {
     const pts: Pt[] = [[ox, 2.6], [ox + sway * 0.4, 2.6 + len * 0.5], [ox + sway, 2.6 + len]];
-    inkLine(ctx, pts, 1.4, T_ROPE, true, 1);
+    inkLine(ctx, pts, 1.5, T_ROPE, true, 1);
     for (let k = 1; k <= 3; k++) {
       const t = k / 3.4;
-      ball(ctx, ox + sway * t * t * 0.9, 2.6 + len * t, 1.25, T_ROPE, T_ROPE_SH, 0.9, 0.5);
+      const kx = ox + sway * t * t * 0.9, ky = 2.6 + len * t;
+      shape(ctx, (c) => ellipsePath(c, kx, ky, 1.25, 1.55), { fill: T_ROPE, ink: 0.9, shadow: T_ROPE_SH, shadowOffset: [-0.5, -0.5] });
+      line(ctx, [[kx - 1, ky - 0.7], [kx + 1, ky + 0.5]], 0.5, T_ROPE_SH);
     }
+    // frayed tassel end
+    for (const d of [-0.6, 0, 0.6]) line(ctx, [[ox + sway, 2.6 + len], [ox + sway + d, 4.4 + len]], 0.5, T_ROPE_SH);
   }
-  ball(ctx, -5, 2.6, 2, T_ROPE, T_ROPE_SH, 1.1);
+  shape(ctx, (c) => ellipsePath(c, -5, 2.6, 2.3, 1.8, 0.3), { fill: T_ROPE, ink: 1.1, shadow: T_ROPE_SH, shadowOffset: [-0.7, -0.7] });
+  line(ctx, [[-6.6, 1.8], [-3.4, 3.4]], 0.6, T_ROPE_SH);
 
   // --- head: tonsure, rosy cheeks, jolly closed eyes, big white beard
   shape(ctx, (c) => ellipsePath(c, hx - 12.2, hy + 1.6, 2.5, 3.3), { fill: T_SKIN, ink: 1.5, shadow: T_SKIN_SH, shadowOffset: [-0.8, -0.8] });

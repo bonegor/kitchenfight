@@ -12,5 +12,6 @@ import './bosses_b_ananas';
 import './bosses_b_campanile';
 import './bosses_b_influencer';
 import './bosses_b_microonde';
+import './bosses_b_fusione';
 
 export {};

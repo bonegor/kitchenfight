@@ -37,7 +37,11 @@ export class World {
 
   private footprint(p: PropInst): [number, number, number, number] | null {
     const c = p.collider;
-    if (!c) return null;
+    if (!c) {
+      // breakables without a collider still need a hit area
+      if (p.breakable) return [p.x - 20, p.y - 34, p.x + 20, p.y + 4];
+      return null;
+    }
     const ox = p.x + (c.ox ?? 0), oy = p.y + (c.oy ?? 0);
     if (c.kind === 'circle') return [ox - c.r, oy - c.r, ox + c.r, oy + c.r];
     return [ox - c.w / 2, oy - c.h / 2, ox + c.w / 2, oy + c.h / 2];
@@ -141,7 +145,8 @@ export class World {
         const a = this.grid.get(this.gkey(cx, cy));
         if (!a) continue;
         for (const p of a) {
-          const c = p.collider!;
+          const c = p.collider;
+          if (!c) continue;
           const px = p.x + (c.ox ?? 0), py = p.y + (c.oy ?? 0);
           if (c.kind === 'circle') {
             const dx = o.x - px, dy = o.y - py;

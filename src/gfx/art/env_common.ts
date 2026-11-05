@@ -177,7 +177,7 @@ export function devScale(ctx: Ctx): number {
 export function softShape(ctx: Ctx, build: (c: Ctx) => void, blur: number, color: string) {
   const m = ctx.getTransform();
   const k = devScale(ctx);
-  const OFF = 6000;
+  const OFF = 2400;
   ctx.save();
   ctx.shadowColor = color;
   ctx.shadowBlur = blur * k;

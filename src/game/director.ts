@@ -18,14 +18,21 @@ export class Director {
 
   constructor(private run: Run, private stage: StageDef) {}
 
+  /** later stages phase in their extra toughness over the first 7 minutes */
+  private ramp() {
+    return Math.min(1, this.run.time / 420);
+  }
+
   hpScale() {
     const t = this.run.time / 60;
-    return this.stage.hpBase * (1 + t * this.stage.hpGrowth + Math.max(0, t - 10) * this.stage.hpGrowth * 0.6);
+    const base = 1 + (this.stage.hpBase - 1) * this.ramp();
+    return base * (1 + t * this.stage.hpGrowth + Math.max(0, t - 10) * this.stage.hpGrowth * 0.6);
   }
 
   dmgScale() {
     const t = this.run.time / 60;
-    return this.stage.dmgBase * (1 + t * 0.045);
+    const base = 1 + (this.stage.dmgBase - 1) * this.ramp();
+    return base * (1 + t * 0.045);
   }
 
   wave(): WaveMinute {

@@ -331,7 +331,7 @@ function drawSpezzato(ctx: Ctx, f: number) {
   gloveArm(ctx, 5.4, -1.2, hx, hy, 2.0, 1.5, 0.25);
 }
 
-reg('spezzato', 32, 36, 15, 23, drawSpezzato);
+reg('spezzato', 36, 37, 17, 24, drawSpezzato);
 
 // ===========================================================================
 // 2. SPRUZZATORE ROSSO — r14. Angry red squeeze bottle, pointy nozzle hat.
@@ -450,7 +450,7 @@ function drawKetchup(ctx: Ctx, f: number) {
   ctx.restore();
 }
 
-reg('ketchup', 40, 54, 20, 39, drawKetchup);
+reg('ketchup', 46, 55, 23, 40, drawKetchup);
 
 // ===========================================================================
 // 3. PANNA INVASORA — r15. Whipped-cream dollop wearing a milk-carton helmet.
@@ -593,7 +593,7 @@ function drawPanna(ctx: Ctx, f: number) {
   ctx.restore();
 }
 
-reg('panna', 46, 52, 23, 35, drawPanna);
+reg('panna', 48, 56, 24, 36, drawPanna);
 
 // ===========================================================================
 // 4. FORBICI FURIOSE — r13. Kitchen scissors on finger-loop feet; the blades
@@ -611,14 +611,14 @@ function bladePoly(px: number, py: number, ang: number, side: number, L: number)
   const ux = Math.cos(ang), uy = Math.sin(ang);
   const nx = -uy * side, ny = ux * side;
   const P = (u: number, v: number): Pt => [px + ux * u + nx * v, py + uy * u + ny * v];
-  return [P(-2.5, -1.4), P(L * 0.1, -1.4), P(L * 0.6, -1.0), P(L, 0.0), P(L * 0.88, 1.6), P(L * 0.55, 3.6), P(L * 0.2, 4.6), P(-2.2, 4.0)];
+  return [P(-2.5, -1.6), P(L * 0.1, -1.6), P(L * 0.6, -1.15), P(L, 0.0), P(L * 0.86, 2.0), P(L * 0.55, 4.4), P(L * 0.2, 5.6), P(-2.2, 5.0)];
 }
 
 function handlePath(c: Ctx, px: number, py: number, ang: number, D: number, rl: number, rw: number) {
   const ux = Math.cos(ang), uy = Math.sin(ang);
   const nx = -uy, ny = ux;
   const cx = px + ux * D, cy = py + uy * D;
-  const w0 = 2.4, w1 = 1.9;
+  const w0 = 2.8, w1 = 2.2;
   c.moveTo(px + nx * w0, py + ny * w0);
   c.lineTo(cx - ux * rl * 0.7 + nx * w1, cy - uy * rl * 0.7 + ny * w1);
   c.lineTo(cx - ux * rl * 0.7 - nx * w1, cy - uy * rl * 0.7 - ny * w1);
@@ -631,12 +631,12 @@ function drawForbici(ctx: Ctx, f: number) {
   const open = [0.34, 0.56, 0.34, 0.05][f];
   const bA = -0.7; // blade bisector: up and forward
   const hA = Math.PI / 2 + 0.2; // handle bisector: down to the floor
-  const D = 12.2;
-  const L = 21;
+  const D = 12.0;
+  const L = 20;
   // rigid halves: A (upper blade + front leg) turns by -open, B by +open
   const aBlade = bA - open, aHandle = hA - open;
   const bBlade = bA + open, bHandle = hA + open;
-  const loops: [number, number, number][] = [[aHandle, 5.4, 4.2], [bHandle, 4.4, 3.6]];
+  const loops: [number, number, number][] = [[aHandle, 5.8, 4.6], [bHandle, 4.8, 4.0]];
   const px = 1.2;
   // put the lowest loop on the floor (y ≈ +12.6)
   let low = -99;
@@ -650,7 +650,7 @@ function drawForbici(ctx: Ctx, f: number) {
     const ux = Math.cos(ang), uy = Math.sin(ang);
     const cx = px + ux * D, cy = py + uy * D;
     shape(ctx, (c) => handlePath(c, px, py, ang, D, rl, rw), {
-      fill: HANDLE, shadow: HANDLE_SH, ink: 1.8, shadowOffset: [-1.4, -1.3],
+      fill: HANDLE, shadow: HANDLE_SH, ink: 2.0, shadowOffset: [-1.5, -1.4],
       gloss: [{ x: cx - rw * 0.5, y: cy - rl * 0.5, rx: rw * 0.3, ry: rl * 0.2, rot: -0.3, alpha: 0.6 }],
     });
     shape(ctx, (c) => ellipsePath(c, cx + 0.2, cy, rl * 0.56, rw * 0.5, ang), { fill: RUBBER, ink: 0.9, shadow: 'none' });
@@ -658,13 +658,13 @@ function drawForbici(ctx: Ctx, f: number) {
   };
   const drawBlade = (ang: number, side: number) => {
     const poly = bladePoly(px, py, ang, side, L);
-    shape(ctx, (c) => polyPath(c, poly), { fill: STEEL, shadow: STEEL_SH, ink: 1.8, shadowOffset: side < 0 ? [-1.0, -1.6] : [-1.6, -0.6] });
+    shape(ctx, (c) => polyPath(c, poly), { fill: STEEL, shadow: STEEL_SH, ink: 2.0, shadowOffset: side < 0 ? [-1.2, -1.8] : [-1.8, -0.7] });
     const ux = Math.cos(ang), uy = Math.sin(ang);
     const nx = -uy * side, ny = ux * side;
     const P = (u: number, v: number): Pt => [px + ux * u + nx * v, py + uy * u + ny * v];
     // ground bevel along the cutting edge + spine shading
     line(ctx, [P(3, -0.5), P(L * 0.6, -0.35), P(L * 0.93, -0.02)], 0.8, '#ffffff', true, 0.95);
-    line(ctx, [P(4, 2.6), P(L * 0.5, 2.5), P(L * 0.8, 1.2)], 0.6, STEEL_DK, true, 0.5);
+    line(ctx, [P(4, 3.2), P(L * 0.5, 3.0), P(L * 0.8, 1.5)], 0.6, STEEL_DK, true, 0.5);
     // serrations on the cutting edge
     const pts: Pt[] = [];
     for (let i = 0; i <= 10; i++) {
@@ -690,27 +690,30 @@ function drawForbici(ctx: Ctx, f: number) {
     const tg = mp(bBlade, 1, 8);
     shape(ctx, (c) => ellipsePath(c, tg[0] - 0.6, tg[1] - 1.4, 3.0, 1.6, bA + 0.3), { fill: '#e8616e', ink: 0, shadow: 'none' });
   }
-  drawHandle(bHandle, 4.4, 3.6); // back leg, small loop
+  drawHandle(bHandle, 4.8, 4.0); // back leg, small loop
   drawBlade(bBlade, 1);
-  drawHandle(aHandle, 5.4, 4.2); // front leg, big loop
+  drawHandle(aHandle, 5.8, 4.6); // front leg, big loop
   drawBlade(aBlade, -1);
 
   // pivot hub = the head
   const hx = px - 0.2, hy = py + 0.6;
-  shape(ctx, (c) => circlePath(c, hx, hy, 6.1), {
-    fill: STEEL, shadow: STEEL_SH, ink: 1.8, shadowOffset: [-1.6, -1.7],
+  shape(ctx, (c) => circlePath(c, hx, hy, 6.7), {
+    fill: STEEL, shadow: STEEL_SH, ink: 2.0, shadowOffset: [-1.8, -1.9],
     gloss: [{ x: hx - 2.6, y: hy - 2.8, rx: 1.5, ry: 0.85, rot: -0.6, alpha: 0.9 }],
   });
   // pivot screw (between the eyes, under the brow)
-  shape(ctx, (c) => circlePath(c, hx + 1.6, hy + 3.0, 1.15), { fill: '#a7b2c4', ink: 0.7, shadow: 'none' });
-  line(ctx, [[hx + 0.9, hy + 3.5], [hx + 2.3, hy + 2.5]], 0.45, STEEL_DK);
-  eyes(ctx, { x: hx + 0.6, y: hy - 1.0, r: 2.6, sp: 5.2, look: [0.45, -0.15], brow: { ang: 0.62, th: 1.5, dy: 1.2 } });
+  shape(ctx, (c) => circlePath(c, hx - 3.4, hy + 3.3, 1.15), { fill: '#a7b2c4', ink: 0.7, shadow: 'none' });
+  line(ctx, [[hx - 4.1, hy + 3.8], [hx - 2.7, hy + 2.8]], 0.45, STEEL_DK);
+  // clenched steel grimace
+  line(ctx, [[hx - 0.6, hy + 3.4], [hx + 1.6, hy + 3.0], [hx + 3.8, hy + 3.4]], 0.9, INK, true);
+  line(ctx, [[hx + 3.6, hy + 3.4], [hx + 4.4, hy + 2.6]], 0.7, INK, false);
+  eyes(ctx, { x: hx + 0.6, y: hy - 1.1, r: 2.85, sp: 5.6, look: [0.45, -0.15], brow: { ang: 0.62, th: 1.6, dy: 1.2 } });
   // sharp sparkle on the upper blade tip
   const tA: Pt = [px + Math.cos(aBlade) * L, py + Math.sin(aBlade) * L];
   sparkle(ctx, tA[0] - 0.2, tA[1] + 0.6, f === 3 ? 3.4 : 2.2, 0.95);
 }
 
-reg('forbici', 42, 46, 17, 32, drawForbici);
+reg('forbici', 42, 49, 17, 33, drawForbici);
 
 // ===========================================================================
 // 5/6. PASTA SCOTTA (r16) + PASTINA SCOTTA (r10). A saggy, swollen, glossy
@@ -857,8 +860,8 @@ function drawScotta(ctx: Ctx, f: number, mini: boolean) {
   ctx.restore();
 }
 
-reg('scotta', 56, 48, 28, 26, (ctx, f) => drawScotta(ctx, f, false));
-reg('scotta_mini', 36, 32, 18, 17, (ctx, f) => drawScotta(ctx, f, true));
+reg('scotta', 62, 52, 31, 27, (ctx, f) => drawScotta(ctx, f, false));
+reg('scotta_mini', 42, 34, 21, 18, (ctx, f) => drawScotta(ctx, f, true));
 
 // ===========================================================================
 // 7. CIPOLLA CLANDESTINA — r15. A purple onion travelling incognito:
@@ -1041,7 +1044,7 @@ function drawCipolla(ctx: Ctx, f: number) {
   line(ctx, [[10.0, -5.8], [15.4, -13.6]], 0.6, COAT_DK, true, 0.6);
 }
 
-reg('cipolla', 42, 52, 21, 35, drawCipolla);
+reg('cipolla', 44, 55, 22, 36, drawCipolla);
 
 // ===========================================================================
 // 8. AGLIO IN CAMICIA — r14. A smug garlic bulb in a crisp white shirt and
@@ -1489,7 +1492,7 @@ function drawPezzo(ctx: Ctx, f: number) {
   gloveArm(ctx, 7.6, 0.2, 11.0 + sw * 1.4, 3.0, 1.7, 1.2, 0.3, LIMB);
 }
 
-reg('ananas_pezzo', 32, 28, 17, 16, drawPezzo);
+reg('ananas_pezzo', 36, 29, 18, 16, drawPezzo);
 
 // ===========================================================================
 // 13. POLLO INFILTRATO — r13. A roast drumstick working undercover: spy fedora,
@@ -1516,12 +1519,12 @@ function drumPath(c: Ctx) {
 
 /** Scrawny chicken leg: shank from hip to ankle, three forward toes + a back toe. */
 function chickenLeg(ctx: Ctx, hx: number, hy: number, ax: number, ay: number, toeAng: number) {
-  inkLine(ctx, [[hx, hy], [ax, ay]], 1.5, FOOT, false, 0.85);
-  for (const [da, len] of [[-0.55, 3.4], [0, 3.9], [0.55, 3.2], [Math.PI - 0.2, 2.0]] as Pt[]) {
+  inkLine(ctx, [[hx, hy], [ax, ay]], 1.8, FOOT, false, 0.9);
+  for (const [da, len] of [[-0.5, 4.0], [0, 4.6], [0.5, 3.8], [Math.PI - 0.2, 2.4]] as Pt[]) {
     const a = toeAng + da;
-    inkLine(ctx, [[ax, ay], [ax + Math.cos(a) * len, ay + Math.sin(a) * len * 0.55]], 1.15, FOOT, false, 0.8);
+    inkLine(ctx, [[ax, ay], [ax + Math.cos(a) * len, ay + Math.sin(a) * len * 0.5]], 1.35, FOOT, false, 0.85);
   }
-  shape(ctx, (c) => circlePath(c, ax, ay, 1.15), { fill: FOOT, ink: 0.7, shadow: 'none' });
+  shape(ctx, (c) => circlePath(c, ax, ay, 1.35), { fill: FOOT, ink: 0.8, shadow: 'none' });
 }
 
 function drawPollo(ctx: Ctx, f: number) {
@@ -1560,27 +1563,27 @@ function drawPollo(ctx: Ctx, f: number) {
   });
 
   // groucho disguise: round glasses, big pink nose, bushy brows, moustache
-  eyes(ctx, { x: 7.4, y: -4.8, r: 2.1, sp: 5.6, look: [0.45, 0.05], lid: 'angry', pupil: 0.55, far: 0.95 });
-  for (const ex of [4.6, 10.2]) {
+  eyes(ctx, { x: 7.0, y: -4.8, r: 2.15, sp: 5.8, look: [0.45, 0.05], lid: 'angry', pupil: 0.55, far: 0.95 });
+  for (const ex of [4.1, 9.9]) {
     ctx.save();
     ctx.beginPath();
-    circlePath(ctx, ex, -4.8, 2.9);
-    ctx.lineWidth = 1.05;
+    circlePath(ctx, ex, -4.8, 2.95);
+    ctx.lineWidth = 1.5;
     ctx.strokeStyle = '#1a1416';
     ctx.stroke();
     ctx.restore();
   }
-  line(ctx, [[7.4, -5.4], [7.6, -5.8]], 1.0, '#1a1416');
-  line(ctx, [[1.7, -5.2], [-1.0, -5.8]], 0.9, '#1a1416');
-  brow(ctx, 4.4, -8.6, 4.6, 0.32, 1.6, '#1a1416');
-  brow(ctx, 10.4, -8.8, 4.8, -0.32, 1.6, '#1a1416');
-  moustache(ctx, 8.4, 1.0, 4.2, '#1a1416', 0.55);
-  shape(ctx, (c) => ellipsePath(c, 8.6, -1.4, 2.3, 2.0), {
+  line(ctx, [[6.9, -5.6], [7.1, -5.9]], 1.2, '#1a1416');
+  line(ctx, [[1.2, -5.2], [-1.4, -5.8]], 1.1, '#1a1416');
+  brow(ctx, 3.9, -8.7, 4.8, 0.32, 1.8, '#1a1416');
+  brow(ctx, 10.1, -8.9, 5.0, -0.32, 1.8, '#1a1416');
+  moustache(ctx, 8.0, 1.0, 4.4, '#1a1416', 0.55);
+  shape(ctx, (c) => ellipsePath(c, 8.2, -1.4, 2.4, 2.1), {
     fill: '#f5a2a2', ink: 0.9, shadow: '#d9787f', shadowOffset: [-0.7, -0.7],
     gloss: [{ x: 7.9, y: -2.2, rx: 0.8, ry: 0.5, alpha: 0.85 }],
   });
   // sly grin under it all
-  line(ctx, [[5.4, 3.6], [8.2, 4.4], [11.4, 3.0]], 0.9, '#5b1320', true);
+  line(ctx, [[5.0, 3.6], [7.8, 4.4], [11.0, 3.0]], 0.9, '#5b1320', true);
 
   // spy fedora, brim pulled low
   ctx.save();
@@ -1657,52 +1660,85 @@ function wing(ctx: Ctx, x: number, y: number, side: number, ang: number) {
   ctx.restore();
 }
 
+function blobPathLocal(c: Ctx, x: number, y: number, rx: number, ry: number, seed: number) {
+  const pts: Pt[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + seed;
+    const k = 0.8 + ((Math.sin(seed * 13.7 + i * 2.3) + 1) / 2) * 0.4;
+    pts.push([x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k]);
+  }
+  smoothPath(c, pts, true, 0.5);
+}
+
 function drawPepperoni(ctx: Ctx, f: number) {
   const flap = [0, -0.55, 0, 0.45][f];
   const cy = -4.4;
   // wings behind the slice
-  wing(ctx, -9.4, cy - 1.0, -1, flap);
-  wing(ctx, 9.6, cy - 1.4, 1, flap);
-  // slice edge (thickness) then the top face, slightly cupped
-  const rim = (c: Ctx) => ellipsePath(c, 0, cy + 1.8, 11.2, 9.0);
-  const top = (c: Ctx) => ellipsePath(c, 0, cy, 11.2, 9.0);
-  shape(ctx, rim, { fill: SALAMI_RIM, ink: 1.8, shadow: 'none' });
-  shape(ctx, top, {
-    fill: SALAMI, shadow: SALAMI_SH, ink: 1.6, shadowOffset: [-1.8, -1.6],
-    gloss: [{ x: -5.2, y: cy - 5.0, rx: 2.8, ry: 1.3, rot: -0.5, alpha: 0.5 }],
-  });
+  wing(ctx, -10.0, cy - 0.4, -1, flap);
+  wing(ctx, 10.2, cy - 0.8, 1, flap);
+  // slice edge (thickness) then the top face: crinkled, slightly cupped
+  const crinkle = (c: Ctx, dy: number) => {
+    const pts: Pt[] = [];
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * TAU;
+      const k = 1 + (i % 2 ? 0.035 : -0.02);
+      pts.push([Math.cos(a) * 11.6 * k, cy + dy + Math.sin(a) * 7.8 * k]);
+    }
+    smoothPath(c, pts, true, 0.5);
+  };
+  const rim = (c: Ctx) => crinkle(c, 2.6);
+  const top = (c: Ctx) => crinkle(c, 0);
+  shape(ctx, rim, { fill: SALAMI_RIM, ink: 1.8, shadow: '#6e140e', shadowOffset: [-2.4, -0.6] });
+  shape(ctx, top, { fill: SALAMI, shadow: SALAMI_SH, ink: 1.5, shadowOffset: [-1.6, -1.4] });
   clipped(ctx, top, () => {
-    // curled edge: lighter rim ring
+    // curled-up edge: a lighter lip all round, darker cupped centre
     ctx.beginPath();
-    ellipsePath(ctx, 0, cy, 11.2, 9.0);
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = rgba('#e8644a', 0.6);
+    ellipsePath(ctx, 0, cy, 11.4, 7.7);
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = rgba('#ec6a4c', 0.75);
     ctx.stroke();
-    // fat specks + peppercorns
-    speckle(ctx, 0, cy, 9.4, 7.4, 16, '#f6c9b8', 0.75, 91);
-    speckle(ctx, 0, cy, 9.4, 7.4, 7, '#5a120c', 0.38, 92);
+    ctx.beginPath();
+    ellipsePath(ctx, 0.4, cy + 0.6, 7.2, 4.6);
+    ctx.fillStyle = rgba('#8e1c14', 0.18);
+    ctx.fill();
+    // fat specks (irregular) + black peppercorns
+    const Rn = rng(93);
+    for (let i = 0; i < 15; i++) {
+      const a = Rn() * TAU, d = Math.sqrt(Rn()) * 0.86;
+      const x = Math.cos(a) * 10 * d, y = cy + Math.sin(a) * 6.6 * d;
+      ctx.beginPath();
+      blobPathLocal(ctx, x, y, 0.75 + Rn() * 0.55, 0.55 + Rn() * 0.4, Rn() * 9);
+      ctx.fillStyle = '#fbd8c8';
+      ctx.fill();
+    }
+    speckle(ctx, 0, cy, 9.6, 6.4, 8, '#3a0d08', 0.32, 92);
+    // oily sheen streak
+    glint(ctx, -5.6, cy - 4.4, 2.8, 0.75, -0.25, 0.6);
   });
-  // tiny bell-pepper hat
+  // tiny bell-pepper hat, cocked over one eye
   ctx.save();
-  ctx.translate(3.6, cy - 9.2);
-  ctx.rotate(0.28);
+  ctx.translate(5.6, cy - 7.6);
+  ctx.rotate(0.5);
+  ctx.scale(0.9, 0.9);
   shape(ctx, (c) => {
     c.moveTo(-3.4, -1.0);
-    c.bezierCurveTo(-4.2, 2.4, -2.6, 3.6, -1.2, 3.0);
-    c.quadraticCurveTo(0, 3.8, 1.2, 3.0);
-    c.bezierCurveTo(2.6, 3.6, 4.2, 2.4, 3.4, -1.0);
+    c.bezierCurveTo(-4.4, 2.6, -2.8, 3.8, -1.3, 3.1);
+    c.quadraticCurveTo(0, 4.0, 1.3, 3.1);
+    c.bezierCurveTo(2.8, 3.8, 4.4, 2.6, 3.4, -1.0);
     c.quadraticCurveTo(0, -3.0, -3.4, -1.0);
     c.closePath();
-  }, { fill: PEPPER, shadow: '#26742a', ink: 1.2, shadowOffset: [-0.9, -0.8], gloss: [{ x: -1.8, y: -0.2, rx: 0.7, ry: 1.3, alpha: 0.7 }] });
-  line(ctx, [[0, 0], [0.2, 2.6]], 0.45, '#26742a', false, 0.8);
-  inkLine(ctx, [[0, -1.6], [0.4, -3.6], [1.8, -4.4]], 1.0, '#2d6e2a', true, 0.6);
+  }, { fill: PEPPER, shadow: '#26742a', ink: 1.3, shadowOffset: [-0.9, -0.8], gloss: [{ x: -1.8, y: -0.2, rx: 0.7, ry: 1.3, alpha: 0.75 }] });
+  line(ctx, [[-1.1, 0.4], [-1.2, 2.8]], 0.5, '#26742a', false, 0.8);
+  line(ctx, [[1.1, 0.4], [1.2, 2.8]], 0.5, '#26742a', false, 0.8);
+  shape(ctx, (c) => ellipsePath(c, 0, -1.8, 1.8, 0.8), { fill: '#2d7a2c', ink: 0.8, shadow: 'none' });
+  inkLine(ctx, [[0, -2.0], [0.3, -4.0], [1.8, -4.8]], 1.2, '#2d6e2a', true, 0.65);
   ctx.restore();
   // face: evil spicy grin
-  eyes(ctx, { x: 1.8, y: cy - 2.0, r: 2.6, sp: 5.8, look: [0.35, 0.1], lid: 'angry', pupil: 0.42, brow: { ang: 0.6, th: 1.3, dy: 1.25 } });
-  mouth(ctx, 2.2, cy + 3.4, 7.4, 'grin', { teeth: true, tongue: true });
+  eyes(ctx, { x: 1.0, y: cy - 1.8, r: 2.6, sp: 5.8, look: [0.35, 0.1], lid: 'angry', pupil: 0.42, brow: { ang: 0.6, th: 1.3, dy: 1.2 } });
+  mouth(ctx, 1.6, cy + 3.2, 7.0, 'grin', { teeth: true, tongue: true });
 }
 
-reg('pepperoni', 46, 34, 23, 22, drawPepperoni);
+reg('pepperoni', 52, 34, 26, 22, drawPepperoni);
 
 // ===========================================================================
 // 15. POLPETTA ROTOLANTE — r14. A glossy meatball tangled in spaghetti, with a
@@ -1734,8 +1770,8 @@ function drawPolpetta(ctx: Ctx, f: number) {
   // spaghetti ends sticking out (behind the ball)
   for (let k = 0; k < 3; k++) {
     const a = (k / 3) * TAU + 0.5;
-    const p0 = P(a, R * 0.8), p1 = P(a + 0.12, R * 1.18), p2 = P(a + 0.38, R * 1.3);
-    inkLine(ctx, [p0, p1, p2], 2.0, NOODLE, true, 0.9);
+    const p0 = P(a, R * 0.8), p1 = P(a + 0.1, R * 1.16), p2 = P(a + 0.32, R * 1.32), p3 = P(a + 0.52, R * 1.22);
+    inkLine(ctx, [p0, p1, p2, p3], 1.7, NOODLE, true, 0.85);
   }
 
   shape(ctx, ballPath, { fill: MEAT, ink: 2.0, shadow: 'none' });
@@ -1790,36 +1826,42 @@ function drawPolpetta(ctx: Ctx, f: number) {
     glint(ctx, -9.2, -1.6, 0.8, 1.4, 0.2, 0.5);
   });
 
-  // dollop of tomato sauce on top, dripping
-  const dr = [0, 0.5, 1.0, 0.4][f];
-  shape(ctx, (c) => {
-    c.moveTo(-10.4, -8.0);
-    c.bezierCurveTo(-9.6, -15.6, 8.6, -17.0, 11.2, -8.4);
-    c.quadraticCurveTo(10.4, -5.2, 8.6, -6.0);
-    c.quadraticCurveTo(8.2, -2.4 - dr, 6.6, -2.6 - dr);
-    c.quadraticCurveTo(5.2, -2.8 - dr, 5.0, -6.4);
-    c.quadraticCurveTo(1.0, -7.6, -3.0, -6.8);
-    c.quadraticCurveTo(-3.6, -4.0, -5.2, -4.2);
-    c.quadraticCurveTo(-6.6, -4.4, -6.8, -6.6);
-    c.quadraticCurveTo(-9.6, -5.6, -10.4, -8.0);
+  // tomato sauce ladled over the top, dripping down (static: gravity wins)
+  const dr = [0, 0.6, 1.1, 0.4][f];
+  const sauce = (c: Ctx) => {
+    c.moveTo(-10.4, -8.4);
+    c.bezierCurveTo(-9.6, -13.6, -5.0, -15.4, 0.4, -15.2);
+    c.bezierCurveTo(5.6, -15.0, 10.2, -13.2, 10.8, -8.0);
+    c.quadraticCurveTo(10.2, -6.6, 9.0, -7.4);
+    c.quadraticCurveTo(8.9, -4.0 - dr, 7.6, -3.8 - dr);
+    c.quadraticCurveTo(6.2, -3.8 - dr, 6.2, -7.8);
+    c.quadraticCurveTo(3.6, -9.2, 1.2, -9.0);
+    c.quadraticCurveTo(1.0, -5.8 - dr * 0.6, -0.4, -5.8 - dr * 0.6);
+    c.quadraticCurveTo(-1.8, -5.8 - dr * 0.6, -2.0, -8.8);
+    c.quadraticCurveTo(-4.4, -8.6, -5.6, -8.2);
+    c.quadraticCurveTo(-6.0, -6.6, -7.2, -6.8);
+    c.quadraticCurveTo(-8.4, -7.0, -8.4, -8.0);
+    c.quadraticCurveTo(-9.6, -7.6, -10.4, -8.4);
     c.closePath();
-  }, {
-    fill: SAUCE, shadow: '#a01e12', ink: 1.6, shadowOffset: [-1.6, -1.4],
-    gloss: [{ x: -3.6, y: -13.0, rx: 2.6, ry: 1.0, rot: -0.2, alpha: 0.75 }, { x: 6.0, y: -11.6, rx: 0.8, ry: 0.5, alpha: 0.8 }],
+  };
+  shape(ctx, sauce, {
+    fill: SAUCE, shadow: '#a01e12', ink: 1.6, shadowOffset: [-1.4, -1.5],
+    gloss: [{ x: -3.6, y: -13.0, rx: 2.8, ry: 0.9, rot: -0.15, alpha: 0.75 }, { x: 6.2, y: -12.2, rx: 0.8, ry: 0.45, alpha: 0.8 }],
   });
-  // basil leaf garnish
-  leaf(ctx, [[1.0, -14.6], [3.6, -17.2], [6.4, -17.0]], [1.2, 3.0, 0.3], '#3f9a3a', 1.0);
+  // grated cheese snow + a little basil leaf lying on the sauce
+  speckle(ctx, 1.0, -12.2, 7.0, 1.8, 9, '#fff6d8', 0.42, 57);
+  leaf(ctx, [[2.6, -13.4], [5.2, -15.0], [7.6, -14.4]], [1.0, 2.4, 0.3], '#3f9a3a', 0.9);
 
   // maniacal face (static — the face doesn't roll, only the meat does)
-  eye(ctx, -2.2, -1.6, 2.7, { look: [0.3, 0.1], pupil: 0.3, iris: '#e8c44a' });
-  eye(ctx, 4.6, -2.0, 3.4, { look: [0.25, 0.05], pupil: 0.26, iris: '#e8c44a' });
-  brow(ctx, -2.4, -5.6, 4.4, 0.55, 1.3);
-  brow(ctx, 4.8, -6.9, 5.2, 0.12, 1.3);
+  eye(ctx, -1.8, -1.4, 2.5, { look: [0.3, 0.1], pupil: 0.3, iris: '#e8c44a' });
+  eye(ctx, 4.6, -1.8, 3.1, { look: [0.25, 0.05], pupil: 0.26, iris: '#e8c44a' });
+  brow(ctx, -2.0, -5.0, 4.2, 0.55, 1.3);
+  brow(ctx, 4.8, -6.3, 5.0, 0.12, 1.3);
   const gp = (c: Ctx) => {
-    c.moveTo(-4.8, 3.0);
-    c.quadraticCurveTo(1.6, 5.0, 8.8, 1.6);
-    c.quadraticCurveTo(8.0, 9.6, 1.8, 9.4);
-    c.quadraticCurveTo(-3.6, 9.0, -4.8, 3.0);
+    c.moveTo(-3.8, 3.0);
+    c.quadraticCurveTo(1.8, 4.8, 8.2, 1.8);
+    c.quadraticCurveTo(7.4, 8.8, 2.0, 8.8);
+    c.quadraticCurveTo(-2.8, 8.4, -3.8, 3.0);
     c.closePath();
   };
   shape(ctx, gp, { fill: '#5b1320', ink: 1.2, shadow: 'none' });
@@ -1846,4 +1888,4 @@ function drawPolpetta(ctx: Ctx, f: number) {
   });
 }
 
-reg('polpetta', 42, 42, 21, 22, drawPolpetta);
+reg('polpetta', 44, 46, 22, 23, drawPolpetta);

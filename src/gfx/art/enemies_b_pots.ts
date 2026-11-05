@@ -41,90 +41,77 @@ function icicle(ctx: Ctx, x: number, y: number, w: number, len: number, rot = 0)
 function drawPentola(ctx: Ctx, f: number) {
   const { ph, s } = cyc(f);
   const chatter = f % 2;
+  const RIM = -9; // rim height
+  const BOT = 10.6; // bottom of the pot
 
-  // cold mist at the feet (behind)
-  for (let k = 0; k < 3; k++) {
-    const x = -13 + k * 13 + Math.sin(ph + k * 2) * 1.6;
-    ctx.save();
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#d6efff';
-    ctx.beginPath();
-    ellipsePath(ctx, x, 14.6 - (k % 2) * 1.2, 6.2, 2.1);
-    ctx.fill();
-    ctx.restore();
+  // cold fog curling round the feet (behind)
+  for (const [x, y, r, k] of [[-14.6, 12.4, 2.6, 0], [15.4, 12, 2.4, 2], [-9.6, 14.6, 2, 4], [10.4, 14.8, 2.1, 1]] as [number, number, number, number][]) {
+    puff(ctx, x + Math.sin(ph + k) * 1.2, y - Math.abs(Math.sin(ph + k)) * 0.8, r, '#d2f0ff', '#9fd8f5', 0.78, 0.6);
   }
+  steamCurl(ctx, -17.2, 12.6, 7, ph, 1.1, 0.75, '#c8ecff');
+  steamCurl(ctx, 17.6, 12.2, 6, ph + 2, 1.1, 0.7, '#c8ecff');
 
-  legs(ctx, 0, 10, f, { len: 4.2, spread: 12, thick: 2.7, color: '#5e7c9c', shoe: '#eef6ff', stride: 3.6 });
+  legs(ctx, 0, BOT, f, { len: 4, spread: 12, thick: 2.7, color: '#5e7c9c', shoe: '#eef6ff', stride: 3.6 });
 
-  // side handles (behind the body)
+  // side handles (behind the body) with icicles
   for (const sx of [-1, 1]) {
-    shape(ctx, (c) => {
-      roundRectPath(c, sx < 0 ? -19.6 : 13.2, -5.6, 6.4, 3.4, 1.4);
-    }, { fill: '#7f98b2', ink: 1.6, shadow: '#5a7391', shadowOffset: [-0.8, -0.8] });
-    icicle(ctx, sx * 17.4, -2.6, 2, 4.2 + (sx > 0 ? 1.4 : 0) + s * 0.3);
-    icicle(ctx, sx * 15.6, -2.6, 1.5, 2.8);
+    shape(ctx, (c) => roundRectPath(c, sx < 0 ? -19.8 : 13.4, RIM + 2.6, 6.4, 3.4, 1.4), { fill: '#7f98b2', ink: 1.6, shadow: '#5a7391', shadowOffset: [-0.8, -0.8] });
+    icicle(ctx, sx * 17.6, RIM + 5.6, 2, 4.4 + (sx > 0 ? 1.4 : 0) + s * 0.3);
+    icicle(ctx, sx * 15.8, RIM + 5.6, 1.5, 2.8);
   }
 
   // pot body
-  const body = (c: Ctx) => cylPath(c, 0, -7, 10.4, 14, 12.8, 3.8, 3.2);
-  shape(ctx, body, { fill: POT, shadow: POT_SH, shadowOffset: [-3, -1.2], ink: 2.2, gloss: [{ x: -10, y: 0.5, rx: 1.3, ry: 5.6, alpha: 0.55 }] });
+  const body = (c: Ctx) => cylPath(c, 0, RIM, BOT, 14, 12.8, 3.8, 3.2);
+  shape(ctx, body, { fill: POT, shadow: POT_SH, shadowOffset: [-3, -1.2], ink: 2.2, gloss: [{ x: -10, y: 1, rx: 1.3, ry: 6.4, alpha: 0.55 }] });
   clipTo(ctx, body, () => {
     // frost creeping up from the bottom + rime under the rim
     const R = rng(4);
     ctx.fillStyle = FROST;
     ctx.globalAlpha = 0.85;
     ctx.beginPath();
-    ctx.moveTo(-16, 16);
-    for (let i = 0; i <= 10; i++) {
-      const x = -16 + i * 3.2;
-      ctx.lineTo(x, 9.6 - R() * 3.2);
-    }
-    ctx.lineTo(16, 16);
+    ctx.moveTo(-16, 18);
+    for (let i = 0; i <= 10; i++) ctx.lineTo(-16 + i * 3.2, BOT - 0.6 - R() * 3);
+    ctx.lineTo(16, 18);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(-16, -8);
-    for (let i = 0; i <= 12; i++) {
-      const x = -16 + i * 2.7;
-      ctx.lineTo(x, -3.6 + R() * 2.2 - (i % 2) * 1.4);
-    }
-    ctx.lineTo(16, -8);
+    ctx.moveTo(-16, RIM - 1);
+    for (let i = 0; i <= 12; i++) ctx.lineTo(-16 + i * 2.7, RIM + 3.6 + R() * 1.8 - (i % 2) * 1.3);
+    ctx.lineTo(16, RIM - 1);
     ctx.closePath();
     ctx.fill();
     ctx.globalAlpha = 1;
-    speckle(ctx, 0, 2, 12, 6, 10, '#ffffff', 0.45, 13, 0.8);
+    speckle(ctx, 0, 2, 12, 7, 10, '#ffffff', 0.45, 13, 0.8);
   });
 
   // opening (dark icy water)
-  shape(ctx, (c) => ellipsePath(c, 0, -7, 12.6, 2.9), { fill: '#3d6d93', ink: 0, shadow: 'none' });
+  shape(ctx, (c) => ellipsePath(c, 0, RIM, 12.6, 2.9), { fill: '#3d6d93', ink: 0, shadow: 'none' });
 
   // frozen block of spaghetti
   ctx.save();
-  ctx.translate(0.6, 0);
+  ctx.translate(0.6, RIM + 2);
   ctx.rotate(-0.07);
-  const front: Pt[] = [[-8, -6], [6.4, -6], [6.4, -20.6], [-8, -20.6]];
-  const top: Pt[] = [[-8, -20.6], [-4.6, -24], [9.8, -24], [6.4, -20.6]];
-  const side: Pt[] = [[6.4, -6], [9.8, -9.4], [9.8, -24], [6.4, -20.6]];
+  const front: Pt[] = [[-8, -1], [6.4, -1], [6.4, -14], [-8, -14]];
+  const top: Pt[] = [[-8, -14], [-4.6, -17.2], [9.8, -17.2], [6.4, -14]];
+  const side: Pt[] = [[6.4, -1], [9.8, -4.2], [9.8, -17.2], [6.4, -14]];
   // sticks poking out of the top (behind the top face edge)
-  const sticks: [number, number, number][] = [[-4.5, -21.6, -0.32], [-1.6, -22.4, -0.1], [1.2, -22.6, 0.08], [3.8, -22.2, 0.22], [6.6, -22.6, 0.36], [0, -22.8, -0.22]];
-  for (const [x, y, a] of sticks) {
-    const L = 7 + ((x * 7) % 3);
-    inkLine(ctx, [[x, y + 2], [x + Math.sin(a) * L, y - Math.cos(a) * L]], 1, PASTA, false, 0.75);
+  const sticks: [number, number, number][] = [[-4.5, -15, -0.32], [-1.6, -15.6, -0.1], [1.2, -15.8, 0.08], [3.8, -15.4, 0.22], [6.6, -15.8, 0.36], [0, -16, -0.22]];
+  for (const [x, y, a2] of sticks) {
+    const L = 6.4 + ((x * 7) % 3);
+    inkLine(ctx, [[x, y + 2], [x + Math.sin(a2) * L, y - Math.cos(a2) * L]], 1, PASTA, false, 0.75);
   }
   group(ctx, [
     { build: (c) => polyPath(c, side), style: { fill: ICE_SH, shadow: 'none' } },
     { build: (c) => polyPath(c, front), style: { fill: ICE, shadow: 'none' } },
     { build: (c) => polyPath(c, top), style: { fill: '#effbff', shadow: 'none' } },
   ], 1.8);
-  // spaghetti trapped inside the ice
   clipTo(ctx, (c) => { polyPath(c, front); polyPath(c, side); }, () => {
     for (let i = 0; i < 9; i++) {
       const x = -7 + i * 1.9;
-      const a = (i - 4) * 0.05;
-      line(ctx, [[x + Math.sin(a) * 14, -5], [x - Math.sin(a) * 2, -21]], 0.75, '#e9c35e', false, 0.75);
+      const a2 = (i - 4) * 0.05;
+      line(ctx, [[x + Math.sin(a2) * 14, 0], [x - Math.sin(a2) * 2, -14.4]], 0.75, '#e9c35e', false, 0.75);
     }
-    // bubbles & cracks
-    for (const [bx, by, br] of [[-5, -16, 0.7], [3.5, -9.6, 0.55], [-2.4, -9, 0.45], [4.6, -17, 0.4]] as [number, number, number][]) {
+    for (const [bx, by, br] of [[-5, -10, 0.7], [3.5, -4.4, 0.55], [-2.4, -3.6, 0.45], [4.6, -10.6, 0.4]] as [number, number, number][]) {
       ctx.save();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 0.4;
@@ -133,36 +120,35 @@ function drawPentola(ctx: Ctx, f: number) {
       ctx.stroke();
       ctx.restore();
     }
-    line(ctx, [[-8, -13], [-4.6, -14.6], [-3.6, -12]], 0.5, '#ffffff', false, 0.85);
-    // glassy highlights
-    line(ctx, [[-6.8, -19.4], [-6.8, -8]], 1, '#ffffff', false, 0.7);
-    line(ctx, [[5.2, -19.6], [5.2, -16.8]], 0.7, '#ffffff', false, 0.6);
+    line(ctx, [[-8, -7.4], [-4.6, -9], [-3.6, -6.4]], 0.5, '#ffffff', false, 0.85);
+    line(ctx, [[-6.8, -12.8], [-6.8, -2.6]], 1, '#ffffff', false, 0.7);
+    line(ctx, [[5.2, -13], [5.2, -10.4]], 0.7, '#ffffff', false, 0.6);
   });
-  twinkle(ctx, 8.6, -23.4, 2.2, '#ffffff', 0.95);
+  twinkle(ctx, 8.6, -16.6, 2.2, '#ffffff', 0.95);
   ctx.restore();
 
-  // front rim (frosted lip over the block)
+  // front rim (frosted lip over the block) + snow lumps
   shape(ctx, (c) => {
-    c.ellipse(0, -7, 14, 3.8, 0, Math.PI, 0, true);
-    c.ellipse(0, -7.3, 12.2, 2.5, 0, 0, Math.PI, false);
+    c.ellipse(0, RIM, 14, 3.8, 0, Math.PI, 0, true);
+    c.ellipse(0, RIM - 0.3, 12.2, 2.5, 0, 0, Math.PI, false);
     c.closePath();
   }, { fill: '#d9ecf8', ink: 1.6, shadow: 'none' });
-  // snow cap lumps on the rim
-  for (const [x, y, r] of [[-11.4, -5.6, 2], [-6, -4.1, 2.2], [0.5, -3.6, 2], [7, -4.2, 2.2], [11.8, -5.7, 1.8]] as [number, number, number][]) {
-    shape(ctx, (c) => ellipsePath(c, x, y, r * 1.2, r * 0.75), { fill: FROST, ink: 1, shadow: '#cfe3f2', shadowOffset: [-0.6, -0.7] });
+  for (const [x, dy, r] of [[-11.4, 1.4, 1.8], [-6, 2.8, 2], [0.5, 3.3, 1.8], [7, 2.7, 2], [11.8, 1.3, 1.7]] as [number, number, number][]) {
+    shape(ctx, (c) => ellipsePath(c, x, RIM + dy, r * 1.2, r * 0.7), { fill: FROST, ink: 1, shadow: '#cfe3f2', shadowOffset: [-0.6, -0.7] });
   }
 
   // face: angry & shivering
-  const fx = 1, fy = 1.2;
-  eye(ctx, fx - 4.3, fy, 3.2, { look: [0.32, 0.12], lid: 'angry-l', pupil: 0.48 });
-  eye(ctx, fx + 4.6, fy, 3.5, { look: [0.32, 0.12], lid: 'angry-r', pupil: 0.48 });
+  const fx = 1, fy = 1.8;
+  eye(ctx, fx - 4.4, fy, 3.3, { look: [0.32, 0.12], lid: 'angry-l', pupil: 0.48 });
+  eye(ctx, fx + 4.7, fy, 3.6, { look: [0.32, 0.12], lid: 'angry-r', pupil: 0.48 });
   // icicle eyebrows (pointy inner ends dip down = angry)
-  icicle(ctx, fx - 6.9, fy - 4.8, 2.4, 6.6, -1.95);
-  icicle(ctx, fx + 7.6, fy - 5.2, 2.6, 7, 1.95);
+  icicle(ctx, fx - 7.6, fy - 4.6, 2.5, 7, -1.92);
+  icicle(ctx, fx + 8.4, fy - 5, 2.7, 7.4, 1.92);
   // chattering teeth
-  const my = fy + 6.4, mw = 9.4, mh = 3.6 + chatter * 0.8;
-  shape(ctx, (c) => roundRectPath(c, fx - mw / 2 + 0.6, my - mh / 2, mw, mh, 1.4), { fill: '#3a1a2a', ink: 1.2, shadow: 'none' });
-  clipTo(ctx, (c) => roundRectPath(c, fx - mw / 2 + 0.6, my - mh / 2, mw, mh, 1.4), () => {
+  const my = fy + 6.2, mw = 9.4, mh = 3.4 + chatter * 0.8;
+  const mp = (c: Ctx) => roundRectPath(c, fx - mw / 2 + 0.6, my - mh / 2, mw, mh, 1.4);
+  shape(ctx, mp, { fill: '#3a1a2a', ink: 1.2, shadow: 'none' });
+  clipTo(ctx, mp, () => {
     ctx.fillStyle = '#fbfdff';
     ctx.fillRect(fx - 6, my - mh / 2, 12, mh * 0.42);
     ctx.fillRect(fx - 6, my + mh / 2 - mh * 0.38, 12, mh * 0.4);
@@ -175,15 +161,14 @@ function drawPentola(ctx: Ctx, f: number) {
     }
     ctx.stroke();
   });
-  cheeks(ctx, [[fx - 8.4, fy + 4.2], [fx + 9.6, fy + 3.8]], 1.8, 1, '#5aa8ff', 0.45);
-  shakeLines(ctx, -17.4, 6 + chatter, -1, 2, 2, 2.4, '#3d6d93', 0.7, 0.8);
-  shakeLines(ctx, 17.6, 6 - chatter, 1, 2, 2, 2.4, '#3d6d93', 0.7, 0.8);
+  cheeks(ctx, [[fx - 8.6, fy + 4], [fx + 9.8, fy + 3.6]], 1.8, 1, '#5aa8ff', 0.45);
+  shakeLines(ctx, -17.8, fy + 4 + chatter, -1, 2, 2, 2.4, '#3d6d93', 0.7, 0.8);
+  shakeLines(ctx, 18, fy + 4 - chatter, 1, 2, 2, 2.4, '#3d6d93', 0.7, 0.8);
 
-  // snowflakes
-  snowflake(ctx, -15 + s, -18 - f * 0.6, 1.6, '#ffffff', 0.9);
-  snowflake(ctx, 15.4, -13 + s * 0.8, 1.3, '#ffffff', 0.8);
-  // icy vapour curling off the block
-  steamCurl(ctx, -2.6, -27, 5, ph, 1.2, 0.5, '#e8f7ff');
+  // snowflakes + icy vapour
+  snowflake(ctx, -15 + s, -20 - f * 0.6, 1.6, '#ffffff', 0.9);
+  snowflake(ctx, 15.4, -15 + s * 0.8, 1.3, '#ffffff', 0.8);
+  steamCurl(ctx, -2.6, -27.6, 4.6, ph, 1.2, 0.5, '#e8f7ff');
 }
 
 enemySprite('pentola', 44, 52, 33, drawPentola);
@@ -396,8 +381,8 @@ function drawScatoletta(ctx: Ctx, f: number) {
     ctx.restore();
     // pictured bowl of carbonara (wrapping round the left side)
     ctx.save();
-    ctx.translate(-8.2, 0.4);
-    ctx.scale(0.62, 1);
+    ctx.translate(-8.6, 2.6);
+    ctx.scale(0.5, 0.8);
     shape(ctx, (c) => {
       c.moveTo(-4, -0.6);
       c.quadraticCurveTo(0, 5.4, 4, -0.6);
@@ -419,16 +404,15 @@ function drawScatoletta(ctx: Ctx, f: number) {
   shape(ctx, (c) => ellipsePath(c, 0, YT + 0.5, RX - 1.4, RY - 1.2), { fill: CARBO, ink: 0, shadow: '#d9b55a', shadowOffset: [1, 0.6] });
   // ooze over the front rim + drips
   const oz = (c: Ctx) => {
-    c.moveTo(-1, YT + 1.6);
-    c.quadraticCurveTo(4, YT + 4.6, 9.6, YT + 1.6);
-    c.quadraticCurveTo(6, YT + 0.4, -1, YT + 1.6);
+    c.moveTo(5.2, YT + 2.6);
+    c.quadraticCurveTo(8.4, YT + 4.2, 10.8, YT + 1.2);
+    c.quadraticCurveTo(8.6, YT + 0.6, 5.2, YT + 2.6);
     c.closePath();
-    dripPath(c, 7.4, YT + 2.8, 2.2, 3.2 + lift * 0.9);
-    dripPath(c, 2.4, YT + 3.4, 1.8, 2.2 + lift * 0.5);
+    dripPath(c, 9.4, YT + 2.8, 2, 3.4 + lift * 1.1);
   };
-  shape(ctx, oz, { fill: CARBO, ink: 1, shadow: '#d9b55a', shadowOffset: [-0.6, -0.6] });
+  shape(ctx, oz, { fill: CARBO, ink: 1, shadow: '#d9b55a', shadowOffset: [-0.6, -0.6], gloss: [{ x: 8.6, y: YT + 2.2, rx: 0.9, ry: 0.4, alpha: 0.8 }] });
   ctx.fillStyle = GUANCIALE;
-  ctx.fillRect(5, YT + 1.6, 1.3, 1.1);
+  ctx.fillRect(7.2, YT + 2, 1.2, 1);
 
   // lid, popping up at the front-right (hinged at the back-left)
   ctx.save();
@@ -447,10 +431,10 @@ function drawScatoletta(ctx: Ctx, f: number) {
   ctx.restore();
 
   // face: deranged
-  eye(ctx, -1.6, -2.6, 2.7, { look: [0.4, 0.15], lid: 'angry-l', pupil: 0.36 });
-  eye(ctx, 5.4, -2.9, 3.4, { look: [0.3, 0.1], lid: 'angry-r', pupil: 0.3 });
-  brow(ctx, -1.8, -6.6, 4.6, 0.5, 1.5);
-  brow(ctx, 5.8, -7.6, 5.4, -0.5, 1.5);
+  eye(ctx, -1.8, -2.4, 3.05, { look: [0.4, 0.15], lid: 'angry-l', pupil: 0.36 });
+  eye(ctx, 5.6, -2.7, 3.75, { look: [0.3, 0.1], lid: 'angry-r', pupil: 0.3 });
+  brow(ctx, -2, -6.8, 4.8, 0.5, 1.55);
+  brow(ctx, 6, -8, 5.6, -0.5, 1.55);
   // jagged can-opener grin
   const gm = (c: Ctx) => {
     c.moveTo(-3.6, 2.2);
@@ -503,73 +487,82 @@ const CAP = '#f6e07c';
 const CAP_SH = '#d6ab3c';
 const POWDER = '#fff4cf';
 
+/** A painted question mark (path, not font text). */
+function questionMark(ctx: Ctx, x: number, y: number, h: number, col: string) {
+  const w = h * 0.2;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const [lw, c] of [[w + 1.4, INK], [w, col]] as [number, string][]) {
+    ctx.strokeStyle = c;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.arc(x, y - h * 0.22, h * 0.24, Math.PI * 1.05, Math.PI * 2.35);
+    ctx.quadraticCurveTo(x, y + h * 0.02, x, y + h * 0.16);
+    ctx.stroke();
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    circlePath(ctx, x, y + h * 0.42, lw * 0.55);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawParmesan(ctx: Ctx, f: number) {
-  const { ph, s } = cyc(f);
+  const { s } = cyc(f);
 
   legs(ctx, 0, 9.6, f, { len: 4.2, spread: 9, thick: 2.3, color: LIMB, shoe: '#2d2422', stride: 3.6 });
 
-  // standing flip lid (hinged across the middle of the top)
-  shape(ctx, (c) => {
-    c.moveTo(-10, -19.4);
-    c.bezierCurveTo(-10, -26.8, 10, -26.8, 10, -19.4);
+  // standing flip lid (we see its underside) with a big "?" on it
+  const lid = (c: Ctx) => {
+    c.moveTo(-9.6, -19.2);
+    c.bezierCurveTo(-10.4, -33.4, 10.4, -33.4, 9.6, -19.2);
     c.closePath();
-  }, { fill: CAP, ink: 1.8, shadow: CAP_SH, shadowOffset: [-1.6, -1.4], gloss: [{ x: -5, y: -23.4, rx: 2.2, ry: 0.8, rot: -0.3, alpha: 0.6 }] });
-  line(ctx, [[-7.6, -21.2], [7.6, -21.2]], 0.7, CAP_SH, false, 0.7);
+  };
+  shape(ctx, lid, { fill: '#ecc952', ink: 1.8, shadow: CAP_SH, shadowOffset: [-1.6, -1.4], gloss: [{ x: -5.6, y: -27.4, rx: 1.8, ry: 0.8, rot: -0.7, alpha: 0.55 }] });
+  line(ctx, [[-8.6, -20.4], [8.6, -20.4]], 0.6, CAP_SH, false, 0.6);
+  questionMark(ctx, 0.4, -26.6, 6.6, '#e0402e');
 
   // can body (green), metal base
   const body = (c: Ctx) => cylPath(c, 0, -13.4, 9.4, 9.6, 9.6, 2.9);
   shape(ctx, body, { fill: CAN_G, shadow: CAN_G_SH, shadowOffset: [-2.8, -0.8], ink: 2, gloss: [{ x: -6.8, y: -2, rx: 1.1, ry: 7.4, alpha: 0.45 }] });
   clipTo(ctx, body, () => {
-    // cream band near the top + dark band at the bottom
+    // pale stripe low on the label + dark base band
     ctx.save();
-    ctx.lineWidth = 2.6;
-    ctx.strokeStyle = '#f3ead2';
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = '#bfe3a6';
     ctx.beginPath();
-    ctx.ellipse(0, -10.4, 9.6, 2.9, 0, 0, Math.PI);
+    ctx.ellipse(0, 3.8, 9.6, 2.9, 0, 0, Math.PI);
     ctx.stroke();
     ctx.lineWidth = 2.4;
     ctx.strokeStyle = '#1e5a2e';
     ctx.beginPath();
-    ctx.ellipse(0, 6.6, 9.6, 2.9, 0, 0, Math.PI);
+    ctx.ellipse(0, 7, 9.6, 2.9, 0, 0, Math.PI);
     ctx.stroke();
-    ctx.restore();
-    // a "cheese" wedge with too many holes, on the cream band
-    ctx.save();
-    ctx.translate(-5.6, -9.4);
-    shape(ctx, (c) => polyPath(c, [[-2.2, 1], [2.2, 1], [1.4, -1.6]]), { fill: '#ffd447', ink: 0.6, shadow: 'none' });
-    ctx.restore();
-    // question mark on the band
-    ctx.save();
-    ctx.fillStyle = '#c0392b';
-    ctx.font = 'bold 3.6px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('?', 6.2, -8.8);
     ctx.restore();
   });
   // metal bottom rim
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(0, 9.4, 9.6, 2.9, 0, 0, Math.PI);
+  ctx.ellipse(0, 9.4, 9.6, 2.9, 0, 0.15, Math.PI - 0.15);
   ctx.strokeStyle = '#c9ced8';
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.1;
   ctx.stroke();
   ctx.restore();
 
   // cap
-  const cap = (c: Ctx) => cylPath(c, 0, -19.4, -13, 10.2, 10.2, 3);
+  const cap = (c: Ctx) => cylPath(c, 0, -19.2, -13, 10.2, 10.2, 3);
   shape(ctx, cap, { fill: CAP, shadow: CAP_SH, shadowOffset: [-2, -0.6], ink: 1.9 });
-  for (let i = -4; i <= 4; i++) {
-    const x = i * 2.2;
-    line(ctx, [[x, -16.6 + Math.abs(i) * -0.25 + 3], [x, -14.2 + 3 - Math.abs(i) * 0.12]], 0.5, CAP_SH, false, 0.7);
-  }
+  clipTo(ctx, cap, () => {
+    for (let i = -4; i <= 4; i++) line(ctx, [[i * 2.3, -18], [i * 2.3, -9]], 0.5, CAP_SH, false, 0.6);
+  });
   // top face: front half with sprinkle holes
   shape(ctx, (c) => {
-    c.moveTo(-10.2, -19.4);
-    c.ellipse(0, -19.4, 10.2, 3, 0, Math.PI, 0, true);
+    c.moveTo(-10.2, -19.2);
+    c.ellipse(0, -19.2, 10.2, 3, 0, Math.PI, 0, true);
     c.closePath();
   }, { fill: '#fff0a8', ink: 0, shadow: 'none' });
-  for (const [hx, hy] of [[-5.2, -18.6], [-1.8, -18], [1.8, -18], [5.2, -18.6], [-3.4, -17.2], [0, -16.8], [3.4, -17.2]] as Pt[]) {
+  for (const [hx, hy] of [[-5.2, -18.4], [-1.8, -17.8], [1.8, -17.8], [5.2, -18.4], [-3.4, -17], [0, -16.6], [3.4, -17]] as Pt[]) {
     ctx.fillStyle = '#5c4a1f';
     ctx.beginPath();
     ellipsePath(ctx, hx, hy, 0.7, 0.42);
@@ -579,33 +572,32 @@ function drawParmesan(ctx: Ctx, f: number) {
   // powder puffs drifting up (looping)
   for (let k = 0; k < 3; k++) {
     const t = ((f + k * 1.34) % 4) / 4;
-    const x = 2 + k * 2.6 + t * 8, y = -20 - t * 10 - k * 1.4;
+    const x = 4 + k * 2.4 + t * 7, y = -19.6 - t * 9 - k * 1.2;
     puff(ctx, x, y, 1.5 + t * 1.6, POWDER, '#d9c38a', 0.95 - t * 0.55, 0.8);
   }
-  speckle(ctx, 9, -26, 5, 4, 7, '#f7e9b8', 0.45, 3 + f, 0.9);
+  speckle(ctx, 10, -25, 5, 4, 7, '#f7e9b8', 0.45, 3 + f, 0.9);
 
   // shifty face
-  eye(ctx, -2.4, -4.8, 2.9, { look: [0.6, 0.18], lid: 'half', pupil: 0.48 });
-  eye(ctx, 4.6, -4.9, 3.1, { look: [0.6, 0.18], lid: 'half', pupil: 0.48 });
-  brow(ctx, -2.6, -8.8, 4.6, 0.42, 1.35);
-  brow(ctx, 4.9, -9.7, 4.8, 0.3, 1.35);
-  mouth(ctx, 2.4, 0.8, 6.2, 'smirk');
-  shape(ctx, (c) => roundRectPath(c, 3.4, 0.4, 1.4, 1.5, 0.3), { fill: '#fff8ea', ink: 0.5, shadow: 'none' });
+  eye(ctx, -2.6, -6.6, 3.1, { look: [0.62, 0.16], lid: 'half', pupil: 0.48 });
+  eye(ctx, 4.6, -6.7, 3.35, { look: [0.62, 0.16], lid: 'half', pupil: 0.48 });
+  brow(ctx, -2.8, -10.6, 4.8, 0.42, 1.4);
+  brow(ctx, 5.2, -12.4, 5, -0.28, 1.4);
+  mouth(ctx, 2.2, -1.2, 6.6, 'smirk');
+  shape(ctx, (c) => roundRectPath(c, 3.4, -1.5, 1.4, 1.5, 0.3), { fill: '#fff8ea', ink: 0.5, shadow: 'none' });
   // sweat bead (guilty)
   shape(ctx, (c) => {
-    c.moveTo(9.4, -10);
-    c.quadraticCurveTo(10.6, -8, 9.4, -7.2);
-    c.quadraticCurveTo(8.2, -8, 9.4, -10);
+    c.moveTo(10.6, -11.4);
+    c.quadraticCurveTo(11.8, -9.4, 10.6, -8.6);
+    c.quadraticCurveTo(9.4, -9.4, 10.6, -11.4);
     c.closePath();
   }, { fill: '#bfe8ff', ink: 0.7, shadow: 'none' });
 
   // hands rubbing together (scheming)
-  const rub = s * 0.6;
-  hoseArm(ctx, -9, -1.6, 0.4 + rub, 4.6, { bend: 0.3, thick: 1.8, handR: 2.3 });
-  hoseArm(ctx, 9.2, -1.8, 3.4 - rub, 5, { bend: -0.3, thick: 1.8, handR: 2.4 });
-  void ph;
+  const rub = s * 0.7;
+  hoseArm(ctx, -9.2, 1.4, 0.2 + rub, 5.8, { bend: 0.22, thick: 1.8, handR: 2.3 });
+  hoseArm(ctx, 9.4, 1.2, 3.6 - rub, 6.2, { bend: -0.22, thick: 1.8, handR: 2.4 });
 }
 
-enemySprite('parmesan', 42, 52, 33, drawParmesan);
+enemySprite('parmesan', 42, 56, 37, drawParmesan);
 
 void mouth; void eyePair; void TAU; void twinkle;
