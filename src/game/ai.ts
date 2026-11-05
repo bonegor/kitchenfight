@@ -45,7 +45,7 @@ function shoot(run: Run, e: Enemy, angle: number, speed: number, sprite: string,
   s.vy = Math.sin(angle) * speed;
   s.r = r;
   s.damage = dmg;
-  s.life = 5;
+  s.life = 2.8;
   s.sprite = sprite;
   s.rot = angle;
   s.spin = sprite === 'proj.e_pepperoni' || sprite === 'proj.e_seed' ? 8 : 0;
@@ -79,7 +79,7 @@ function danger(run: Run, x: number, y: number, r: number, delay: number, dmg: n
   const a = run.addArea('warning', x, y, r, delay, { enemy: true });
   a.onEnd = () => {
     const p = run.player;
-    if ((p.x - x) ** 2 + ((p.y - y) / 0.8) ** 2 < r * r) run.hurtPlayer(dmg, x, y);
+    if ((p.x - x) ** 2 + ((p.y - y) / 0.8) ** 2 < r * r) run.hurtPlayer(dmg, x, y, 'danger');
     run.fx.ring(x, y, r * 0.5, r * 1.1, 0.4, '#ff6b4a', 6);
     run.fx.burst(x, y, 10, { colors: ['#ffffff', '#ffd2c2'], speed: 220, size: 4, life: 0.4 });
     after?.();
@@ -129,11 +129,9 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         steer(e, -e.ax * 20, -e.ay * 20, dt, 10);
         e.timer -= dt;
         if (e.timer <= 0) {
+          // commit to the telegraphed direction (fair & dodgeable)
           e.state = 2;
           e.timer = P.dashTime ?? 0.4;
-          const t2 = toPlayer(run, e);
-          e.ax = t2.dx;
-          e.ay = t2.dy;
           e.attackPose = e.timer;
           run.sfx('enemy_dash', { volume: 0.5 }, e.x);
         }
@@ -171,7 +169,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const spread = P.spread ?? 0;
         for (let i = 0; i < n; i++) {
           const off = n > 1 ? (i / (n - 1) - 0.5) * spread * 2 : 0;
-          shoot(run, e, a + off, P.shotSpeed ?? 190, P.shot ?? 'proj.e_generic', e.damage * 0.9);
+          shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.6);
         }
         e.attackPose = 0.3;
         e.face = t.dx > 0 ? 1 : -1;
@@ -192,7 +190,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const tx = p.x + p.vx * 0.6, ty = p.y + p.vy * 0.6;
         const area = P.area ?? 'cheese';
         lobShot(run, e, tx, ty, 0.9, 'proj.e_generic', e.damage, (x, y) => {
-          hazard(run, area, x, y, P.r ?? 34, 4, P.slow ?? 0.3, e.damage * 0.4);
+          hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * 0.2);
           run.fx.burst(x, y, 10, { colors: ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
         });
         e.attackPose = 0.3;
@@ -289,7 +287,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         e.squash = 0.5 + Math.sin(e.timer * 40) * 0.5;
         if (e.timer <= 0) {
           const r = P.blast ?? 70;
-          if (t.d < r) run.hurtPlayer(e.damage, e.x, e.y);
+          if (t.d < r) run.hurtPlayer(e.damage, e.x, e.y, 'blast:' + e.def.id);
           run.fx.burst(e.x, e.y, 18, { colors: ['#ffd34d', '#ff7b2e', '#ffffff'], speed: 280, size: 5, life: 0.5, additive: true });
           run.fx.ring(e.x, e.y, 10, r, 0.35, '#ffb02e', 6);
           if (P.cloud) hazard(run, 'cheese', e.x, e.y, r * 0.8, 3, 0.3, 3);
@@ -486,7 +484,7 @@ export function onEnemyDeath(run: Run, e: Enemy) {
 
 type Pattern = (run: Run, e: Enemy, dt: number) => void;
 
-function ring(run: Run, e: Enemy, n: number, speed: number, sprite: string, off = 0, dmgMul = 0.6) {
+function ring(run: Run, e: Enemy, n: number, speed: number, sprite: string, off = 0, dmgMul = 0.45) {
   for (let i = 0; i < n; i++) shoot(run, e, off + (i / n) * TAU, speed, sprite, e.damage * dmgMul, 8);
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
@@ -496,7 +494,7 @@ function aimed(run: Run, e: Enemy, n: number, spread: number, speed: number, spr
   const a = Math.atan2(t.dy, t.dx);
   for (let i = 0; i < n; i++) {
     const off = n > 1 ? (i / (n - 1) - 0.5) * spread : 0;
-    shoot(run, e, a + off, speed, sprite, e.damage * 0.6, 8);
+    shoot(run, e, a + off, speed, sprite, e.damage * 0.45, 8);
   }
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
@@ -513,7 +511,8 @@ function summon(run: Run, e: Enemy, id: string, n: number) {
 }
 
 /** Jump to (tx,ty) over `time`, slam on landing. */
-function leap(e: Enemy, tx: number, ty: number, time: number) {
+function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
+  e.slamR = r;
   e.state = 50;
   e.timer = time;
   e.aux = time;
@@ -538,7 +537,8 @@ function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
     run.fx.ring(e.x, e.y + e.r * 0.4, e.r * 0.5, e.r * 2.6, 0.5, '#ffffff', 8, false);
     run.fx.burst(e.x, e.y + e.r * 0.5, 22, { color: '#d9c7a0', speed: 260, size: 5, life: 0.5, layer: 0 });
     const p = run.player;
-    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r * 2.2) run.hurtPlayer(e.damage, e.x, e.y);
+    const R = e.slamR || e.r * 1.8;
+    if ((p.x - e.x) ** 2 + ((p.y - e.y) / 0.8) ** 2 < R * R) run.hurtPlayer(e.damage, e.x, e.y, 'slam:' + e.def.id);
     return true;
   }
   return false;
@@ -588,16 +588,16 @@ const PATTERNS: Record<string, Pattern> = {
       steer(e, 0, 0, dt, 6);
       if (a === 'spray') {
         if (first) { e.telegraph = 0.5; e.attackPose = 1.6; }
-        if (t > 0.5 && Math.floor((t - dt) * 8) !== Math.floor(t * 8)) aimed(run, e, 3, 0.5, 230, 'proj.e_ketchup');
+        if (t > 0.5 && Math.floor((t - dt) * 5) !== Math.floor(t * 5)) aimed(run, e, 3, 0.55, 190, 'proj.e_ketchup');
         return t > 1.6;
       }
       if (a === 'spiral') {
         if (first) { e.telegraph = 0.4; e.attackPose = 2.4; }
-        if (t > 0.4 && Math.floor((t - dt) * 12) !== Math.floor(t * 12)) {
+        if (t > 0.4 && Math.floor((t - dt) * 9) !== Math.floor(t * 9)) {
           const off = t * 3.2;
-          shoot(run, e, off, 170, 'proj.e_ketchup', e.damage * 0.5, 8);
-          shoot(run, e, off + Math.PI, 170, 'proj.e_ketchup', e.damage * 0.5, 8);
-          if (e.bossPhase) shoot(run, e, off + Math.PI / 2, 170, 'proj.e_ketchup', e.damage * 0.5, 8);
+          shoot(run, e, off, 160, 'proj.e_ketchup', e.damage * 0.4, 8);
+          shoot(run, e, off + Math.PI, 160, 'proj.e_ketchup', e.damage * 0.4, 8);
+          if (e.bossPhase) shoot(run, e, off + Math.PI / 2, 160, 'proj.e_ketchup', e.damage * 0.4, 8);
         }
         return t > 2.4;
       }
@@ -624,7 +624,7 @@ const PATTERNS: Record<string, Pattern> = {
         if (first) {
           const p = run.player;
           danger(run, p.x, p.y, e.r * 1.9, 0.9, 0);
-          leap(e, p.x, p.y, 0.9);
+          leap(e, p.x, p.y, 0.9, e.r * 1.9);
           e.attackPose = 0.9;
         }
         return true;
@@ -658,7 +658,7 @@ const PATTERNS: Record<string, Pattern> = {
         if (first) {
           const p = run.player;
           danger(run, p.x, p.y, e.r * 2, 1, 0);
-          leap(e, p.x, p.y, 1);
+          leap(e, p.x, p.y, 1, e.r * 2);
           e.attackPose = 1;
           run.schedule(1.02, () => {
             if (e.alive) for (let i = 0; i < 4; i++) hazard(run, 'cream', e.x + Math.cos(i * 1.57) * 60, e.y + Math.sin(i * 1.57) * 45, 40, 6, 0.4);
@@ -721,7 +721,7 @@ const PATTERNS: Record<string, Pattern> = {
         if (first) {
           const p = run.player;
           danger(run, p.x, p.y, e.r * 1.6, 1.1, 0);
-          leap(e, p.x, p.y, 1.1);
+          leap(e, p.x, p.y, 1.1, e.r * 1.6);
           e.attackPose = 1.1;
         }
         return true;
@@ -784,7 +784,7 @@ const PATTERNS: Record<string, Pattern> = {
       if (first) {
         const p = run.player;
         danger(run, p.x, p.y, e.r * 1.8, 0.95, 0);
-        leap(e, p.x, p.y, 0.95);
+        leap(e, p.x, p.y, 0.95, e.r * 1.8);
       }
       return true;
     });
@@ -894,7 +894,7 @@ const PATTERNS: Record<string, Pattern> = {
         if (first) {
           const p = run.player;
           danger(run, p.x, p.y, e.r * 1.7, 1, 0);
-          leap(e, p.x, p.y, 1);
+          leap(e, p.x, p.y, 1, e.r * 1.7);
         }
         return true;
       }

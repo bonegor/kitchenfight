@@ -170,8 +170,12 @@ function drawEnzo(ctx: Ctx, f: number) {
   line(ctx, [[hx + 0.5, hy + 8.2], [hx + 3.4, hy + 9.2], [hx + 6.4, hy + 8]], 1.1, '#7a2e22', true);
   moustache(ctx, hx + 3.6, hy + 5.8, 9.6);
 
-  // --- toque
-  toque(ctx, hx - 0.5, hy - 9.6, 1, -0.07);
+  // --- toque (squashed a touch so its puffy top stays inside the 92-unit-tall box)
+  ctx.save();
+  ctx.translate(hx - 0.5, hy - 9.6);
+  ctx.scale(1, 0.88);
+  toque(ctx, 0, 0, 1, -0.07);
+  ctx.restore();
 
   // --- red neckerchief (over the collar)
   shape(ctx, (c) => {

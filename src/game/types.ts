@@ -21,7 +21,7 @@ export interface Stats {
 
 export function baseStats(): Stats {
   return {
-    maxHp: 100,
+    maxHp: 120,
     recovery: 0,
     armor: 0,
     moveSpeed: 1,

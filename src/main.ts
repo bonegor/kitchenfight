@@ -1,10 +1,10 @@
 /**
  * KITCHEN FIGHT — app shell: boot, main loop, screen flow, attract mode.
  */
-import '@fontsource/lobster/400.css';
-import '@fontsource/lilita-one/400.css';
-import '@fontsource/playfair-display/400.css';
-import '@fontsource/playfair-display/400-italic.css';
+import '@fontsource/lobster/latin-400.css';
+import '@fontsource/lilita-one/latin-400.css';
+import '@fontsource/playfair-display/latin-400.css';
+import '@fontsource/playfair-display/latin-400-italic.css';
 import './styles/main.css';
 import './gfx/art/index';
 // the audio engine registers itself (optional at dev time)
@@ -247,6 +247,66 @@ class App {
     this.ui.showTitle();
   }
 
+  // ------------------------------------------------------------------ headless balance simulation (dev)
+
+  /** Simulate a run with a bot (no rendering). Returns per-minute stats. */
+  simulate(stageId: string, charId: string, seconds = 900, skill = 1) {
+    const st = stageById(stageId);
+    const ch = charById(charId);
+    const save: SaveData = JSON.parse(JSON.stringify(this.save));
+    let r!: Run;
+    let dead = false, won = false;
+    const pick = () => {
+      const cs = r.rollChoices(r.choiceCount());
+      const score = (c: import('./game/run').Choice) => {
+        let v = Math.random();
+        if (c.type === 'weapon') v += c.isNew ? (r.weapons.length < 4 ? 6 : -5) : 7.5;
+        if (c.type === 'passive') {
+          v += r.weapons.some((w) => w.def.evolve?.passive === c.id) ? 8 : 2;
+          if (['olio', 'espresso', 'sanmarzano', 'grembiule', 'macinapepe', 'minestrone'].includes(c.id)) v += 2.5;
+        }
+        return v;
+      };
+      cs.sort((a, b) => score(b) - score(a));
+      r.applyChoice(cs[0]);
+    };
+    const hooks: RunHooks = {
+      onLevelUp: () => {
+        while (r.pendingLevels > 0) { pick(); r.pendingLevels--; }
+        r.state = 'playing';
+      },
+      onChest: () => { r.state = 'playing'; },
+      onBoss: () => undefined,
+      onBossDefeated: () => undefined,
+      onGameOver: () => { dead = true; },
+      onVictory: () => { won = true; },
+      onRevive: () => undefined,
+      onToast: () => undefined,
+    };
+    r = new Run(st, ch, save, hooks);
+    r.fx.numbersEnabled = false;
+    r.autopilot = (rr) => {
+      const a = autopilot(rr);
+      return skill >= 1 ? a : { x: a.x * skill, y: a.y * skill };
+    };
+    const dt = 1 / 30;
+    const snaps: any[] = [];
+    let nextSnap = 60;
+    const t0 = performance.now();
+    while (!dead && !won && r.time < seconds) {
+      const p = r.player;
+      r.view.x0 = p.x - 550; r.view.x1 = p.x + 550; r.view.y0 = p.y - 310; r.view.y1 = p.y + 310;
+      r.world.update(r.view.x0, r.view.y0, r.view.x1, r.view.y1, dt);
+      r.update(dt);
+      if (r.state === 'dying') { for (let i = 0; i < 100 && r.state === 'dying'; i++) r.update(0.05); }
+      if (r.time >= nextSnap) {
+        nextSnap += 60;
+        snaps.push({ m: Math.round(r.time / 60), lvl: r.level, hp: Math.round(p.hp), maxHp: Math.round(r.stats.maxHp), kills: r.kills, alive: r.enemies.length, weapons: r.weapons.map((w) => w.def.id + ':' + w.level).join(' '), passives: r.passives.map((q) => q.id + ':' + q.level).join(' '), bosses: r.bosses.filter((b) => b.alive).map((b) => b.def.id + ' ' + Math.round((b.hp / b.maxHp) * 100) + '%').join(',') });
+      }
+    }
+    return { stage: stageId, char: charId, time: Math.round(r.time), dead, won, level: r.level, kills: r.kills, coins: r.coins, evolutions: r.evolutionsDone, ms: Math.round(performance.now() - t0), snaps, dmgTaken: Math.round(r.damageTaken), dmgBy: Object.fromEntries(Object.entries(r.dmgBy).map(([k, v]) => [k, Math.round(v)])), wdmg: r.weapons.map((w) => w.def.id + ':' + Math.round(w.damageDealt)).join(' ') };
+  }
+
   // ------------------------------------------------------------------ loop
 
   frame(now: number) {
@@ -290,34 +350,86 @@ class App {
   }
 }
 
-/** Title-screen autopilot: dodge crimes, chase ingredients, wander. */
+/** Autopilot (title screen + balance sims): circle-strafe crowds, dodge, grab ingredients. */
 function autopilot(r: Run): { x: number; y: number } {
   const p = r.player;
   let ax = 0, ay = 0;
+  let cx = 0, cy = 0, n = 0;
   for (const e of r.enemies) {
     if (!e.alive) continue;
     const dx = p.x - e.x, dy = p.y - e.y;
     const d2 = dx * dx + dy * dy;
-    if (d2 > 220 * 220 || d2 < 1) continue;
-    const w = 1 / d2;
-    ax += dx * w * 4000;
-    ay += dy * w * 4000;
+    if (d2 < 380 * 380) { cx += e.x; cy += e.y; n++; }
+    const danger = e.boss ? 170 : 75 + e.r;
+    if (d2 > danger * danger || d2 < 1) continue;
+    const d = Math.sqrt(d2);
+    const w = (danger - d) / danger;
+    ax += (dx / d) * w * 3.2;
+    ay += (dy / d) * w * 3.2;
+  }
+  for (const s of r.shots) {
+    if (!s.alive) continue;
+    const dx = p.x - s.x, dy = p.y - s.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > 160 * 160 || d2 < 1) continue;
+    // will it hit? closest approach along its path
+    const sv = Math.hypot(s.vx, s.vy) || 1;
+    const ux = s.vx / sv, uy = s.vy / sv;
+    const along = dx * ux + dy * uy;
+    if (along < 0) continue;
+    const px = dx - ux * along, py = dy - uy * along; // perpendicular offset from the path
+    const miss = Math.hypot(px, py);
+    if (miss > 34) continue;
+    const k = (34 - miss) / 34 * 2.6;
+    const pl = miss > 0.5 ? 1 / miss : 0;
+    ax += (px * pl || -uy) * k;
+    ay += (py * pl || ux) * k;
+  }
+  for (const e of r.enemies) {
+    if (!e.alive || e.telegraph <= 0 || e.def.behavior !== 'charger') continue;
+    const dx = p.x - e.x, dy = p.y - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > 320) continue;
+    ax += (-dy / d) * 2.2;
+    ay += (dx / d) * 2.2;
+  }
+  if (n) {
+    cx /= n; cy /= n;
+    const dx = p.x - cx, dy = p.y - cy;
+    const d = Math.hypot(dx, dy) || 1;
+    const want = 150;
+    const radial = (want - d) / want;
+    ax += (dx / d) * radial * 1.2 + (-dy / d) * 0.9;
+    ay += (dy / d) * radial * 1.2 + (dx / d) * 0.9;
   }
   let best = 1e12, tx = 0, ty = 0;
+  const hurt = p.hp < r.stats.maxHp * 0.6;
   for (const q of r.pickups) {
     if (!q.alive) continue;
-    const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
-    if (d < best && d < 340 * 340) { best = d; tx = q.x; ty = q.y; }
+    let d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+    if (hurt && (q.kind === 'cannolo' || q.kind === 'lasagna')) d *= 0.1;
+    if (q.kind === 'chest') d *= 0.3;
+    if (d < best && d < 260 * 260) { best = d; tx = q.x; ty = q.y; }
+  }
+  if (hurt && best > 120 * 120) {
+    for (const pr of r.world.visible) {
+      if (!pr.breakable || pr.hp <= 0) continue;
+      const d = ((pr.x - p.x) ** 2 + (pr.y - p.y) ** 2) * 0.5;
+      if (d < best) { best = d; tx = pr.x; ty = pr.y; }
+    }
   }
   if (best < 1e12) {
     const d = Math.sqrt(best) || 1;
-    ax += ((tx - p.x) / d) * 0.6;
-    ay += ((ty - p.y) / d) * 0.6;
+    ax += ((tx - p.x) / d) * 0.8;
+    ay += ((ty - p.y) / d) * 0.8;
   }
-  const wa = r.realTime * 0.25;
-  ax += Math.cos(wa) * 0.35;
-  ay += Math.sin(wa * 1.3) * 0.35;
-  const l = Math.hypot(ax, ay) || 1;
+  if (!n) {
+    const wa = r.realTime * 0.25;
+    ax += Math.cos(wa) * 0.5;
+    ay += Math.sin(wa * 1.3) * 0.5;
+  }
+  const l = Math.hypot(ax, ay);
+  if (l < 0.05) return { x: 0, y: 0 };
   return { x: ax / l, y: ay / l };
 }
 

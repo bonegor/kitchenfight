@@ -4,8 +4,8 @@
  * (icon.chest lives in items_pickups.ts with the picnic basket painter.)
  */
 import { Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, line, rgba, starPath } from '../painter';
-import { S, G, icon, goldGrad, goldBall, radial, linear, tube, inkSparkle } from './items_kit';
-import { fork, coinFace, heart, basilLeaf, chefKnife } from './items_objects';
+import { S, G, icon, goldGrad, radial, linear, tube, inkSparkle } from './items_kit';
+import { fork, coinFace, heart, basilLeaf } from './items_objects';
 
 function rot(ctx: Ctx, x: number, y: number, a: number, fn: () => void) {
   ctx.save();
@@ -144,12 +144,6 @@ icon('icon.banish', (ctx) => {
     c.moveTo(14.4, 0);
     c.arc(0, 0, 14.4, 0, Math.PI * 2, true);
   };
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,240,235,0.35)';
-  ctx.beginPath();
-  circlePath(ctx, 0, 0, 15);
-  ctx.fill();
-  ctx.restore();
   const bar = (c: Ctx) => {
     c.save();
     c.rotate(Math.PI / 4);
@@ -337,4 +331,3 @@ icon('icon.xp', (ctx) => {
   ctx.restore();
 });
 
-void goldBall; void chefKnife;

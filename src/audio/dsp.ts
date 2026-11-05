@@ -75,13 +75,19 @@ export class Slicer {
   private t0 = now();
   /** Longest uninterrupted slice observed (ms) — for diagnostics. */
   maxSlice = 0;
+  /** current phase label and the label of the longest slice (diagnostics) */
+  phase = '';
+  maxPhase = '';
   constructor(public budgetMs = 8) {}
   due(): boolean {
     return now() - this.t0 > this.budgetMs;
   }
   async yield(): Promise<void> {
     const d = now() - this.t0;
-    if (d > this.maxSlice) this.maxSlice = d;
+    if (d > this.maxSlice) {
+      this.maxSlice = d;
+      this.maxPhase = this.phase;
+    }
     await yieldToLoop();
     this.t0 = now();
   }

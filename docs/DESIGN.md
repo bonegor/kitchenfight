@@ -27,7 +27,7 @@ Dispensa** (the pantry).
 |---|-------|------|--------|
 | 1 | **La Cucina** — Trattoria kitchen | black/white checkered floor, steel counters, stoves with bubbling pots, copper pans, garlic braids, flour sacks, tomato crates | start |
 | 2 | **La Trattoria** — dining room at night | herringbone parquet, round tables with red/white checked cloths, candles in Chianti bottles, lemon trees, wine racks | win stage 1 |
-| 3 | **I Vicoli di Napoli** — Naples alleys at sunset→night | basalt cobblestones, Vespas, laundry lines overhead, fountains, street lamps, café tables, market stalls, pigeons | win stage 2 |
+| 3 | **I Vicoli di Napoli** — Naples alleys at sunset→night | basalt cobblestones, scooters, laundry lines overhead, fountains, street lamps, café tables, market stalls, pigeons | win stage 2 |
 | 4 | **La Food Court** — the crimes' lair | glossy linoleum, plastic tables, neon fast-food counters, soda machines, wet-floor signs, fluorescent light | win stage 3 |
 
 ## Characters
@@ -52,7 +52,7 @@ Dispensa** (the pantry).
 | **Pizza Volante** | spinning dough discs tossed up in arcs | San Marzano | **Pizza Celeste** — margheritas rain from the sky |
 | **Rotella** (pizza cutter) | wheel bouncing off the screen edges | Cornicello | **Ruota della Fortuna** — golden wheels, big crits |
 | **Peperoncino** | chillies burst into burning patches | Sale Grosso | **Inferno Calabrese** — fire trails + giant blazes |
-| **Moka** | moka pot lobbed into crowds, explodes in coffee steam | Vespa | **Moka Turbo** — chain explosions |
+| **Moka** | moka pot lobbed into crowds, explodes in coffee steam | Motorino | **Moka Turbo** — chain explosions |
 | **Spaghetti** | noodle lash chaining between nearby enemies | Macinapepe | **Tornado Cacio e Pepe** — spinning pasta tornado |
 | **Vesuvio** | lava rocks strike random enemies on screen | Grattugia | **Pompei** — meteor showers |
 | **Forma di Parmigiano** | huge cheese wheel rolls through everything | Salvadanaio | **Forma d'Oro** — golden wheels (Parmigiano is literally bank collateral in Emilia) |
@@ -70,7 +70,7 @@ Dispensa** (the pantry).
 | **Grattugia** (grater) | +10% Area |
 | **Semola di Grano Duro** | +10% Duration |
 | **Macinapepe** (pepper mill) | +1 Amount (max 2) |
-| **Vespa** (keys) | +10% Move speed |
+| **Motorino** (scooter keys) | +10% Move speed |
 | **Cornicello** (lucky horn) | +10% Luck |
 | **Ricettario della Nonna** | +8% Growth (XP) |
 | **Profumo di Ragù** | +25% Magnet radius |

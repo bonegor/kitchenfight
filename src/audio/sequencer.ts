@@ -134,7 +134,7 @@ export function parseMelody(ch: string, str: string, ctx: SectionCtx, o: MelOpts
   const vel = o.vel ?? 0.8;
   const shift = (o.oct ?? 0) * 12 + (o.tr ?? 0);
   const graceSec = 0.048;
-  for (const tok of str.split(/\s+/)) {
+  for (const tok of str.replace(/\|/g, ' | ').split(/\s+/)) {
     if (!tok) continue;
     if (tok === '|') {
       if (!o.free && Math.abs(t - barStart - ctx.barSteps) > 1e-6) ctx.warn(`${ch}: bar has ${t - barStart} steps (expected ${ctx.barSteps}) near "${str.slice(0, 40)}…" at step ${t}`);

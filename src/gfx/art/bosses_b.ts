@@ -9,5 +9,7 @@
  * The painters live in bosses_b_<id>.ts (shared helpers in bosses_b_kit.ts).
  */
 import './bosses_b_ananas';
+import './bosses_b_campanile';
+import './bosses_b_influencer';
 
 export {};

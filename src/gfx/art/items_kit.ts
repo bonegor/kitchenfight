@@ -7,9 +7,7 @@
  *   bright edge / glow / drop shadow (used for icons and projectiles).
  */
 import { defineSprite } from '../sprites';
-import {
-  Ctx, Pt, ShapeStyle, shape, group, INK, ellipsePath, circlePath, rgba, polyPath,
-} from '../painter';
+import { Ctx, Pt, ShapeStyle, shape, group, INK, ellipsePath, circlePath, rgba, polyPath, shade, light } from '../painter';
 
 // ---------------------------------------------------------------------------
 // Palette
@@ -412,21 +410,35 @@ export interface IconOpts {
   fit?: number | false;
 }
 
-/** Evolution backdrop: warm radial glow + rays + a thin ring. */
+/** Evolution backdrop: a radiant golden medallion (reads on dark AND light UIs). */
 export function evoBackdrop(ctx: Ctx, color = '#ffcf3f', rot = 0.2) {
-  softGlow(ctx, 0, 0, 24, color, 0.95);
-  rays(ctx, 0, 0, 4, 24, 16, '#fff6c8', 1, rot, 0.6);
-  softGlow(ctx, 0, 0, 13, '#fffbe8', 0.55);
+  // outer soft aura
+  softGlow(ctx, 0, 0, 24, color, 0.75);
+  // medallion disc
   ctx.save();
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = rgba('#fff6d0', 0.8);
   ctx.beginPath();
-  ellipsePath(ctx, 0, 0, 22, 22);
+  circlePath(ctx, 0, 0, 21.6);
+  const g = ctx.createRadialGradient(-4, -5, 1, 0, 0, 22);
+  g.addColorStop(0, rgba('#fffbe6', 0.98));
+  g.addColorStop(0.45, rgba(light(color, 0.18), 0.92));
+  g.addColorStop(1, rgba(shade(color, 0.16), 0.95));
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.clip();
+  // rays inside the disc
+  rays(ctx, 0, 0, 3, 24, 16, '#ffffff', 0.75, rot, 0.55);
+  ctx.restore();
+  // rim: dark gold outer line + bright inner bevel
+  ctx.save();
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = rgba(shade(color, 0.45), 0.95);
+  ctx.beginPath();
+  ellipsePath(ctx, 0, 0, 21.8, 21.8);
   ctx.stroke();
-  ctx.lineWidth = 0.6;
-  ctx.strokeStyle = rgba(color, 0.9);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgba('#fff8d8', 0.95);
   ctx.beginPath();
-  ellipsePath(ctx, 0, 0, 23.2, 23.2);
+  ellipsePath(ctx, 0, 0, 20.2, 20.2);
   ctx.stroke();
   ctx.restore();
 }

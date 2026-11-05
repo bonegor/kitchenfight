@@ -3,9 +3,13 @@
  * + icon.chest.
  */
 import { defineSprite } from '../sprites';
-import { Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng, rgba } from '../painter';
-import { S, G, icon, composite, goldGrad, goldBall, radial, linear, tube, sparkle, inkSparkle, softGlow, rays, CompositeOpts } from './items_kit';
-import { basilLeaf, tomatoBall, coinFace, euroSign, margherita, rollingPin, heart } from './items_objects';
+import {
+  Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng, rgba,
+} from '../painter';
+import {
+  S, G, icon, composite, goldGrad, radial, linear, tube, sparkle, inkSparkle, softGlow, rays, CompositeOpts,
+} from './items_kit';
+import { basilLeaf, tomatoBall, coinFace, euroSign, rollingPin } from './items_objects';
 import { toqueIcon } from './items_icons_m';
 
 function rot(ctx: Ctx, x: number, y: number, a: number, fn: () => void) {
@@ -74,9 +78,10 @@ function wicker(ctx: Ctx, build: (c: Ctx) => void, x0: number, y0: number, x1: n
 // ===========================================================================
 // Picnic basket (cesta da picnic). Designed ~40u wide; anchor = centre of art.
 // ===========================================================================
-export function basket(ctx: Ctx, o: { gold?: boolean; open?: boolean; ink?: number } = {}) {
+export function basket(ctx: Ctx, o: { gold?: boolean; open?: boolean; ink?: number; part?: 'all' | 'lid' | 'body' } = {}) {
   const gold = !!o.gold;
   const ink = o.ink ?? 2;
+  const part = o.part ?? 'all';
   const body = (c: Ctx) => {
     c.moveTo(-19, -3);
     c.lineTo(19, -3);
@@ -86,7 +91,7 @@ export function basket(ctx: Ctx, o: { gold?: boolean; open?: boolean; ink?: numb
     c.quadraticCurveTo(-16, 16, -16.5, 13);
     c.closePath();
   };
-  if (o.open) {
+  if (o.open && part !== 'body') {
     // lid swung open behind, showing its gingham lining
     const lid = (c: Ctx) => polyPath(c, [[-17.5, -6], [17.5, -6], [20, -27], [-20, -27]]);
     S(ctx, lid, { fill: gold ? '#c98a1c' : '#c99050', ink, shadow: 'none' });
@@ -101,6 +106,7 @@ export function basket(ctx: Ctx, o: { gold?: boolean; open?: boolean; ink?: numb
     // hinge straps
     for (const x of [-10, 10]) S(ctx, (c) => roundRectPath(c, x - 2, -8, 4, 4, 1), { fill: '#8a4a26', ink: ink * 0.6, shadow: 'none' });
   }
+  if (part === 'lid') return;
   // body
   S(ctx, body, { fill: gold ? '#e8a628' : '#d39a55', ink, shadow: 'none' });
   wicker(ctx, body, -20, -3, 20, 17, 3.2, 5.2, gold);
@@ -235,17 +241,6 @@ pickup('pickup.chest_gold', 50, 48, (ctx) => {
   sparkle(ctx, 18, 3, 2.8, '#ffffff', 0.9);
 }, { glow: '#ffd34a', glowR: 3, glowA: 0.85, edge: '#fff6c8' });
 
-/** Light pouring out of the open basket (drawn outside the composite). */
-function basketLight(ctx: Ctx, s: number) {
-  ctx.save();
-  ctx.scale(s, s);
-  // clip rays to a soft column so nothing hits the sprite box edge hard
-  rays(ctx, 0, -4, 3, 28, 14, '#fff6c8', 0.95, -Math.PI / 2 - 0.95, 0.42);
-  softGlow(ctx, 0, -10, 22, '#ffe58a', 0.8, 18);
-  softGlow(ctx, 0, -4, 14, '#ffffff', 0.9, 6);
-  ctx.restore();
-}
-
 defineSprite({
   id: 'ui.chest',
   w: 96,
@@ -253,32 +248,48 @@ defineSprite({
   res: 4,
   frames: 2,
   draw: (ctx, f) => {
-    const oy = f === 1 ? 14 : 4;
-    if (f === 1) {
-      softGlow(ctx, 0, -8, 46, '#ffd34a', 0.5);
-      ctx.save();
-      ctx.translate(0, oy);
-      basketLight(ctx, 1.95);
-      ctx.restore();
+    const sc = f === 1 ? 1.82 : 1.95;
+    if (f === 0) {
+      composite(ctx, (c) => {
+        c.save();
+        c.translate(0, 6);
+        c.scale(sc, sc);
+        basket(c, { ink: 1.5 });
+        c.restore();
+      }, { drop: true, dropA: 0.35, dropOff: [1.5, 2.5], dropBlur: 1.6 });
+      return;
     }
+    const oy = 17;
+    softGlow(ctx, 0, -6, 46, '#ffcf3a', 0.55);
     composite(ctx, (c) => {
       c.save();
       c.translate(0, oy);
-      c.scale(1.95, 1.95);
-      basket(c, { ink: 1.5, open: f === 1 });
+      c.scale(sc, sc);
+      basket(c, { ink: 1.5, open: true, part: 'lid' });
+      c.restore();
+    }, { drop: true, dropA: 0.3, dropOff: [1.5, 2.5], dropBlur: 1.6 });
+    // the light: god-rays fanning upward + a hot core in the opening
+    ctx.save();
+    ctx.translate(0, oy - 8);
+    rays(ctx, 0, 0, 4, 44, 16, '#fff6c8', 1, -Math.PI / 2 - 1.0, 0.45);
+    softGlow(ctx, 0, -6, 36, '#ffe68a', 0.85, 26);
+    softGlow(ctx, 0, 0, 30, '#ffffff', 0.95, 10);
+    ctx.restore();
+    composite(ctx, (c) => {
+      c.save();
+      c.translate(0, oy);
+      c.scale(sc, sc);
+      basket(c, { ink: 1.5, open: true, part: 'body' });
       c.restore();
     }, { drop: true, dropA: 0.35, dropOff: [1.5, 2.5], dropBlur: 1.6 });
-    if (f === 1) {
-      // light spilling over the front rim (on top)
-      ctx.save();
-      ctx.translate(0, oy);
-      softGlow(ctx, 0, -6, 30, '#fff8d8', 0.55, 8);
-      ctx.restore();
-      sparkle(ctx, -28, -30, 5, '#ffffff', 1);
-      sparkle(ctx, 30, -22, 4, '#ffffff', 0.95);
-      sparkle(ctx, 8, -40, 3.4, '#ffffff', 0.9);
-      sparkle(ctx, -10, -42, 2.6, '#ffffff', 0.8);
-    }
+    ctx.save();
+    ctx.translate(0, oy - 6);
+    softGlow(ctx, 0, 0, 34, '#fff8d8', 0.5, 7);
+    ctx.restore();
+    sparkle(ctx, -30, -26, 5, '#ffffff', 1);
+    sparkle(ctx, 31, -18, 4, '#ffffff', 0.95);
+    sparkle(ctx, 10, -38, 3.4, '#ffffff', 0.9);
+    sparkle(ctx, -12, -40, 2.6, '#ffffff', 0.85);
   },
 });
 
@@ -387,7 +398,7 @@ pickup('pickup.coin', 16, 16, (ctx, f) => {
   }
 }, { frames: 4 });
 
-pickup('pickup.coinbag', 26, 26, (ctx) => {
+pickup('pickup.coinbag', 28, 30, (ctx) => {
   ctx.translate(0, 1.5);
   // coins peeking out
   for (const [x, y, a] of [[-3, -7.5, -0.3], [2.5, -8.5, 0.25]] as [number, number, number][]) {
@@ -670,8 +681,8 @@ pickup('pickup.spumante', 32, 38, (ctx) => {
   sparkle(ctx, -11, -14, 2.6, '#ffffff', 0.95);
 });
 
-pickup('pickup.gelato', 24, 30, (ctx) => {
-  ctx.translate(0, 1.5);
+pickup('pickup.gelato', 26, 36, (ctx) => {
+  ctx.translate(0, 0.5);
   // cone
   const cone = (c: Ctx) => {
     c.moveTo(-6.5, -1);
@@ -822,7 +833,7 @@ defineSprite({
       rot(c, 16, 24, -2.2, () => basilLeaf(c, 13, { ink: 1.4 }));
       glint(c, -24, -30, 5, 1.6, -0.2, 0.55);
       // chef hat on top
-      toqueIcon(c, 0, -44, 1.55, 3);
+      toqueIcon(c, 0, -43, 1.38, 2.8);
       // tricolore ribbon banner across the bottom
       const band = (cc: Ctx) => {
         cc.moveTo(-62, 44);
@@ -889,4 +900,3 @@ defineSprite({
   },
 });
 
-void margherita; void heart; void goldBall; void G;

@@ -1,9 +1,11 @@
 /**
  * ICONS — passives ('icon.p.*'). 48×48, anchor centre, res 3 (auto-fitted).
  */
-import { Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng, rgba, shade, light } from '../painter';
-import { S, G, icon, goldGrad, goldBall, radial, linear, tube, inkSparkle, swoosh } from './items_kit';
-import { olive, basilLeaf, oliveLeaf, coinFace, calyx, puff } from './items_objects';
+import {
+  Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, line, speckle, glint, rng, rgba, shade, light,
+} from '../painter';
+import { S, icon, goldGrad, radial, linear, tube, inkSparkle } from './items_kit';
+import { olive, basilLeaf, oliveLeaf, coinFace, calyx } from './items_objects';
 
 function rot(ctx: Ctx, x: number, y: number, a: number, fn: () => void) {
   ctx.save();
@@ -725,46 +727,70 @@ function crystal(ctx: Ctx, x: number, y: number, s: number, a: number, ink = 1) 
 }
 
 icon('icon.p.sale', (ctx) => {
-  const jar = (c: Ctx) => {
-    c.moveTo(-12, -9);
-    c.lineTo(12, -9);
-    c.quadraticCurveTo(15, -9, 15, -5);
-    c.lineTo(15, 16);
-    c.quadraticCurveTo(15, 20, 11, 20);
-    c.lineTo(-11, 20);
-    c.quadraticCurveTo(-15, 20, -15, 16);
-    c.lineTo(-15, -5);
-    c.quadraticCurveTo(-15, -9, -12, -9);
+  // wooden scoop resting in the heap (behind)
+  rot(ctx, 9, -12, -0.7, () => {
+    S(ctx, (c) => roundRectPath(c, 0, -1.6, 13, 3.2, 1.6), { fill: '#d9a466', ink: 1.6, shadow: '#a8743c', shadowOffset: [-0.4, -1] });
+  });
+  // terracotta salt crock
+  const crock = (c: Ctx) => {
+    c.moveTo(-17, -3);
+    c.lineTo(17, -3);
+    c.bezierCurveTo(18, 6, 15, 17, 9, 19);
+    c.lineTo(-9, 19);
+    c.bezierCurveTo(-15, 17, -18, 6, -17, -3);
     c.closePath();
   };
-  S(ctx, jar, { fill: rgba('#e3f1fa', 0.95), ink: 2, shadow: 'none' });
+  // heap of coarse crystals (behind the rim)
+  const heap = (c: Ctx) => {
+    c.moveTo(-17, -2);
+    c.bezierCurveTo(-15, -15, -5, -21, 1, -20.5);
+    c.bezierCurveTo(9, -20, 15, -13, 17, -2);
+    c.closePath();
+  };
+  S(ctx, heap, { fill: '#f3f7fd', ink: 1.8, shadow: '#c9d4e6', shadowOffset: [-2.4, -2.4] });
   ctx.save();
   ctx.beginPath();
-  jar(ctx);
+  heap(ctx);
   ctx.clip();
-  // salt fill
-  ctx.fillStyle = '#eef3fb';
-  ctx.fillRect(-16, -3, 32, 24);
   const R = rng(9);
-  for (let i = 0; i < 26; i++) {
-    const x = -13 + R() * 26, y = -2 + R() * 21;
-    crystal(ctx, x, y, 1.6 + R() * 1.2, R() * 3, 0.6);
+  for (let i = 0; i < 22; i++) {
+    const t = R();
+    const x = -15 + t * 30;
+    const top = -2 - Math.sin(t * Math.PI) * 18;
+    const y = top + 1.5 + R() * (-top - 2);
+    crystal(ctx, x, y, 1.9 + R() * 1.3, R() * 3, 0.7);
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.beginPath();
-  roundRectPath(ctx, -12.5, -6, 2.4, 22, 1.2);
-  ctx.fill();
   ctx.restore();
-  // jar glass edge highlight
-  line(ctx, [[10.5, -4], [10.5, 14]], 1, 'rgba(255,255,255,0.7)');
-  // wooden lid
-  S(ctx, (c) => roundRectPath(c, -14, -15, 28, 7, 2.5), { fill: '#d9a466', ink: 1.9, shadow: '#a8743c', shadowOffset: [-1, -1.2], gloss: [{ x: -6, y: -13.5, rx: 6, ry: 0.9, alpha: 0.45 }] });
-  for (const x of [-7, 0, 7]) line(ctx, [[x, -14.5], [x, -8.5]], 0.6, rgba('#8a5530', 0.55));
+  S(ctx, crock, {
+    fill: radial(ctx, -6, 2, 24, [[0, '#f0a06a'], [0.55, '#d4763e'], [1, '#a4502a']]),
+    ink: 2, shadow: '#9a4424', shadowOffset: [-2.6, -1.8],
+    gloss: [{ x: -11, y: 5, rx: 1.6, ry: 4.5, rot: 0.2, alpha: 0.55 }],
+  });
+  // glazed band with little waves
+  ctx.save();
+  ctx.beginPath();
+  crock(ctx);
+  ctx.clip();
+  ctx.fillStyle = '#2f6fb8';
+  ctx.fillRect(-20, 3, 40, 4.4);
+  ctx.strokeStyle = '#e8f2ff';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  for (let x = -18; x <= 18; x += 1) {
+    const y = 5.2 + Math.sin(x * 0.9) * 1.1;
+    if (x === -18) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+  // rim
+  S(ctx, (c) => roundRectPath(c, -18.5, -5, 37, 4, 2), { fill: '#e08850', ink: 1.8, shadow: '#a4502a', shadowOffset: [-0.6, -0.9], gloss: [{ x: -8, y: -4.2, rx: 7, ry: 0.7, alpha: 0.5 }] });
   // spilled crystals
-  crystal(ctx, -18, 17, 2.6, 0.4, 1.1);
-  crystal(ctx, 18, 18.5, 2.3, 1.2, 1.1);
-  crystal(ctx, 14, 21, 1.7, 0.2, 1);
-  inkSparkle(ctx, 17, -14, 3, '#ffffff', 0.9);
+  crystal(ctx, -19, 17, 2.4, 0.4, 1.1);
+  crystal(ctx, 18, 18, 2.2, 1.2, 1.1);
+  crystal(ctx, 14.5, 21, 1.6, 0.2, 1);
+  inkSparkle(ctx, -9, -17, 3.2, '#ffffff', 0.9);
+  inkSparkle(ctx, 4, -22, 2.4, '#ffffff', 0.8);
 });
 
 // ---------------------------------------------------------------------------
@@ -822,5 +848,3 @@ icon('icon.p.salvadanaio', (ctx) => {
   });
 });
 
-// keep imports honest
-void G; void goldBall; void smoothPath; void swoosh; void puff;

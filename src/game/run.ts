@@ -299,6 +299,7 @@ export class Run {
     e.attackPose = 0;
     e.telegraph = 0;
     e.buff = 0;
+    e.slamR = 0;
     e.lastHit = {};
     this.enemies.push(e);
     if (e.boss) this.bosses.push(e);
@@ -515,11 +516,12 @@ export class Run {
       const last = this.pickups[this.pickups.length - 1];
       if (last && last.kind === 'chest') last.gold = e.boss;
       this.dropPickup('coinbag', e.x + 14, e.y, 1);
+      if (e.elite) this.dropPickup('cannolo', e.x - 14, e.y, 1);
       this.fx.shake(e.boss ? 0.6 : 0.25);
     } else {
       const r = this.rng.next();
       if (r < 0.012 * luck) this.dropPickup('coin', e.x, e.y, 1);
-      else if (r < 0.014 * luck) this.dropPickup('cannolo', e.x, e.y, 1);
+      else if (r < 0.0155 * luck) this.dropPickup('cannolo', e.x, e.y, 1);
     }
     onEnemyDeath(this, e);
     if (e.boss) this.bossDefeated(e);
@@ -550,6 +552,16 @@ export class Run {
     }
   }
 
+  private sayT = 0;
+  /** Chef exclamation: speech bubble + voice babble (rate limited). */
+  say(lines: string[], force = false, color = '#fff3d6') {
+    if (!force && this.realTime < this.sayT) return;
+    this.sayT = this.realTime + 5;
+    const text = lines[Math.floor(this.rng.next() * lines.length)];
+    this.fx.bubble(this.player, text, -78, color, 1.7, true);
+    if (this.fx.bubblesEnabled) audio.voice(text, this.char.voice);
+  }
+
   heal(amount: number) {
     const p = this.player;
     const before = p.hp;
@@ -561,18 +573,23 @@ export class Run {
     }
   }
 
-  hurtPlayer(dmg: number, sx: number, sy: number) {
+  dmgBy: Record<string, number> = {};
+
+  hurtPlayer(dmg: number, sx: number, sy: number, src = '?') {
     const p = this.player;
-    if (p.iframes > 0 || this.state !== 'playing' || p.hp <= 0) return;
+    if (p.iframes > 0 || this.state !== 'playing' || p.hp <= 0 || this.finalBossDefeated) return;
     const d = Math.max(1, dmg - this.stats.armor);
     p.hp -= d;
     this.damageTaken += d;
-    p.iframes = 0.45;
+    this.dmgBy[src] = (this.dmgBy[src] ?? 0) + d;
+    p.iframes = 0.5;
     p.hurtT = 0.3;
     this.fx.hurt = Math.min(1, this.fx.hurt + 0.5 + d / 30);
     this.fx.shake(0.18 + Math.min(0.3, d / 60));
     this.fx.number(p.x, p.y - 40, d, false, '#ff5a4f');
     this.sfx('player_hurt', { volume: 0.8 });
+    if (p.hp < this.stats.maxHp * 0.3 && this.rng.next() < 0.3) this.say(['Aiuto!', 'Mannaggia!', 'Ahia!', 'Porca miseria!'], false, '#ffd0c8');
+    else if (this.rng.next() < 0.06) this.say(['Che schifo!', 'Vergogna!', 'Ma che fai?!', 'Non si fa!'], false, '#ffd0c8');
     // push nearby enemies back a little so you can escape
     const dx = p.x - sx, dy = p.y - sy;
     const l = Math.hypot(dx, dy) || 1;
@@ -740,7 +757,7 @@ export class Run {
   // ======================================================================
 
   static xpFor(level: number) {
-    if (level < 20) return 5 + (level - 1) * 10;
+    if (level < 20) return 5 + (level - 1) * 9;
     if (level < 40) return 195 + (level - 20) * 13 + (level === 20 ? 600 : 0);
     return 455 + (level - 40) * 16 + (level === 40 ? 2400 : 0);
   }
@@ -994,6 +1011,7 @@ export class Run {
 
   onLevelFx() {
     const p = this.player;
+    if (this.rng.next() < 0.35) this.say(['Perfetto!', 'Bravissimo!', 'Buonissimo!', 'Delizioso!', 'Che bontà!', 'Si cucina!']);
     this.fx.ring(p.x, p.y, 10, 140, 0.6, '#ffd34d', 8);
     this.fx.burst(p.x, p.y - 20, 22, { colors: ['#ffd34d', '#ffffff', '#7dff8a'], speed: 260, size: 4, life: 0.8, additive: true });
     this.fx.screenFlash(0.25, '#fff4c2');
@@ -1075,6 +1093,7 @@ export class Run {
     const despawnD = Math.max(vw, vh) * 0.95 + 220;
     let contactDmg = 0;
     let csx = 0, csy = 0;
+    let csrc = '';
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (e.spawnT > 0) e.spawnT -= dt;
@@ -1129,10 +1148,11 @@ export class Run {
           contactDmg = e.damage;
           csx = e.x;
           csy = e.y;
+          csrc = e.def.id;
         }
       }
     }
-    if (contactDmg > 0) this.hurtPlayer(contactDmg, csx, csy);
+    if (contactDmg > 0) this.hurtPlayer(contactDmg, csx, csy, csrc);
     // separation
     for (const e of this.enemies) {
       if (!e.alive || e.def.flying) continue;
@@ -1437,10 +1457,10 @@ export class Run {
         continue;
       }
       if (s.z < 14) {
-        const rr = s.r + pl.r * 0.8;
+        const rr = s.r * 0.8 + pl.r * 0.6;
         if ((s.x - pl.x) ** 2 + (s.y - (pl.y - 8)) ** 2 < rr * rr) {
           s.alive = false;
-          this.hurtPlayer(s.damage, s.x, s.y);
+          this.hurtPlayer(s.damage, s.x, s.y, 'shot:' + s.sprite);
           this.fx.burst(s.x, s.y, 6, { color: '#e8312a', speed: 120, size: 3, life: 0.35 });
         }
       }
@@ -1469,7 +1489,7 @@ export class Run {
             a.tickT -= dt;
             if (a.tickT <= 0) {
               a.tickT = a.tick;
-              this.hurtPlayer(a.damage, a.x, a.y);
+              this.hurtPlayer(a.damage, a.x, a.y, 'area:' + a.kind);
             }
           }
         }
@@ -1594,6 +1614,7 @@ export class Run {
       case 'chest':
         this.chestQueue.push({ gold: p.gold });
         this.sfx('chest_drop');
+        this.say(['Mangia!', 'Che bella cesta!', 'Un regalo!'], true);
         break;
     }
   }

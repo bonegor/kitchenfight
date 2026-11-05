@@ -56,6 +56,7 @@ export class Enemy {
   attackPose = 0; // >0 shows attack sprite
   telegraph = 0; // red warning tint
   buff = 0; // speed buff timer (garlic aura)
+  slamR = 0; // boss leap impact radius
   /** last time hit per weapon slot (for persistent hitboxes) */
   lastHit: Record<number, number> = {};
 }

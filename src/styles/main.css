@@ -277,8 +277,10 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .choice .lv { font-size: 15px; color: var(--muted); }
 .choice .new { position: absolute; top: 26px; right: -34px; transform: rotate(35deg); background: var(--green); color: #fff; border: 2px solid var(--ink); padding: 2px 40px; font-size: 14px; }
 .choice .desc { font-family: var(--font-serif); font-size: 15px; line-height: 1.3; padding: 0 14px; color: var(--ink2); flex: 1; }
-.choice .evo-hint { font-size: 13px; color: var(--green-d); display: flex; align-items: center; gap: 4px; padding: 0 10px; }
-.choice .evo-hint img { width: 22px; height: 22px; }
+.choice .evo-hint { font-size: 13px; color: var(--green-d); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 10px 0; margin: 0 10px; border-top: 2px dashed rgba(31, 107, 57, 0.3); line-height: 1.25; }
+.choice .evo-hint span { display: inline-flex; align-items: center; gap: 2px; flex-wrap: wrap; justify-content: center; }
+.choice .evo-hint img { width: 20px; height: 20px; vertical-align: middle; }
+.choice .evo-hint b { color: var(--red-d); font-weight: normal; }
 .choice.banish-mode { outline: 4px dashed var(--red); }
 .lvl-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .pips { display: flex; gap: 3px; }

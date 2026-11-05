@@ -12,6 +12,21 @@ import { INSTRUMENTS, type InstDef, type Sample } from './instruments';
 import { applyReverb } from './reverb';
 import { compileSong, type SongDef, type TimedEv } from './sequencer';
 
+export interface RenderStats {
+  ms: number;
+  maxSliceMs: number;
+  maxPhase: string;
+  synthMs: number;
+  mixMs: number;
+  revMs: number;
+  events: number;
+  peak: number;
+  samplesSynth: number;
+  warnings: string[];
+  clipped: number;
+  prof: Record<string, { synth: number; n: number; mixed: number }>;
+}
+
 export interface RenderOut {
   sr: number;
   left: Float32Array;
@@ -21,15 +36,7 @@ export interface RenderOut {
   /** loop window in samples (when loop) */
   loopStart: number;
   loopEnd: number;
-  stats: {
-    ms: number;
-    maxSliceMs: number;
-    events: number;
-    peak: number;
-    samplesSynth: number;
-    warnings: string[];
-    clipped: number;
-  };
+  stats: RenderStats;
 }
 
 export interface RenderOpts {
@@ -44,45 +51,44 @@ export interface RenderOpts {
 
 /** seconds of material repeated after the loop end */
 export const LOOP_PAD = 4;
+/** release tails are mixed for this many time constants (≈ -40 dB) */
+const TAIL_TAU = 4.6;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
 // ---------------------------------------------------------------------------------------------
 
 const globalCache = new Map<string, Sample>();
+const naturalKeys = new Set<string>();
 let globalBytes = 0;
-const GLOBAL_LIMIT = 48 * 1024 * 1024;
+const GLOBAL_LIMIT = 40 * 1024 * 1024;
 
-function sampleBytes(s: Sample): number {
-  return (s.l.length + (s.r ? s.r.length : 0)) * 4;
-}
+const sampleBytes = (s: Sample): number => (s.l.length + (s.r ? s.r.length : 0)) * 4;
 
-function getSample(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, local: Map<string, Sample>): { s: Sample; made: boolean } {
-  const key = `${inst.id}|${midi}|${vr}|${lenSec}|${sr}`;
-  if (inst.kind === 'sustain') {
-    let s = local.get(key);
-    if (s) return { s, made: false };
-    s = inst.make(sr, midi, vr, lenSec);
-    local.set(key, s);
-    return { s, made: true };
-  }
-  let s = globalCache.get(key);
-  if (s) {
-    // refresh LRU position
+function cachePut(key: string, s: Sample, natural: boolean): void {
+  const old = globalCache.get(key);
+  if (old) {
+    globalBytes -= sampleBytes(old);
     globalCache.delete(key);
-    globalCache.set(key, s);
-    return { s, made: false };
   }
-  s = inst.make(sr, midi, vr, lenSec);
   globalCache.set(key, s);
+  if (natural) naturalKeys.add(key);
+  else naturalKeys.delete(key);
   globalBytes += sampleBytes(s);
   while (globalBytes > GLOBAL_LIMIT && globalCache.size > 1) {
     const first = globalCache.keys().next().value as string;
-    const old = globalCache.get(first);
+    const o = globalCache.get(first);
     globalCache.delete(first);
-    if (old) globalBytes -= sampleBytes(old);
+    naturalKeys.delete(first);
+    if (o) globalBytes -= sampleBytes(o);
   }
-  return { s, made: true };
+}
+
+/** Drop all cached instrument samples (e.g. on memory pressure). */
+export function clearSampleCache(): void {
+  globalCache.clear();
+  naturalKeys.clear();
+  globalBytes = 0;
 }
 
 const velAmp = (v: number): number => Math.pow(clamp(v, 0, 1.6), 1.6);
@@ -91,16 +97,14 @@ interface MixEv {
   st: number; // start sample (may be negative)
   gate: number; // samples
   inst: InstDef;
-  midi: number;
-  vr: number;
-  lenSec: number;
+  key: string;
   /** constant-power gains for mono samples */
   gl: number;
   gr: number;
   /** balance gains for stereo samples */
   bl: number;
   br: number;
-  /** reverb send gain */
+  /** reverb send gain (half-rate send) */
   gs: number;
   /** release: samples to mix after the gate, per-sample decay factor */
   relN: number;
@@ -110,6 +114,7 @@ interface MixEv {
 export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {}): Promise<RenderOut> {
   const t0 = performance.now();
   const slicer = opts.slicer ?? new Slicer(8);
+  slicer.phase = 'compile';
   const chInst = (ch: string): InstDef | undefined => {
     const c = song.channels[ch];
     return c ? INSTRUMENTS[c.inst] : undefined;
@@ -133,8 +138,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const rr = new Map<string, number>();
   for (const e of comp.events) {
     if (e.vr >= 0) continue;
-    const inst = chInst(e.ch);
-    const n = inst?.variants ?? 1;
+    const n = chInst(e.ch)?.variants ?? 1;
     const c = rr.get(e.ch) ?? 0;
     e.vr = c % n;
     rr.set(e.ch, c + 1);
@@ -152,69 +156,117 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     }
     const st = Math.round(e.t * sr) + shift;
     if (st >= length) return;
-    const gate = Math.max(1, Math.round(e.d * sr));
-    let lenSec = 0;
-    if (inst.kind === 'sustain') {
-      const need = e.d + inst.release * 6 + 0.05;
-      const base = inst.sustainLen ?? 2.5;
-      lenSec = need <= base ? base : Math.ceil(need * 2) / 2;
-    }
     const amp = velAmp(e.v) * dbToGain(chDef.gain);
     const pan = clamp((chDef.pan ?? 0) + e.pan, -1, 1);
     const a = ((pan + 1) * Math.PI) / 4;
+    const vr = Math.max(0, e.vr) % Math.max(1, inst.variants);
     mixEvs.push({
       st,
-      gate,
+      gate: Math.max(1, Math.round(e.d * sr)),
       inst,
-      midi: e.m,
-      vr: e.vr,
-      lenSec,
+      key: `${inst.id}|${e.m}|${vr}|${sr}`,
       gl: amp * Math.cos(a) * Math.SQRT2,
       gr: amp * Math.sin(a) * Math.SQRT2,
       bl: amp * (pan > 0 ? 1 - pan : 1),
       br: amp * (pan < 0 ? 1 + pan : 1),
-      gs: amp * (chDef.send ?? 0.15),
-      relN: Math.round(inst.release * 6 * sr),
+      gs: amp * (chDef.send ?? 0.15) * 0.5,
+      relN: Math.round(inst.release * TAIL_TAU * sr),
       relK: Math.exp(-1 / (Math.max(0.001, inst.release) * sr)),
     });
   };
   for (const e of comp.events) pushEv(e, 0);
   if (loop) {
+    const lf = song.loopFrom as number;
     const lim = comp.loopStart + LOOP_PAD + 0.001;
-    for (const e of comp.events) if (e.fi >= (song.loopFrom as number) && e.t < lim) pushEv(e, loopLenS);
+    for (const e of comp.events) if (e.fi >= lf && e.t < lim) pushEv(e, loopLenS);
     // sanity: nothing from before the loop may still sound at loopStart + P
     for (const e of comp.events) {
-      if (e.fi >= (song.loopFrom as number)) continue;
+      if (e.fi >= lf) continue;
       const inst = chInst(e.ch);
       if (!inst) continue;
-      const endT = inst.ring ? e.t + 3.5 : e.t + e.d + inst.release * 6;
-      if (endT > comp.loopStart + LOOP_PAD) warnings.push(`event in intro rings past the loop seam (ch ${e.ch} t=${e.t.toFixed(2)})`);
+      const endT = inst.ring ? e.t + 3.5 : e.t + e.d + inst.release * TAIL_TAU;
+      if (endT > comp.loopStart + LOOP_PAD) warnings.push(`event before the loop rings past the seam (ch ${e.ch} t=${e.t.toFixed(2)})`);
     }
   }
   mixEvs.sort((a, b) => a.st - b.st);
 
-  // output buffers
-  const [L, R] = opts.alloc ? opts.alloc(length) : [new Float32Array(length), new Float32Array(length)];
-  const send = new Float32Array(length);
+  // needed sample length per unique sample (seconds; 0 = natural length)
+  const need = new Map<string, number>();
+  for (const ev of mixEvs) {
+    if (ev.inst.ring) {
+      need.set(ev.key, 0);
+      continue;
+    }
+    const n = (ev.gate + ev.relN) / sr + 0.03;
+    const cur = need.get(ev.key);
+    if (cur === 0) continue;
+    if (cur === undefined || n > cur) need.set(ev.key, n);
+  }
 
-  // synthesize + mix
+  // output buffers (+ half-rate reverb send)
+  slicer.phase = 'alloc';
+  const [L, R] = opts.alloc ? opts.alloc(length) : [new Float32Array(length), new Float32Array(length)];
+  const send = new Float32Array((length >> 1) + 2);
+
+  // synthesize unique samples (yield between samples), then mix
+  slicer.phase = 'synth';
+  const tSynth = performance.now();
   const local = new Map<string, Sample>();
+  const prof: RenderStats['prof'] = {};
   let made = 0;
+  for (const [key, n] of need) {
+    const [id, midiS, vrS] = key.split('|');
+    const inst = INSTRUMENTS[id];
+    const lenSec = n === 0 ? 0 : Math.max(0.5, Math.ceil(n * 4) / 4);
+    const tt = performance.now();
+    if (inst.kind === 'sustain') {
+      local.set(key, inst.make(sr, +midiS, +vrS, Math.max(lenSec, 0.5)));
+      track(prof, id, performance.now() - tt);
+      made++;
+    } else {
+      const have = globalCache.get(key);
+      const ok = !!have && (naturalKeys.has(key) || (n !== 0 && have.l.length / sr >= lenSec - 0.001));
+      if (have && ok) {
+        globalCache.delete(key);
+        globalCache.set(key, have);
+      } else {
+        const smp = inst.make(sr, +midiS, +vrS, lenSec);
+        cachePut(key, smp, n === 0 || smp.l.length / sr < lenSec - 0.01);
+        track(prof, id, performance.now() - tt);
+        made++;
+      }
+    }
+    if (slicer.due()) await slicer.yield();
+  }
+  const synthMs = performance.now() - tSynth;
+
+  slicer.phase = 'mix';
+  const tMix = performance.now();
   for (let k = 0; k < mixEvs.length; k++) {
     const ev = mixEvs[k];
-    const { s, made: m } = getSample(ev.inst, sr, ev.midi, ev.vr, ev.lenSec, local);
-    if (m) made++;
+    const s = ev.inst.kind === 'sustain' ? local.get(ev.key) : globalCache.get(ev.key);
+    if (!s) {
+      warnings.push(`missing sample ${ev.key}`);
+      continue;
+    }
+    const pr = (prof[ev.inst.id] = prof[ev.inst.id] ?? { synth: 0, n: 0, mixed: 0 });
+    pr.mixed += ev.inst.ring ? s.l.length : Math.min(s.l.length, ev.gate + ev.relN);
     mixInto(L, R, send, s, ev);
     if ((k & 7) === 0 && slicer.due()) await slicer.yield();
   }
+  const mixMs = performance.now() - tMix;
   local.clear();
 
   // reverb
+  slicer.phase = 'reverb';
+  const tRev = performance.now();
   await applyReverb(send, L, R, sr, song.reverb, slicer);
+  const revMs = performance.now() - tRev;
 
-  // master: gain, DC high-pass, soft clip, peak
+  // master: gain, DC high-pass, soft clip (memoryless → seam-safe), peak
   let peak = 0;
   let clipped = 0;
+  slicer.phase = 'master';
   if (!opts.raw) {
     const g = dbToGain(song.gainDb);
     const hpL = Biquad.hp(sr, 22, 0.6);
@@ -265,13 +317,24 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     stats: {
       ms: performance.now() - t0,
       maxSliceMs: slicer.maxSlice,
+      maxPhase: slicer.maxPhase,
+      synthMs,
+      mixMs,
+      revMs,
       events: mixEvs.length,
       peak,
       samplesSynth: made,
       warnings,
       clipped,
+      prof,
     },
   };
+}
+
+function track(prof: RenderStats['prof'], id: string, ms: number): void {
+  const p = (prof[id] = prof[id] ?? { synth: 0, n: 0, mixed: 0 });
+  p.synth += ms;
+  p.n++;
 }
 
 function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, ev: MixEv): void {
@@ -288,48 +351,48 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const st = ev.st;
   const a = Math.max(i0, Math.min(gateEnd, iEnd));
   const k = ev.relK;
+  const gs = ev.gs;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
-    const gs = ev.gs * 0.5;
+    const gs2 = gs * 0.5;
     for (let i = i0; i < a; i++) {
       const vl = sl[i];
       const vr = sr2[i];
       const j = st + i;
       L[j] += vl * gL;
       R[j] += vr * gR;
-      S[j] += (vl + vr) * gs;
+      S[j >> 1] += (vl + vr) * gs2;
     }
     let env = 1;
     for (let i = a; i < iEnd; i++) {
       env *= k;
-      const e = iEnd - i < 64 ? (env * (iEnd - i)) / 64 : env;
+      const e = total - i < 64 ? (env * (total - i)) / 64 : env;
       const j = st + i;
       const vl = sl[i] * e;
       const vr = sr2[i] * e;
       L[j] += vl * gL;
       R[j] += vr * gR;
-      S[j] += (vl + vr) * gs;
+      S[j >> 1] += (vl + vr) * gs2;
     }
     return;
   }
   const gl = ev.gl;
   const gr = ev.gr;
-  const gs = ev.gs;
   for (let i = i0; i < a; i++) {
     const v = sl[i];
     const j = st + i;
     L[j] += v * gl;
     R[j] += v * gr;
-    S[j] += v * gs;
+    S[j >> 1] += v * gs;
   }
   let env = 1;
   for (let i = a; i < iEnd; i++) {
     env *= k;
-    const v = sl[i] * (iEnd - i < 64 ? (env * (iEnd - i)) / 64 : env);
+    const v = sl[i] * (total - i < 64 ? (env * (total - i)) / 64 : env);
     const j = st + i;
     L[j] += v * gl;
     R[j] += v * gr;
-    S[j] += v * gs;
+    S[j >> 1] += v * gs;
   }
 }

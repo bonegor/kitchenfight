@@ -141,7 +141,9 @@ def({
   evolve: { passive: 'grembiule', into: 'mattarello_nonna' },
   fire(run, w) {
     const s = w.stats(run);
-    const face = run.player.face;
+    const pl = run.player;
+    const near = run.nearestEnemy(pl.x, pl.y, 150 * s.area);
+    const face = near ? (near.x >= pl.x ? 1 : -1) : pl.face;
     volley(run, w, s.amount, s.interval, (i) => {
       const dir = i % 2 === 0 ? face : -face;
       const p = baseProj(run, w, s, 'proj.mattarello');

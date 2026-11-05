@@ -253,7 +253,6 @@ export class UI {
     }
     renderDetail(this.selectedChar);
     const el = h('div', { class: 'screen dim' },
-      this.coinsPill(),
       h('div', { class: 'paper panel' },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Scegli il tuo Chef'), h('span', { class: 'sub' }, 'Choose your chef')),
@@ -311,7 +310,6 @@ export class UI {
       grid.appendChild(card);
     }
     const el = h('div', { class: 'screen dim' },
-      this.coinsPill(),
       h('div', { class: 'paper panel' },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Scegli la Cucina'), h('span', { class: 'sub' }, `Chef: ${char.name} — choose where to fight`)),
@@ -506,7 +504,7 @@ export class UI {
       if (d.evolve) {
         const p = PASSIVES[d.evolve.passive];
         const evo = WEAPONS[d.evolve.into];
-        evoHint = h('div', { class: 'evo-hint' }, '✨ + ', img(icon(p.icon)), p.name, ' → ', h('b', {}, evo.name));
+        evoHint = h('div', { class: 'evo-hint' }, h('span', {}, '✨ Max level + ', img(icon(p.icon)), ' ', p.name), h('b', {}, '→ ' + evo.name));
       }
     } else if (c.type === 'passive') {
       const d = PASSIVES[c.id];
@@ -518,7 +516,7 @@ export class UI {
       const evolves = Object.values(WEAPONS).filter((w) => w.evolve?.passive === c.id);
       if (evolves.length) {
         const w = evolves[0];
-        evoHint = h('div', { class: 'evo-hint' }, '✨ Evolves ', img(icon(w.icon)), w.name);
+        evoHint = h('div', { class: 'evo-hint' }, h('span', {}, '✨ Evolves ', img(icon(w.icon)), ' ', w.name), h('b', {}, '→ ' + WEAPONS[w.evolve!.into].name));
       }
     } else if (c.type === 'coins') {
       name = 'Mancia';

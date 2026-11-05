@@ -1,0 +1,20 @@
+// Balance simulation: node scripts/sim.mjs <stage> <char> [seconds] [skill]
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+const [,, stage = 'kitchen', char = 'enzo', secs = '900', skill = '1'] = process.argv;
+const port = process.env.PORT || '5175';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+page.setDefaultTimeout(0);
+const logs = [];
+page.on('pageerror', (e) => logs.push('pageerror: ' + e.message + '\n' + e.stack));
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.press-start', { timeout: 120000 });
+const pu = process.env.POWERUPS ? JSON.parse(process.env.POWERUPS) : {};
+const res = await page.evaluate(([s, c, t, k, pu]) => { window.__kf.save.powerups = pu; return window.__kf.simulate(s, c, t, k); }, [stage, char, +secs, +skill, pu]);
+for (const sn of res.snaps) console.log(`m${sn.m} L${sn.lvl} hp ${sn.hp}/${sn.maxHp} kills ${sn.kills} alive ${sn.alive} | ${sn.weapons} | ${sn.passives} ${sn.bosses ? '| BOSS ' + sn.bosses : ''}`);
+delete res.snaps;
+console.log(JSON.stringify(res));
+if (logs.length) console.log(logs.slice(0, 5).join('\n'));
+await browser.close();

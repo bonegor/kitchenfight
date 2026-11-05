@@ -6,6 +6,7 @@ import type { Run } from './run';
 import type { StageDef, WaveMinute } from './stages';
 import { ENEMIES } from './enemies';
 import { TAU } from '../core/math';
+import { audio } from '../audio/audio';
 
 export class Director {
   private acc = 0;
@@ -62,6 +63,17 @@ export class Director {
   update(dt: number) {
     const run = this.run;
     const t = run.time;
+    if (run.finalBossDefeated) {
+      // the crimes flee: everything still alive panics and runs away
+      for (const e of run.enemies) if (e.alive && !e.boss && e.state !== 99) {
+        e.state = 99;
+        const a = Math.atan2(e.y - run.player.y, e.x - run.player.x);
+        e.ax = Math.cos(a) * 320;
+        e.ay = Math.sin(a) * 320;
+        e.timer = 5;
+      }
+      return;
+    }
     const w = this.wave();
     let alive = 0;
     for (const e of run.enemies) if (e.alive && !e.boss) alive++;
@@ -123,6 +135,8 @@ export class Director {
     run.fx.shake(0.5);
     run.sfx('boss_roar');
     run.fx.bubble(e, def.boss?.taunt ?? '!!!', -e.r * 2.3, '#ffe1d6', 2.6, true);
+    if (run.fx.bubblesEnabled) audio.voice(def.boss?.taunt ?? '!!!', 'boss');
+    run.schedule(2.8, () => run.say(['MAMMA MIA!', 'Non si fa!', 'Vergogna!', 'Che orrore!'], true, '#ffd0c8'));
     run.hooks.onBoss(e, final);
   }
 

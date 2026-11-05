@@ -29,14 +29,16 @@ const BASE_LINES = [1031, 1327, 1523, 1801, 2053, 2311, 2579, 2903]; // samples 
 const DIFF = [142, 107, 379, 277]; // Dattorro input diffusers @ 29.76 kHz
 const ER_TAPS: Array<[number, number, number]> = [
   // [ms, gainL, gainR]
-  [7.1, 0.55, 0.2],
-  [11.3, 0.2, 0.5],
-  [16.9, 0.42, 0.18],
-  [22.7, 0.16, 0.4],
-  [29.3, 0.32, 0.22],
-  [37.9, 0.2, 0.3],
+  [7.1, 0.6, 0.22],
+  [12.3, 0.22, 0.55],
+  [19.9, 0.45, 0.2],
+  [29.3, 0.2, 0.42],
 ];
 
+/**
+ * @param send half-rate mono send (send[k] ≈ input at sample 2k), consumed (filtered in place)
+ * @param L,R full-rate outputs (wet added in)
+ */
 export async function applyReverb(
   send: Float32Array,
   L: Float32Array,
@@ -45,19 +47,19 @@ export async function applyReverb(
   o: ReverbOpts,
   slicer: Slicer,
 ): Promise<void> {
-  const n = Math.min(send.length, L.length);
-  // 1. band-limit the send at full rate
-  const filters = [Biquad.hp(sr, o.hp ?? 220, 0.6), Biquad.lp(sr, o.lp ?? 7500, 0.6), Biquad.lp(sr, 10000, 0.7)];
+  const n = L.length;
+  const hsr = sr / 2;
+  const hn = Math.min(send.length, Math.ceil(n / 2) + 1);
+  // 1. band-limit the send (half rate)
+  const filters = [Biquad.hp(hsr, o.hp ?? 220, 0.6), Biquad.lp(hsr, Math.min(o.lp ?? 7500, hsr * 0.45), 0.6)];
   const BLK = 16384;
   for (const f of filters) {
-    for (let s = 0; s < n; s += BLK) {
-      f.run(send, s, Math.min(n, s + BLK));
+    for (let s = 0; s < hn; s += BLK) {
+      f.run(send, s, Math.min(hn, s + BLK));
       if (slicer.due()) await slicer.yield();
     }
   }
-  // 2. half-rate processing
-  const hsr = sr / 2;
-  const hn = Math.ceil(n / 2);
+  // 2. half-rate FDN
   const outL = new Float32Array(hn + 1);
   const outR = new Float32Array(hn + 1);
   const scale = o.size;
@@ -100,6 +102,7 @@ export async function applyReverb(
   const pbuf = new Float32Array(PSIZE);
   const er = o.er ?? 0.35;
   const taps = ER_TAPS.map(([ms, gl, gr]) => [Math.round((ms * scale * hsr) / 1000), gl * er, gr * er] as [number, number, number]);
+  const [[t0d, t0l, t0r], [t1d, t1l, t1r], [t2d, t2l, t2r], [t3d, t3l, t3r]] = taps;
   let w = 0;
   let pw = 0;
   let dw = 0;
@@ -114,16 +117,15 @@ export async function applyReverb(
   for (let s = 0; s < hn; s += BLK2) {
     const e = Math.min(hn, s + BLK2);
     for (let i = s; i < e; i++) {
-      const x = send[i * 2] ?? 0;
+      const x = send[i];
       pbuf[pw] = x;
       const xd = pbuf[(pw - pre) & pmask];
-      let el = 0;
-      let erR = 0;
-      for (let t = 0; t < taps.length; t++) {
-        const v = pbuf[(pw - pre - taps[t][0]) & pmask];
-        el += v * taps[t][1];
-        erR += v * taps[t][2];
-      }
+      const e0 = pbuf[(pw - pre - t0d) & pmask];
+      const e1 = pbuf[(pw - pre - t1d) & pmask];
+      const e2 = pbuf[(pw - pre - t2d) & pmask];
+      const e3 = pbuf[(pw - pre - t3d) & pmask];
+      const el = e0 * t0l + e1 * t1l + e2 * t2l + e3 * t3l;
+      const erR = e0 * t0r + e1 * t1r + e2 * t2r + e3 * t3r;
       pw = (pw + 1) & pmask;
       // input diffusion (allpass chain)
       let u = xd;
@@ -182,10 +184,11 @@ export async function applyReverb(
     for (let k = 0; k < 8; k++) if (Math.abs(lpState[k]) < 1e-20) lpState[k] = 0;
     if (slicer.due()) await slicer.yield();
   }
-  // 3. upsample (linear) + smoothing low-pass, add into L/R
+  // 3. upsample (linear interpolation + gentle one-pole smoothing), add into L/R
   const wet = o.wet ?? 1;
-  const sl = Biquad.lp(sr, 9500, 0.6);
-  const srr = Biquad.lp(sr, 9500, 0.6);
+  const a = 1 - Math.exp((-2 * Math.PI * 11000) / sr);
+  let yl = 0;
+  let yr = 0;
   for (let s = 0; s < n; s += BLK) {
     const e = Math.min(n, s + BLK);
     for (let i = s; i < e; i++) {
@@ -199,8 +202,10 @@ export async function applyReverb(
         vl = outL[h];
         vr = outR[h];
       }
-      L[i] += sl.process(vl) * wet;
-      R[i] += srr.process(vr) * wet;
+      yl += a * (vl - yl);
+      yr += a * (vr - yr);
+      L[i] += yl * wet;
+      R[i] += yr * wet;
     }
     if (slicer.due()) await slicer.yield();
   }

@@ -15,7 +15,7 @@ P({ id: 'minestrone', name: 'Minestrone', short: '+0.25 HP/s', desc: 'A bowl of 
 P({ id: 'grattugia', name: 'Grattugia', short: '+10% Area', desc: 'Grate generously. Attacks cover more ground.', icon: 'icon.p.grattugia', maxLevel: 5, mods: [{ stat: 'area', add: 0.1 }] });
 P({ id: 'semola', name: 'Semola di Grano Duro', short: '+10% Duration', desc: 'Durum-wheat semolina: holds its shape. Effects last longer.', icon: 'icon.p.semola', maxLevel: 5, mods: [{ stat: 'duration', add: 0.1 }] });
 P({ id: 'macinapepe', name: 'Macinapepe', short: '+1 Amount', desc: 'Another twist of the pepper mill. Fires extra projectiles.', icon: 'icon.p.macinapepe', maxLevel: 2, mods: [{ stat: 'amount', add: 1 }] });
-P({ id: 'vespa', name: 'Vespa', short: '+10% Speed', desc: 'Keys to a vintage scooter. Move faster.', icon: 'icon.p.vespa', maxLevel: 5, mods: [{ stat: 'moveSpeed', add: 0.1 }] });
+P({ id: 'vespa', name: 'Motorino', short: '+10% Speed', desc: 'Keys to a vintage Italian scooter. Move faster.', icon: 'icon.p.vespa', maxLevel: 5, mods: [{ stat: 'moveSpeed', add: 0.1 }] });
 P({ id: 'cornicello', name: 'Cornicello', short: '+10% Luck', desc: 'A red Neapolitan lucky horn. Never buy your own — but this one was a gift.', icon: 'icon.p.cornicello', maxLevel: 5, mods: [{ stat: 'luck', add: 0.1 }] });
 P({ id: 'ricettario', name: 'Ricettario della Nonna', short: '+8% Growth', desc: "Nonna's handwritten recipe book. Learn faster.", icon: 'icon.p.ricettario', maxLevel: 5, mods: [{ stat: 'growth', add: 0.08 }] });
 P({ id: 'profumo', name: 'Profumo di Ragù', short: '+25% Magnet', desc: 'Sunday ragù simmering for six hours. Ingredients come to you.', icon: 'icon.p.profumo', maxLevel: 5, mods: [{ stat: 'magnet', add: 0.25 }] });
@@ -47,7 +47,7 @@ export const POWERUPS: PowerupDef[] = [
   { id: 'speed', name: 'Sale Grosso', icon: 'icon.p.sale', desc: '+10% Projectile speed per rank', maxRank: 2, baseCost: 300, mods: [{ stat: 'speed', add: 0.1 }] },
   { id: 'duration', name: 'Semola', icon: 'icon.p.semola', desc: '+15% Duration per rank', maxRank: 2, baseCost: 300, mods: [{ stat: 'duration', add: 0.15 }] },
   { id: 'amount', name: 'Macinapepe', icon: 'icon.p.macinapepe', desc: '+1 Projectile', maxRank: 1, baseCost: 5000, mods: [{ stat: 'amount', add: 1 }] },
-  { id: 'move', name: 'Vespa', icon: 'icon.p.vespa', desc: '+5% Move speed per rank', maxRank: 2, baseCost: 300, mods: [{ stat: 'moveSpeed', add: 0.05 }] },
+  { id: 'move', name: 'Motorino', icon: 'icon.p.vespa', desc: '+5% Move speed per rank', maxRank: 2, baseCost: 300, mods: [{ stat: 'moveSpeed', add: 0.05 }] },
   { id: 'magnet', name: 'Profumo', icon: 'icon.p.profumo', desc: '+25% Magnet per rank', maxRank: 2, baseCost: 300, mods: [{ stat: 'magnet', add: 0.25 }] },
   { id: 'luck', name: 'Cornicello', icon: 'icon.p.cornicello', desc: '+10% Luck per rank', maxRank: 3, baseCost: 600, mods: [{ stat: 'luck', add: 0.1 }] },
   { id: 'growth', name: 'Ricettario', icon: 'icon.p.ricettario', desc: '+3% Growth per rank', maxRank: 5, baseCost: 900, mods: [{ stat: 'growth', add: 0.03 }] },

@@ -100,69 +100,129 @@ function osc(
   env: Float32Array,
   o: OscOpts = {},
 ): void {
+  oscMulti(out, out2, tbl, sr, f0, env, [{ ...o, gl: g1, gr: g2 }]);
+}
+
+interface Voice extends OscOpts {
+  gl: number;
+  gr: number;
+}
+
+/** Several detuned voices reading one table, summed per sample (one output write per channel). */
+function oscMulti(outL: Float32Array, outR: Float32Array | null, tbl: Float32Array, sr: number, f0: number, env: Float32Array, voices: Voice[]): void {
   const N = TABLE_SIZE;
   const mask = N - 1;
-  const len = Math.min(out.length, env.length);
-  const det = centsToRatio(o.detune ?? 0);
-  const vr = o.vibRate ?? 0;
-  const vd = (o.vibDepth ?? 0) * 0.000578;
-  const vdel = o.vibDelay ?? 0;
-  const vramp = Math.max(1e-3, o.vibRamp ?? 0.2);
-  const vph = o.vibPhase ?? 0;
-  const dr = (o.drift ?? 0) * 0.000578;
-  const drr = o.driftRate ?? 0.4;
-  let ph = (o.phase ?? 0) * N;
+  const nv = voices.length;
+  const ph = new Float64Array(nv);
+  const inc = new Float64Array(nv);
+  const gl = new Float64Array(nv);
+  const gr = new Float64Array(nv);
+  const det = new Float64Array(nv);
+  const vd = new Float64Array(nv);
+  const vdel = new Float64Array(nv);
+  const vramp = new Float64Array(nv);
+  const vrate = new Float64Array(nv);
+  const vph = new Float64Array(nv);
+  const dr = new Float64Array(nv);
+  const drr = new Float64Array(nv);
+  const pitchFns: Array<((t: number) => number) | undefined> = [];
+  for (let k = 0; k < nv; k++) {
+    const o = voices[k];
+    ph[k] = (o.phase ?? 0) * N;
+    gl[k] = o.gl;
+    gr[k] = o.gr;
+    det[k] = centsToRatio(o.detune ?? 0);
+    vd[k] = (o.vibDepth ?? 0) * 0.000578;
+    vdel[k] = o.vibDelay ?? 0;
+    vramp[k] = Math.max(1e-3, o.vibRamp ?? 0.2);
+    vrate[k] = TAU * (o.vibRate ?? 5);
+    vph[k] = o.vibPhase ?? 0;
+    dr[k] = (o.drift ?? 0) * 0.000578;
+    drr[k] = TAU * (o.driftRate ?? 0.4);
+    pitchFns.push(o.pitch);
+  }
+  const anyPitch = pitchFns.some((f) => !!f);
+  const k0 = (f0 * N) / sr;
+  const len = Math.min(outL.length, env.length);
   for (let b = 0; b < len; b += 32) {
     const be = Math.min(len, b + 32);
     const t = b / sr;
-    let ratio = det;
-    if (vd > 0 && t > vdel) {
-      const amt = Math.min(1, (t - vdel) / vramp);
-      ratio *= 1 + vd * amt * Math.sin(TAU * vr * t + vph);
+    for (let k = 0; k < nv; k++) {
+      let ratio = det[k];
+      if (vd[k] > 0 && t > vdel[k]) {
+        const amt = Math.min(1, (t - vdel[k]) / vramp[k]);
+        ratio *= 1 + vd[k] * amt * Math.sin(vrate[k] * t + vph[k]);
+      }
+      if (dr[k] > 0) ratio *= 1 + dr[k] * (0.6 * Math.sin(drr[k] * t + vph[k] * 1.7) + 0.4 * Math.sin(drr[k] * 2.31 * t + vph[k]));
+      if (anyPitch) {
+        const fn = pitchFns[k];
+        if (fn) ratio *= fn(t);
+      }
+      inc[k] = k0 * ratio;
     }
-    if (dr > 0) ratio *= 1 + dr * (0.6 * Math.sin(TAU * drr * t + vph * 1.7) + 0.4 * Math.sin(TAU * drr * 2.31 * t + vph));
-    if (o.pitch) ratio *= o.pitch(t);
-    const inc = (f0 * ratio * N) / sr;
-    if (out2) {
+    if (outR) {
       for (let i = b; i < be; i++) {
-        const ip = ph | 0;
-        const fr = ph - ip;
-        const i0 = ip & mask;
-        const a = tbl[i0];
-        const v = (a + (tbl[i0 + 1] - a) * fr) * env[i];
-        out[i] += v * g1;
-        out2[i] += v * g2;
-        ph += inc;
-        if (ph >= N) ph -= N;
+        let sl = 0;
+        let sr2 = 0;
+        for (let k = 0; k < nv; k++) {
+          const p = ph[k];
+          const ip = p | 0;
+          const i0 = ip & mask;
+          const a = tbl[i0];
+          const v = a + (tbl[i0 + 1] - a) * (p - ip);
+          sl += v * gl[k];
+          sr2 += v * gr[k];
+          const np = p + inc[k];
+          ph[k] = np >= N ? np - N : np;
+        }
+        const e = env[i];
+        outL[i] += sl * e;
+        outR[i] += sr2 * e;
       }
     } else {
       for (let i = b; i < be; i++) {
-        const ip = ph | 0;
-        const fr = ph - ip;
-        const i0 = ip & mask;
-        const a = tbl[i0];
-        out[i] += (a + (tbl[i0 + 1] - a) * fr) * env[i] * g1;
-        ph += inc;
-        if (ph >= N) ph -= N;
+        let sl = 0;
+        for (let k = 0; k < nv; k++) {
+          const p = ph[k];
+          const ip = p | 0;
+          const i0 = ip & mask;
+          const a = tbl[i0];
+          sl += (a + (tbl[i0 + 1] - a) * (p - ip)) * gl[k];
+          const np = p + inc[k];
+          ph[k] = np >= N ? np - N : np;
+        }
+        outL[i] += sl * env[i];
       }
     }
   }
 }
 
+/** constant-power pan gains for p in -1..1 */
+const panGains = (p: number): [number, number] => [Math.cos(((p + 1) * Math.PI) / 4), Math.sin(((p + 1) * Math.PI) / 4)];
+
 /** Attack/decay/sustain envelope array; smooth (raised-cosine) attack; fade at the very end. */
 function envADS(sr: number, len: number, att: number, dec: number, sus: number, peak = 1, attCurve = 1): Float32Array {
   const e = new Float32Array(len);
-  const na = Math.max(1, Math.round(att * sr));
+  const na = Math.min(len, Math.max(1, Math.round(att * sr)));
+  // raised cosine via phasor recurrence: y = 0.5 - 0.5 cos(pi x)
+  const d = Math.PI / na;
+  const cd = Math.cos(d);
+  const sd = Math.sin(d);
+  let c = 1;
+  let sn = 0;
+  for (let i = 0; i < na; i++) {
+    const y = 0.5 - 0.5 * c;
+    e[i] = peak * (attCurve === 1 ? y : attCurve === 2 ? y * y : y * Math.sqrt(y));
+    const nc = c * cd - sn * sd;
+    sn = sn * cd + c * sd;
+    c = nc;
+  }
   const kd = dec > 0 ? Math.exp(-1 / (dec * sr)) : 0;
-  let v = peak;
-  for (let i = 0; i < len; i++) {
-    if (i < na) {
-      const x = i / na;
-      e[i] = peak * Math.pow(0.5 - 0.5 * Math.cos(Math.PI * x), attCurve);
-    } else {
-      v = sus + (v - sus) * kd;
-      e[i] = v;
-    }
+  let diff = peak - sus;
+  for (let i = na; i < len; i++) {
+    diff *= kd;
+    if (diff < 1e-9 && diff > -1e-9) diff = 0;
+    e[i] = sus + diff;
   }
   const nf = Math.min(len, Math.round(0.012 * sr));
   for (let i = 0; i < nf; i++) e[len - 1 - i] *= i / nf;
@@ -194,6 +254,9 @@ function normalizeRms(s: Sample, sr: number, target: number, win = 0.5): Sample 
 function eq(buf: Float32Array, filters: Biquad[]): void {
   for (const f of filters) f.run(buf);
 }
+
+/** requested length (s) capped at the natural length; 0 = natural */
+const want = (natural: number, lenSec: number): number => (lenSec > 0 ? Math.min(natural, Math.max(0.15, lenSec)) : natural);
 
 const seedOf = (id: string, midi: number, v: number): number => hashStr(id) ^ Math.imul(midi + 1, 2654435761) ^ Math.imul(v + 7, 40503);
 
@@ -260,12 +323,12 @@ function accordion(id: string, bright: number, reeds: number[], spread: number, 
       const l = new Float32Array(len);
       const r = new Float32Array(len);
       const rng = new Rng(seedOf(id, midi, 0));
-      reeds.forEach((c, i) => {
+      const voices: Voice[] = reeds.map((c, i) => {
         const p = reeds.length === 1 ? 0 : (i / (reeds.length - 1)) * 2 - 1; // -1..1
-        const gl = Math.cos(((p * spread + 1) * Math.PI) / 4);
-        const gr = Math.sin(((p * spread + 1) * Math.PI) / 4);
-        osc(l, r, gl, gr, tbl, sr, f0, env, { detune: c, phase: rng.next(), drift: 1.5, driftRate: 0.3 + 0.2 * i, vibPhase: rng.next() * 6 });
+        const [gl, gr] = panGains(p * spread);
+        return { gl, gr, detune: c, phase: rng.next(), drift: 1.5, driftRate: 0.3 + 0.2 * i, vibPhase: rng.next() * 6 };
       });
+      oscMulti(l, r, tbl, sr, f0, env, voices);
       return normalizeRms({ l, r }, sr, 0.18);
     },
   };
@@ -289,11 +352,11 @@ function stringsInst(id: string, attack: number, stab: boolean): InstDef {
       const rng = new Rng(seedOf(id, midi, 0));
       const dets = [-9, -3.5, 3.5, 9];
       const rates = [4.9, 5.35, 5.8, 6.2];
-      dets.forEach((c, i) => {
-        const p = (i / 3) * 2 - 1;
-        const gl = Math.cos(((p * 0.75 + 1) * Math.PI) / 4);
-        const gr = Math.sin(((p * 0.75 + 1) * Math.PI) / 4);
-        osc(l, r, gl, gr, tbl, sr, f0, env, {
+      oscMulti(l, r, tbl, sr, f0, env, dets.map((c, i) => {
+        const [gl, gr] = panGains(((i / 3) * 2 - 1) * 0.75);
+        return {
+          gl,
+          gr,
           detune: c,
           phase: rng.next(),
           vibRate: rates[i],
@@ -303,8 +366,8 @@ function stringsInst(id: string, attack: number, stab: boolean): InstDef {
           vibPhase: rng.next() * TAU,
           drift: 2,
           driftRate: 0.25 + 0.1 * i,
-        });
-      });
+        };
+      }));
       return normalizeRms({ l, r }, sr, 0.17, stab ? 0.15 : 0.6);
     },
   };
@@ -348,12 +411,12 @@ function choir(id: string, vowel: 'a' | 'o'): InstDef {
       const l = new Float32Array(len);
       const r = new Float32Array(len);
       const rng = new Rng(seedOf(id, midi, 0));
-      const dets = [-11, -4, 3, 10, 0];
-      dets.forEach((c, i) => {
-        const p = i === 4 ? 0 : (i / 3) * 2 - 1;
-        const gl = Math.cos(((p * 0.8 + 1) * Math.PI) / 4);
-        const gr = Math.sin(((p * 0.8 + 1) * Math.PI) / 4);
-        osc(l, r, gl, gr, tbl, sr, f0, env, {
+      const dets = [-11, -4, 3, 10];
+      oscMulti(l, r, tbl, sr, f0, env, dets.map((c, i) => {
+        const [gl, gr] = panGains(((i / 3) * 2 - 1) * 0.8);
+        return {
+          gl,
+          gr,
           detune: c,
           phase: rng.next(),
           vibRate: 4.8 + 0.35 * i,
@@ -363,8 +426,8 @@ function choir(id: string, vowel: 'a' | 'o'): InstDef {
           vibPhase: rng.next() * TAU,
           drift: 5,
           driftRate: 0.3 + 0.13 * i,
-        });
-      });
+        };
+      }));
       // breath: band-limited noise around F2 for air
       const nr = new Rng(seedOf(id, midi, 3));
       const bp = new Svf(sr, vowel === 'a' ? 1200 : 800, 2.5);
@@ -458,8 +521,8 @@ const tuba: InstDef = {
     const soft = table('tubaS', tubaTimbre(950), sr, f0, 6000);
     const hard = table('tubaH', tubaTimbre(2100), sr, f0, 8000);
     const envS = envADS(sr, len, 0.018, 0.25, 0.8, 1, 1);
-    const envH = new Float32Array(len);
-    for (let i = 0; i < len; i++) envH[i] = envS[i] * 0.8 * Math.exp(-i / (0.045 * sr));
+    const envH = new Float32Array(Math.min(len, Math.round(0.25 * sr)));
+    for (let i = 0; i < envH.length; i++) envH[i] = envS[i] * 0.8 * Math.exp(-i / (0.045 * sr));
     const l = new Float32Array(len);
     const scoop = (t: number) => centsToRatio(-40 * Math.exp(-t / 0.028));
     osc(l, null, 1, 0, soft, sr, f0, envS, { pitch: scoop });
@@ -545,16 +608,10 @@ function synthPad(id: string, cutoff: number, wobble: number): InstDef {
       const l = new Float32Array(len);
       const r = new Float32Array(len);
       const rng = new Rng(seedOf(id, midi, 0));
-      [-14, -7, 0, 7, 14].forEach((c, i) => {
-        const p = (i / 4) * 2 - 1;
-        osc(l, r, Math.cos(((p * 0.9 + 1) * Math.PI) / 4), Math.sin(((p * 0.9 + 1) * Math.PI) / 4), tbl, sr, f0, env, {
-          detune: c,
-          phase: rng.next(),
-          drift: 3 + wobble,
-          driftRate: 0.2 + 0.11 * i,
-          vibPhase: rng.next() * 6,
-        });
-      });
+      oscMulti(l, r, tbl, sr, f0, env, [-12, -4, 4, 12].map((c, i) => {
+        const [gl, gr] = panGains(((i / 3) * 2 - 1) * 0.9);
+        return { gl, gr, detune: c, phase: rng.next(), drift: 3 + wobble, driftRate: 0.2 + 0.11 * i, vibPhase: rng.next() * 6 };
+      }));
       return normalizeRms({ l, r }, sr, 0.15, 1.0);
     },
   };
@@ -592,9 +649,9 @@ const mandolin: InstDef = {
   variants: 2,
   release: 0.035,
   gate: 1,
-  make(sr, midi, v) {
+  make(sr, midi, v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(1.5 * sr);
+    const len = Math.round(want(1.5, lenSec) * sr);
     const out = new Float32Array(len);
     const t60 = clamp(1.3 * Math.pow(440 / f, 0.55), 0.35, 2.4);
     const seed = seedOf('mandolin', midi, v);
@@ -618,9 +675,9 @@ const guitar: InstDef = {
   variants: 2,
   release: 0.12,
   gate: 1,
-  make(sr, midi, v) {
+  make(sr, midi, v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(2.6 * sr);
+    const len = Math.round(want(2.6, lenSec) * sr);
     const out = new Float32Array(len);
     const t60 = clamp(3.2 * Math.pow(196 / f, 0.45), 0.9, 4.5);
     ksString(out, 0, sr, f, { t60, damp: 0.3 + 0.04 * v, exciteHz: v ? 2000 : 2600, pick: 0.17 + 0.03 * v, seed: seedOf('guitar', midi, v) });
@@ -636,9 +693,9 @@ const harpsichord: InstDef = {
   variants: 1,
   release: 0.05,
   gate: 1,
-  make(sr, midi) {
+  make(sr, midi, _v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(2.4 * sr);
+    const len = Math.round(want(2.4, lenSec) * sr);
     const out = new Float32Array(len);
     const t60 = clamp(2.6 * Math.pow(262 / f, 0.5), 0.6, 5);
     const seed = seedOf('harpsi', midi, 0);
@@ -656,9 +713,9 @@ const pizz: InstDef = {
   variants: 2,
   release: 0.06,
   gate: 1,
-  make(sr, midi, v) {
+  make(sr, midi, v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(1.1 * sr);
+    const len = Math.round(want(1.1, lenSec) * sr);
     const out = new Float32Array(len);
     const t60 = clamp(0.75 * Math.pow(330 / f, 0.3), 0.25, 1.1);
     const seed = seedOf('pizz', midi, v);
@@ -676,9 +733,9 @@ const uprightBass: InstDef = {
   variants: 2,
   release: 0.07,
   gate: 0.9,
-  make(sr, midi, v) {
+  make(sr, midi, v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(1.8 * sr);
+    const len = Math.round(want(1.8, lenSec) * sr);
     const out = new Float32Array(len);
     ksString(out, 0, sr, f, { t60: 1.7, damp: 0.42, exciteHz: 850 + 150 * v, pick: 0.21, seed: seedOf('ubass', midi, v) });
     // body thump at the fundamental
@@ -699,9 +756,9 @@ const synthBass: InstDef = {
   variants: 1,
   release: 0.025,
   gate: 0.8,
-  make(sr, midi) {
+  make(sr, midi, _v, lenSec) {
     const f0 = mtof(midi);
-    const len = Math.round(0.9 * sr);
+    const len = Math.round(want(0.9, lenSec) * sr);
     const saw = table('saw', sawTimbre, sr, f0, 12000);
     const sq = table('square', squareTimbre, sr, f0, 12000);
     const env = envADS(sr, len, 0.003, 0.18, 0.7, 1, 1);
@@ -728,9 +785,9 @@ const epiano: InstDef = {
   variants: 1,
   release: 0.18,
   gate: 1,
-  make(sr, midi) {
+  make(sr, midi, _v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(2.6 * sr);
+    const len = Math.round(want(2.6, lenSec) * sr);
     const l = new Float32Array(len);
     const r = new Float32Array(len);
     let pc = 0;
@@ -767,9 +824,9 @@ const roboArp: InstDef = {
   variants: 1,
   release: 0.02,
   gate: 0.7,
-  make(sr, midi) {
+  make(sr, midi, _v, lenSec) {
     const f0 = mtof(midi);
-    const len = Math.round(0.4 * sr);
+    const len = Math.round(want(0.4, lenSec) * sr);
     const sq = table('square', squareTimbre, sr, f0, 9000);
     const env = envADS(sr, len, 0.002, 0.07, 0.25, 1, 1);
     const raw = new Float32Array(len);
@@ -823,9 +880,9 @@ const vibes: InstDef = {
   variants: 1,
   release: 0.25,
   gate: 1,
-  make(sr, midi) {
+  make(sr, midi, _v, lenSec) {
     const f = mtof(midi);
-    const len = Math.round(2.8 * sr);
+    const len = Math.round(want(2.8, lenSec) * sr);
     const l = new Float32Array(len);
     addPartials(l, 0, sr, [
       { f, amp: 1, t60: 3.2 },
@@ -1083,15 +1140,17 @@ const crash: InstDef = {
     const l = new Float32Array(len);
     const r = new Float32Array(len);
     const rng = new Rng(31337);
-    const fs = [377, 553, 707, 921, 1187, 1433, 1801];
+    const kd = Math.exp(-1 / (0.55 * sr));
+    let e = 1;
     for (let i = 0; i < len; i++) {
-      const t = i / sr;
-      let m = 0;
-      for (let k = 0; k < fs.length; k++) m += Math.sin(TAU * fs[k] * 5.3 * t + k);
-      const e = Math.exp(-t / 0.55) * Math.min(1, t / 0.002);
-      l[i] = (rng.bi() * 0.8 + m * 0.05) * e;
-      r[i] = (rng.bi() * 0.8 + m * 0.05) * e;
+      const a = e * Math.min(1, i / (0.002 * sr));
+      l[i] = rng.bi() * 0.8 * a;
+      r[i] = rng.bi() * 0.8 * a;
+      e *= kd;
     }
+    const metal = [377, 553, 707, 921, 1187, 1433, 1801].map((f, k) => ({ f: f * 5.3, amp: 0.05, t60: 1.6, phase: k }));
+    addPartials(l, 0, sr, metal);
+    addPartials(r, 0, sr, metal.map((p) => ({ ...p, phase: (p.phase ?? 0) + 1.3 })));
     const fl = [Biquad.hp(sr, 3500, 0.7), Biquad.peak(sr, 8000, 0.8, 3), Biquad.highShelf(sr, 12000, -3)];
     const fr = [Biquad.hp(sr, 3500, 0.7), Biquad.peak(sr, 8000, 0.8, 3), Biquad.highShelf(sr, 12000, -3)];
     eq(l, fl);

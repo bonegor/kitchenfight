@@ -196,8 +196,8 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
   for (const side of [-1, 1]) {
     const lift = idle ? Math.max(0, Math.sin(ph + (side < 0 ? 0 : Math.PI))) * 4 : wind ? 0 : side > 0 ? 3 : 0;
     const fx = side * (wind ? 21 : 17) + (idle ? Math.cos(ph + (side < 0 ? 0 : Math.PI)) * 3 : 0);
-    const fy = 42 - lift;
-    inkLine(ctx, [[side * 14, 32], [fx, fy - 2]], 5, '#3b2a30', false, 2);
+    const fy = 41.4 - lift;
+    inkLine(ctx, [[side * 14, 24], [fx, fy - 2]], 5, '#3b2a30', false, 2);
     shape(ctx, (c) => ellipsePath(c, fx + side * 2.6 + 2, fy + 1.4, 8.2, 4.4), { fill: '#241a1f', ink: 2.2, shadow: 'none', gloss: [{ x: fx + side * 2.6, y: fy - 0.2, rx: 3, ry: 1.2, alpha: 0.45 }] });
     shape(ctx, (c) => roundRectPath(c, fx - 4.4, fy - 6.4, 8.8, 5.6, 2), { fill: K_GLOVE, ink: 1.8, shadow: K_GLOVE_SH, shadowOffset: [-1.4, -1] });
     ball(ctx, fx + 2.6, fy - 3.6, 0.9, '#2b2230', '#100a10', 0.6, 0.4);
@@ -207,7 +207,7 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
   const sx = wind ? 1.08 : atk ? 0.92 : 1 + 0.014 * c4;
   const sy = wind ? 0.89 : atk ? 1.07 : 1 - 0.016 * c4;
   ctx.save();
-  ctx.translate(0, 38);
+  ctx.translate(0, 32);
   ctx.scale(sx, sy);
   ctx.translate(0, -38);
 
@@ -369,9 +369,9 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
   ctx.restore();
 
   // --- top hat (pops off on the attack)
-  const hatLift = wind ? -4 + (f % 2) : atk ? -40 : 0.8 * Math.max(0, -c4);
-  const hatTilt = wind ? 0.02 : atk ? 0.42 : 0.08 + s * 0.02;
-  const topY = 38 - (38 + 76) * (wind ? 0.89 : atk ? 1.07 : 1 - 0.016 * c4);
+  const hatLift = wind ? -4 + (f % 2) : atk ? -14 : 0.8 * Math.max(0, -c4);
+  const hatTilt = wind ? 0.02 : atk ? -0.55 : 0.08 + s * 0.02;
+  const topY = 32 - (38 + 76) * (wind ? 0.89 : atk ? 1.07 : 1 - 0.016 * c4);
   if (atk) {
     // SPLURT: ketchup jet from the nozzle
     const jet: Pt[] = [[0, topY - 8], [6, topY - 26], [20, topY - 40], [38, topY - 46], [54, topY - 44]];
@@ -383,34 +383,35 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
       shape(ctx, (c) => circlePath(c, dx, topY + dy + 8, r), { fill: K_SAUCE, ink: 2, shadow: 'none', gloss: [{ x: dx - r * 0.3, y: topY + dy + 8 - r * 0.3, rx: r * 0.35, ry: r * 0.2, alpha: 0.6 }] });
     }
   }
-  topHat(ctx, atk ? -14 : 0, topY - 1 + hatLift, hatTilt, 1);
+  topHat(ctx, atk ? -34 : 0, topY - 1 + hatLift, hatTilt, 1);
+  if (atk) effortMarks(ctx, -34, topY - 30, 34, 1.9, 3.1, 3, 8, 2.4);
 
   // --- near arm + cane
   if (wind) {
     // cane raised high, about to strike
-    hoseArm(ctx, [[40, -14 * 0.89 + 4], [58, -30], [62, -52]]);
+    hoseArm(ctx, [[40, -14], [58, -36], [62, -58]]);
     ctx.save();
-    ctx.translate(62, -52);
+    ctx.translate(62, -58);
     ctx.rotate(-0.5);
     inkLine(ctx, [[0, 0], [0, -46]], 3.6, '#2a2230', false, 2.2);
     ball(ctx, 0, 6, 5, K_GOLD, K_GOLD_SH, 2.2, 0.8);
     shape(ctx, (c) => roundRectPath(c, -2.6, -50, 5.2, 6, 1.4), { fill: '#e8e4dc', ink: 2, shadow: 'none' });
     ctx.restore();
-    glove(ctx, 62, -52, 7.2, -0.2);
-    effortMarks(ctx, 50, -96, 22, -2.2, -0.6, 3, 6, 2.2);
+    glove(ctx, 62, -58, 7.2, -0.2);
+    effortMarks(ctx, 50, -100, 22, -2.2, -0.6, 3, 6, 2.2);
   } else if (atk) {
     // cane thrust forward: "Charge!"
-    hoseArm(ctx, [[40, -12], [56, -16], [66, -26]]);
-    inkLine(ctx, [[60, -18], [74, -44]], 3.6, '#2a2230', false, 2.2);
-    ball(ctx, 62, -22, 5, K_GOLD, K_GOLD_SH, 2.2, 0.8);
-    glove(ctx, 66, -26, 7, -0.6);
+    hoseArm(ctx, [[40, -18], [56, -22], [64, -32]]);
+    inkLine(ctx, [[58, -24], [70, -50]], 3.6, '#2a2230', false, 2.2);
+    ball(ctx, 60, -28, 5, K_GOLD, K_GOLD_SH, 2.2, 0.8);
+    glove(ctx, 64, -32, 7, -0.6);
   } else {
     const tap = f === 1 ? 4 : f === 2 ? 1.5 : 0;
-    const hx = 58, hy = 8 - tap;
-    hoseArm(ctx, [[41, -12], [58 + s, -6], [hx, hy]]);
-    inkLine(ctx, [[hx + 2, hy - 2], [hx + 7, 46 - tap]], 3.6, '#2a2230', false, 2.2);
-    line(ctx, [[hx + 1.2, hy], [hx + 5.6, 40 - tap]], 1, '#6a5a76', false, 0.8);
-    shape(ctx, (c) => roundRectPath(c, hx + 4.4, 40 - tap, 5.4, 6.4, 1.6), { fill: '#e8e4dc', ink: 2, shadow: 'none' });
+    const hx = 58, hy = 2 - tap;
+    hoseArm(ctx, [[41, -18], [58 + s, -12], [hx, hy]]);
+    inkLine(ctx, [[hx + 2, hy - 2], [hx + 7.4, 44 - tap]], 3.6, '#2a2230', false, 2.2);
+    line(ctx, [[hx + 1.2, hy], [hx + 6, 38 - tap]], 1, '#6a5a76', false, 0.8);
+    shape(ctx, (c) => roundRectPath(c, hx + 4.8, 38.6 - tap, 5.4, 6.4, 1.6), { fill: '#e8e4dc', ink: 2, shadow: 'none' });
     ball(ctx, hx + 1.6, hy - 4, 5, K_GOLD, K_GOLD_SH, 2.2, 0.8);
     glove(ctx, hx, hy, 6.8, 0.2);
   }
@@ -438,11 +439,17 @@ function alfredoJar(c: Ctx) {
 
 /** One flat fettuccine ribbon along a centre line. */
 function fettuccine(ctx: Ctx, pts: Pt[], w: number, seed: number) {
-  const build = (c: Ctx) => smoothPath(c, ribbon(pts, pts.map((_, i) => (i === pts.length - 1 ? w * 0.8 : w))), true, 0.5);
-  shape(ctx, build, { fill: A_PASTA, ink: 2.2, shadow: A_PASTA_SH, shadowOffset: [-1.6, -1.6] });
-  // flat-ribbon highlight + sauce coating
-  line(ctx, pts.map(([x, y]) => [x - w * 0.12, y - w * 0.14] as Pt), w * 0.22, '#fff1c2', true, 0.75);
-  clipped(ctx, build, () => speckle(ctx, pts[2][0], pts[2][1], 14, 14, 5, A_SAUCE_HI, w * 0.22, seed, 0.9));
+  const ws = pts.map((_, i) => (i === pts.length - 1 ? w * 0.85 : i % 2 ? w * 0.86 : w));
+  const build = (c: Ctx) => smoothPath(c, ribbon(pts, ws), true, 0.5);
+  shape(ctx, build, { fill: A_PASTA, ink: 2.2, shadow: A_PASTA_SH, shadowOffset: [-1.8, -1.8] });
+  clipped(ctx, build, () => {
+    // flat ribbon: a pale lit face and a darker turned edge
+    const side = ribbon(pts, ws.map((v) => v * 0.55));
+    const half = side.slice(0, pts.length);
+    line(ctx, half, w * 0.2, '#fff3c8', true, 0.85);
+    line(ctx, side.slice(pts.length), w * 0.14, A_PASTA_SH, true, 0.7);
+    speckle(ctx, pts[2][0], pts[2][1], 14, 14, 5, A_SAUCE_HI, w * 0.22, seed, 0.95);
+  });
 }
 
 /** A noodle arm: two fettuccine strands with splayed noodle "fingers". */
@@ -452,10 +459,10 @@ function noodleArm(ctx: Ctx, pts: Pt[], seed: number) {
   const a = Math.atan2(end[1] - prev[1], end[0] - prev[0]);
   for (const k of [-1, 0, 1]) {
     const fa = a + k * 0.55;
-    fettuccine(ctx, [prev, end, [end[0] + Math.cos(fa) * 9, end[1] + Math.sin(fa) * 9], [end[0] + Math.cos(fa) * 15, end[1] + Math.sin(fa) * 15 + 2]], 4.2, seed + k);
+    fettuccine(ctx, [prev, end, [end[0] + Math.cos(fa) * 8, end[1] + Math.sin(fa) * 8], [end[0] + Math.cos(fa) * 13, end[1] + Math.sin(fa) * 13 + 2]], 4.6, seed + k);
   }
-  fettuccine(ctx, pts.map(([x, y], i) => [x - 3 + i * 0.4, y + 2] as Pt), 6.4, seed + 7);
-  fettuccine(ctx, pts, 6.8, seed + 11);
+  fettuccine(ctx, pts.map(([x, y], i) => [x - 3.4 + i * 0.4, y + 2.4] as Pt), 7.6, seed + 7);
+  fettuccine(ctx, pts, 8.2, seed + 11);
 }
 
 function crownLid(ctx: Ctx, x: number, y: number, rot: number) {
@@ -608,7 +615,7 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   }
   brow(ctx, -19 + fx, -16 + fy, 20, 0.45, 5);
   brow(ctx, 16 + fx, -18 + fy, 20, -0.45, 5);
-  if (idle) mouth(ctx, -1 + fx, 26 + fy, 34, 'snarl', { teeth: true });
+  if (idle) bossMouth(ctx, -1 + fx, 22 + fy, 36, 11, { frown: 0.5, bottomTeeth: true, ink: 2.8 });
   else mouth(ctx, -1 + fx, 24 + fy, 34, 'shout', { teeth: true, tongue: true, open: wind ? 0.8 : 1.15 });
 
   // --- glass: reflections, outline, rim light
@@ -652,36 +659,977 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   }, { fill: 'rgba(225,244,250,0.9)', ink: BI * 0.8, shadow: '#a9c6d0', shadowOffset: [-6, -1.5] });
   line(ctx, [[-38, -54], [0, -51.6], [38, -54]], 1.4, '#9bb9c4', true, 0.9);
 
-  // --- crown lid (rattles in the wind-up, flips up on the attack)
-  if (atk) {
-    crownLid(ctx, -10, -100, -0.5);
-    // geyser of Alfredo erupting forward
-    const g: Pt[] = [[0, -52], [10, -70], [28, -84], [52, -86], [74, -76]];
-    group(ctx, [
-      { build: (c) => smoothPath(c, ribbon(g, [44, 34, 26, 22, 18]), true, 0.5), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-4, -4], gloss: [{ x: 18, y: -82, rx: 9, ry: 2, rot: -0.4, alpha: 0.8 }] } },
-      { build: (c) => circlePath(c, 76, -76, 11), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-2.6, -2.6] } },
-    ], BI * 0.85);
-    for (const [dx, dy, r] of [[78, -96, 4], [60, -104, 3], [80, -56, 3.4], [40, -102, 2.4]] as [number, number, number][]) {
-      shape(ctx, (c) => circlePath(c, dx, dy, r), { fill: A_SAUCE, ink: 2, shadow: 'none', gloss: [{ x: dx - r * 0.3, y: dy - r * 0.3, rx: r * 0.35, ry: r * 0.2, alpha: 0.7 }] });
-    }
-  } else {
+  // sauce oozing out under the lid and down the outside of the glass
+  const oz = idle ? [0, 3, 6, 9][f] : wind ? 10 : 4;
+  group(ctx, [
+    { build: (c) => dripPath(c, -30, -50, 9, 14 + oz, 3.8), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: -31.4, y: -44, rx: 1.2, ry: 3, alpha: 0.9 }] } },
+    { build: (c) => dripPath(c, 24, -50, 7, 8 + oz * 0.6, 3), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-1.4, -1.4] } },
+  ], 2.4);
+
+  // --- crown lid (rattles in the wind-up; flips off on the attack, drawn below)
+  if (!atk) {
     const rattle = wind ? (f === 0 ? -5 : -4) : idle ? Math.max(0, s) * -1.2 : 0;
     crownLid(ctx, 0, -55 + rattle, (wind ? 0.06 : -0.09) + (idle ? c4 * 0.015 : 0));
     if (wind) {
-      // steam puffs of pressure under the lid
-      for (const [px, py, r] of [[-48, -62, 6], [-56, -70, 4.4], [50, -64, 6], [58, -73, 4.4]] as [number, number, number][]) {
-        shape(ctx, (c) => circlePath(c, px, py, r), { fill: 'rgba(255,255,255,0.85)', ink: 1.6, shadow: 'none' });
-      }
+      for (const [px, py, r] of [[-50, -64, 7], [-60, -74, 5], [50, -66, 7], [60, -77, 5]] as [number, number, number][]) puff(ctx, px, py, r, 0.7);
+      effortMarks(ctx, 0, -78, 52, -2.7, -0.45, 5, 8, 2.6);
     }
   }
 
   // --- near noodle arm
   if (wind) noodleArm(ctx, [[36, -52], [50, -66], [60, -86], [56, -108], [42, -120]], 5);
-  else if (atk) noodleArm(ctx, [[36, -52], [52, -50], [64, -40], [76, -36], [84, -34]], 5);
+  else if (atk) noodleArm(ctx, [[36, -52], [50, -50], [58, -38], [60, -22], [62, -8]], 5);
   else noodleArm(ctx, [[36, -52], [52, -58], [62, -46], [65 + wv * 0.3, -26], [68 + wv, -8], [72 + wv, 4]], 5);
 
   ctx.restore();
+
+  if (atk) {
+    // lid flips off; a geyser of Alfredo erupts forward
+    crownLid(ctx, -26, -104, -0.55);
+    effortMarks(ctx, -26, -112, 40, 2.2, 3.3, 3, 8, 2.4);
+    const g: Pt[] = [[12, -54], [18, -72], [31, -86], [48, -92], [64, -88]];
+    group(ctx, [
+      { build: (c) => smoothPath(c, ribbon(g, [42, 34, 28, 24, 20]), true, 0.5), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-4, -4], gloss: [{ x: 22, y: -84, rx: 9, ry: 2, rot: -0.5, alpha: 0.8 }] } },
+      { build: (c) => circlePath(c, 66, -88, 11), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-2.6, -2.6] } },
+    ], BI * 0.85);
+    for (const [dx, dy, r] of [[74, -106, 4], [54, -112, 3], [78, -70, 3.4], [36, -108, 2.4]] as [number, number, number][]) {
+      shape(ctx, (c) => circlePath(c, dx, dy, r), { fill: A_SAUCE, ink: 2, shadow: 'none', gloss: [{ x: dx - r * 0.3, y: dy - r * 0.3, rx: r * 0.35, ry: r * 0.2, alpha: 0.7 }] });
+    }
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Shared: villain mouth with pointy teeth, block lettering
+// ---------------------------------------------------------------------------
+
+/**
+ * Big villain mouth. (x,y) = centre of the top lip line, w×h = size.
+ * frown > 0 pulls the corners down. Pointy teeth top (and bottom when open).
+ */
+function bossMouth(ctx: Ctx, x: number, y: number, w: number, h: number, o: { frown?: number; tongue?: boolean; bottomTeeth?: boolean; ink?: number } = {}) {
+  const fr = (o.frown ?? 0.25) * h;
+  const build = (c: Ctx) => {
+    c.moveTo(x - w / 2, y + fr);
+    c.quadraticCurveTo(x, y - h * 0.3, x + w / 2, y + fr * 0.8);
+    c.quadraticCurveTo(x + w * 0.1, y + h * 1.25, x - w / 2, y + fr);
+    c.closePath();
+  };
+  shape(ctx, build, { fill: '#5b1320', ink: o.ink ?? BI, shadow: 'none' });
+  clipped(ctx, build, () => {
+    if (o.tongue) {
+      ctx.fillStyle = '#e8616e';
+      ctx.beginPath();
+      ellipsePath(ctx, x + w * 0.08, y + h * 0.95, w * 0.26, h * 0.42);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ellipsePath(ctx, x + w * 0.02, y + h * 0.8, w * 0.08, h * 0.1);
+      ctx.fill();
+    }
+    const n = Math.max(3, Math.round(w / (h * 0.62)));
+    const tw = w / n;
+    ctx.fillStyle = '#fff8ea';
+    ctx.strokeStyle = 'rgba(90,40,30,0.5)';
+    ctx.lineWidth = 0.9;
+    for (let i = 0; i < n; i++) {
+      const tx = x - w / 2 + (i + 0.5) * tw;
+      const t = (tx - (x - w / 2)) / w;
+      const lipY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y - h * 0.3) + t * t * (y + fr * 0.8);
+      ctx.beginPath();
+      ctx.moveTo(tx - tw * 0.52, lipY - 4);
+      ctx.lineTo(tx + tw * 0.52, lipY - 4);
+      ctx.lineTo(tx + tw * 0.08, lipY + h * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (o.bottomTeeth) {
+      for (let i = 0; i < n - 1; i++) {
+        const tx = x - w / 2 + (i + 1) * tw;
+        const t = (tx - (x - w / 2)) / w;
+        const lowY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y + h * 1.25) + t * t * (y + fr * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(tx - tw * 0.45, lowY + 4);
+        ctx.lineTo(tx + tw * 0.45, lowY + 4);
+        ctx.lineTo(tx - tw * 0.05, lowY - h * 0.34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+/** Chunky block letters (P, A, N only — enough for "PANNA"). (x,y) = top-left of the first glyph. */
+function blockText(ctx: Ctx, text: string, x: number, y: number, h: number, gap: number, fill: string, shadowCol: string, wobble: number[] = []) {
+  const w = h * 0.74;
+  const t = h * 0.27;
+  const glyph = (c: Ctx, ch: string) => {
+    if (ch === 'P') {
+      c.moveTo(0, h);
+      c.lineTo(0, 0);
+      c.lineTo(w * 0.5, 0);
+      c.quadraticCurveTo(w * 0.98, 0, w * 0.98, h * 0.27);
+      c.quadraticCurveTo(w * 0.98, h * 0.54, w * 0.5, h * 0.54);
+      c.lineTo(0, h * 0.54);
+    } else if (ch === 'A') {
+      c.moveTo(0, h);
+      c.lineTo(w * 0.42, 0);
+      c.lineTo(w * 0.58, 0);
+      c.lineTo(w, h);
+      c.moveTo(w * 0.2, h * 0.66);
+      c.lineTo(w * 0.8, h * 0.66);
+    } else if (ch === 'N') {
+      c.moveTo(0, h);
+      c.lineTo(0, 0);
+      c.lineTo(w, h);
+      c.lineTo(w, 0);
+    }
+  };
+  const passes: [string, number, number, number][] = [
+    [shadowCol, t + 4.4, 1.6, 2],
+    [INK, t + 3.6, 0, 0],
+    [fill, t, 0, 0],
+  ];
+  for (const [col, lw, ox, oy] of passes) {
+    for (let i = 0; i < text.length; i++) {
+      ctx.save();
+      ctx.translate(x + i * (w + gap) + w / 2 + ox, y + h / 2 + oy);
+      ctx.rotate(wobble[i] ?? 0);
+      ctx.translate(-w / 2, -h / 2);
+      ctx.beginPath();
+      glyph(ctx, text[i]);
+      ctx.lineWidth = lw;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+/** Soft translucent steam/pressure puff (no outline). */
+function puff(ctx: Ctx, x: number, y: number, r: number, alpha = 0.75) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  circlePath(ctx, x, y, r);
+  circlePath(ctx, x + r * 0.8, y + r * 0.2, r * 0.7);
+  circlePath(ctx, x - r * 0.7, y + r * 0.3, r * 0.6);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// LA PANNA COLOSSALE — a colossal carton of heavy cream with an angry cow label.
+// ---------------------------------------------------------------------------
+const P_BLUE = '#3a8ae0', P_BLUE_SH = '#2559a8', P_BLUE_DK = '#1d3f80';
+const P_WHITE = '#f8fafc', P_WHITE_SH = '#c8d3e2';
+const P_CREAM = '#fffdf5', P_CREAM_SH = '#e2dccb';
+const P_SKY = '#d8ecfb';
+
+function cowLeg(ctx: Ctx, hip: Pt, foot: Pt, patch: boolean) {
+  inkLine(ctx, [hip, foot], 11, '#f7f5f0', false, BI * 0.75);
+  if (patch) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(hip[0] - 5.2, hip[1] + 2);
+    ctx.lineTo(hip[0] + 5.2, hip[1] + 2);
+    ctx.lineTo(foot[0] + 5.2, foot[1] - 4);
+    ctx.lineTo(foot[0] - 5.2, foot[1] - 4);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = '#2b2630';
+    ctx.beginPath();
+    ellipsePath(ctx, (hip[0] + foot[0]) / 2 + 2, (hip[1] + foot[1]) / 2 - 1, 4.4, 3.6, 0.4);
+    ctx.fill();
+    ctx.restore();
+  }
+  shape(ctx, (c) => {
+    c.moveTo(foot[0] - 7.4, foot[1] - 4);
+    c.lineTo(foot[0] + 7.4, foot[1] - 4);
+    c.quadraticCurveTo(foot[0] + 8.6, foot[1] + 3.4, foot[0] + 5, foot[1] + 3.4);
+    c.lineTo(foot[0] - 5, foot[1] + 3.4);
+    c.quadraticCurveTo(foot[0] - 8.6, foot[1] + 3.4, foot[0] - 7.4, foot[1] - 4);
+    c.closePath();
+  }, { fill: '#3d3440', ink: BI * 0.75, shadow: '#1f1a22', shadowOffset: [-1.6, -1.4], gloss: [{ x: foot[0] - 2.4, y: foot[1] - 2, rx: 2.8, ry: 0.9, alpha: 0.35 }] });
+  line(ctx, [[foot[0] + 0.6, foot[1] - 3.4], [foot[0] + 0.6, foot[1] + 3]], 1.4, '#1f1a22');
+}
+
+function drawPanna(ctx: Ctx, f: number, pose: Pose) {
+  const ph = (f / 4) * TAU;
+  const s = Math.sin(ph), c4 = Math.cos(ph);
+  const wind = pose === 'windup', atk = pose === 'attack';
+  const idle = pose === 'idle';
+  const L = -56, R = 30, T = -100, B = 30, rr = 6;
+
+  // --- legs: one back leg (under the side face), two front cow legs
+  const step = (k: number) => (idle ? Math.max(0, Math.sin(ph + k * Math.PI)) * 5 : 0);
+  const sp = wind ? 7 : 0;
+  cowLeg(ctx, [46, 12], [49 + (idle ? Math.cos(ph + Math.PI) * 2 : 0), 46 - step(1)], false);
+  cowLeg(ctx, [-36, 22], [-38 - sp + (idle ? Math.cos(ph) * 3 : 0), 55 - step(0)], true);
+  cowLeg(ctx, [12, 22], [14 + sp + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 55 - step(1)], false);
+
+  // --- carton (squash & stretch around its base)
+  const sx = wind ? 1.07 : atk ? 0.93 : 1 + 0.012 * c4;
+  const sy = wind ? 0.93 : atk ? 1.06 : 1 - 0.012 * c4;
+  ctx.save();
+  ctx.translate(0, B);
+  ctx.scale(sx, sy);
+  ctx.translate(0, -B);
+
+  const b = wind ? 10 : atk ? 0.5 : 4 + c4 * 0.8;
+  const front = (c: Ctx) => {
+    c.moveTo(L + rr, T);
+    c.quadraticCurveTo((L + R) / 2, T - b, R - rr, T);
+    c.quadraticCurveTo(R, T, R, T + rr);
+    c.quadraticCurveTo(R + b, (T + B) / 2, R, B - rr);
+    c.quadraticCurveTo(R, B, R - rr, B);
+    c.quadraticCurveTo((L + R) / 2, B + b * 0.6, L + rr, B);
+    c.quadraticCurveTo(L, B, L, B - rr);
+    c.quadraticCurveTo(L - b, (T + B) / 2, L, T + rr);
+    c.quadraticCurveTo(L, T, L + rr, T);
+    c.closePath();
+  };
+  const side = (c: Ctx) => {
+    c.moveTo(R - 2, T + 1);
+    c.lineTo(R + 26, T - 13);
+    c.quadraticCurveTo(R + 28, T - 12, R + 28, T - 8);
+    c.quadraticCurveTo(R + 28 + b * 0.7, (T + B) / 2 - 8, R + 28, B - 18);
+    c.quadraticCurveTo(R + 27, B - 14, R + 22, B - 10);
+    c.lineTo(R - 2, B - 1);
+    c.closePath();
+  };
+  const top = (c: Ctx) => {
+    c.moveTo(L + 2, T + 1);
+    c.lineTo(L + 26, T - 13);
+    c.lineTo(R + 26, T - 13);
+    c.lineTo(R - 2, T + 1);
+    c.closePath();
+  };
+  group(ctx, [
+    { build: top, style: { fill: '#eef3f9', shadow: 'none' } },
+    { build: side, style: { fill: P_BLUE_SH, shadow: P_BLUE_DK, shadowOffset: [-4, -6] } },
+    { build: front, style: { fill: P_WHITE, shadow: 'none' } },
+  ], BI);
+  // side-face waves + folded flap
+  clipped(ctx, side, () => {
+    for (let k = 0; k < 4; k++) {
+      const y0 = T + 10 + k * 30;
+      line(ctx, [[R, y0 + 10], [R + 8, y0 + 2], [R + 16, y0 + 6], [R + 30, y0 - 6]], 3, '#5d9fe6', true, 0.55);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    roundRectPath(ctx, R + 3, T - 6, 4, 120, 2);
+    ctx.fill();
+  });
+  shape(ctx, (c) => {
+    c.moveTo(R + 4, T - 2);
+    c.lineTo(R + 24, T - 12);
+    c.lineTo(R + 20, T + 6);
+    c.closePath();
+  }, { fill: '#4d95e4', ink: 2, shadow: 'none' });
+  // sealed seam strip on the top face
+  shape(ctx, (c) => {
+    c.moveTo(L + 12, T - 6.5);
+    c.lineTo(R + 14, T - 6.5);
+    c.lineTo(R + 18, T - 9.5);
+    c.lineTo(L + 16, T - 9.5);
+    c.closePath();
+  }, { fill: '#dfe7f1', ink: 1.8, shadow: 'none' });
+
+  // front face design: blue top band, sky panel, hills, blue bottom wave
+  clipped(ctx, front, () => {
+    ctx.fillStyle = P_BLUE;
+    ctx.fillRect(L - 20, T - 20, 140, 46);
+    ctx.fillStyle = P_SKY;
+    ctx.fillRect(L - 20, T + 26, 140, 110);
+    ctx.fillStyle = '#7cc35a';
+    ctx.beginPath();
+    ctx.moveTo(L - 20, B - 32);
+    ctx.quadraticCurveTo(-36, B - 44, -14, B - 34);
+    ctx.quadraticCurveTo(10, B - 46, R + 20, B - 34);
+    ctx.lineTo(R + 20, B + 20);
+    ctx.lineTo(L - 20, B + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = P_BLUE;
+    ctx.beginPath();
+    ctx.moveTo(L - 20, B - 18);
+    for (let x = L - 20; x <= R + 20; x += 6) ctx.quadraticCurveTo(x + 3, B - 14 - 4 * Math.sin(x * 0.3), x + 6, B - 18);
+    ctx.lineTo(R + 20, B + 30);
+    ctx.lineTo(L - 20, B + 30);
+    ctx.closePath();
+    ctx.fill();
+    line(ctx, Array.from({ length: 16 }, (_, i) => [L - 4 + i * 6, B - 19 + 2.4 * Math.sin(i * 1.7)] as Pt), 3, '#ffffff', true, 0.95);
+    // cel shadow on the right of the front face + a glossy streak
+    ctx.fillStyle = 'rgba(37,89,168,0.22)';
+    ctx.beginPath();
+    roundRectPath(ctx, R - 9, T, 20, 140, 6);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    roundRectPath(ctx, L + 4, T + 32, 4, 60, 2);
+    ctx.fill();
+  });
+  line(ctx, [[L + rr, T], [R - rr, T]], 2.4, INK);
+  line(ctx, [[R, T + rr], [R + b * 0.5, (T + B) / 2], [R, B - rr]], 2.4, INK, true);
+  blockText(ctx, 'PANNA', -41, T + 5, 14.4, 3.4, '#ffffff', P_BLUE_DK, idle ? [0.05 * s, -0.04, 0.05 * c4, -0.05 * s, 0.04] : [0.08, -0.08, 0.06, -0.08, 0.1]);
+
+  // --- the angry cow on the label
+  const cx = -12, cy = -38;
+  for (const sgn of [-1, 1]) {
+    shape(ctx, (c) => {
+      c.moveTo(cx + sgn * 18, cy - 20);
+      c.quadraticCurveTo(cx + sgn * 30, cy - 26, cx + sgn * 32, cy - 40);
+      c.quadraticCurveTo(cx + sgn * 24, cy - 30, cx + sgn * 13, cy - 26);
+      c.closePath();
+    }, { fill: '#f3e7c9', ink: 2.4, shadow: '#cdbb92', shadowOffset: [-1.4, -1.4] });
+    shape(ctx, (c) => ellipsePath(c, cx + sgn * 33, cy - 12, 10, 5, sgn * 0.35), { fill: '#f7f5f0', ink: 2.4, shadow: '#cfd0d6', shadowOffset: [-1.4, -1.4] });
+    shape(ctx, (c) => ellipsePath(c, cx + sgn * 34, cy - 11.4, 6, 2.6, sgn * 0.35), { fill: '#f4a3b0', ink: 0, shadow: 'none' });
+  }
+  const head = (c: Ctx) => ellipsePath(c, cx, cy - 4, 27, 24);
+  shape(ctx, head, { fill: '#fbfbf8', ink: BI * 0.85, shadow: '#cfd3dc', shadowOffset: [-4, -3] });
+  clipped(ctx, head, () => {
+    ctx.fillStyle = '#2b2630';
+    ctx.beginPath();
+    smoothPath(ctx, [[cx - 30, cy - 30], [cx - 14, cy - 28], [cx - 8, cy - 18], [cx - 16, cy - 8], [cx - 30, cy - 6]], true);
+    smoothPath(ctx, [[cx + 10, cy - 30], [cx + 24, cy - 26], [cx + 30, cy - 14], [cx + 18, cy - 16], [cx + 12, cy - 22]], true);
+    ctx.fill();
+  });
+  const snY = cy + 12;
+  shape(ctx, (c) => ellipsePath(c, cx + 1, snY, 21, 12), { fill: '#f6a9b6', ink: BI * 0.8, shadow: '#d97f92', shadowOffset: [-3, -2.4], gloss: [{ x: cx - 7, y: snY - 6, rx: 6, ry: 2, rot: -0.1, alpha: 0.55 }] });
+  const flare = wind ? 1.4 : atk ? 1.25 : 1 + Math.max(0, s) * 0.15;
+  for (const sgn of [-1, 1]) {
+    shape(ctx, (c) => ellipsePath(c, cx + 1 + sgn * 8, snY - 3, 2.8 * flare, 3.8 * flare, sgn * 0.3), { fill: '#7a2b3c', ink: 1.6, shadow: 'none' });
+  }
+  if (wind) {
+    puff(ctx, cx - 16, snY + 5, 5.4, 0.85);
+    puff(ctx, cx + 20, snY + 5, 5.4, 0.85);
+    squeezeEye(ctx, cx - 11, cy - 10, 7, -1);
+    squeezeEye(ctx, cx + 12, cy - 10, 7, 1);
+    line(ctx, [[cx - 6, snY + 8], [cx + 8, snY + 8]], 2.4, '#7a2b3c');
+  } else {
+    eye(ctx, cx - 11, cy - 10, 7.4, { look: [0.42, 0.12], lid: 'angry-l', pupil: atk ? 0.36 : 0.5, ink: 2.2 });
+    eye(ctx, cx + 12, cy - 11, 7.4, { look: [0.42, 0.12], lid: 'angry-r', pupil: atk ? 0.36 : 0.5, ink: 2.2 });
+    if (atk) bossMouth(ctx, cx + 1, snY + 5, 20, 9, { frown: 0.1, tongue: true, bottomTeeth: true, ink: 2.4 });
+    else line(ctx, [[cx - 7, snY + 7.4], [cx + 1, snY + 5.6], [cx + 9, snY + 7.4]], 2.4, '#7a2b3c', true);
+  }
+  brow(ctx, cx - 11, cy - 21, 14, 0.42, 4.2);
+  brow(ctx, cx + 12, cy - 22, 14, -0.42, 4.2);
+
+  // --- spout cap on the top-left + cream dribbling down the left margin
+  const capX = -34, capY = T - 7;
+  const ooze = idle ? f * 3 : wind ? 10 : 4;
+  const dx0 = L + 7;
+  group(ctx, [
+    { build: (c) => { c.moveTo(capX - 8, capY + 2); c.quadraticCurveTo(capX - 14, T - 2, dx0 - 5, T + 1); c.lineTo(dx0 + 5, T + 1); c.quadraticCurveTo(capX - 4, T - 1, capX + 2, capY + 3); c.closePath(); }, style: { fill: P_CREAM, shadow: 'none' } },
+    { build: (c) => dripPath(c, dx0, T, 10, 22 + ooze, 4.4), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-1.8, -1.8], gloss: [{ x: dx0 - 1.8, y: T + 8, rx: 1.4, ry: 4, alpha: 0.85 }] } },
+  ], 2.4);
+  group(ctx, [{ build: (c) => dripPath(c, R - 4, T + 0.5, 7, 9 + ooze * 0.4, 3), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-1.2, -1.2] } }], 2.2);
+  if (idle && f === 3) shape(ctx, (c) => dropPath(c, dx0, T + 46, 3.4), { fill: P_CREAM, ink: 2, shadow: 'none' });
+  if (!atk) {
+    const lift = wind ? -5 : 0;
+    shape(ctx, (c) => {
+      c.moveTo(capX - 12, capY);
+      c.lineTo(capX - 12, capY - 9 + lift);
+      c.lineTo(capX + 12, capY - 9 + lift);
+      c.lineTo(capX + 12, capY);
+      c.quadraticCurveTo(capX, capY + 5, capX - 12, capY);
+      c.closePath();
+    }, { fill: '#ffffff', ink: BI * 0.8, shadow: P_WHITE_SH, shadowOffset: [-4, -1] });
+    for (let i = -2; i <= 2; i++) line(ctx, [[capX + i * 4.4, capY - 7.6 + lift], [capX + i * 4.4, capY + 1]], 1.1, '#c4cede', false, 0.9);
+    shape(ctx, (c) => ellipsePath(c, capX, capY - 9 + lift, 12, 4.4), { fill: '#ffffff', ink: BI * 0.8, shadow: 'none', gloss: [{ x: capX - 4, y: capY - 10 + lift, rx: 5, ry: 1.2, alpha: 0.6 }] });
+    if (wind) {
+      shape(ctx, (c) => { ellipsePath(c, capX - 14, capY - 1, 5, 3.4); ellipsePath(c, capX + 14, capY - 1, 4.4, 3); }, { fill: P_CREAM, ink: 2, shadow: 'none' });
+      effortMarks(ctx, capX, capY - 6, 18, -2.6, -0.5, 4, 6, 2.4);
+    }
+  } else {
+    shape(ctx, (c) => ellipsePath(c, capX, capY, 10, 3.8), { fill: '#5b4f4a', ink: BI * 0.8, shadow: 'none' });
+  }
+  ctx.restore();
+
+  if (atk) {
+    // the cap rockets off; a geyser of cream arcs forward
+    const topY = B - (B - (T - 7)) * sy;
+    const g: Pt[] = [[capX, topY], [capX + 4, topY - 16], [capX + 20, topY - 28], [capX + 44, topY - 32], [capX + 70, topY - 26]];
+    group(ctx, [
+      { build: (c) => smoothPath(c, ribbon(g, [18, 22, 24, 22, 20]), true, 0.5), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3.4, -3.4], gloss: [{ x: capX + 18, y: topY - 28, rx: 8, ry: 2, rot: -0.4, alpha: 0.9 }] } },
+      { build: (c) => circlePath(c, capX + 72, topY - 26, 12), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3, -3] } },
+    ], BI * 0.85);
+    for (const [ddx, ddy, r] of [[86, -44, 4.4], [66, -50, 3.2], [92, -12, 3.4], [40, -48, 2.6]] as [number, number, number][]) {
+      shape(ctx, (c) => circlePath(c, capX + ddx, topY + ddy, r), { fill: P_CREAM, ink: 2, shadow: 'none' });
+    }
+    ctx.save();
+    ctx.translate(capX - 20, topY - 32);
+    ctx.rotate(-0.7);
+    shape(ctx, (c) => roundRectPath(c, -12, -9, 24, 10, 3), { fill: '#ffffff', ink: BI * 0.8, shadow: P_WHITE_SH, shadowOffset: [-3, -1] });
+    shape(ctx, (c) => ellipsePath(c, 0, -9, 12, 4.4), { fill: '#ffffff', ink: BI * 0.8, shadow: 'none' });
+    ctx.restore();
+    effortMarks(ctx, capX - 20, topY - 32, 16, 0.4, 2.0, 3, 6, 2.2);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LO SCATOLONE — giant tin of spaghetti rings; the jagged lid is its jaw.
+// ---------------------------------------------------------------------------
+const S_LABEL = '#f3a53a', S_STRIPE = '#d9412e';
+const S_SAUCE = '#ee6a24', S_SAUCE_SH = '#b23d16', S_RING = '#f6b04a';
+
+function metalGrad(ctx: Ctx, x0: number, x1: number) {
+  const g = ctx.createLinearGradient(x0, 0, x1, 0);
+  g.addColorStop(0, '#7f8a9b');
+  g.addColorStop(0.1, '#d9e0ea');
+  g.addColorStop(0.26, '#f6f9fc');
+  g.addColorStop(0.5, '#c2cad6');
+  g.addColorStop(0.8, '#97a1b2');
+  g.addColorStop(1, '#6a7385');
+  return g;
+}
+
+/** Spaghetti ring (tiny torus) at (x,y). */
+function pastaRing(ctx: Ctx, x: number, y: number, r: number, rot = 0) {
+  ctx.save();
+  ctx.beginPath();
+  ellipsePath(ctx, x, y, r, r * 0.62, rot);
+  ctx.lineWidth = r * 0.95;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.lineWidth = r * 0.55;
+  ctx.strokeStyle = S_RING;
+  ctx.stroke();
+  ctx.restore();
+  glint(ctx, x - r * 0.5, y - r * 0.5, r * 0.22, r * 0.14, rot - 0.5, 0.8);
+}
+
+function drawScatolone(ctx: Ctx, f: number, pose: Pose) {
+  const ph = (f / 4) * TAU;
+  const s = Math.sin(ph), c4 = Math.cos(ph);
+  const wind = pose === 'windup', atk = pose === 'attack';
+  const idle = pose === 'idle';
+  const RX = 46, TOP = -40, BOT = 22, RY = 13;
+
+  // --- little legs + red sneakers
+  for (const side of [-1, 1]) {
+    const lift = idle ? Math.max(0, Math.sin(ph + (side < 0 ? 0 : Math.PI))) * 5 : 0;
+    const fx = side * (wind ? 28 : 22) + (idle ? Math.cos(ph + (side < 0 ? 0 : Math.PI)) * 3 : 0);
+    const fy = 49.6 - lift;
+    inkLine(ctx, [[side * 20, 30], [fx, fy - 2]], 8, '#4a5162', false, BI * 0.75);
+    shape(ctx, (c) => {
+      c.moveTo(fx - 9 + side * 2, fy + 3.6);
+      c.quadraticCurveTo(fx - 9 + side * 2, fy - 5, fx + side * 2, fy - 5);
+      c.quadraticCurveTo(fx + 11 + side * 2, fy - 4, fx + 11 + side * 2, fy + 3.6);
+      c.closePath();
+    }, { fill: '#d9443a', ink: BI * 0.75, shadow: '#a12a2a', shadowOffset: [-2, -1.6], gloss: [{ x: fx - 2, y: fy - 2.4, rx: 3, ry: 1.2, alpha: 0.5 }] });
+    line(ctx, [[fx - 8 + side * 2, fy + 2.6], [fx + 10 + side * 2, fy + 2.6]], 2.2, '#f4efe6');
+  }
+
+  const sx = wind ? 1.07 : atk ? 0.95 : 1 + 0.012 * c4;
+  const sy = wind ? 0.94 : atk ? 1.04 : 1 - 0.012 * c4;
+  ctx.save();
+  ctx.translate(0, BOT + RY);
+  ctx.scale(sx, sy);
+  ctx.translate(0, -(BOT + RY));
+
+  // --- can body (metal)
+  const body = (c: Ctx) => {
+    c.moveTo(-RX, TOP);
+    c.ellipse(0, TOP, RX, RY, 0, Math.PI, 0, true);
+    c.lineTo(RX, BOT);
+    c.ellipse(0, BOT, RX, RY, 0, 0, Math.PI, false);
+    c.closePath();
+  };
+  shape(ctx, body, { fill: metalGrad(ctx, -RX, RX), ink: BI, shadow: 'none' });
+  for (const ry0 of [TOP + 8, BOT - 6]) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, ry0, RX, RY, 0, Math.PI * 0.98, Math.PI * 0.02, true);
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(70,78,96,0.55)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, ry0 - 2, RX, RY, 0, Math.PI * 0.98, Math.PI * 0.02, true);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // --- dented label
+  const LT = -24, LB = 10;
+  const label = (c: Ctx) => {
+    c.moveTo(-RX, LT);
+    c.ellipse(0, LT, RX, RY, 0, Math.PI, 0, true);
+    c.lineTo(RX, LB);
+    c.ellipse(0, LB, RX, RY, 0, 0, Math.PI, false);
+    c.closePath();
+  };
+  shape(ctx, label, { fill: S_LABEL, ink: 2.2, shadow: 'none' });
+  clipped(ctx, label, () => {
+    for (const [yy, w] of [[LT + 4, 5], [LB + 4.6, 5]] as Pt[]) {
+      ctx.beginPath();
+      ctx.ellipse(0, yy, RX, RY, 0, Math.PI, 0, true);
+      ctx.lineWidth = w;
+      ctx.strokeStyle = S_STRIPE;
+      ctx.stroke();
+    }
+    const ey = (LT + LB) / 2 + 4;
+    ctx.fillStyle = '#fff7e6';
+    ctx.beginPath();
+    ellipsePath(ctx, 4, ey, 19, 12);
+    ctx.fill();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = S_STRIPE;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(-8, ey);
+    ctx.quadraticCurveTo(4, ey + 15, 16, ey);
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#8f99aa';
+    ctx.stroke();
+    for (const [rx0, ry0] of [[-3, -3], [3, -5], [9, -3], [0, 0], [6, -0.6], [12, 0]] as Pt[]) {
+      ctx.beginPath();
+      circlePath(ctx, rx0 + 1, ey + ry0, 2.2);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = S_SAUCE;
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#fff2c4';
+    for (const [sx0, sy0] of [[-30, ey - 6], [-24, ey + 6], [34, ey + 4]] as Pt[]) {
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * TAU, r = k % 2 ? 1 : 3;
+        const px = sx0 + Math.cos(a) * r, py = sy0 + Math.sin(a) * r;
+        if (k) ctx.lineTo(px, py);
+        else ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    const g = ctx.createLinearGradient(-RX, 0, RX, 0);
+    g.addColorStop(0, 'rgba(120,40,10,0.35)');
+    g.addColorStop(0.18, 'rgba(255,255,255,0.18)');
+    g.addColorStop(0.32, 'rgba(255,255,255,0)');
+    g.addColorStop(0.75, 'rgba(120,40,10,0.1)');
+    g.addColorStop(1, 'rgba(120,40,10,0.45)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-RX, LT - 20, RX * 2, 70);
+    // the dent: crumpled crease
+    ctx.fillStyle = 'rgba(90,30,10,0.3)';
+    ctx.beginPath();
+    smoothPath(ctx, [[-44, ey - 12], [-32, ey - 8], [-28, ey + 2], [-36, ey + 10], [-46, ey + 8]], true);
+    ctx.fill();
+    line(ctx, [[-46, ey - 10], [-36, ey - 6], [-31, ey], [-37, ey + 4], [-33, ey + 9]], 1.6, '#7a3412', false, 0.9);
+    line(ctx, [[-44, ey - 9], [-35, ey - 5]], 1, '#ffd38a', false, 0.8);
+  });
+  shape(ctx, (c) => {
+    c.moveTo(RX - 1, LT + 6);
+    c.lineTo(RX - 12, LT + 8);
+    c.quadraticCurveTo(RX - 6, LT + 16, RX - 1, LT + 22);
+    c.closePath();
+  }, { fill: '#fff4dc', ink: 1.8, shadow: '#d8c7a4', shadowOffset: [-1.2, -1.2] });
+
+  // --- the jaw: lid (upper jaw, with the eyes) over a dark throat
+  const chomp = idle ? [0, -3, -1, 1.5][f] : 0;
+  const lidRY = wind ? 21 : atk ? 30 : 27;
+  const lidCY = wind ? TOP - 12 : atk ? TOP - RY - 44 : TOP - RY - 28 + chomp;
+  const lidRot = wind ? 0.02 : atk ? -0.14 : 0.05 + (idle ? s * 0.025 : 0);
+  const lidBot = lidCY + lidRY;
+  const throat = (c: Ctx) => {
+    c.moveTo(-RX + 2, TOP);
+    c.bezierCurveTo(-RX - 2, TOP - 12, -RX + 2, lidBot - 10, -RX + 10, lidCY);
+    c.lineTo(RX - 10, lidCY);
+    c.bezierCurveTo(RX - 2, lidBot - 10, RX + 2, TOP - 12, RX - 2, TOP);
+    c.ellipse(0, TOP, RX - 2, RY - 1.4, 0, 0, Math.PI, false);
+    c.closePath();
+  };
+  if (!wind) {
+    shape(ctx, throat, { fill: '#3d1510', ink: BI, shadow: 'none' });
+    clipped(ctx, throat, () => {
+      const g = ctx.createLinearGradient(0, lidCY, 0, TOP + RY);
+      g.addColorStop(0, '#1c0806');
+      g.addColorStop(1, '#5a1d12');
+      ctx.fillStyle = g;
+      ctx.fillRect(-RX, lidCY - 4, RX * 2, TOP + RY - lidCY + 8);
+      // sauce pool with rings at the bottom of the mouth
+      ctx.fillStyle = S_SAUCE;
+      ctx.beginPath();
+      ellipsePath(ctx, 0, TOP + 4, RX - 6, RY - 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,190,120,0.45)';
+      ctx.beginPath();
+      ellipsePath(ctx, -10, TOP, 16, 3);
+      ctx.fill();
+      for (const [px, py, r] of [[-28, TOP + 2, 4], [-16, TOP + 5, 4.4], [-3, TOP + 1, 4], [12, TOP + 4, 4.2], [26, TOP + 1, 4], [36, TOP + 5, 3.4], [4, TOP + 8, 3.8]] as [number, number, number][]) {
+        pastaRing(ctx, px, py + (idle ? Math.sin(ph + px) * 0.8 : 0), r, 0.1);
+      }
+      // drooling strands of sauce between the jaws
+      for (const [x0, w] of [[-22, 2.6], [20, 2.2]] as Pt[]) {
+        const sag = idle ? s * 1.5 : 0;
+        line(ctx, [[x0, lidBot - 2], [x0 + 1.4 + sag, (lidBot + TOP) / 2], [x0 + 0.6, TOP + 2]], w + 2, '#7a2410', true, 0.9);
+        line(ctx, [[x0, lidBot - 2], [x0 + 1.4 + sag, (lidBot + TOP) / 2], [x0 + 0.6, TOP + 2]], w, S_SAUCE, true);
+        shape(ctx, (c) => dropPath(c, x0 + 1.4 + sag, (lidBot + TOP) / 2 + 3, w * 0.9), { fill: S_SAUCE, ink: 1.2, shadow: 'none' });
+      }
+    });
+  }
+  // front rim (lower jaw) with tin teeth
+  const rimFront = (c: Ctx) => {
+    c.moveTo(-RX, TOP);
+    c.ellipse(0, TOP, RX, RY, 0, Math.PI, 0, true);
+    c.lineTo(RX - 4.6, TOP);
+    c.ellipse(0, TOP, RX - 4.6, RY - 3.4, 0, 0, Math.PI, false);
+    c.closePath();
+  };
+  shape(ctx, rimFront, { fill: '#eef2f7', ink: 2.4, shadow: '#a7b0bf', shadowOffset: [3, -1.4] });
+  // sauce + rings spilling over the front rim and down the label
+  const dl = idle ? f * 2.6 : wind ? 12 : 6;
+  group(ctx, [
+    { build: (c) => { c.moveTo(-24, TOP + 6); c.quadraticCurveTo(-8, TOP + 20, 10, TOP + 9); c.lineTo(12, TOP + 2); c.lineTo(-24, TOP + 2); c.closePath(); }, style: { fill: S_SAUCE, shadow: 'none' } },
+    { build: (c) => dripPath(c, -12, TOP + 10, 12, 18 + dl, 4.6), style: { fill: S_SAUCE, shadow: S_SAUCE_SH, shadowOffset: [-2, -2], gloss: [{ x: -14, y: TOP + 18, rx: 1.4, ry: 4, alpha: 0.6 }] } },
+    { build: (c) => dripPath(c, 4, TOP + 10, 8, 10 + dl * 0.6, 3.4), style: { fill: S_SAUCE, shadow: S_SAUCE_SH, shadowOffset: [-1.6, -1.6] } },
+  ], 2.4);
+  pastaRing(ctx, -14, TOP + 14 + dl * 0.5, 4.2, 0.3);
+  pastaRing(ctx, 2, TOP + 9, 3.8, -0.2);
+  if (idle && f === 3) shape(ctx, (c) => dropPath(c, -12, TOP + 46, 3), { fill: S_SAUCE, ink: 1.8, shadow: 'none' });
+  for (let i = 0; i < 9; i++) {
+    if (i === 3 || i === 4) continue; // gap where the sauce spills out
+    const a = Math.PI * (0.1 + (i / 8) * 0.8);
+    const px = Math.cos(a) * (RX - 3.6), py = TOP + Math.sin(a) * (RY - 2.6);
+    const th = wind ? 4 : 9;
+    shape(ctx, (c) => {
+      c.moveTo(px - 4.8, py + 1.6);
+      c.lineTo(px + (i - 4) * 0.3, py - th);
+      c.lineTo(px + 4.8, py + 1.6);
+      c.closePath();
+    }, { fill: '#f2f5f9', ink: 1.8, shadow: '#a7b0bf', shadowOffset: [-1.4, 0] });
+  }
+  if (wind) {
+    // clamped shut: sauce squeezing out at the corners
+    for (const sgn of [-1, 1]) {
+      group(ctx, [{ build: (c) => dripPath(c, sgn * (RX - 4), TOP - 2, 9, 16 + (f % 2) * 4, 3.6), style: { fill: S_SAUCE, shadow: S_SAUCE_SH, shadowOffset: [-1.4, -1.4] } }], 2.2);
+    }
+  }
+
+  // --- lid / upper jaw
+  ctx.save();
+  ctx.translate(2, lidCY);
+  ctx.rotate(lidRot);
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * (0.1 + (i / 8) * 0.8);
+    const px = Math.cos(a) * (RX - 1), py = Math.sin(a) * lidRY;
+    shape(ctx, (c) => {
+      c.moveTo(px - 5, py - 3);
+      c.lineTo(px - (i - 4) * 0.3, py + (wind ? 5 : 9));
+      c.lineTo(px + 5, py - 3);
+      c.closePath();
+    }, { fill: '#f2f5f9', ink: 1.8, shadow: '#a7b0bf', shadowOffset: [-1.4, 0] });
+  }
+  const lid = (c: Ctx) => ellipsePath(c, 0, 0, RX + 1, lidRY);
+  shape(ctx, lid, { fill: metalGrad(ctx, -RX, RX), ink: BI, shadow: 'none' });
+  clipped(ctx, lid, () => {
+    for (const k of [0.8, 0.58]) {
+      ctx.beginPath();
+      ellipsePath(ctx, 0, 0, RX * k, lidRY * k);
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = 'rgba(70,78,96,0.45)';
+      ctx.stroke();
+      ctx.beginPath();
+      ellipsePath(ctx, -1.4, -1.6, RX * k, lidRY * k);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ellipsePath(ctx, -26, -lidRY * 0.52, 10, 3, -0.5);
+    ctx.fill();
+  });
+  const er = Math.min(10.5, lidRY * 0.4);
+  if (wind) {
+    squeezeEye(ctx, -16, 0, er * 0.85, -1);
+    squeezeEye(ctx, 16, -1, er * 0.85, 1);
+  } else {
+    eye(ctx, -16, 0, er, { look: [0.4, 0.2], lid: 'angry-l', pupil: atk ? 0.34 : 0.48, iris: '#e0442c', ink: 2.4 });
+    eye(ctx, 16, -1, er, { look: [0.4, 0.2], lid: 'angry-r', pupil: atk ? 0.34 : 0.48, iris: '#e0442c', ink: 2.4 });
+  }
+  brow(ctx, -16, -er - 5, 20, 0.42, 4.6, '#3d4352');
+  brow(ctx, 16, -er - 6, 20, -0.42, 4.6, '#3d4352');
+  ctx.restore();
+  if (wind) effortMarks(ctx, 0, lidCY - 4, 52, -2.8, -0.35, 5, 8, 2.6);
+  ctx.restore();
+
+  if (atk) {
+    // a blast of sauce and rings out of the jaws
+    const my = BOT + RY - (BOT + RY - TOP) * sy;
+    // widening splash: a cone with a lumpy front made of blobs
+    group(ctx, [
+      {
+        build: (c) => {
+          c.moveTo(-4, my - 8);
+          c.quadraticCurveTo(10, my - 10, 16, my - 18);
+          c.quadraticCurveTo(24, my - 26, 33, my - 27);
+          c.quadraticCurveTo(42, my - 32, 44, my - 42);
+          c.lineTo(54, my);
+          c.quadraticCurveTo(40, my + 7, 28, my + 2);
+          c.quadraticCurveTo(14, my + 7, -2, my + 4);
+          c.closePath();
+        },
+        style: { fill: S_SAUCE, shadow: S_SAUCE_SH, shadowOffset: [-3, -4], gloss: [{ x: 22, y: my - 16, rx: 9, ry: 2, rot: -0.5, alpha: 0.45 }] },
+      },
+      { build: (c) => { circlePath(c, 45, my - 38, 9); circlePath(c, 55, my - 25, 10); circlePath(c, 57, my - 11, 9); circlePath(c, 49, my - 1, 7); }, style: { fill: S_SAUCE, shadow: S_SAUCE_SH, shadowOffset: [-3, -3] } },
+    ], BI * 0.85);
+    for (const [px, py, r] of [[14, -6, 4], [26, -17, 4.4], [36, -6, 4.2], [47, -26, 4.6], [50, -10, 4.2], [66, -42, 4.2], [70, -20, 4], [60, -56, 3.6], [72, -4, 3.6], [34, -38, 3.8]] as [number, number, number][]) {
+      pastaRing(ctx, px, my + py, r, (px % 7) * 0.2);
+    }
+    for (const [px, py, r] of [[54, -62, 3.4], [77, -32, 2.8], [24, -34, 2.4], [64, 7, 2.6]] as [number, number, number][]) {
+      shape(ctx, (c) => circlePath(c, px, my + py, r), { fill: S_SAUCE, ink: 1.8, shadow: 'none', gloss: [{ x: px - r * 0.3, y: my + py - r * 0.3, rx: r * 0.3, ry: r * 0.2, alpha: 0.6 }] });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// IL DEEP DISH — a Chicago deep-dish behemoth: crust walls, molten cheese lake.
+// ---------------------------------------------------------------------------
+const D_CRUST = '#de9c4a', D_CRUST_HI = '#f4cd85';
+const D_SAUCE = '#c8331f', D_SAUCE_SH = '#8f1f12';
+const D_CHEESE = '#f8d867', D_CHEESE_SH = '#d9a93a';
+
+function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
+  const ph = (f / 4) * TAU;
+  const s = Math.sin(ph), c4 = Math.cos(ph);
+  const wind = pose === 'windup', atk = pose === 'attack';
+  const idle = pose === 'idle';
+  const RX = 96, RY = 32, TY = -26, BY = 36, BRX = 92, BRY = 28;
+
+  // --- stubby legs (back pair first)
+  const legLift = (k: number) => (idle ? Math.max(0, Math.sin(ph + k * Math.PI)) * 6 : 0);
+  const stubLeg = (hx: number, hy: number, fx: number, fy: number, back: boolean) => {
+    inkLine(ctx, [[hx, hy], [fx, fy - 4]], 17, back ? '#8c4e22' : '#a35d28', false, BI);
+    shape(ctx, (c) => {
+      c.moveTo(fx - 13, fy + 4);
+      c.quadraticCurveTo(fx - 13, fy - 8, fx, fy - 8);
+      c.quadraticCurveTo(fx + 14, fy - 8, fx + 14, fy + 4);
+      c.closePath();
+    }, { fill: back ? '#4a2812' : '#5c3218', ink: BI, shadow: '#2f180a', shadowOffset: [-2.4, -2], gloss: [{ x: fx - 4, y: fy - 4, rx: 4, ry: 1.4, alpha: 0.35 }] });
+  };
+  if (wind) {
+    stubLeg(-64, 38, -70, 70, true);
+    stubLeg(64, 38, 70, 70, true);
+  } else {
+    stubLeg(-66, 40, -70 + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 66 - legLift(1), true);
+    stubLeg(64, 40, 70 + (idle ? Math.cos(ph) * 3 : 0), 66 - legLift(0), true);
+  }
+
+  // body transform: rear up (wind-up), slam squash (attack), heavy idle bob
+  ctx.save();
+  if (wind) {
+    ctx.translate(70, 66);
+    ctx.rotate(-0.14);
+    ctx.translate(-70, -66);
+    ctx.translate(0, -6);
+  } else {
+    const sx = atk ? 1.08 : 1 + 0.01 * c4;
+    const sy = atk ? 0.86 : 1 - 0.012 * c4;
+    ctx.translate(0, 62);
+    ctx.scale(sx, sy);
+    ctx.translate(0, -62);
+  }
+
+  // --- front legs
+  if (wind) {
+    stubLeg(-44, 52, -56, 76, false);
+    stubLeg(38, 52, 34, 78, false);
+  } else {
+    stubLeg(-44, 54, -48 + (idle ? Math.cos(ph) * 4 : 0) - (atk ? 8 : 0), 74 - legLift(0), false);
+    stubLeg(40, 54, 44 + (idle ? Math.cos(ph + Math.PI) * 4 : 0) + (atk ? 8 : 0), 74 - legLift(1), false);
+  }
+
+  // --- crust wall
+  const wall = (c: Ctx) => {
+    c.moveTo(-RX, TY);
+    c.ellipse(0, TY, RX, RY, 0, Math.PI, 0, true);
+    c.lineTo(BRX, BY);
+    c.ellipse(0, BY, BRX, BRY, 0, 0, Math.PI, false);
+    c.closePath();
+  };
+  const wg = ctx.createLinearGradient(0, TY, 0, BY + BRY);
+  wg.addColorStop(0, '#e9ad57');
+  wg.addColorStop(0.55, D_CRUST);
+  wg.addColorStop(1, '#b06a2c');
+  shape(ctx, wall, { fill: wg, ink: BI, shadow: 'none' });
+  clipped(ctx, wall, () => {
+    // side shading (cylinder), lower bake, texture
+    const g = ctx.createLinearGradient(-RX, 0, RX, 0);
+    g.addColorStop(0, 'rgba(120,50,10,0.3)');
+    g.addColorStop(0.2, 'rgba(255,240,200,0.18)');
+    g.addColorStop(0.4, 'rgba(255,255,255,0)');
+    g.addColorStop(0.8, 'rgba(110,45,10,0.18)');
+    g.addColorStop(1, 'rgba(110,45,10,0.5)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-RX - 4, TY - 40, RX * 2 + 8, 140);
+    speckle(ctx, 0, 30, 90, 30, 70, '#8a4a1c', 0.8, 61, 0.55);
+    speckle(ctx, 0, 30, 90, 30, 40, '#f6d48e', 0.7, 63, 0.7);
+    // blisters
+    for (const [bx, by, br] of [[-70, 30, 4], [62, 14, 3.4], [-6, 56, 3], [74, 42, 3.6], [-80, 6, 2.6]] as [number, number, number][]) {
+      ctx.fillStyle = 'rgba(255,230,170,0.6)';
+      ctx.beginPath();
+      ellipsePath(ctx, bx, by, br * 1.4, br);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(120,60,20,0.5)';
+      ctx.stroke();
+    }
+  });
+
+  // --- top: crust lip + chunky tomato + molten cheese
+  const inner = (c: Ctx) => ellipsePath(c, 0, TY + 3, RX - 13, RY - 8.5);
+  shape(ctx, (c) => ellipsePath(c, 0, TY, RX, RY), { fill: D_CRUST_HI, ink: BI, shadow: 'none' });
+  // lip shading: inner bevel
+  ctx.save();
+  ctx.beginPath();
+  ellipsePath(ctx, 0, TY, RX, RY);
+  ctx.clip();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(169,101,42,0.55)';
+  ctx.beginPath();
+  ellipsePath(ctx, 2, TY + 3, RX - 2, RY - 2);
+  ctx.stroke();
+  speckle(ctx, 0, TY, RX - 3, RY - 3, 50, '#b8732e', 0.7, 71, 0.5);
+  ctx.restore();
+  const slosh = wind ? -6 : atk ? 4 : 0;
+  shape(ctx, inner, { fill: D_SAUCE, ink: 2.4, shadow: 'none' });
+  clipped(ctx, inner, () => {
+    // sauce depth shadow near the back lip
+    ctx.fillStyle = 'rgba(80,10,5,0.35)';
+    ctx.beginPath();
+    ellipsePath(ctx, 0, TY - 6 + slosh * 0.3, RX - 14, RY - 14);
+    ctx.fill();
+    // cheese pools (molten lake)
+    const pools: [number, number, number, number][] = [[-40, TY + 4, 24, 9], [18, TY - 2, 30, 10], [56, TY + 8, 16, 6], [-6, TY + 12, 18, 6]];
+    for (const [px, py, prx, pry] of pools) {
+      shape(ctx, (c) => smoothPath(c, Array.from({ length: 9 }, (_, i) => {
+        const a = (i / 9) * TAU;
+        const k = 1 + 0.18 * Math.sin(a * 3 + px);
+        return [px + slosh + Math.cos(a) * prx * k, py + Math.sin(a) * pry * k] as Pt;
+      }), true), { fill: D_CHEESE, ink: 1.6, inkColor: '#b9822a', shadow: D_CHEESE_SH, shadowOffset: [-2.4, -2], gloss: [{ x: px - prx * 0.3, y: py - pry * 0.3, rx: prx * 0.3, ry: pry * 0.25, alpha: 0.6 }] });
+    }
+    // tomato chunks
+    for (const [tx, ty, tr] of [[-66, TY + 2, 7], [-20, TY - 8, 6], [40, TY - 12, 6.4], [70, TY - 2, 5.4], [-50, TY + 14, 5], [30, TY + 14, 6], [-24, TY + 16, 4.6], [0, TY - 16, 5]] as [number, number, number][]) {
+      shape(ctx, (c) => smoothPath(c, [[tx - tr, ty], [tx - tr * 0.3, ty - tr * 0.7], [tx + tr, ty - tr * 0.4], [tx + tr * 0.7, ty + tr * 0.6], [tx - tr * 0.4, ty + tr * 0.7]], true), { fill: '#e2462a', ink: 1.6, inkColor: '#7a160c', shadow: D_SAUCE_SH, shadowOffset: [-1.4, -1.4], gloss: [{ x: tx - tr * 0.3, y: ty - tr * 0.3, rx: tr * 0.3, ry: tr * 0.18, alpha: 0.6 }] });
+    }
+    // sausage crumbles + pepperoni peeking out of the sauce
+    for (const [px, py, pr] of [[-56, TY - 6, 5.4], [46, TY + 2, 5], [-14, TY + 2, 4.6], [70, TY - 10, 4.4]] as [number, number, number][]) {
+      shape(ctx, (c) => ellipsePath(c, px + slosh * 0.5, py, pr * 1.3, pr * 0.62), { fill: '#b8402e', ink: 1.5, inkColor: '#5e150c', shadow: '#8a2416', shadowOffset: [-1, -0.8], gloss: [{ x: px - pr * 0.4, y: py - pr * 0.2, rx: pr * 0.4, ry: pr * 0.14, alpha: 0.55 }] });
+      speckle(ctx, px + slosh * 0.5, py, pr, pr * 0.5, 4, '#f1c9a0', 0.45, (px * 7) | 0, 0.9);
+    }
+    for (const [px, py] of [[-34, TY - 12], [30, TY + 10], [-70, TY + 8], [8, TY - 14]] as Pt[]) {
+      shape(ctx, (c) => smoothPath(c, [[px - 3.4, py], [px - 1, py - 2.6], [px + 3, py - 1.6], [px + 2.4, py + 2], [px - 1.6, py + 2.2]], true), { fill: '#8a4a2a', ink: 1.3, inkColor: '#4a2410', shadow: 'none', gloss: [{ x: px - 1, y: py - 1, rx: 1, ry: 0.6, alpha: 0.4 }] });
+    }
+    speckle(ctx, 0, TY + 2, RX - 16, RY - 10, 40, '#3f6a2a', 0.9, 77, 0.85);
+    speckle(ctx, 0, TY + 2, RX - 16, RY - 10, 26, '#fff3d6', 0.6, 79, 0.8);
+    // pre-cut into slices: knife lines radiating from the centre
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU + 0.2;
+      ctx.beginPath();
+      ctx.moveTo(slosh * 0.3, TY + 3);
+      ctx.lineTo(Math.cos(a) * (RX - 12), TY + 3 + Math.sin(a) * (RY - 8));
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(90,15,8,0.45)';
+      ctx.stroke();
+      ctx.lineWidth = 0.9;
+      ctx.strokeStyle = 'rgba(255,210,150,0.35)';
+      ctx.stroke();
+    }
+    ctx.restore();
+    // bubbles in the cheese (pop on frame 2)
+    const bub = idle ? [3.6, 4.6, 0, 2.4][f] : 4;
+    if (bub > 0) {
+      shape(ctx, (c) => circlePath(c, 14 + slosh, TY - 4, bub), { fill: D_CHEESE, ink: 1.4, inkColor: '#b9822a', shadow: D_CHEESE_SH, shadowOffset: [-1, -1], gloss: [{ x: 13, y: TY - 5.4, rx: bub * 0.35, ry: bub * 0.22, alpha: 0.85 }] });
+    } else {
+      ctx.save();
+      ctx.strokeStyle = '#b9822a';
+      ctx.lineWidth = 1.4;
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * TAU;
+        ctx.beginPath();
+        ctx.moveTo(14 + Math.cos(a) * 3, TY - 4 + Math.sin(a) * 2);
+        ctx.lineTo(14 + Math.cos(a) * 6, TY - 4 + Math.sin(a) * 4);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    const b2 = idle ? [1.6, 0, 2.6, 3.2][f] : 2.4;
+    if (b2 > 0) shape(ctx, (c) => circlePath(c, -40 + slosh, TY + 4, b2), { fill: D_CHEESE, ink: 1.2, inkColor: '#b9822a', shadow: 'none', gloss: [{ x: -41, y: TY + 3, rx: b2 * 0.35, ry: b2 * 0.22, alpha: 0.85 }] });
+  });
+
+  // --- angry face on the crust wall (drawn after the top so the brows sit under the lip)
+  const fyo = idle ? s * 0.8 : 0;
+  const EY = 27;
+  if (wind) {
+    eye(ctx, -38, EY, 12.4, { look: [0.45, 0.05], lid: 'angry-l', pupil: 0.34, iris: '#7a3a12', ink: 2.8 });
+    eye(ctx, 26, EY - 2, 12.4, { look: [0.45, 0.05], lid: 'angry-r', pupil: 0.34, iris: '#7a3a12', ink: 2.8 });
+    bossMouth(ctx, -6, 46, 64, 9, { frown: 0.2, tongue: true, bottomTeeth: true });
+  } else if (atk) {
+    eye(ctx, -38, EY + 1, 12.4, { look: [0.3, 0.2], lid: 'angry-l', pupil: 0.3, iris: '#7a3a12', ink: 2.8 });
+    eye(ctx, 26, EY - 1, 12.4, { look: [0.3, 0.2], lid: 'angry-r', pupil: 0.3, iris: '#7a3a12', ink: 2.8 });
+    bossMouth(ctx, -6, 44, 72, 11, { frown: 0.1, tongue: true, bottomTeeth: true });
+  } else {
+    eye(ctx, -38, EY + fyo, 12.4, { look: [0.42, 0.12], lid: 'angry-l', pupil: 0.48, iris: '#7a3a12', ink: 2.8 });
+    eye(ctx, 26, EY - 2 + fyo, 12.4, { look: [0.42, 0.12], lid: 'angry-r', pupil: 0.48, iris: '#7a3a12', ink: 2.8 });
+    bossMouth(ctx, -6, 44 + fyo * 0.5, 62, 13, { frown: 0.55, bottomTeeth: true, tongue: true });
+  }
+  brow(ctx, -38, EY - 15 + fyo, 30, 0.4, 7.4, '#5a2a10');
+  brow(ctx, 26, EY - 17 + fyo, 30, -0.4, 7.4, '#5a2a10');
+
+  // --- cheese oozing over the lip, dripping down the wall
+  const dl = idle ? [0, 4, 8, 11][f] : wind ? 2 : 14;
+  for (const [x0, w, len] of [[-80, 14, 22], [70, 16, 24]] as [number, number, number][]) {
+    const ly = TY + Math.sqrt(Math.max(0, 1 - (x0 / RX) ** 2)) * RY - 3;
+    group(ctx, [
+      { build: (c) => ellipsePath(c, x0, ly - 1, w * 0.9, 5), style: { fill: D_CHEESE, shadow: 'none' } },
+      { build: (c) => dripPath(c, x0, ly, w, len + dl, w * 0.4), style: { fill: D_CHEESE, shadow: D_CHEESE_SH, shadowOffset: [-2, -2], gloss: [{ x: x0 - w * 0.2, y: ly + 6, rx: 1.6, ry: 4, alpha: 0.7 }] } },
+    ], 2.4);
+  }
+  // a tomato drip
+  group(ctx, [{ build: (c) => dripPath(c, 50, TY + Math.sqrt(1 - (50 / RX) ** 2) * RY - 3, 9, 10 + dl * 0.5, 3.6), style: { fill: D_SAUCE, shadow: D_SAUCE_SH, shadowOffset: [-1.6, -1.6] } }], 2.4);
+
+  ctx.restore();
+
+  // --- steam / splash
+  if (idle || wind) {
+    for (const [x0, y0, k] of [[-30, -60, 0], [34, -66, 2]] as [number, number, number][]) {
+      const t = ((idle ? f : 1) / 4 + k / 4) % 1;
+      const rise = t * 14;
+      const sway = Math.sin((t + k) * TAU) * 2.4;
+      const wisp: Pt[] = [[x0, y0 - rise], [x0 + 4 + sway, y0 - 10 - rise], [x0 + 2 + sway, y0 - 20 - rise], [x0 + 6 + sway * 0.6, y0 - 28 - rise]];
+      ctx.save();
+      ctx.globalAlpha = 0.5 * (1 - t * 0.75);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      smoothPath(ctx, ribbon(wisp, [7, 6, 4.4, 1]), true, 0.5);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  if (atk) {
+    // SLAM: sauce + cheese blobs fly up, dust puffs at the feet
+    for (const [bx, by, br, col] of [[-60, -78, 8, D_CHEESE], [-24, -96, 7, D_SAUCE], [20, -100, 9, D_CHEESE], [58, -86, 7, D_SAUCE], [84, -64, 6, D_CHEESE], [-88, -56, 6, D_SAUCE], [0, -76, 5, D_CHEESE]] as [number, number, number, string][]) {
+      shape(ctx, (c) => dropPath(c, bx, by, br), { fill: col, ink: 2.4, shadow: col === D_SAUCE ? D_SAUCE_SH : D_CHEESE_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: bx - br * 0.3, y: by - br * 0.3, rx: br * 0.3, ry: br * 0.2, alpha: 0.7 }] });
+    }
+    for (const [px, py, r] of [[-98, 66, 10], [-84, 72, 8], [96, 66, 10], [82, 72, 8]] as [number, number, number][]) puff(ctx, px, py, r, 0.8);
+  }
 }
 
 registerBoss('ketchup', 150, 200, 75, 150, drawKetchup);
 registerBoss('alfredo', 170, 200, 85, 140, drawAlfredo);
+registerBoss('panna', 180, 220, 90, 160, drawPanna);
+registerBoss('scatolone', 170, 200, 85, 142, drawScatolone);
+registerBoss('deepdish', 220, 200, 110, 122, drawDeepDish);

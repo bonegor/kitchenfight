@@ -2,11 +2,13 @@
  * ICONS — weapons ('icon.w.*') and evolutions ('icon.e.*').
  * 48×48 box, anchor centre, res 3. Evolutions get a golden radiant backdrop.
  */
-import { Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng, rgba } from '../painter';
-import { S, G, lit, icon, goldGrad, goldBall, radial, linear, sparkle, inkSparkle, swoosh, softGlow, tube } from './items_kit';
+import { Ctx, Pt, ellipsePath, circlePath, roundRectPath, polyPath, line, speckle, glint, rng, rgba } from '../painter';
 import {
-  rollingPin, slipper, chefKnife, olive, fork, trident, margherita, cutterWheel, chilli, moka, lavaRock, meteor,
-  basilLeaf, flame, flamePath, angerMark, noodles, wing, heart, oliveLeaf, puff,
+  S, G, icon, goldGrad, goldBall, radial, linear, sparkle, inkSparkle, swoosh, softGlow, tube,
+} from './items_kit';
+import {
+  rollingPin, slipper, slipper34, chefKnife, olive, fork, trident, margherita, cutterWheel, chilli, moka, meteor,
+  basilLeaf, flame, angerMark, noodles, wing, heart, oliveLeaf, puff,
 } from './items_objects';
 
 function rot(ctx: Ctx, x: number, y: number, a: number, fn: () => void, s = 1) {
@@ -65,17 +67,22 @@ icon('icon.e.mattarello_nonna', (ctx) => {
 // CIABATTA
 // ===========================================================================
 icon('icon.w.ciabatta', (ctx) => {
-  speedLines(ctx, -11, 3, -0.32, 11, 3, 4.6, '#ffffff', 0.9, 1.5);
-  rot(ctx, 3, 1, -0.32, () => slipper(ctx, 40, { ink: 2 }));
-});
+  speedLines(ctx, -12, 4, -0.3, 9, 3, 4.6, '#ffffff', 0.9, 1.5);
+  rot(ctx, 3, 0, -0.3, () => slipper34(ctx, 40, { ink: 2 }));
+}, { fit: 44 });
+
+icon('icon.w.ciabatta_side', (ctx) => {
+  speedLines(ctx, -10, 6, -0.5, 10, 3, 4.8, '#ffffff', 0.9, 1.5);
+  rot(ctx, 3, 0, -0.5, () => slipper(ctx, 40, { ink: 2 }));
+}, { fit: 44 });
 
 icon('icon.e.ira_nonna', (ctx) => {
-  speedLines(ctx, -12, 5, -0.32, 10, 3, 4.6, '#fff4c0', 0.95, 1.5);
-  rot(ctx, 1, 4, -0.32, () => slipper(ctx, 38, { ink: 2, gold: true }));
-  angerMark(ctx, 13, -13, 7.5, { ink: 1.1 });
-  angerMark(ctx, -12, -12, 4.2, { ink: 0.9 });
-  inkSparkle(ctx, 17, 4, 3.2, '#fff6c8', 0.9);
-}, { evo: true });
+  speedLines(ctx, -13, 6, -0.3, 8, 3, 4.4, '#fff4c0', 0.95, 1.5);
+  rot(ctx, 1, 3, -0.3, () => slipper34(ctx, 38, { ink: 2, gold: true }));
+  angerMark(ctx, 14, -12, 7, { ink: 1.1 });
+  angerMark(ctx, -10, -13, 4, { ink: 0.9 });
+  inkSparkle(ctx, 17, 5, 3, '#fff6c8', 0.9);
+}, { evo: true, fit: 40 });
 
 // ===========================================================================
 // COLTELLI
@@ -260,8 +267,23 @@ function doughTilted(ctx: Ctx) {
 }
 
 icon('icon.w.pizza', (ctx) => {
+  // dashed toss arc rising from the lower-left
   ctx.save();
-  ctx.rotate(-0.22);
+  ctx.setLineDash([3, 3]);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-22, 22);
+  ctx.quadraticCurveTo(-21, 4, -10, -2);
+  ctx.lineWidth = 3.6;
+  ctx.strokeStyle = '#2b1712';
+  ctx.stroke();
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.translate(4, -3);
+  ctx.rotate(-0.25);
   ctx.save();
   ctx.scale(1, 0.8);
   swoosh(ctx, 0, 1, 23.5, Math.PI * 0.95, Math.PI * 1.6, 2.6, '#ffffff', 0.95);
@@ -272,8 +294,8 @@ icon('icon.w.pizza', (ctx) => {
   swoosh(ctx, 0, 1, 23.5, Math.PI * -0.05, Math.PI * 0.6, 2.6, '#ffffff', 0.95);
   ctx.restore();
   ctx.restore();
-  puff(ctx, 17, -15, 3.8, { ink: 1, seed: 8 });
-  puff(ctx, -18, 15, 3.2, { ink: 1, seed: 9 });
+  puff(ctx, 20, -16, 3.8, { ink: 1, seed: 8 });
+  puff(ctx, -14, 17, 2.8, { ink: 1, seed: 9 });
 });
 
 icon('icon.e.pizza_celeste', (ctx) => {
@@ -926,5 +948,3 @@ icon('icon.e.forno_legna', (ctx) => {
   softGlow(ctx, 0, 14, 12, '#ffe07a', 0.6, 5);
 }, { evo: true, burst: '#ffb03a' });
 
-// keep tree-shaking honest under noUnusedLocals
-void lit; void lavaRock; void flamePath; void smoothPath;

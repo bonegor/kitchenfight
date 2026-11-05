@@ -613,8 +613,8 @@ function drawAnanas(ctx: Ctx, p: Pose) {
   ctx.rotate(p.peelAng);
   peel(ctx, p.peelHd, f, p.glow, p.sliceGone);
   ctx.restore();
-  const ex = gy > -10 ? gx - 8 : gx + 8, ey = gy > -10 ? gy + 16 : (gy + 2) / 2 + 6;
-  limb(ctx, [[40, 0], [ex, ey], [gx - 1, gy + 3]], 15, RED, OUT_IN, RED_SH);
+  const ex = gy > -10 ? gx - 9 : gx + 8, ey = gy > -10 ? gy + 18 : (gy + 2) / 2 + 6;
+  limb(ctx, [[47, 5], [ex, ey], [gx - 1, gy + 3]], 15, RED, OUT_IN, RED_SH);
   fist(ctx, gx, gy, 10, p.peelAng + Math.PI / 2, { cuff: TRIM, ink: OUT_IN });
 
   // ---- the little crown, perched on top of the leaves

@@ -7,9 +7,10 @@
  * RIGHT (+x). Sizes are passed in world units.
  */
 import {
-  Ctx, Pt, INK, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng, shade, light, rgba,
+  Ctx, Pt, INK, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, line, speckle, glint, rng,
+  shade, light, rgba,
 } from '../painter';
-import { P, S, G, lit, goldGrad, cylGrad, GOLD_CYL, STEEL_CYL, goldBall, radial, linear, tube } from './items_kit';
+import { P, S, G, lit, goldGrad, cylGrad, GOLD_CYL, goldBall, radial, linear, tube } from './items_kit';
 
 // ---------------------------------------------------------------------------
 // Mattarello — rolling pin (horizontal)
@@ -853,29 +854,29 @@ export function cheeseDisc(ctx: Ctx, r: number, o: { ink?: number; gold?: boolea
   const gold = !!o.gold;
   const rindCol = gold ? goldBall(ctx, 0, 0, r) : radial(ctx, -r * 0.3, -r * 0.3, r * 1.3, [[0, '#e9a94c'], [0.7, '#cf8a33'], [1, '#a9661f']]);
   S(ctx, (c) => circlePath(c, 0, 0, r), { fill: rindCol, ink, shadow: gold ? '#c67a12' : '#94561a', shadowOffset: [-r * 0.07, -r * 0.08] });
-  // dotted "lettering" band on the rind (pin-dot groups, no actual text)
-  const rd = r * 0.9;
+  // dotted "lettering" band on the rind: pin-dot glyph groups (abstract, no real text)
   ctx.save();
-  ctx.fillStyle = gold ? '#a75f0d' : '#5e3510';
-  const groups = 9;
+  ctx.fillStyle = gold ? '#9a560c' : '#5a300e';
+  const groups = 11;
   const R = rng(17);
+  const dotR = Math.max(0.42, r * 0.026);
   for (let gi = 0; gi < groups; gi++) {
-    const a0 = (gi / groups) * Math.PI * 2;
-    const cols = 3 + Math.floor(R() * 3);
+    const a0 = (gi / groups) * Math.PI * 2 + 0.12;
+    const cols = 3 + Math.floor(R() * 2);
     for (let ci = 0; ci < cols; ci++) {
-      for (let row = -1; row <= 1; row++) {
-        if (R() < 0.3) continue;
-        const a = a0 + ci * 0.055;
-        const d = rd + row * r * 0.035;
+      for (let row = 0; row < 3; row++) {
+        if (R() < 0.28) continue;
+        const a = a0 + ci * (dotR * 2.6) / r;
+        const d = r * 0.84 + row * dotR * 2.5 + dotR;
         ctx.beginPath();
-        circlePath(ctx, Math.cos(a) * d, Math.sin(a) * d, Math.max(0.4, r * 0.017));
+        circlePath(ctx, Math.cos(a) * d, Math.sin(a) * d, dotR);
         ctx.fill();
       }
     }
   }
   ctx.restore();
   // paste face
-  const fr = r * 0.8;
+  const fr = r * 0.78;
   S(ctx, (c) => circlePath(c, 0, 0, fr), {
     fill: gold ? radial(ctx, -fr * 0.3, -fr * 0.35, fr * 1.2, [[0, '#fff8c8'], [0.5, '#ffe178'], [1, '#f2b638']]) : radial(ctx, -fr * 0.3, -fr * 0.35, fr * 1.2, [[0, '#fffbe6'], [0.55, '#f9e7a8'], [1, '#efcf7c']]),
     ink: ink * 0.6,
@@ -1247,4 +1248,121 @@ export function puff(ctx: Ctx, x: number, y: number, r: number, o: { ink?: numbe
     circlePath(c, x, y, r * 0.62);
   }, { fill: o.color ?? '#fffaf0', ink: o.ink ?? 1.1, shadow: o.shadow ?? '#d9d4de', shadowOffset: [-r * 0.18, -r * 0.22] });
   ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Ciabatta, 3/4 view from above: foot-shaped sole, domed upper, visible
+// insole + fluffy opening. Toe points right. L = length.
+// ---------------------------------------------------------------------------
+const SOLE34: Pt[] = [
+  [-0.5, 0.0], [-0.47, -0.1], [-0.38, -0.152], [-0.24, -0.158], [-0.06, -0.168], [0.12, -0.192], [0.29, -0.205],
+  [0.43, -0.165], [0.5, -0.07], [0.5, 0.04], [0.45, 0.135], [0.33, 0.19], [0.17, 0.18], [0.04, 0.12],
+  [-0.12, 0.1], [-0.28, 0.13], [-0.42, 0.125], [-0.485, 0.075],
+];
+
+export function slipper34(ctx: Ctx, L: number, o: { ink?: number; gold?: boolean } = {}) {
+  const ink = o.ink ?? 1.8;
+  const gold = !!o.gold;
+  const sq = 0.62; // perspective squash of the sole outline
+  const sole = SOLE34.map(([x, y]) => [x * L, y * L * sq] as Pt);
+  const th = L * 0.075; // sole thickness
+  // sole side wall
+  S(ctx, (c) => {
+    smoothPath(c, sole.map(([x, y]) => [x, y + th] as Pt));
+  }, { fill: gold ? '#b36a0e' : '#6e4129', ink, shadow: 'none' });
+  S(ctx, (c) => {
+    // connect top & bottom outlines on the near side
+    c.moveTo(-0.5 * L, 0);
+    c.lineTo(-0.5 * L, th);
+    c.lineTo(0.5 * L, th);
+    c.lineTo(0.5 * L, 0);
+    c.closePath();
+  }, { fill: gold ? '#b36a0e' : '#6e4129', ink: 0, shadow: 'none' });
+  line(ctx, [[-0.46 * L, th * 0.55], [0.47 * L, th * 0.45]], Math.max(0.4, L * 0.012), gold ? '#ffd76a' : '#a8714a', false, 0.7);
+  // insole (top surface)
+  S(ctx, (c) => smoothPath(c, sole), {
+    fill: gold ? '#fff2d6' : '#efd5a8', ink, shadow: gold ? '#e6c690' : '#d8b482', shadowOffset: [-L * 0.03, -L * 0.03],
+  });
+  // heel imprint
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = gold ? '#d9a860' : '#a8794a';
+  ctx.beginPath();
+  ellipsePath(ctx, -0.33 * L, 0, 0.09 * L, 0.06 * L);
+  ctx.fill();
+  ctx.restore();
+  // upper (dome over the front)
+  const N: Pt = [-0.06 * L, 0.085 * L];
+  const T: Pt = [0.5 * L, 0.005 * L];
+  const D: Pt = [-0.02 * L, -0.2 * L];
+  const upper = (c: Ctx) => {
+    c.moveTo(N[0], N[1]);
+    c.bezierCurveTo(0.12 * L, 0.15 * L, 0.38 * L, 0.14 * L, T[0], T[1]);
+    c.bezierCurveTo(0.5 * L, -0.2 * L, 0.2 * L, -0.31 * L, D[0], D[1]);
+    c.quadraticCurveTo(-0.17 * L, -0.06 * L, N[0], N[1]);
+    c.closePath();
+  };
+  const fabric = gold ? goldGrad(ctx, -0.05 * L, -0.28 * L, 0.45 * L, 0.12 * L) : '#4a68bd';
+  S(ctx, upper, {
+    fill: fabric, ink, shadow: gold ? '#c27a12' : '#2d4689', shadowOffset: [-L * 0.06, -L * 0.07],
+    gloss: [{ x: 0.17 * L, y: -0.17 * L, rx: 0.15 * L, ry: 0.035 * L, rot: -0.2, alpha: gold ? 0.9 : 0.4 }],
+  });
+  ctx.save();
+  ctx.beginPath();
+  upper(ctx);
+  ctx.clip();
+  if (!gold) {
+    // tartan, following the dome a little
+    ctx.fillStyle = rgba('#9ab8ff', 0.3);
+    for (let i = 0; i < 4; i++) ctx.fillRect(-0.2 * L, -0.25 * L + i * 0.095 * L, 0.8 * L, 0.04 * L);
+    for (let i = 0; i < 5; i++) ctx.fillRect(0.02 * L + i * 0.11 * L, -0.35 * L, 0.04 * L, 0.6 * L);
+    ctx.strokeStyle = rgba('#ff5a4a', 0.8);
+    ctx.lineWidth = Math.max(0.3, L * 0.012);
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      ctx.moveTo(-0.2 * L, -0.23 * L + i * 0.095 * L);
+      ctx.lineTo(0.6 * L, -0.23 * L + i * 0.095 * L);
+    }
+    for (let i = 0; i < 5; i++) {
+      ctx.moveTo(0.04 * L + i * 0.11 * L, -0.35 * L);
+      ctx.lineTo(0.04 * L + i * 0.11 * L, 0.25 * L);
+    }
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = rgba('#fff6c8', 0.75);
+    ctx.lineWidth = Math.max(0.35, L * 0.016);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const x = -0.05 * L + i * 0.1 * L;
+      ctx.moveTo(x, -0.35 * L);
+      ctx.lineTo(x + 0.1 * L, 0.2 * L);
+    }
+    ctx.stroke();
+  }
+  // dark lining just inside the opening
+  ctx.fillStyle = gold ? 'rgba(120,60,10,0.5)' : 'rgba(20,30,70,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(D[0], D[1]);
+  ctx.quadraticCurveTo(-0.17 * L, -0.06 * L, N[0], N[1]);
+  ctx.quadraticCurveTo(-0.07 * L, -0.05 * L, D[0], D[1]);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // fluffy trim along the opening
+  S(ctx, (c) => {
+    for (let i = 0; i <= 7; i++) {
+      const t = i / 7;
+      // quadratic D -> ctrl -> N
+      const cx = -0.17 * L, cy = -0.06 * L;
+      const x = (1 - t) * (1 - t) * D[0] + 2 * (1 - t) * t * cx + t * t * N[0];
+      const y = (1 - t) * (1 - t) * D[1] + 2 * (1 - t) * t * cy + t * t * N[1];
+      circlePath(c, x, y, L * 0.042);
+    }
+  }, { fill: gold ? '#ffffff' : '#f7eedf', ink: ink * 0.75, shadow: gold ? '#eedcb8' : '#d6c3aa', shadowOffset: [-L * 0.014, -L * 0.016] });
+  if (gold) {
+    S(ctx, (c) => ellipsePath(c, 0.24 * L, -0.08 * L, 0.045 * L, 0.05 * L), {
+      fill: '#e2243b', ink: ink * 0.6, shadow: '#9b1428', shadowOffset: [-L * 0.012, -L * 0.015],
+      gloss: [{ x: 0.228 * L, y: -0.098 * L, rx: 0.018 * L, ry: 0.013 * L, alpha: 0.95 }],
+    });
+  }
 }

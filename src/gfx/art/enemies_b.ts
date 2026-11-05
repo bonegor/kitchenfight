@@ -21,5 +21,8 @@
  * facing right. Painters live in the enemies_b_* modules.
  */
 import './enemies_b_pizza';
+import './enemies_b_drinks';
+import './enemies_b_pots';
+import './enemies_b_pasta';
 
 export {};

@@ -333,6 +333,19 @@ export class Renderer {
       drawSpriteCanvas(ctx, s, getTinted(sid, tint, frame % s.frames.length), x, y, scx, scy, tilt);
     }
     ctx.globalAlpha = 1;
+    // charge telegraph: show the dash lane
+    if (e.telegraph > 0 && def.behavior === 'charger' && e.state === 1) {
+      const len = (def.params?.dash ?? 400) * (def.params?.dashTime ?? 0.4) + 20;
+      const k = clamp(1 - e.telegraph / (def.params?.windup ?? 0.6), 0, 1);
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(Math.atan2(e.ay, e.ax));
+      ctx.fillStyle = `rgba(255,60,40,${0.12 + k * 0.22})`;
+      ctx.fillRect(0, -e.r * 0.8, len, e.r * 1.6);
+      ctx.fillStyle = `rgba(255,80,50,${0.35 + k * 0.4})`;
+      ctx.fillRect(0, -e.r * 0.8, len * k, e.r * 1.6);
+      ctx.restore();
+    }
     // onion layers indicator / elite hp bar
     if ((e.elite || e.layers > 0) && e.hp < e.maxHp) {
       const w = e.r * 1.6;
