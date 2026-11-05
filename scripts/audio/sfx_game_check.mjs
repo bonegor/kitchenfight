@@ -9,7 +9,11 @@
 // Every AudioBufferSourceNode.start() is classified: recorded voice, synthesized layer of a recorded voice
 // (same start time, right after it), synthesized-only (fallback) or music (> 8 s buffers). Speech bubbles are
 // switched off so that the formant babble (not an SFX) is not counted.
+// Startup: the title is clicked the moment it appears and the menu is used at once (no waiting for the MP3s), so
+// the report shows how many sounds still fell back to the synthesized versions while decoding was in progress, and
+// when decoding finished (ms after navigation, as measured in the game).
 import { createRequire } from 'module';
+import fs from 'fs';
 import path from 'path';
 
 const require = createRequire(import.meta.url);
@@ -21,6 +25,8 @@ const arg = (k, d) => {
 const file = arg('file', '');
 const url = file ? 'file://' + path.resolve(file) : arg('url', 'http://localhost:5183/');
 const secs = +arg('secs', '25');
+const manifest = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..', 'src', 'audio', 'assets', 'sfx', 'manifest.json'), 'utf8'));
+const nAssets = Object.keys(manifest.assets).length;
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -31,6 +37,7 @@ page.on('console', (m) => {
 });
 await page.addInitScript(() => {
   const st = { decoded: 0, decodeFailed: 0, decodeMs: 0, firstDecode: 0, lastDecode: 0, recorded: 0, layer: 0, synthOnly: 0, music: 0, beforeReady: 0 };
+  // window.__nAssets is set by an init script registered right after this one
   window.__sfxStats = st;
   const recBufs = new WeakSet();
   const Off = window.OfflineAudioContext;
@@ -78,22 +85,29 @@ await page.addInitScript(() => {
       } else if (prev && prev.when === when && prev.ctx === this.context) st.layer++;
       else if (b.length > 1) {
         st.synthOnly++;
-        if (st.decoded < 100) st.beforeReady++;
+        if (st.decodeFailed === 0 && st.decoded < window.__nAssets) st.beforeReady++;
       }
     }
     prev = null;
     return start.call(this, when, ...rest);
   };
 });
+await page.addInitScript((n) => (window.__nAssets = n), nAssets);
 const t0 = Date.now();
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 const loadMs = Date.now() - t0;
-await page.mouse.click(10, 10); // unlock audio
-await page.waitForFunction(() => window.__sfxStats.decoded >= 100 || window.__sfxStats.decodeFailed > 0, null, { timeout: 30000 });
-await page.waitForTimeout(800);
-// menu sounds: hover and click a few buttons
+// startup, no waiting: unlock on the title and use the menu at once
+await page.mouse.click(10, 10);
 const btns = await page.$$('.btn');
+for (const b of btns.slice(0, 4)) {
+  await b.hover().catch(() => {});
+  await page.waitForTimeout(60);
+}
+const startup = await page.evaluate(() => ({ t: Math.round(performance.now()), ...window.__sfxStats }));
+await page.waitForFunction(() => window.__sfxStats.decoded >= window.__nAssets || window.__sfxStats.decodeFailed > 0, null, { timeout: 30000 });
+await page.waitForTimeout(800);
+// the menu again, everything decoded now
 for (const b of btns.slice(0, 4)) {
   await b.hover().catch(() => {});
   await page.waitForTimeout(120);
@@ -133,6 +147,14 @@ const res = await page.evaluate(() => {
   return { ...st, decodeWindowMs: st.lastDecode - st.firstDecode, run: r ? { t: +r.time.toFixed(1), level: r.level, kills: r.kills, weapons: r.weapons.map((w) => w.def.id) } : null };
 });
 const voices = res.recorded + res.synthOnly;
-console.log(JSON.stringify({ url, pageLoadMs: loadMs, menu: { recorded: menu.recorded, synthOnly: menu.synthOnly }, ...res, recordedShare: voices ? +(res.recorded / voices).toFixed(4) : 0 }, null, 1));
+const sv = startup.recorded + startup.synthOnly;
+console.log(JSON.stringify({
+  url, pageLoadMs: loadMs, assets: nAssets,
+  startup: { clickedAtMs: startup.t, decodedThen: startup.decoded, recorded: startup.recorded, synthOnly: startup.synthOnly, synthShare: sv ? +(startup.synthOnly / sv).toFixed(3) : 0 },
+  decodeMsAfterNavigation: { first: Math.round(res.firstDecode), last: Math.round(res.lastDecode), failed: res.decodeFailed },
+  menuAfterDecode: { recorded: menu.recorded - startup.recorded, synthOnly: menu.synthOnly - startup.synthOnly },
+  ...res, recordedShare: voices ? +(res.recorded / voices).toFixed(4) : 0,
+  synthOnlyWhileDecoding: res.beforeReady, synthOnlyAfterDecodeDone: res.synthOnly - res.beforeReady,
+}, null, 1));
 console.log(logs.length ? 'PAGE LOG:\n' + logs.slice(0, 20).join('\n') : 'no page errors');
 await browser.close();

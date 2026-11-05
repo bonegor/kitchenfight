@@ -278,7 +278,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   // ---------------------------------------------------------------- UI
   ui_hover: {
     len: 0.04,
-    gain: -21,
+    // +5 dB (Audio 2.0 review): at its call-site volume (0.5) it sat 13-19 dB under the menu music
+    gain: -16,
     maxVoices: 2,
     minGap: 0.035,
     pitchVar: 0.03,
@@ -364,7 +365,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   ui_tick: {
     len: 0.03,
-    gain: -20,
+    // +10 dB (Audio 2.0 review): it is the volume sliders' preview, so it plays about as loud as a typical effect
+    gain: -10,
     maxVoices: 3,
     minGap: 0.025,
     pitchVar: 0.04,
@@ -760,7 +762,8 @@ export const SFX: Record<SfxId, SfxDef> = {
     priority: true,
     len: 1.3,
     gain: -6,
-    maxVoices: 1,
+    // 2: the kamikaze fuse plays this too (pitch 2) and must not cut off a real elite's entrance
+    maxVoices: 2,
     minGap: 0.6,
     stereo: true,
     gen(g) {
@@ -1063,7 +1066,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   w_forno: {
     len: 0.62,
-    gain: -15,
+    // +8 dB (Audio 2.0 review): the oven's aura tick plays at volume 0.25 and sat ~15 dB under the music
+    gain: -7,
     maxVoices: 1,
     minGap: 0.25,
     pitchVar: 0.05,
@@ -1090,7 +1094,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   burn: {
     len: 0.13,
-    gain: -21,
+    // +8 dB (Audio 2.0 review): at its call-site volume (0.5) the crackle sat ~17 dB under the music
+    gain: -13,
     maxVoices: 2,
     minGap: 0.06,
     pitchVar: 0.1,

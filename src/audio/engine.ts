@@ -8,7 +8,8 @@
  *
  * Music is synthesized in JS (render.ts) — in a Web Worker when available, otherwise in
  * cooperative main-thread slices — into AudioBuffers that loop sample-exactly.
- * SFX are synthesized once per variant after unlock and replayed from buffers.
+ * SFX are recorded MP3 variants (sfxsamples.ts, decoded before the first gesture; some ids add a synthesized layer);
+ * the synthesized versions (sfx.ts, rendered after unlock) stand in until an id's recording is decoded, or if it fails.
  * Nothing here throws into the game; before unlock() everything is a silent no-op.
  */
 import type { AudioAPI, MusicId, SfxId, SfxOpts, VoiceMood } from './audio';
@@ -658,9 +659,15 @@ export class AudioEngine implements AudioAPI {
     }
   }
 
+  /** the synthesized buffers of an id can still be played: no recording decoded (yet), or a synth layer */
+  private needsSynth(id: SfxId): boolean {
+    const rec = this.rec.get(id);
+    return !rec || rec.synth > 0;
+  }
+
   private storeSfx(id: SfxId, v: number, l: Float32Array, r: Float32Array | null): void {
     const ctx = this.ctx;
-    if (!ctx) return;
+    if (!ctx || !this.needsSynth(id)) return;
     const key = this.sfxKey(id, v);
     if (this.sfxBufs.has(key)) return;
     try {
@@ -677,11 +684,17 @@ export class AudioEngine implements AudioAPI {
     if (this.sfxPrerendering || !this.ctx) return;
     this.rec.load(this.ctx); // recorded sfx: no-op unless decoding could not start without a context
     this.sfxPrerendering = true;
+    // synthesized buffers only where they can still play: ids whose recording isn't decoded yet (fallback) and synth
+    // layers; once decoding is done, the ones a recording replaced are dropped (makeSfxBuffer re-renders on demand)
+    void this.rec.whenDone.then(() => {
+      for (const id of SFX_IDS) if (!this.needsSynth(id)) for (let v = 0; v < (SFX[id].variants ?? 1); v++) this.sfxBufs.delete(this.sfxKey(id, v));
+    });
     // most frequent first
     const first: SfxId[] = ['hit', 'pickup_xp', 'enemy_death', 'player_hurt', 'ui_hover', 'ui_click', 'pickup_coin', 'hit_crit', 'enemy_shoot'];
     const order = [...first, ...SFX_IDS.filter((id) => !first.includes(id))];
     const list: Array<[SfxId, number]> = [];
-    for (const id of order) for (let v = 0; v < (SFX[id].variants ?? 1); v++) list.push([id, v]);
+    for (const id of order) if (this.needsSynth(id)) for (let v = 0; v < (SFX[id].variants ?? 1); v++) list.push([id, v]);
+    if (!list.length) return;
     const sr = this.ctx.sampleRate;
     const viaWorker = await new Promise<boolean>((resolve) => {
       let any = false;
@@ -700,11 +713,12 @@ export class AudioEngine implements AudioAPI {
       });
       if (!ok) resolve(false);
     });
-    if (viaWorker && list.every(([id, v]) => this.sfxBufs.has(this.sfxKey(id, v)))) return;
-    // fallback: main thread, time-sliced
+    const missing = list.filter(([id, v]) => this.needsSynth(id) && !this.sfxBufs.has(this.sfxKey(id, v)));
+    if (viaWorker && !missing.length) return;
+    // fallback: main thread, time-sliced (skipping ids whose recording was decoded meanwhile)
     const sl = new Slicer(5);
-    for (const [id, v] of list) {
-      this.makeSfxBuffer(id, v);
+    for (const [id, v] of missing) {
+      if (this.needsSynth(id)) this.makeSfxBuffer(id, v);
       if (sl.due()) await sl.yield();
     }
   }
@@ -724,16 +738,19 @@ export class AudioEngine implements AudioAPI {
       if (now - st.last < (def.minGap ?? 0.02)) return;
       st.voices = st.voices.filter((v) => v.end > now);
       const maxV = def.maxVoices ?? 4;
-      if (st.voices.length >= maxV) {
-        if (def.drop) return;
+      const steal = st.voices.length >= maxV;
+      if (steal && def.drop) return;
+      // at the global cap only a priority cue, or one replacing its own oldest voice, still plays
+      if (this.activeVoices >= MAX_SFX_VOICES && !def.priority && !steal) return;
+      if (steal) {
         const old = st.voices.shift();
         if (old) this.killVoice(old, now);
       }
-      if (this.activeVoices >= MAX_SFX_VOICES && !def.priority) return;
       const rec = this.rec.get(id);
       const nv = rec ? rec.bufs.length : def.variants ?? 1;
+      // random variant, no immediate repeat from 3 variants up (with 2 that would be a fixed A-B-A-B pattern)
       let variant = nv > 1 ? Math.floor(Math.random() * nv) : 0;
-      if (nv > 1 && variant === st.lastVariant) variant = (variant + 1) % nv;
+      if (nv > 2 && variant === st.lastVariant) variant = (variant + 1 + Math.floor(Math.random() * (nv - 1))) % nv;
       st.lastVariant = variant;
       const buf = rec ? rec.bufs[variant] : this.makeSfxBuffer(id, variant);
       if (!buf) return;
@@ -796,13 +813,24 @@ export class AudioEngine implements AudioAPI {
     }
   }
 
-  private killVoice(v: Voice, now: number): void {
+  /** A boss line is spoken (spawn taunt): its roar, a recorded voice too, fades out so the boss never has two voices. */
+  private sfxYieldToSpeech(mood: VoiceMood, now: number): void {
+    if (mood !== 'boss') return;
+    const st = this.sfxState.get('boss_roar');
+    for (const v of st?.voices ?? []) {
+      if (v.end <= now) continue;
+      this.killVoice(v, now, 0.06);
+      v.end = now + 0.07;
+    }
+  }
+
+  private killVoice(v: Voice, now: number, fade = 0.015): void {
     try {
       v.gain.gain.cancelScheduledValues(now);
       v.gain.gain.setValueAtTime(v.gain.gain.value, now);
-      v.gain.gain.linearRampToValueAtTime(0, now + 0.015);
-      v.src.stop(now + 0.02);
-      v.extra?.stop(now + 0.02);
+      v.gain.gain.linearRampToValueAtTime(0, now + fade);
+      v.src.stop(now + fade + 0.005);
+      v.extra?.stop(now + fade + 0.005);
     } catch {
       /* ignore */
     }
@@ -818,6 +846,7 @@ export class AudioEngine implements AudioAPI {
       const now = ctx.currentTime;
       if (now - this.lastSpeech < 0.08) return;
       this.lastSpeech = now;
+      this.sfxYieldToSpeech(mood, now);
       const line = String(text ?? '').slice(0, 64);
       const key = mood + '|' + line;
       const cached = this.voiceCache.get(key);

@@ -31,6 +31,8 @@ interface ManifestId {
 interface Manifest {
   version: number;
   sr: number;
+  /** attribution lines for the Credits screen (generated with the assets) */
+  credits?: string[];
   /** ch: channels, dur: s, lk: LK100 (dB), a: attack anchors (first samples above -6/-12/-20 dB re peak) in the gapless original */
   assets: Record<string, { ch: number; dur: number; lk: number; a?: number[] }>;
   ids: Record<string, ManifestId>;
@@ -49,6 +51,12 @@ export interface RecSfx {
 }
 
 const MANIFEST = manifestJson as unknown as Manifest;
+
+/**
+ * Attribution for the recorded sound effects, one paragraph per line: show it on the Credits screen (and in the
+ * README). Required by the licenses of the material used (CC BY 4.0: Oculus Audio Pack; CC Sampling Plus 1.0: SSO).
+ */
+export const SFX_CREDITS: readonly string[] = Array.isArray(MANIFEST.credits) ? MANIFEST.credits : [];
 const URLS = import.meta.glob('./assets/sfx/*.mp3', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 /** lead-in below this (re the buffer's peak) is considered silence (decoder delay / priming) */
 const LEAD_DB = -50;
@@ -194,11 +202,18 @@ export class SfxSamples {
         synth: m.syn === null || m.syn === undefined ? 0 : dbToGain(m.syn),
       });
     };
-    // most frequent sounds first
-    const first = ['hit', 'pickup_xp', 'ui_hover', 'ui_click', 'enemy_death', 'pickup_coin', 'player_hurt', 'hit_crit'];
+    // the menu first (it is on screen before any run), then the most frequent sounds; rare, big cues that only play
+    // well into a run (and make up much of the bytes) last
+    const first = ['ui_hover', 'ui_click', 'ui_confirm', 'ui_back', 'ui_error', 'ui_tick', 'ui_buy', 'ui_unlock',
+      'hit', 'pickup_xp', 'enemy_death', 'pickup_coin', 'player_hurt', 'hit_crit'];
+    const last = ['pickup_spumante', 'chest_drop', 'chest_reward', 'chest_open', 'player_revive', 'evolution',
+      'boss_shoot', 'boss_slam', 'boss_roar', 'boss_warning', 'boss_death'];
     const rank = (n: string) => {
-      const i = first.findIndex((id) => (users.get(n) ?? []).includes(id));
-      return i < 0 ? first.length : i;
+      const u = users.get(n) ?? [];
+      const i = first.findIndex((id) => u.includes(id));
+      if (i >= 0) return i;
+      const j = last.findIndex((id) => u.includes(id));
+      return j >= 0 ? first.length + 1 + j : first.length;
     };
     const names = Object.keys(MANIFEST.assets).sort((a, b) => rank(a) - rank(b));
     let next = 0;

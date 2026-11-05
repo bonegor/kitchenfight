@@ -1,19 +1,24 @@
 // Audio 2.0 SFX measurements, run through the REAL engine (src/audio/engine.ts) in Chromium.
 //
 //   npx vite --port 5183 --strictPort --config scripts/vite.agent.config.ts   (in another shell)
-//   node scripts/audio/sfx_measure.mjs [--port 5183] [--out <dir>] [--ids a,b] [--wav]
+//   node scripts/audio/sfx_measure.mjs [--port 5183] [--out <dir>] [--ids a,b] [--wav] [--doc]
 //
 // 1. per id (offline, sample-accurate): the engine is unlocked on an OfflineAudioContext (AudioContext patched),
-//    every id is fired once through engine.sfx() and the master output is measured: onset latency after the call,
-//    LK100 / RMS / peak / true peak / duration / clipping, for the recorded version AND the synthesized one
-//    (recorded disabled), plus proof that the recorded buffer (and the synth layer, where designed) was played.
-// 2. stress (offline): 20 s of a busy fight at 60 fps with music: dozens of hits + XP pickups per second with combo
-//    pitch ramps, every weapon on its cooldown, enemy deaths/shots/burns/explosions, and rare important sounds;
-//    reports clipping, loudness, voice counts, drops (rate limit / voice cap) and render CPU.
+//    every id is fired once through engine.sfx() and the master output is measured as played on stereo speakers
+//    (mono up-mixed to both channels): onset latency after the call (-50 dB) and perceptual attack (-20 dB),
+//    LK100 / LK400 / integrated loudness / RMS / peak / true peak / duration / clipping, for the recorded version AND
+//    the synthesized one (recorded disabled), plus proof that the recorded buffer (and the synth layer) was played.
+// 2. stress (offline, deterministic: event times and the engine's Math.random are seeded): 20 s of a busy fight at
+//    60 fps with music: dozens of hits + XP pickups per second with combo pitch ramps, every weapon on its cooldown,
+//    enemy deaths/shots/burns/explosions, and rare important sounds; reports clipping, loudness, voice counts, drops
+//    (rate limit / voice cap) and render CPU. Then a cap-saturation run: every non-priority id fired every frame (the
+//    40-voice cap is hit) while priority cues keep coming: they must still play, and the voice count must return to 0.
 // 3. realtime: a real AudioContext in Chromium: decode time, per-asset decoder delay trimmed, recorded buffers
 //    used for every id, main-thread cost of sfx() calls, output level through an AnalyserNode.
+// Outputs go to --out (default: <os tmp>/kf-sfx-measure; nothing is written into the repository unless --doc).
 import { createRequire } from 'module';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const require = createRequire(import.meta.url);
@@ -23,7 +28,7 @@ const arg = (k, d) => {
   return i >= 0 ? process.argv[i + 1] : d;
 };
 const port = arg('port', process.env.PORT || '5183');
-const outDir = arg('out', path.join(process.cwd(), 'sfx-measure-out'));
+const outDir = arg('out', path.join(os.tmpdir(), 'kf-sfx-measure'));
 const onlyIds = (arg('ids', '') || '').split(',').filter(Boolean);
 const wantWav = process.argv.includes('--wav');
 // --doc: write the results into docs/credits/sfx.md (section after the marker; the build script keeps it)
@@ -104,6 +109,35 @@ await page.evaluate(() => {
     const g2 = g1.filter((v) => L(v) > rel);
     return L(g2.reduce((a, b) => a + b, 0) / g2.length);
   };
+  /**
+   * integrated loudness of one sound starting at frame `at`, as build_sfx.py's lk_int: silence before it counts as
+   * padding, and the result is averaged over four positions of the 100 ms block grid (0/25/50/75 ms; a short sound's
+   * loudness moves by up to ~1 dB with the grid)
+   */
+  const lufsAt = (chs, at) => {
+    const n = Math.round(0.4 * SR), hop = Math.round(0.1 * SR);
+    const zs = chs.map((c) => kw(c.subarray(at)));
+    const len = zs[0].length;
+    const c = new Float64Array(len + 1);
+    for (let i = 0; i < len; i++) {
+      let s = 0;
+      for (const z of zs) s += z[i] * z[i];
+      c[i + 1] = c[i] + s;
+    }
+    const sum = (a, b) => c[Math.min(len, Math.max(0, b))] - c[Math.min(len, Math.max(0, a))];
+    const L = (v) => -0.691 + 10 * Math.log10(Math.max(v, 1e-15));
+    const out = [];
+    for (const ph of [0, 0.025, 0.05, 0.075]) {
+      const bl = [];
+      for (let a = -n - Math.round(ph * SR); a + n <= len; a += hop) bl.push(sum(a, a + n) / n);
+      const g1 = bl.filter((v) => L(v) > -70);
+      if (!g1.length) return -99;
+      const rel = L(g1.reduce((x, y) => x + y, 0) / g1.length) - 10;
+      const g2 = g1.filter((v) => L(v) > rel);
+      out.push(L(g2.reduce((x, y) => x + y, 0) / g2.length));
+    }
+    return out.reduce((x, y) => x + y, 0) / out.length;
+  };
   /** true peak (4x oversampled, windowed-sinc interpolation) */
   const truePeak = (chs) => {
     let tp = 0;
@@ -157,13 +191,15 @@ await page.evaluate(() => {
       latency20: ((first(-20) - at) / SR) * 1000,
       dur: (e - at) / SR,
       lk: lkMax(chs),
+      lk400: lkMax(chs, 0.4),
+      lki: lufsAt(chs, at),
       rms: db(Math.sqrt(ss / Math.max(1, cnt))),
       peak: db(pk),
       tp: db(truePeak(chs)),
       clip,
     };
   };
-  window.__h = { SR, kw, db, lkMax, lufs, truePeak, measure };
+  window.__h = { SR, kw, db, lkMax, lufs, lufsAt, truePeak, measure };
 
   /**
    * An engine unlocked on an OfflineAudioContext. The render has 4 channels: 0-1 = the final output (after the
@@ -211,21 +247,37 @@ await page.evaluate(() => {
     } finally {
       window.AudioContext = Real;
     }
-    // taps: compressor out -> ch 0-1, master (pre-compressor) -> ch 2-3
+    // taps: compressor out -> ch 0-1, master (pre-compressor) -> ch 2-3. Each tap first goes through a 2-channel
+    // 'speakers' node: a mono bus is up-mixed to both channels, as on stereo output (a ChannelSplitter alone
+    // interprets channels discretely and would put a mono bus on the left tap only, i.e. 3 dB low)
     const merger = off.createChannelMerger(4);
     const sp1 = off.createChannelSplitter(2), sp2 = off.createChannelSplitter(2);
+    const up = () => {
+      const g = off.createGain();
+      g.channelCount = 2;
+      g.channelCountMode = 'explicit';
+      g.channelInterpretation = 'speakers';
+      return g;
+    };
+    const up1 = up(), up2 = up();
     comp.disconnect();
-    comp.connect(sp1);
-    eng.master.connect(sp2);
+    comp.connect(up1);
+    up1.connect(sp1);
+    eng.master.connect(up2);
+    up2.connect(sp2);
     sp1.connect(merger, 0, 0); sp1.connect(merger, 1, 1); sp2.connect(merger, 0, 2); sp2.connect(merger, 1, 3);
     merger.connect(off.destination);
     if (!shared) {
       eng.rec.load();
       await eng.rec.whenDone;
-      // the synthesized buffers (fallback + layers) are rendered by the worker after unlock: wait for them
-      const total = SFX_IDS.reduce((a, id) => a + (SFX[id].variants ?? 1), 0);
+      // the synth layers are rendered by the worker after unlock: wait for them (other synthesized buffers, used
+      // here only for the "synth" comparisons, are rendered on demand)
+      const layers = SFX_IDS.filter((id) => (eng.rec.get(id)?.synth ?? 0) > 0);
+      const need = layers.reduce((a, id) => a + (SFX[id].variants ?? 1), 0);
+      const have = () => layers.reduce((a, id) => a + [...Array(SFX[id].variants ?? 1).keys()].filter((v) => eng.sfxBufs.has(id + '#' + v)).length, 0);
       const t0 = performance.now();
-      while (eng.sfxBufs.size < total && performance.now() - t0 < 30000) await new Promise((r) => setTimeout(r, 50));
+      while (have() < need && performance.now() - t0 < 30000) await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 300)); // let the prerender finish and drop the replaced buffers
       shared = { rec: eng.rec, sfxBufs: eng.sfxBufs };
       window.__noLoad = true;
       if (hideRec) eng.rec = { get: (i) => (i === hideRec ? null : shared.rec.get(i)), load() {}, lead: shared.rec.lead };
@@ -321,24 +373,32 @@ const perId = await page.evaluate(async ({ onlyIds, wantWav }) => {
 
 const f = (v, d = 1) => (typeof v === 'number' ? v.toFixed(d) : String(v));
 const lines = [];
-lines.push('| id | recorded used | variants | synth layer | latency ms (-50 dB) | attack ms (-20 dB) | dur s | LK100 rec (min..max) | LK100 synth | RMS | peak / true peak | clipped |');
-lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
-let allRec = true, maxLat = 0, clips = 0;
+lines.push('| id | recorded used | variants | synth layer | latency ms (-50 dB) | attack ms (-20 dB, min..max) | dur s | LK100 rec (min..max) | LK100 synth | rec - synth: LK100 / LK400 / integrated | RMS | peak / true peak | clipped |');
+lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+let allRec = true, maxLat = 0, clips = 0, maxDev = 0;
+const swell = ['ui_unlock', 'chest_open', 'evolution', 'player_revive', 'elite_spawn', 'boss_warning', 'boss_roar', 'pickup_gelato'];
+let maxAtk = [0, ''];
+const sg = (v) => (v >= 0 ? '+' : '') + v.toFixed(1);
 for (const [id, r] of Object.entries(perId)) {
   allRec = allRec && r.recordedUsed;
   maxLat = Math.max(maxLat, r.rec.latency50.max);
   clips += r.rec.clip.max + r.rec.postClip.max;
+  const d = ['lk', 'lk400', 'lki'].map((k) => r.rec[k].mean - r.synth[k].mean);
+  maxDev = Math.max(maxDev, ...d.map(Math.abs));
+  if (!swell.includes(id) && r.rec.latency20.max > maxAtk[0]) maxAtk = [r.rec.latency20.max, id];
   lines.push(
-    `| \`${id}\` | ${r.recordedUsed ? 'yes' : 'NO'} | ${r.variants} | ${r.synthLayer ? 'yes' : '-'} | ${f(r.rec.latency50.max, 2)} | ${f(r.rec.latency20.max, 1)} | ` +
-      `${f(r.rec.dur.mean, 2)} | ${f(r.rec.lk.mean)} (${f(r.rec.lk.min)}..${f(r.rec.lk.max)}) | ${f(r.synth.lk.mean)} | ${f(r.rec.rms.mean)} | ${f(r.rec.peak.max)} / ${f(r.rec.tp.max)} | ${r.rec.clip.max} |`,
+    `| \`${id}\` | ${r.recordedUsed ? 'yes' : 'NO'} | ${r.variants} | ${r.synthLayer ? 'yes' : '-'} | ${f(r.rec.latency50.max, 2)} | ${f(r.rec.latency20.min, 1)}..${f(r.rec.latency20.max, 1)} | ` +
+      `${f(r.rec.dur.mean, 2)} | ${f(r.rec.lk.mean)} (${f(r.rec.lk.min)}..${f(r.rec.lk.max)}) | ${f(r.synth.lk.mean)} | ${d.map(sg).join(' / ')} | ${f(r.rec.rms.mean)} | ${f(r.rec.peak.max)} / ${f(r.rec.tp.max)} | ${r.rec.clip.max} |`,
   );
 }
 lines.push('');
-lines.push(`ids: ${Object.keys(perId).length}; recorded version used for every variant of every id: ${allRec}; max latency (call -> first sound above -50 dB re its peak, pre-compressor): ${f(maxLat, 2)} ms; clipped samples: ${clips}`);
+lines.push(`ids: ${Object.keys(perId).length}; recorded version used for every variant of every id: ${allRec}; max latency (call -> first sound above -50 dB re its peak, pre-compressor): ${f(maxLat, 2)} ms; ` +
+  `slowest attack (-20 dB) of an event-locked id: ${f(maxAtk[0], 1)} ms (${maxAtk[1]}; designed swells excluded: ${swell.join(', ')}); largest loudness deviation from the synthesized version (variant means): ${f(maxDev, 1)} dB; clipped samples: ${clips}`);
 fs.writeFileSync(path.join(outDir, 'per_id.md'), lines.join('\n') + '\n');
 docParts.push('### Every id through the real engine (offline render, one call at volume 1, every variant)', '',
-  'Latency = call -> first sample above -50 dB re the sound\'s peak; attack = first sample above -20 dB (designed swells are slow on purpose). ' +
-  'LK100 = loudest 100 ms, K-weighted (LUFS scale), pre-compressor, SFX volume at its default (0.9). "synth" = the same call with the recorded version disabled.', '', ...lines, '');
+  'Measured as played on stereo speakers (a mono voice is up-mixed to both channels), pre-compressor, SFX volume at its default (0.9). ' +
+  'Latency = call -> first sample above -50 dB re the sound\'s peak; attack = first sample above -20 dB, the perceptual onset (designed swells are slow on purpose). ' +
+  'LK100 / LK400 = loudest 100 / 400 ms, K-weighted (LUFS scale); integrated = BS.1770 gated loudness of the whole sound. "synth" = the same call with the recorded version disabled.', '', ...lines, '');
 if (wantWav) {
   for (const [id, r] of Object.entries(perId)) if (r.wav) fs.writeFileSync(path.join(outDir, `${id}.json`), JSON.stringify(r.wav));
 }
@@ -347,62 +407,101 @@ fs.writeFileSync(path.join(outDir, 'per_id.json'), JSON.stringify(perId, null, 1
 console.log(lines.join('\n'));
 
 // ------------------------------------------------------------------------------------------------ 1b. pitch ramps
-// pickup_xp combo (pitch 1 -> 2) and chest_reward steps must keep a clear, rising pitch: dominant frequency per call
+// pickup_xp's combo (pitch 1 -> 2) and chest_reward's steps must keep a clear, rising pitch at a steady loudness. Per
+// call (every recorded variant, and the synthesized version): the dominant frequency over the full band, the
+// A-weighted level, LK100, and the share of energy above 12 kHz (content many adults cannot hear).
 if (!onlyIds.length || onlyIds.includes('pickup_xp')) {
   const ramp = await page.evaluate(async () => {
-    const { SR } = window.__h;
+    const { SR, lkMax } = window.__h;
+    const fft = (re, im) => {
+      const n = re.length;
+      for (let i = 1, j = 0; i < n; i++) {
+        let bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) {
+          [re[i], re[j]] = [re[j], re[i]];
+          [im[i], im[j]] = [im[j], im[i]];
+        }
+      }
+      for (let len = 2; len <= n; len <<= 1) {
+        const ang = (-2 * Math.PI) / len;
+        for (let i = 0; i < n; i += len) {
+          for (let k = 0; k < len / 2; k++) {
+            const wr = Math.cos(ang * k), wi = Math.sin(ang * k);
+            const ur = re[i + k], ui = im[i + k];
+            const vr = re[i + k + len / 2] * wr - im[i + k + len / 2] * wi;
+            const vi = re[i + k + len / 2] * wi + im[i + k + len / 2] * wr;
+            re[i + k] = ur + vr; im[i + k] = ui + vi;
+            re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+          }
+        }
+      }
+    };
+    // IEC 61672 A-weighting (analog curve, applied per FFT bin)
+    const aw = (f) => {
+      const f2 = f * f;
+      const r = (12194 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2));
+      return Math.pow(10, (20 * Math.log10(Math.max(r, 1e-12)) + 2.0) / 10);
+    };
+    const analyse = (x) => {
+      const N = 1 << 15;
+      const re = new Float64Array(N), im = new Float64Array(N);
+      for (let i = 0; i < Math.min(N, x.length); i++) re[i] = x[i];
+      fft(re, im);
+      let best = 0, bf = 0, tot = 0, hi = 0, a = 0;
+      for (let k = 1; k < N / 2; k++) {
+        const f = (k * SR) / N, p = re[k] * re[k] + im[k] * im[k];
+        tot += p;
+        if (f > 12000) hi += p;
+        a += p * aw(f);
+        if (f > 300 && p > best) { best = p; bf = f; }
+      }
+      return { hz: bf, aw: 10 * Math.log10(a + 1e-30), hi12: hi / tot };
+    };
     const out = [];
     for (const [id, pitches] of [['pickup_xp', [1, 1.25, 1.5, 1.75, 2]], ['chest_reward', [1, 1.08, 1.16, 1.24]]]) {
-      for (const p of pitches) {
-        const { eng, off } = await window.__offlineEngine(1.2);
-        const tq = Math.round((0.1 * SR) / 128) * 128;
-        off.suspend(tq / SR).then(() => {
-          const R = Math.random;
-          const q = [0.25, 0.5, 0.5];
-          Math.random = () => (q.length ? q.shift() : 0.5);
-          try {
-            eng.sfx(id, { pitch: p });
-          } finally {
-            Math.random = R;
+      for (const mode of ['rec', 'synth']) {
+        for (let vi = 0; ; vi++) {
+          let nv = 1;
+          for (const p of pitches) {
+            const { eng, off } = await window.__offlineEngine(1.2, { noRec: mode === 'synth' });
+            const rec = eng.rec.get(id);
+            nv = rec ? rec.bufs.length : 1;
+            const tq = Math.round((0.1 * SR) / 128) * 128;
+            off.suspend(tq / SR).then(() => {
+              const R = Math.random;
+              const q = [...(nv > 1 ? [(vi + 0.5) / nv] : []), 0.5, 0.5];
+              Math.random = () => (q.length ? q.shift() : 0.5);
+              try {
+                eng.sfx(id, { pitch: p });
+              } finally {
+                Math.random = R;
+              }
+              off.resume();
+            });
+            const buf = await off.startRendering();
+            const l = buf.getChannelData(2).subarray(tq, tq + Math.round(0.6 * SR));
+            const r = buf.getChannelData(3).subarray(tq, tq + Math.round(0.6 * SR));
+            out.push({ id, mode, vi, pitch: p, lk: lkMax([l, r]), ...analyse(l) });
           }
-          off.resume();
-        });
-        const buf = await off.startRendering();
-        const x = buf.getChannelData(2);
-        // dominant frequency 1..5 kHz (the notes; glockenspiel overtones lie above) in the first 60 ms
-        const n = Math.round(0.06 * SR);
-        const seg = x.subarray(tq, tq + n);
-        const mag = (f) => {
-          let re = 0, im = 0;
-          for (let i = 0; i < seg.length; i++) {
-            const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (seg.length - 1));
-            re += seg[i] * w * Math.cos((2 * Math.PI * f * i) / SR);
-            im -= seg[i] * w * Math.sin((2 * Math.PI * f * i) / SR);
-          }
-          return Math.hypot(re, im);
-        };
-        let bf = 0, bm = 0;
-        for (let f = 1000; f <= 5000; f += 10) {
-          const m = mag(f);
-          if (m > bm) { bm = m; bf = f; }
+          if (vi + 1 >= nv) break;
         }
-        for (let f = bf - 10; f <= bf + 10; f += 0.5) {
-          const m = mag(f);
-          if (m > bm) { bm = m; bf = f; }
-        }
-        out.push({ id, pitch: p, hz: bf });
       }
     }
     return out;
   });
-  const lines2 = ['| id | pitch opt | dominant Hz | ratio to pitch 1 |', '|---|---|---|---|'];
+  const lines2 = ['| id | version | pitch opt | dominant Hz | ratio to pitch 1 | A-weighted level re pitch 1 (dB) | LK100 | energy above 12 kHz |', '|---|---|---|---|---|---|---|---|'];
   const base = {};
   for (const r of ramp) {
-    if (r.pitch === 1) base[r.id] = r.hz;
-    lines2.push(`| \`${r.id}\` | ${r.pitch} | ${r.hz.toFixed(1)} | ${(r.hz / base[r.id]).toFixed(3)} |`);
+    const key = r.id + r.mode + r.vi;
+    if (r.pitch === 1) base[key] = r;
+    const b0 = base[key];
+    lines2.push(`| \`${r.id}\` | ${r.mode === 'rec' ? 'recorded ' + (r.vi + 1) : 'synthesized'} | ${r.pitch} | ${r.hz.toFixed(1)} | ${(r.hz / b0.hz).toFixed(3)} | ` +
+      `${(r.aw - b0.aw >= 0 ? '+' : '') + (r.aw - b0.aw).toFixed(1)} | ${r.lk.toFixed(1)} | ${(r.hi12 * 100).toFixed(1)} % |`);
   }
   fs.writeFileSync(path.join(outDir, 'pitch_ramp.md'), lines2.join('\n') + '\n');
-  docParts.push('### Pitch ramps (dominant frequency of the output)', '', ...lines2, '');
+  docParts.push('### Pitch ramps (combo pitch; full-band dominant frequency, A-weighted level)', '', ...lines2, '');
   console.log('\n' + lines2.join('\n'));
 }
 
@@ -555,8 +654,17 @@ if (!onlyIds.length) {
         off.resume();
       });
     }
+    // the engine's own randomness (variant choice, pitch / gain spread) is seeded too: the run is reproducible
+    const R = Math.random;
+    let s2 = 4242;
+    Math.random = () => ((s2 = (s2 * 1664525 + 1013904223) >>> 0) / 4294967296);
     const t0 = performance.now();
-    const buf = await off.startRendering();
+    let buf;
+    try {
+      buf = await off.startRendering();
+    } finally {
+      Math.random = R;
+    }
     const renderMs = performance.now() - t0;
     const [post, pre] = window.__split(buf);
     const m = measure(post, 0);
@@ -579,6 +687,60 @@ if (!onlyIds.length) {
     musicOnly: { lufs: musicOnly.mix.lufs, peak: musicOnly.mix.peak, maxLk400: musicOnly.mix.maxLk400 },
   };
   stress.sfxMsAvgPerCall = stress.sfxMsTotal / stress.calls;
+  // cap saturation: every non-priority id fired every frame (with random pitch / pan) for 6 s, a priority cue every
+  // 0.25 s; the cap must hold (priority cues and same-id replacements excepted), priority cues must still play and
+  // every voice must be released afterwards
+  stress.cap = await page.evaluate(async () => {
+    const { SFX, SFX_IDS } = await window.__mods;
+    const { SR } = window.__h;
+    const T = 6;
+    const { eng, off, made } = await window.__offlineEngine(T + 3.5, {});
+    const pri = SFX_IDS.filter((id) => SFX[id].priority);
+    const non = SFX_IDS.filter((id) => !SFX[id].priority);
+    let seed = 777;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const st = { frames: 0, framesAtCap: 0, maxActive: 0, nonCalls: 0, nonPlayed: 0, nonBlockedAtCap: 0, priCalls: 0, priAtCap: 0, priPlayed: 0, priPlayedAtCap: 0 };
+    let k = 0;
+    for (let fr = 0; fr < T * 60; fr++) {
+      const q = Math.round(((0.2 + fr / 60) * SR) / 128) * 128;
+      off.suspend(q / SR).then(() => {
+        for (const id of non) {
+          const atCap = eng.activeVoices >= 40;
+          const n0 = made.length;
+          eng.sfx(id, { pan: rnd() * 2 - 1, pitch: 0.8 + rnd() * 0.8, volume: 0.3 });
+          st.nonCalls++;
+          if (made.length > n0) st.nonPlayed++;
+          else if (atCap) st.nonBlockedAtCap++;
+        }
+        if (fr % 15 === 0) {
+          const id = pri[k++ % pri.length];
+          const atCap = eng.activeVoices >= 40;
+          const n0 = made.length;
+          eng.sfx(id, { volume: 0.3 });
+          st.priCalls++;
+          if (atCap) st.priAtCap++;
+          if (made.length > n0) {
+            st.priPlayed++;
+            if (atCap) st.priPlayedAtCap++;
+          }
+        }
+        st.frames++;
+        if (eng.activeVoices >= 40) st.framesAtCap++;
+        st.maxActive = Math.max(st.maxActive, eng.activeVoices);
+        off.resume();
+      });
+    }
+    const R = Math.random;
+    let s2 = 99;
+    Math.random = () => ((s2 = (s2 * 1664525 + 1013904223) >>> 0) / 4294967296);
+    try {
+      await off.startRendering();
+    } finally {
+      Math.random = R;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+    return { ...st, activeAfter: eng.activeVoices };
+  });
   const c = stress.compare;
   docParts.push('### Stress test (20 s busy fight + music, real engine, offline render)', '',
     `${stress.events} sfx calls (hits ~45/s, XP pickups ~35/s with combo pitch ramp, deaths, shots, burns, explosions, all 14 weapons on cooldown, 16 rare cues); ` +
@@ -590,6 +752,8 @@ if (!onlyIds.length) {
     `| max simultaneous sfx voices (cap 40) | ${stress.maxActive} | ${c.synthMix.maxActive} | - |`,
     `| render CPU (offline, % of one core) | ${stress.cpuPct.toFixed(1)} | ${c.synthMix.cpuPct.toFixed(1)} | - |`,
     `| important cues played | ${stress.importantPlayed}/${stress.importantCalls} | | |`,
+    `| cap saturation (6 s, every id every frame) | cap reached in ${stress.cap.framesAtCap}/${stress.cap.frames} frames, max ${stress.cap.maxActive} voices; ` +
+      `priority cues played ${stress.cap.priPlayed}/${stress.cap.priCalls} (${stress.cap.priPlayedAtCap}/${stress.cap.priAtCap} while at the cap); voices left after: ${stress.cap.activeAfter} | | |`,
     `| main-thread cost of sfx() | ${(stress.sfxMsAvgPerCall * 1000).toFixed(0)} us/call avg, ${stress.sfxMsMax.toFixed(1)} ms max per frame | | |`, '');
   fs.writeFileSync(path.join(outDir, 'stress.json'), JSON.stringify(stress, null, 1));
   console.log('\nSTRESS', JSON.stringify({ ...stress, perId: undefined }, null, 1));
@@ -650,7 +814,8 @@ if (!onlyIds.length) {
   });
   fs.writeFileSync(path.join(outDir, 'realtime.json'), JSON.stringify(rt, null, 1));
   docParts.push('### Realtime AudioContext (headless Chromium)', '',
-    `Context ${rt.sampleRate} Hz. ${rt.assets} MP3s decoded in ${rt.decodeLoadMs.toFixed(0)} ms (${rt.failed.length} failures); decoder delay trimmed at runtime: ` +
+    `Context ${rt.sampleRate} Hz. ${rt.assets} MP3s decoded in ${rt.decodeLoadMs.toFixed(0)} ms on an otherwise idle page (${rt.failed.length} failures; in the game, ` +
+      'where decoding shares the main thread with loading, `scripts/audio/sfx_game_check.mjs` reports when it finishes); decoder delay trimmed at runtime: ' +
       `${rt.leadSamples.min}..${rt.leadSamples.max} samples (Chromium strips the LAME encoder delay itself). Recorded buffer played for every id: ${rt.allRecorded}. ` +
       `sfx() call cost: max ${rt.maxCallMs.toFixed(2)} ms; 1000 calls in a burst: ${rt.burst1000Ms.toFixed(1)} ms.`, '');
   console.log('\nREALTIME', JSON.stringify(rt, null, 1));
