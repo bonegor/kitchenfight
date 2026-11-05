@@ -8,7 +8,7 @@
 import { Ctx, Pt, ellipsePath, circlePath, smoothPath, glint, line, rng } from '../painter';
 import { S, projectile, softGlow, sparkle, radial, swoosh } from './items_kit';
 import {
-  rollingPin, slipper, slipper34, chefKnife, olive, fork, trident, doughDisc, margherita, cutterWheel, chilli, moka,
+  rollingPin, slipper34, chefKnife, olive, fork, trident, doughDisc, margherita, cutterWheel, chilli, moka,
   lavaRock, meteor, cheeseDisc, basilLeaf,
 } from './items_objects';
 
@@ -25,10 +25,8 @@ projectile('proj.mattarello_nonna', 64, 26, (ctx) => rollingPin(ctx, 52, { ink: 
 });
 
 // --- Ciabatta ---------------------------------------------------------------
-projectile('proj.ciabatta', 30, 16, (ctx) => slipper(ctx, 24, { ink: 1.2 }));
-projectile('proj.ciabatta34', 30, 20, (ctx) => slipper34(ctx, 24, { ink: 1.2 }));
-projectile('proj.ciabatta_oro34', 34, 22, (ctx) => slipper34(ctx, 26, { ink: 1.25, gold: true }), { glow: GOLD_GLOW, glowR: 2.6, glowA: 0.8, edge: '#fff6c8' });
-projectile('proj.ciabatta_oro', 34, 20, (ctx) => slipper(ctx, 26, { ink: 1.25, gold: true }), {
+projectile('proj.ciabatta', 30, 20, (ctx) => slipper34(ctx, 24, { ink: 1.2 }));
+projectile('proj.ciabatta_oro', 34, 24, (ctx) => slipper34(ctx, 26, { ink: 1.25, gold: true }), {
   glow: GOLD_GLOW, glowR: 2.6, glowA: 0.8, edge: '#fff6c8',
   over: (ctx) => sparkle(ctx, 9, -6, 2.4, '#ffffff', 0.9),
 });

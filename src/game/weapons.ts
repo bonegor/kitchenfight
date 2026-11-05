@@ -360,8 +360,6 @@ def({
       p.vx = Math.cos(a) * sp;
       p.vy = Math.sin(a) * sp;
       p.r = 6;
-      p.spin = 12;
-      p.faceVel = false;
       p.life = p.max = 1.6;
       run.sfx('w_olive', { volume: 0.7 });
     });
@@ -389,8 +387,6 @@ def({
       p.vx = Math.cos(a) * sp;
       p.vy = Math.sin(a) * sp;
       p.r = 8;
-      p.spin = 14;
-      p.faceVel = false;
       p.glow = '#ffd84a';
       p.life = p.max = 1.6;
       p.onHit = (pp, e) => {

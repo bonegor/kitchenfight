@@ -2,11 +2,11 @@
  * ENEMIES B — pizza crimes: Fetta Hawaiana, Margherita Macchiata.
  */
 import {
-  Ctx, Pt, INK, shape, group, line, inkLine, ellipsePath, circlePath, smoothPath, speckle, glint,
-  legs, eye, brow, mouth, shade, light, rng,
+  Ctx, Pt, shape, group, line, inkLine, ellipsePath, circlePath, smoothPath, blobPath, speckle, glint,
+  legs, mouth, shade, rng,
 } from '../painter';
 import {
-  TAU, LIMB, enemySprite, cyc, dripPath, hoseArm, eyePair, cheeks, clipTo, twinkle,
+  TAU, LIMB, enemySprite, cyc, dripPath, hoseArm, eyePair, cheeks, clipTo,
 } from './enemies_b_kit';
 
 const CRUST = '#e4a457';
@@ -76,7 +76,7 @@ function drawHawaiana(ctx: Ctx, f: number) {
   ctx.rotate(0.07);
 
   // far arm (raised fist, behind the slice)
-  hoseArm(ctx, -12, -8, -18.5 + s * 0.8, -15.5 - Math.abs(s) * 1.2, { bend: -0.25, thick: 2, handR: 2.6 });
+  hoseArm(ctx, -10.5, -5.5, -19.6 - s * 0.8, -7.4 - Math.abs(s) * 1.4, { bend: -0.3, thick: 2, handR: 2.6 });
 
   // slice body (cheese) + cheese drips, one silhouette
   const body = (c: Ctx) => {
@@ -118,8 +118,8 @@ function drawHawaiana(ctx: Ctx, f: number) {
   // toppings
   pineChunk(ctx, -11.2, -11.2, 3.3, -0.4);
   hamPiece(ctx, 12.6, -10.6, 3.3, 0.5, 3);
-  hamPiece(ctx, -5.2, 0.6, 2.5, -0.3, 9);
-  pineChunk(ctx, 5.4, 3.6, 2.4, 0.5);
+  hamPiece(ctx, -8.6, -3.4, 2.4, -0.3, 9);
+  pineChunk(ctx, 0.6, 5.8, 2.3, 0.3);
 
   // crust (thick puffy cornicione) with leopard char
   const crust = (c: Ctx) => {
@@ -171,138 +171,135 @@ enemySprite('hawaiana', 46, 50, 31, drawHawaiana);
 // 5. MARGHERITA MACCHIATA — r14. A ketchup-stained pizza spinning like a UFO.
 // ---------------------------------------------------------------------------
 
-const KETCHUP = '#ee1d36';
-const KETCHUP_SH = '#a90f26';
+const KETCHUP = '#ff2747';
+const KETCHUP_SH = '#b30f2c';
+const UFO = '#a3adc2';
+const UFO_SH = '#626d86';
 
 function drawMacchiata(ctx: Ctx, f: number) {
-  const cx = 0, cy = -3;
-  const RX = 17.5, RY = 11;
-  const spin = (f / 4) * (Math.PI / 2); // 4-fold pattern → seamless loop
+  const cx = 0, cy = -4.4;
+  const RX = 17.4, RY = 11.2;
+  const spin = (f / 4) * (Math.PI / 2); // 4-fold toppings (2-fold ketchup turns at 2×) → seamless loop
 
   // whoosh arcs (behind)
   for (let k = 0; k < 2; k++) {
-    const a0 = spin * 0.5 + k * Math.PI + 0.3;
+    const a0 = (k ? Math.PI : 0) - 0.5 + (f % 2) * 0.25;
     const pts: Pt[] = [];
-    for (let i = 0; i <= 8; i++) {
-      const a = a0 + (i / 8) * 1.1;
-      pts.push([cx + Math.cos(a) * (RX + 3.2), cy + 2 + Math.sin(a) * (RY + 2.6)]);
+    for (let i = 0; i <= 6; i++) {
+      const a = a0 + (i / 6) * 0.9;
+      pts.push([cx + Math.cos(a) * (RX + 2.8), cy + 1 + Math.sin(a) * (RY + 2.4)]);
     }
-    line(ctx, pts, 1.3, '#ffffff', true, 0.45);
+    line(ctx, pts, 1.2, '#ffffff', true, 0.5);
   }
 
-  // underside (UFO belly) + rim lights
-  shape(ctx, (c) => ellipsePath(c, cx, cy + 3.4, RX - 0.4, RY - 0.2), { fill: '#9aa3b5', shadow: '#6d7488', shadowOffset: [-2.5, -3.2], ink: 2.1 });
-  // glowing belly window
-  shape(ctx, (c) => ellipsePath(c, cx, cy + 9.6, 5.5, 2.2), { fill: '#8ff6ff', ink: 1.2, shadow: '#4cc4e0', shadowOffset: [-0.8, -0.8], gloss: [{ x: cx - 2, y: cy + 8.9, rx: 1.6, ry: 0.5, alpha: 0.9 }] });
+  // UFO belly under the pizza
+  const belly = (c: Ctx) => ellipsePath(c, cx, cy + 5.2, RX - 1.4, RY - 1.6);
+  shape(ctx, belly, { fill: UFO, shadow: UFO_SH, shadowOffset: [-2.2, -3.4], ink: 2.1, gloss: [{ x: cx - 9, y: cy + 9.6, rx: 2.6, ry: 0.8, rot: 0.2, alpha: 0.5 }] });
+  // glowing hatch
+  shape(ctx, (c) => ellipsePath(c, cx + 0.5, cy + 12.6, 4.6, 1.7), { fill: '#8ff6ff', ink: 1.2, shadow: '#4cc4e0', shadowOffset: [-0.6, -0.7], gloss: [{ x: cx - 1.4, y: cy + 12.1, rx: 1.4, ry: 0.45, alpha: 0.9 }] });
+  // chasing rim lights round the belly
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * TAU + 0.13;
+    const sn = Math.sin(a);
+    if (sn < 0.12) continue;
+    const x = cx + Math.cos(a) * (RX - 2.6), y = cy + 6.2 + sn * (RY - 3.4);
+    const lit = (i + f) % 4 === 0;
+    const col = i % 2 ? '#ffe45c' : '#7ff3ff';
+    if (lit) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      circlePath(ctx, x, y, 2.4);
+      ctx.fill();
+      ctx.restore();
+    }
+    shape(ctx, (c) => circlePath(c, x, y, 1.05), { fill: lit ? '#ffffff' : col, ink: 0.75, shadow: 'none' });
+  }
 
   // crust disc
   const disc = (c: Ctx) => ellipsePath(c, cx, cy, RX, RY);
-  shape(ctx, disc, { fill: CRUST, shadow: CRUST_SH, shadowOffset: [-2, -2.6], ink: 2.1, gloss: [{ x: cx - 9, y: cy - 7.2, rx: 5, ry: 1.6, rot: -0.25, alpha: 0.5 }] });
-  // leopard char on the rim (rotates)
+  shape(ctx, disc, { fill: CRUST, shadow: CRUST_SH, shadowOffset: [-1.8, -2.4], ink: 2.1, gloss: [{ x: cx - 9, y: cy - 7, rx: 5, ry: 1.4, rot: -0.22, alpha: 0.5 }] });
   clipTo(ctx, disc, () => {
     const R = rng(12);
-    for (let i = 0; i < 16; i++) {
-      const a = spin + (i / 16) * TAU + R() * 0.2;
-      const x = cx + Math.cos(a) * RX * 0.9, y = cy + Math.sin(a) * RY * 0.88;
+    for (let i = 0; i < 14; i++) {
+      const a = spin + (i / 14) * TAU + R() * 0.2;
+      const x = cx + Math.cos(a) * RX * 0.9, y = cy + Math.sin(a) * RY * 0.86;
       ctx.beginPath();
-      ellipsePath(ctx, x, y, 0.8 + R() * 0.8, 0.5 + R() * 0.4, a);
+      ellipsePath(ctx, x, y, 0.8 + R() * 0.7, 0.5 + R() * 0.35, a);
       ctx.fillStyle = CHAR;
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.5;
       ctx.fill();
     }
     ctx.globalAlpha = 1;
   });
 
-  // sauce field
-  const SX = RX - 3.6, SY = RY - 3;
-  const sauce = (c: Ctx) => ellipsePath(c, cx + 0.2, cy - 0.5, SX, SY);
-  shape(ctx, sauce, { fill: SAUCE, ink: 1.2, inkColor: shade(CRUST_SH, 0.2), shadow: '#b52a20', shadowOffset: [1.4, 1.6] });
-
+  // tomato field
+  const SX = RX - 3.5, SY = RY - 2.9;
+  const scx = cx + 0.2, scy = cy - 0.5;
+  const sauce = (c: Ctx) => ellipsePath(c, scx, scy, SX, SY);
+  shape(ctx, sauce, { fill: SAUCE, ink: 1.1, inkColor: shade(CRUST_SH, 0.2), shadow: '#b52a20', shadowOffset: [1.2, 1.4] });
+  const P = (a: number, d: number): Pt => [scx + Math.cos(a) * SX * d, scy + Math.sin(a) * SY * d];
   clipTo(ctx, sauce, () => {
-    const P = (a: number, d: number): Pt => [cx + Math.cos(a) * SX * d, cy - 0.5 + Math.sin(a) * SY * d];
-    // mozzarella patches (4-fold)
+    // big melted mozzarella patches (4-fold) + small ones between
     for (let k = 0; k < 4; k++) {
       const a = spin + k * (Math.PI / 2);
-      const [x, y] = P(a, 0.72);
-      shape(ctx, (c) => ellipsePath(c, x, y, 3.6, 2.4, a * 0.2), { fill: '#fff6e2', ink: 0.9, inkColor: '#c9a27a', shadow: '#f0d9b5', shadowOffset: [-0.8, -0.9] });
+      const [x, y] = P(a, 0.6);
+      shape(ctx, (c) => blobPath(c, x, y, 4.6, 3.1, 0.14, 8, 2), { fill: '#fff6e2', ink: 0.85, inkColor: '#b8865c', shadow: '#efd6b0', shadowOffset: [-0.8, -0.9] });
+      const [x2, y2] = P(a + Math.PI / 4, 0.86);
+      shape(ctx, (c) => blobPath(c, x2, y2, 2, 1.4, 0.15, 7, 5), { fill: '#fff6e2', ink: 0.7, inkColor: '#b8865c', shadow: 'none' });
     }
     // basil leaves
     for (let k = 0; k < 4; k++) {
       const a = spin + k * (Math.PI / 2) + Math.PI / 4;
-      const [x, y] = P(a, 0.8);
+      const [x, y] = P(a, 0.58);
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(a + 1.2);
+      ctx.rotate(a + 1.3);
       shape(ctx, (c) => {
-        c.moveTo(-2.6, 0);
-        c.quadraticCurveTo(0, -2, 2.6, 0);
-        c.quadraticCurveTo(0, 2, -2.6, 0);
+        c.moveTo(-2.7, 0);
+        c.quadraticCurveTo(0, -2, 2.7, 0);
+        c.quadraticCurveTo(0, 2, -2.7, 0);
         c.closePath();
       }, { fill: BASIL, ink: 0.8, shadow: '#1f7a35', shadowOffset: [-0.5, -0.6] });
+      line(ctx, [[-1.9, 0], [1.9, 0]], 0.4, '#8fe08a', false, 0.8);
       ctx.restore();
     }
   });
 
-  // ketchup zig-zags (the crime) — glossy, on top of everything, spinning
-  for (let k = 0; k < 4; k++) {
-    const a0 = spin + k * (Math.PI / 2) + 0.42;
+  // the crime: two glossy zig-zags of ketchup squeezed over the cheese
+  for (let k = 0; k < 2; k++) {
+    const a0 = spin * 2 + k * Math.PI - 0.55;
     const pts: Pt[] = [];
-    for (let i = 0; i <= 6; i++) {
-      const a = a0 + i * 0.16;
-      const d = i % 2 === 0 ? 0.56 : 0.98;
-      pts.push([cx + Math.cos(a) * RX * d, cy - 0.5 + Math.sin(a) * RY * d]);
+    for (let i = 0; i <= 8; i++) {
+      const a = a0 + i * 0.135;
+      pts.push(P(a, i % 2 === 0 ? 0.5 : 0.88));
     }
-    inkLine(ctx, pts, 1.8, KETCHUP, false, 0.75);
-    line(ctx, pts.slice(1, 3), 0.6, '#ff9aa6', false, 0.9);
+    inkLine(ctx, pts, 1.05, KETCHUP, false, 0.6);
+    glint(ctx, pts[3][0], pts[3][1] - 0.2, 0.5, 0.28, 0, 0.9);
   }
-  // splats
   for (let k = 0; k < 4; k++) {
-    const a = spin + k * (Math.PI / 2) + 1.05;
-    const x = cx + Math.cos(a) * RX * 0.52, y = cy - 0.5 + Math.sin(a) * RY * 0.5;
-    shape(ctx, (c) => circlePath(c, x, y, 1.15), { fill: KETCHUP, ink: 0.7, shadow: KETCHUP_SH, shadowOffset: [-0.4, -0.4] });
+    const [x, y] = P(spin + k * (Math.PI / 2) + 1.2, 0.95);
+    shape(ctx, (c) => circlePath(c, x, y, 0.85), { fill: KETCHUP, ink: 0.55, shadow: KETCHUP_SH, shadowOffset: [-0.3, -0.3] });
   }
 
-  // central melted-mozzarella pool carrying the face
+  // central melted-mozzarella pool carrying the face (stays upright)
   const pool = (c: Ctx) => {
     const pts: Pt[] = [];
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * TAU;
-      const k = 1 + 0.09 * Math.sin(i * 2.3 + 1);
-      pts.push([cx + 0.6 + Math.cos(a) * 8.6 * k, cy - 1.6 + Math.sin(a) * 6.4 * k]);
+      const k = 1 + 0.08 * Math.sin(i * 2.3 + 1);
+      pts.push([cx + 0.7 + Math.cos(a) * 6.9 * k, cy - 1.3 + Math.sin(a) * 5.1 * k]);
     }
     smoothPath(c, pts, true);
   };
-  shape(ctx, pool, { fill: '#fff8e8', ink: 1.3, shadow: '#efd6ae', shadowOffset: [-1.6, -1.4], gloss: [{ x: cx - 4.5, y: cy - 6, rx: 2.2, ry: 0.9, rot: -0.3, alpha: 0.9 }] });
+  shape(ctx, pool, { fill: '#fff8e8', ink: 1.2, shadow: '#efd6ae', shadowOffset: [-1.3, -1.2], gloss: [{ x: cx - 3.6, y: cy - 4.8, rx: 1.8, ry: 0.7, rot: -0.3, alpha: 0.9 }] });
 
-  // face
-  eyePair(ctx, cx + 1, cy - 3.6, 2.8, { sp: 7, look: [0.38, 0.12], near: 1.08, brow: 0.55, browDy: 1.45, browTh: 1.45, squash: 1.05 });
-  mouth(ctx, cx + 1.4, cy + 1.6, 7.4, 'snarl', { open: 1.1 });
-  // ketchup smear on the cheek
-  shape(ctx, (c) => ellipsePath(c, cx - 5.6, cy + 1.6, 1.6, 0.9, 0.3), { fill: KETCHUP, ink: 0.7, shadow: 'none' });
-
-  // rim lights on the crust edge (fixed, chasing)
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * TAU + 0.13;
-    const sn = Math.sin(a);
-    if (sn < 0.05) continue; // only the near half
-    const x = cx + Math.cos(a) * (RX - 0.3), y = cy + 1.7 + sn * (RY + 0.2);
-    const lit = (i + f) % 4 === 0;
-    const col = i % 2 ? '#ffe45c' : '#7ff3ff';
-    if (lit) {
-      ctx.save();
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      circlePath(ctx, x, y, 2.6);
-      ctx.fill();
-      ctx.restore();
-    }
-    shape(ctx, (c) => circlePath(c, x, y, 1.15), { fill: lit ? '#ffffff' : shade(col, 0.35), ink: 0.8, shadow: 'none' });
-    if (lit) twinkle(ctx, x, y, 2.6, '#ffffff', 0.9);
-  }
+  eyePair(ctx, cx + 1, cy - 3.2, 2.6, { sp: 7, look: [0.4, 0.14], near: 1.08, brow: 0.55, browDy: 1.45, browTh: 1.45, squash: 1.02 });
+  mouth(ctx, cx + 1.4, cy + 1.6, 6.6, 'snarl', { open: 1.05 });
+  // ketchup smeared on its cheek
+  shape(ctx, (c) => ellipsePath(c, cx - 5.3, cy + 1.5, 1.4, 0.8, 0.3), { fill: KETCHUP, ink: 0.6, shadow: 'none' });
 }
 
-enemySprite('macchiata', 46, 42, 23, drawMacchiata);
+enemySprite('macchiata', 46, 42, 24, drawMacchiata);
 
-// keep tree-shakers honest about helpers we may want later
-void light; void glint; void eye; void brow;

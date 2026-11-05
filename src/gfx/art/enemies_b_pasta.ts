@@ -568,126 +568,137 @@ const WIG = '#fde58a';
 const WIG_SH = '#e2b54a';
 
 function drawVongola(ctx: Ctx, f: number) {
-  // crab legs (3 a side), scuttling
+  const CY = -0.6;
+  // crab legs (3 a side), scuttling sideways
   for (const side of [-1, 1]) {
     for (let i = 0; i < 3; i++) {
       const up = (i + f + (side > 0 ? 1 : 0)) % 2 === 0;
-      const lift = up ? 1.6 : 0;
-      const hx = side * (6 + i * 2.6), hy = 6.4 + i * 0.6;
-      const kx = side * (11 + i * 2.4), ky = 3.6 + i * 1.6 - lift;
-      const fx = side * (12 + i * 2.6) + (up ? side * 0.6 : 0), fy = 13 - lift * 0.8 + (i === 1 ? 0.5 : 0);
-      inkLine(ctx, [[hx, hy], [kx, ky], [fx, fy]], 1.5, '#ef8b6c', false, 0.9);
+      const lift = up ? 1.8 : 0;
+      const hx = side * (5 + i * 2.6), hy = CY + 8.6 - i * 0.9;
+      const kx = side * (16.2 + i * 1.8), ky = CY + 2.6 + i * 1.4 - lift;
+      const fx = side * (18.2 + i * 1.5) + (up ? side * 0.6 : 0), fy = 13.6 - lift * 0.7;
+      inkLine(ctx, [[hx, hy], [kx, ky], [fx, fy]], 1.4, '#f08c6c', false, 0.9);
+      line(ctx, [[kx - side * 0.2, ky + 0.6], [fx, fy - 1.2]], 0.45, '#ffc0a6', false, 0.8);
     }
   }
 
-  const CY = -1;
   // lower shell (bowl)
+  const lowerLip: Pt[] = [[-15.8, CY + 0.4], [-10, CY + 3.4], [-4, CY + 4.9], [4, CY + 4.9], [10, CY + 3.4], [15.8, CY + 0.4]];
   const lower = (c: Ctx) => {
-    c.moveTo(-14.2, CY - 0.6);
-    c.bezierCurveTo(-13.6, CY + 8.4, -6, CY + 11.6, 0, CY + 11.6);
-    c.bezierCurveTo(6, CY + 11.6, 13.6, CY + 8.4, 14.2, CY - 0.6);
-    c.bezierCurveTo(10, CY + 3.6, 5, CY + 5.6, 0, CY + 5.6);
-    c.bezierCurveTo(-5, CY + 5.6, -10, CY + 3.6, -14.2, CY - 0.6);
+    c.moveTo(-15.8, CY + 0.4);
+    c.bezierCurveTo(-15.6, CY + 7.6, -7.6, CY + 11, 0, CY + 11);
+    c.bezierCurveTo(7.6, CY + 11, 15.6, CY + 7.6, 15.8, CY + 0.4);
+    for (let i = lowerLip.length - 2; i >= 0; i--) c.lineTo(lowerLip[i][0], lowerLip[i][1]);
     c.closePath();
   };
-  shape(ctx, lower, { fill: SHELL, shadow: SHELL_SH, shadowOffset: [-1.8, -2.2], ink: 2 });
+  shape(ctx, lower, { fill: SHELL, shadow: SHELL_SH, shadowOffset: [-1.8, -2.4], ink: 2 });
   clipTo(ctx, lower, () => {
-    for (let i = -4; i <= 4; i++) {
-      line(ctx, [[i * 3.3, CY + 4.4], [i * 1.4, CY + 13]], 0.7, SHELL_LN, false, 0.55);
+    for (let i = -6; i <= 6; i++) {
+      if (i % 2 === 0) continue;
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = SHELL_LN;
+      ctx.beginPath();
+      polyPath(ctx, [[0, CY + 13], [i * 2.7 - 1.1, CY + 2], [i * 2.7 + 1.1, CY + 2]]);
+      ctx.fill();
+      ctx.restore();
     }
-    line(ctx, [[-12, CY + 4.6], [-6, CY + 8.4], [0, CY + 9.4], [6, CY + 8.4], [12, CY + 4.6]], 0.9, '#efe0f7', true, 0.6);
+    line(ctx, [[-13.6, CY + 4.4], [-7, CY + 8], [0, CY + 9], [7, CY + 8], [13.6, CY + 4.4]], 0.8, '#efe0f7', true, 0.6);
   });
 
-  // gap / interior + mantle
+  // gap / interior + pink mantle frill
+  const upperLip: Pt[] = [[16.2, CY + 0.1], [12, CY - 2.7], [8, CY - 3.9], [4.4, CY - 3.6], [1.4, CY - 1.7], [-1.4, CY - 1.5], [-4.2, CY - 3.4], [-8, CY - 3.9], [-12, CY - 2.7], [-16.2, CY + 0.1]];
   const gap = (c: Ctx) => {
-    c.moveTo(-14, CY - 0.6);
-    c.bezierCurveTo(-10, CY - 6.6, 10, CY - 6.6, 14, CY - 0.6);
-    c.bezierCurveTo(10, CY + 4, 5, CY + 6, 0, CY + 6);
-    c.bezierCurveTo(-5, CY + 6, -10, CY + 4, -14, CY - 0.6);
-    c.closePath();
+    smoothPath(c, [...upperLip, ...lowerLip.map(([x, y]): Pt => [x * 0.98, y - 0.4]).slice(1, -1)], true, 0.4);
   };
   shape(ctx, gap, { fill: '#3b1430', ink: 0, shadow: 'none' });
   clipTo(ctx, gap, () => {
     ctx.beginPath();
-    ctx.moveTo(-14, CY + 6);
-    for (let i = 0; i <= 14; i++) {
-      const x = -13 + i * (26 / 14);
-      ctx.lineTo(x, CY + 3 + (i % 2) * 1 + Math.abs(x) * 0.05);
+    ctx.moveTo(-16, CY + 7);
+    for (let i = 0; i <= 16; i++) {
+      const x = -15 + i * (30 / 16);
+      ctx.lineTo(x, CY + 2.6 + (i % 2) * 0.9 + Math.abs(x) * 0.03);
     }
-    ctx.lineTo(14, CY + 6);
+    ctx.lineTo(16, CY + 7);
     ctx.closePath();
     ctx.fillStyle = '#f0a6b0';
     ctx.fill();
   });
 
-  // eyes glaring out
-  eye(ctx, -3.8, CY - 0.4, 2.9, { look: [0.4, 0.05], pupil: 0.52 });
-  eye(ctx, 4.4, CY - 0.6, 3.1, { look: [0.4, 0.05], pupil: 0.52 });
-  // tongue (the clam's foot) sticking out
+  // eyes glaring out of the gap
+  eye(ctx, -4.2, CY + 0.2, 2.9, { look: [0.42, 0.05], pupil: 0.52 });
+  eye(ctx, 4.6, CY, 3.1, { look: [0.42, 0.05], pupil: 0.52 });
+  // tongue (the clam's foot) blowing a raspberry
   shape(ctx, (c) => {
-    c.moveTo(1, CY + 4.2);
-    c.quadraticCurveTo(1.6, CY + 9.6, 4.6, CY + 9.4);
-    c.quadraticCurveTo(7.2, CY + 9, 6.6, CY + 3.6);
+    c.moveTo(1.2, CY + 3.6);
+    c.quadraticCurveTo(1.4, CY + 9.4, 4.6, CY + 9.2);
+    c.quadraticCurveTo(7.4, CY + 8.8, 6.8, CY + 3.2);
     c.closePath();
   }, { fill: '#ff8fa3', ink: 1.1, shadow: '#e0607c', shadowOffset: [-0.6, -0.6] });
-  line(ctx, [[3.8, CY + 4.8], [4, CY + 7.8]], 0.55, '#d84b6c', false, 0.8);
+  line(ctx, [[3.9, CY + 4.4], [4.1, CY + 7.4]], 0.55, '#d84b6c', false, 0.8);
 
-  // upper shell (its lip forms an angry brow over the eyes)
+  // upper shell (its scalloped M-lip forms an angry brow over the eyes)
   const upper = (c: Ctx) => {
-    c.moveTo(-14.6, CY - 0.4);
-    c.bezierCurveTo(-15, CY - 9.6, -7.4, CY - 14.2, 0, CY - 14.2);
-    c.bezierCurveTo(7.4, CY - 14.2, 15, CY - 9.6, 14.6, CY - 0.4);
-    // scalloped M-shaped lip, dipping toward the middle
-    const lip: Pt[] = [[11.4, CY - 3.4], [8, CY - 4.6], [4.4, CY - 4.4], [1.4, CY - 2.6], [-1.4, CY - 2.4], [-4.2, CY - 4.2], [-7.8, CY - 4.6], [-11.4, CY - 3.4], [-14.6, CY - 0.4]];
-    let px = 14.6, py = CY - 0.4;
-    for (const [x, y] of lip) {
-      c.quadraticCurveTo((px + x) / 2, (py + y) / 2 + 1.1, x, y);
+    c.moveTo(-16.2, CY + 0.1);
+    c.bezierCurveTo(-16.8, CY - 8.8, -9.4, CY - 12.8, -0.6, CY - 12.8);
+    c.bezierCurveTo(9.4, CY - 12.8, 16.8, CY - 8.8, 16.2, CY + 0.1);
+    let [px, py] = upperLip[0];
+    for (let i = 1; i < upperLip.length; i++) {
+      const [x, y] = upperLip[i];
+      c.quadraticCurveTo((px + x) / 2, (py + y) / 2 + 1.2, x, y);
       px = x; py = y;
     }
     c.closePath();
   };
-  shape(ctx, upper, { fill: SHELL, shadow: SHELL_SH, shadowOffset: [-2.2, -2.6], ink: 2, gloss: [{ x: -6.6, y: CY - 10, rx: 2.8, ry: 1.2, rot: -0.5, alpha: 0.65 }] });
+  shape(ctx, upper, { fill: SHELL, shadow: SHELL_SH, shadowOffset: [-2.2, -2.6], ink: 2, gloss: [{ x: -7.2, y: CY - 9, rx: 3, ry: 1.2, rot: -0.4, alpha: 0.65 }] });
   clipTo(ctx, upper, () => {
-    // radial ridges + zig-zag growth bands
-    for (let i = -5; i <= 5; i++) {
-      line(ctx, [[0, CY - 16], [i * 3.1, CY - 1]], 0.7, SHELL_LN, false, 0.5);
+    // fan ribs from the hinge
+    for (let i = -7; i <= 7; i++) {
+      if (i % 2 === 0) continue;
+      ctx.save();
+      ctx.globalAlpha = 0.26;
+      ctx.fillStyle = SHELL_LN;
+      ctx.beginPath();
+      polyPath(ctx, [[-0.6, CY - 14], [i * 2.4 - 1, CY], [i * 2.4 + 1, CY]]);
+      ctx.fill();
+      ctx.restore();
     }
-    for (const [k, col] of [[0.55, '#9b6db8'], [0.8, '#b48bd0']] as [number, string][]) {
+    // zig-zag growth bands
+    for (const [k, col] of [[0.5, '#9b6db8'], [0.78, '#b48bd0']] as [number, string][]) {
       const pts: Pt[] = [];
-      for (let i = 0; i <= 12; i++) {
-        const a = Math.PI + (i / 12) * Math.PI;
-        pts.push([Math.cos(a) * 14 * k, CY - 1.6 + Math.sin(a) * 12.4 * k + (i % 2 ? 0.7 : -0.7)]);
+      for (let i = 0; i <= 14; i++) {
+        const a = Math.PI + (i / 14) * Math.PI;
+        pts.push([-0.6 + Math.cos(a) * 16 * k, CY - 1 + Math.sin(a) * 12 * k + (i % 2 ? 0.7 : -0.7)]);
       }
-      line(ctx, pts, 0.9, col, false, 0.8);
+      line(ctx, pts, 0.9, col, false, 0.85);
     }
+    // pale lip edge
+    line(ctx, upperLip.map(([x, y]): Pt => [x, y - 0.9]), 0.8, '#efe0f7', false, 0.7);
   });
-
-  // grated-cheese wig
+  // grated-cheese wig: a fluffy mop of shreds
   const R = rng(19);
-  const wig = (c: Ctx) => blobPath(c, -0.6, CY - 15.2, 10.6, 5.4, 0.16, 15, 21);
-  shape(ctx, wig, { fill: WIG, shadow: WIG_SH, shadowOffset: [-1.8, -1.8], ink: 1.6, gloss: [{ x: -4.6, y: CY - 18, rx: 2.4, ry: 1, rot: -0.3, alpha: 0.6 }] });
-  // shreds sticking out of the silhouette
-  for (let i = 0; i < 13; i++) {
-    const a = Math.PI + 0.2 + (i / 12) * (Math.PI - 0.4);
-    const x = -0.6 + Math.cos(a) * 10.4, y = CY - 15.2 + Math.sin(a) * 5.2;
-    const L2 = 1.8 + R() * 1.6;
-    inkLine(ctx, [[x, y], [x + Math.cos(a + (R() - 0.5)) * L2, y + Math.sin(a + (R() - 0.5)) * L2]], 0.8, WIG, false, 0.6);
+  const wy = CY - 14.4;
+  shape(ctx, (c) => blobPath(c, -0.4, wy + 0.6, 10.2, 4.6, 0.12, 12, 21), { fill: WIG_SH, ink: 1.5, shadow: 'none' });
+  const shreds: [number, number, number, number, string][] = [];
+  for (let i = 0; i < 46; i++) {
+    const a = R() * TAU;
+    const d = Math.sqrt(R());
+    const x = -0.4 + Math.cos(a) * 10.4 * d, y = wy + 0.4 + Math.sin(a) * 4.8 * d - (1 - d) * 1.6;
+    const dir = Math.atan2(y - wy - 2, (x + 0.4) * 0.6) + (R() - 0.5) * 1.6;
+    shreds.push([x, y, dir, 2.2 + R() * 2.2, ['#fde68a', '#fff2b8', '#f8d660', '#fde68a'][i % 4]]);
   }
-  clipTo(ctx, wig, () => {
-    for (let i = 0; i < 26; i++) {
-      const x = -10 + R() * 19, y = CY - 19.6 + R() * 8.4;
-      const a = R() * Math.PI;
-      line(ctx, [[x, y], [x + Math.cos(a) * 1.6, y + Math.sin(a) * 1.6]], 0.55, R() < 0.5 ? WIG_SH : '#fff8d6', false, 0.9);
-    }
-  });
-  // a shred or two drifting off
+  shreds.sort((p1, p2) => p1[1] - p2[1]);
+  for (const [x, y, dir, L2, col] of shreds) {
+    const mx = x + Math.cos(dir) * L2 * 0.5 + Math.cos(dir + 1.4) * 0.5;
+    const my = y + Math.sin(dir) * L2 * 0.5 + Math.sin(dir + 1.4) * 0.5;
+    inkLine(ctx, [[x - Math.cos(dir) * L2 * 0.4, y - Math.sin(dir) * L2 * 0.4], [mx, my], [x + Math.cos(dir) * L2 * 0.6, y + Math.sin(dir) * L2 * 0.6]], 1.05, col, true, 0.45);
+  }
+  // shreds drifting off
   const dt = (f % 4) / 4;
-  inkLine(ctx, [[12 + dt * 2, CY - 13 + dt * 7], [13.4 + dt * 2, CY - 12 + dt * 7]], 0.8, WIG, false, 0.55);
-  // angry brow wrinkle on the shell
-  brow(ctx, -4, CY - 6.4, 3.6, 0.5, 0.9, SHELL_LN);
-  brow(ctx, 4.6, CY - 6.6, 3.6, -0.5, 0.9, SHELL_LN);
+  inkLine(ctx, [[12.6 + dt * 2, wy + 2 + dt * 7], [14 + dt * 2, wy + 3 + dt * 7]], 0.8, WIG, false, 0.55);
+  inkLine(ctx, [[-13.4 - dt * 1.6, wy + 4 + ((dt + 0.5) % 1) * 6], [-14.6 - dt * 1.6, wy + 5 + ((dt + 0.5) % 1) * 6]], 0.8, WIG, false, 0.55);
 }
 
-enemySprite('vongola', 42, 44, 25, drawVongola);
+enemySprite('vongola', 50, 44, 25, drawVongola);
 
 void mouth; void glint; void TAU;

@@ -18,11 +18,10 @@ import {
 } from './bosses_b_kit';
 
 export const INFLUENCER_R = 52;
-const W = 186, H = 200, AX = 84, AY = 142;
+const W = 200, H = 204, AX = 86, AY = 146;
 
 const PINK = '#ff4f9e';
 const PINK_SH = '#c4266f';
-const PINK_HI = '#ffa6cf';
 const LILAC = '#9a7cf2';
 const LILAC_SH = '#6a4cc4';
 const SKIN = '#ffd2b8';
@@ -30,7 +29,6 @@ const SKIN_SH = '#f0a98e';
 const HAIR = '#ffe27a';
 const HAIR_SH = '#e8b43a';
 const RING = '#fffaf0';
-const CYAN = '#5fe3ff';
 const PAN = '#3a3540';
 const PAN_SH = '#24202a';
 const CREAM = '#fff3d6';
@@ -58,8 +56,8 @@ interface Pose {
 function ringLight(ctx: Ctx, x: number, y: number, r: number, f: number, glow: number) {
   softGlow(ctx, x, y, r * (1.45 + glow * 0.5), '#fff2c8', 0.5 + glow * 0.45);
   // stand (behind the head, down to the shoulders)
-  line(ctx, [[x, y + r], [x, y + r + 26]], 6.5, INK);
-  line(ctx, [[x, y + r], [x, y + r + 26]], 3, '#8a8a9a');
+  line(ctx, [[x, y + r], [x, y + r + 18]], 6.5, INK);
+  line(ctx, [[x, y + r], [x, y + r + 18]], 3, '#8a8a9a');
   // the ring
   const tube = 8.5;
   ctx.save();
@@ -169,6 +167,19 @@ function phoneHead(ctx: Ctx, p: Pose) {
       }
     }
     screenFace(ctx, x + 2, y + 2, p);
+    if (p.f === 3 && !p.flash) {
+      // stream glitch: a sliced band of the picture slides sideways with RGB fringes
+      const gy = y + 6, gh = 7;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, gy, sw, gh);
+      ctx.clip();
+      ctx.translate(5, 0);
+      screenFace(ctx, x + 2, y + 2, p);
+      ctx.restore();
+      fillPath(ctx, (c) => c.rect(sx, gy - 1, sw, 1.4), '#36f0ff', 0.75);
+      fillPath(ctx, (c) => c.rect(sx, gy + gh, sw, 1.4), '#ff36c8', 0.75);
+    }
     // UI: live pill + viewer eye, reaction hearts drifting up the side
     S(ctx, (c) => roundRectPath(c, sx + 4, sy + 9, 15, 7, 3.5), { fill: '#ff2a4a', ink: 1, shadow: 'none' });
     fillPath(ctx, (c) => circlePath(c, sx + 8, sy + 12.5, 1.7), '#ffffff');
@@ -268,7 +279,7 @@ function screenFace(ctx: Ctx, x: number, y: number, p: Pose) {
   line(ctx, [[x + 1, y + 2], [x + 2.6, y + 6], [x + 0.4, y + 6.6]], 1.3, SKIN_SH, true);
   // THE SMILE: far too wide, far too many teeth
   const open = p.face === 'scream' ? 1.7 : p.face === 'cheese' ? 1.15 : 1;
-  const mw = 34;
+  const mw = 40;
   const my = y + 12;
   const m = (c: Ctx) => {
     c.moveTo(x - mw / 2, my - 2);
@@ -395,6 +406,25 @@ function oneSadPan(ctx: Ctx, x: number, y: number, tilt: number, f: number, hot:
   steamWisp(ctx, x + 8, y - 9, 18, ph + 2.2, 5, hot ? 0.7 : 0.45);
 }
 
+/** Selfie "peace" hand: two fingers up in a V. (x,y) = palm centre. */
+function peaceHand(ctx: Ctx, x: number, y: number, rot: number, spread = 0.32) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  for (const a of [-spread, spread]) {
+    ctx.save();
+    ctx.rotate(a);
+    S(ctx, (c) => roundRectPath(c, -2.6, -17, 5.2, 15, 2.6), { fill: SKIN, ink: OUT_S + 0.2, shadow: SKIN_SH, shadowOffset: [-1, -0.6] });
+    fillPath(ctx, (c) => ellipsePath(c, 0, -14.6, 1.8, 2.2), PINK);
+    ctx.restore();
+  }
+  S(ctx, (c) => ellipsePath(c, 0, 0, 7.4, 6.4), { fill: SKIN, ink: OUT_S + 0.4, shadow: SKIN_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: -2.6, y: -2.2, rx: 1.8, ry: 1.1, alpha: 0.6 }] });
+  // folded fingers + thumb
+  line(ctx, [[-4.6, 1], [3.6, 2.2]], 1.2, SKIN_SH);
+  S(ctx, (c) => ellipsePath(c, -4.6, -1.4, 3, 2.1, -0.6), { fill: SKIN, ink: OUT_S * 0.8, shadow: 'none' });
+  ctx.restore();
+}
+
 function sneaker(ctx: Ctx, x: number, y: number) {
   S(ctx, (c) => {
     c.moveTo(x - 10, y + 1);
@@ -429,7 +459,7 @@ function drawInfluencer(ctx: Ctx, p: Pose) {
   pivot(ctx, 0, FOOT, p.lean);
 
   // ring light halo behind the head
-  ringLight(ctx, HEAD.x, HEAD.y, 47, f, p.ringGlow);
+  ringLight(ctx, HEAD.x, HEAD.y - 2, 53, f, p.ringGlow);
 
   // selfie arm (back, left): stick raised high, filming everything
   const [sx, sy] = p.stick;
@@ -474,9 +504,15 @@ function drawInfluencer(ctx: Ctx, p: Pose) {
   phoneHead(ctx, p);
   ctx.restore();
 
+  // third arm (yes, a third one): the obligatory selfie peace sign
+  const vx = 47 + Math.sin(ph) * 1.5, vy = -48 + Math.cos(ph) * 1.2 - (p.face === 'cheese' ? 6 : 0);
+  limb(ctx, [[22, -10], [44, -18], [vx - 1, vy + 6]], 9, LILAC, OUT_IN, LILAC_SH);
+  S(ctx, (c) => roundRectPath(c, vx - 6, vy + 3, 12, 6, 2.5), { fill: LILAC, ink: OUT_S + 0.4, shadow: LILAC_SH, shadowOffset: [-1, -1] });
+  peaceHand(ctx, vx, vy, 0.18 + Math.sin(ph) * 0.06, p.face === 'scream' ? 0.45 : 0.32);
+
   // pan arm (front, right)
   const [px, py] = p.pan;
-  oneSadPan(ctx, px + 40, py - 2, p.panTilt, f, p.flash);
+  oneSadPan(ctx, px + 37, py - 2, p.panTilt, f, p.flash);
   limb(ctx, [[19, -6], [px - 8, py + 10], [px - 1, py + 1]], 10, LILAC, OUT_IN, LILAC_SH);
   fist(ctx, px, py, 7.4, p.panTilt, { fill: SKIN, shadow: SKIN_SH, cuff: LILAC, ink: OUT_IN });
 
@@ -484,7 +520,7 @@ function drawInfluencer(ctx: Ctx, p: Pose) {
 
   // floating notification bubbles (rising, cycling)
   const bubbles: [number, number, 'heart' | 'like' | 'fire' | 'star', number][] = [
-    [-58, -40, 'heart', 0], [56, -100, 'like', 0.35], [-46, -112, 'fire', 0.6], [70, -58, 'heart', 0.85],
+    [-62, -42, 'heart', 0], [58, -104, 'like', 0.35], [-46, -116, 'fire', 0.6], [78, -66, 'heart', 0.85],
   ];
   bubbles.forEach(([bx, by, kind, off], i) => {
     const t = (off + f * 0.25 + p.hearts) % 1;
@@ -498,7 +534,7 @@ const WALK = (f: number): Pose => {
   const ph = phase(f);
   return {
     f, lean: 0, face: 'smile', ringGlow: 0, stick: [-40, -26 + Math.sin(ph) * 1.5], stickAng: -2.05 + Math.sin(ph) * 0.05,
-    pan: [40, 8 + Math.cos(ph) * 1.5], panTilt: -0.04 + Math.sin(ph) * 0.04, flash: false, hearts: 0,
+    pan: [38, 8 + Math.cos(ph) * 1.5], panTilt: -0.04 + Math.sin(ph) * 0.04, flash: false, hearts: 0,
   };
 };
 
@@ -511,7 +547,7 @@ defineSprite({
       // wind-up: ring light charging, "say cheese!", selfie stick up high
       drawInfluencer(ctx, {
         f: 0, lean: -0.05, face: 'cheese', ringGlow: 0.6, stick: [-40, -36], stickAng: -1.85,
-        pan: [36, 2], panTilt: -0.25, flash: false, hearts: 0.2,
+        pan: [34, 2], panTilt: -0.25, flash: false, hearts: 0.2,
       });
     } else {
       // FLASH: blinding burst from the ring light, hearts everywhere, pan shoved forward
@@ -519,7 +555,7 @@ defineSprite({
       burstLines(ctx, HEAD.x, HEAD.y, 56, 84, 16, '#ffffff', 4, 21, 0, TAU, 0.9);
       drawInfluencer(ctx, {
         f: 2, lean: 0.06, face: 'scream', ringGlow: 1, stick: [-42, -30], stickAng: -2.2,
-        pan: [44, 4], panTilt: 0.28, flash: true, hearts: 0.5,
+        pan: [40, 6], panTilt: 0.28, flash: true, hearts: 0.5,
       });
       swoosh(ctx, 64, 4, 34, -1.2, 0.8, 12, '#fff3d6', 0.5);
     }

@@ -497,6 +497,10 @@ export class Run {
     if (!e.alive) return;
     e.alive = false;
     this.kills++;
+    if (this.kills === 100 || this.kills === 500 || this.kills === 1000 || this.kills === 2500 || this.kills === 5000 || this.kills === 10000) {
+      this.hooks.onToast(`${this.kills.toLocaleString()} crimes stopped! ${['Bravo!', 'Bravissimo!', 'Fantastico!', 'Magnifico!', 'Leggendario!', 'Nonna is crying with joy!'][[100, 500, 1000, 2500, 5000, 10000].indexOf(this.kills)]}`, 'good');
+    }
+    if (e.elite || e.boss) this.hitStop = Math.max(this.hitStop, e.boss ? 0.12 : 0.05);
     this.killsBy[e.def.id] = (this.killsBy[e.def.id] ?? 0) + 1;
     if (w) w.kills++;
     const def = e.def;
@@ -631,7 +635,7 @@ export class Run {
     this.breakProps(x, y, r, 2);
     const c = o.color ?? 'fire';
     if (c === 'coffee') {
-      this.fx.sprite(x, y - 6, 'fx.coffee_cloud', { life: 0.55, size: r / 36, size1: r / 30, alpha: 0.95 });
+      this.fx.sprite(x, y - 6, 'fx.coffee_cloud', { life: 0.5, size: r / 36, size1: r / 30, alpha: 0.95, fps: 8 });
       this.fx.burst(x, y, 14, { colors: ['#6b3f22', '#a8714a', '#f3e2c4'], speed: 260, size: 5, life: 0.6 });
       this.fx.ring(x, y, r * 0.4, r * 1.15, 0.35, '#f3e2c4', 5, false);
     } else if (c === 'cheese') {
@@ -668,7 +672,10 @@ export class Run {
     p.r = 0;
     p.pierce = 0;
     p.faceVel = false;
-    p.spin = 6;
+    if (sprite === 'proj.meteor') {
+      p.rot = Math.PI * 0.62; // falling, tail up-left
+      p.spin = 0;
+    } else p.spin = 4;
     p.glow = '#ff7b2e';
   }
 

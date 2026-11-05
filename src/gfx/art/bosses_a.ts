@@ -383,8 +383,8 @@ function drawKetchup(ctx: Ctx, f: number, pose: Pose) {
       shape(ctx, (c) => circlePath(c, dx, topY + dy + 8, r), { fill: K_SAUCE, ink: 2, shadow: 'none', gloss: [{ x: dx - r * 0.3, y: topY + dy + 8 - r * 0.3, rx: r * 0.35, ry: r * 0.2, alpha: 0.6 }] });
     }
   }
-  topHat(ctx, atk ? -34 : 0, topY - 1 + hatLift, hatTilt, 1);
-  if (atk) effortMarks(ctx, -34, topY - 30, 34, 1.9, 3.1, 3, 8, 2.4);
+  topHat(ctx, atk ? -30 : 0, atk ? topY - 6 : topY - 1 + hatLift, atk ? -0.45 : hatTilt, atk ? 0.92 : 1);
+  if (atk) effortMarks(ctx, -30, topY - 28, 30, 1.9, 3.0, 3, 7, 2.4);
 
   // --- near arm + cane
   if (wind) {
@@ -529,16 +529,18 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   const idle = pose === 'idle';
   const tilt = wind ? -0.11 : atk ? 0.13 : s * 0.035;
 
+  // rock on the bottom corner that stays on the ground
+  const pivX = tilt < 0 ? -50 : 50;
   ctx.save();
-  ctx.translate(0, 53);
+  ctx.translate(pivX, 53);
   ctx.rotate(tilt);
-  ctx.translate(0, -53);
+  ctx.translate(-pivX, -53);
 
   // --- far noodle arm (behind the jar, seen through the glass)
   const wv = idle ? s * 3 : 0;
   if (wind) noodleArm(ctx, [[-36, -52], [-50, -66], [-58, -84], [-52, -104], [-38, -114]], 3);
   else if (atk) noodleArm(ctx, [[-36, -52], [-52, -58], [-62, -46], [-66, -28], [-70, -14]], 3);
-  else noodleArm(ctx, [[-36, -52], [-52, -58], [-62, -46], [-65 - wv * 0.3, -26], [-68 - wv, -8], [-74 - wv, 4]], 3);
+  else noodleArm(ctx, [[-36, -52], [-52, -58], [-60, -46], [-62 - wv * 0.3, -26], [-63 - wv, -10], [-64 - wv * 1.2, 2]], 3);
 
   // --- glass + sauce
   ctx.save();
@@ -679,15 +681,15 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   // --- near noodle arm
   if (wind) noodleArm(ctx, [[36, -52], [50, -66], [60, -86], [56, -108], [42, -120]], 5);
   else if (atk) noodleArm(ctx, [[36, -52], [50, -50], [58, -38], [60, -22], [62, -8]], 5);
-  else noodleArm(ctx, [[36, -52], [52, -58], [62, -46], [65 + wv * 0.3, -26], [68 + wv, -8], [72 + wv, 4]], 5);
+  else noodleArm(ctx, [[36, -52], [52, -58], [60, -46], [62 + wv * 0.3, -26], [63 + wv, -10], [64 + wv * 1.2, 2]], 5);
 
   ctx.restore();
 
   if (atk) {
     // lid flips off; a geyser of Alfredo erupts forward
-    crownLid(ctx, -26, -104, -0.55);
-    effortMarks(ctx, -26, -112, 40, 2.2, 3.3, 3, 8, 2.4);
-    const g: Pt[] = [[12, -54], [18, -72], [31, -86], [48, -92], [64, -88]];
+    crownLid(ctx, -30, -92, -0.55);
+    effortMarks(ctx, -30, -100, 40, 2.2, 3.3, 3, 8, 2.4);
+    const g: Pt[] = [[14, -60], [20, -76], [32, -88], [48, -92], [64, -88]];
     group(ctx, [
       { build: (c) => smoothPath(c, ribbon(g, [42, 34, 28, 24, 20]), true, 0.5), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-4, -4], gloss: [{ x: 22, y: -84, rx: 9, ry: 2, rot: -0.5, alpha: 0.8 }] } },
       { build: (c) => circlePath(c, 66, -88, 11), style: { fill: A_SAUCE, shadow: A_SAUCE_SH, shadowOffset: [-2.6, -2.6] } },
@@ -870,8 +872,8 @@ function drawPanna(ctx: Ctx, f: number, pose: Pose) {
   const step = (k: number) => (idle ? Math.max(0, Math.sin(ph + k * Math.PI)) * 5 : 0);
   const sp = wind ? 7 : 0;
   cowLeg(ctx, [46, 12], [49 + (idle ? Math.cos(ph + Math.PI) * 2 : 0), 46 - step(1)], false);
-  cowLeg(ctx, [-36, 22], [-38 - sp + (idle ? Math.cos(ph) * 3 : 0), 55 - step(0)], true);
-  cowLeg(ctx, [12, 22], [14 + sp + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 55 - step(1)], false);
+  cowLeg(ctx, [-36, 22], [-38 - sp + (idle ? Math.cos(ph) * 3 : 0), 53.4 - step(0)], true);
+  cowLeg(ctx, [12, 22], [14 + sp + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 53.4 - step(1)], false);
 
   // --- carton (squash & stretch around its base)
   const sx = wind ? 1.07 : atk ? 0.93 : 1 + 0.012 * c4;
@@ -1055,21 +1057,21 @@ function drawPanna(ctx: Ctx, f: number, pose: Pose) {
   if (atk) {
     // the cap rockets off; a geyser of cream arcs forward
     const topY = B - (B - (T - 7)) * sy;
-    const g: Pt[] = [[capX, topY], [capX + 4, topY - 16], [capX + 20, topY - 28], [capX + 44, topY - 32], [capX + 70, topY - 26]];
+    const g: Pt[] = [[capX, topY], [capX + 4, topY - 13], [capX + 20, topY - 23], [capX + 44, topY - 26], [capX + 70, topY - 20]];
     group(ctx, [
-      { build: (c) => smoothPath(c, ribbon(g, [18, 22, 24, 22, 20]), true, 0.5), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3.4, -3.4], gloss: [{ x: capX + 18, y: topY - 28, rx: 8, ry: 2, rot: -0.4, alpha: 0.9 }] } },
-      { build: (c) => circlePath(c, capX + 72, topY - 26, 12), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3, -3] } },
+      { build: (c) => smoothPath(c, ribbon(g, [18, 22, 24, 22, 20]), true, 0.5), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3.4, -3.4], gloss: [{ x: capX + 18, y: topY - 23, rx: 8, ry: 2, rot: -0.4, alpha: 0.9 }] } },
+      { build: (c) => circlePath(c, capX + 72, topY - 20, 12), style: { fill: P_CREAM, shadow: P_CREAM_SH, shadowOffset: [-3, -3] } },
     ], BI * 0.85);
-    for (const [ddx, ddy, r] of [[86, -44, 4.4], [66, -50, 3.2], [92, -12, 3.4], [40, -48, 2.6]] as [number, number, number][]) {
+    for (const [ddx, ddy, r] of [[86, -38, 4.4], [64, -40, 3.2], [92, -6, 3.4], [40, -40, 2.6]] as [number, number, number][]) {
       shape(ctx, (c) => circlePath(c, capX + ddx, topY + ddy, r), { fill: P_CREAM, ink: 2, shadow: 'none' });
     }
     ctx.save();
-    ctx.translate(capX - 20, topY - 32);
+    ctx.translate(capX - 22, topY - 24);
     ctx.rotate(-0.7);
     shape(ctx, (c) => roundRectPath(c, -12, -9, 24, 10, 3), { fill: '#ffffff', ink: BI * 0.8, shadow: P_WHITE_SH, shadowOffset: [-3, -1] });
     shape(ctx, (c) => ellipsePath(c, 0, -9, 12, 4.4), { fill: '#ffffff', ink: BI * 0.8, shadow: 'none' });
     ctx.restore();
-    effortMarks(ctx, capX - 20, topY - 32, 16, 0.4, 2.0, 3, 6, 2.2);
+    effortMarks(ctx, capX - 22, topY - 24, 16, 0.4, 2.0, 3, 6, 2.2);
   }
 }
 
@@ -1419,20 +1421,20 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
     }, { fill: back ? '#4a2812' : '#5c3218', ink: BI, shadow: '#2f180a', shadowOffset: [-2.4, -2], gloss: [{ x: fx - 4, y: fy - 4, rx: 4, ry: 1.4, alpha: 0.35 }] });
   };
   if (wind) {
-    stubLeg(-64, 38, -70, 70, true);
-    stubLeg(64, 38, 70, 70, true);
+    stubLeg(-64, 38, -68, 66, true);
+    stubLeg(64, 38, 68, 66, true);
   } else {
-    stubLeg(-66, 40, -70 + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 66 - legLift(1), true);
-    stubLeg(64, 40, 70 + (idle ? Math.cos(ph) * 3 : 0), 66 - legLift(0), true);
+    stubLeg(-66, 40, -70 + (idle ? Math.cos(ph + Math.PI) * 3 : 0), 64 - legLift(1), true);
+    stubLeg(64, 40, 70 + (idle ? Math.cos(ph) * 3 : 0), 64 - legLift(0), true);
   }
 
   // body transform: rear up (wind-up), slam squash (attack), heavy idle bob
   ctx.save();
   if (wind) {
-    ctx.translate(70, 66);
-    ctx.rotate(-0.14);
-    ctx.translate(-70, -66);
-    ctx.translate(0, -6);
+    ctx.translate(74, 66);
+    ctx.rotate(-0.12);
+    ctx.translate(-74, -66);
+    ctx.translate(2, -6);
   } else {
     const sx = atk ? 1.08 : 1 + 0.01 * c4;
     const sy = atk ? 0.86 : 1 - 0.012 * c4;
@@ -1443,11 +1445,11 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
 
   // --- front legs
   if (wind) {
-    stubLeg(-44, 52, -56, 76, false);
-    stubLeg(38, 52, 34, 78, false);
+    stubLeg(-44, 52, -54, 70, false);
+    stubLeg(38, 52, 36, 72, false);
   } else {
-    stubLeg(-44, 54, -48 + (idle ? Math.cos(ph) * 4 : 0) - (atk ? 8 : 0), 74 - legLift(0), false);
-    stubLeg(40, 54, 44 + (idle ? Math.cos(ph + Math.PI) * 4 : 0) + (atk ? 8 : 0), 74 - legLift(1), false);
+    stubLeg(-44, 54, -48 + (idle ? Math.cos(ph) * 4 : 0) - (atk ? 8 : 0), 70 - legLift(0), false);
+    stubLeg(40, 54, 44 + (idle ? Math.cos(ph + Math.PI) * 4 : 0) + (atk ? 8 : 0), 70 - legLift(1), false);
   }
 
   // --- crust wall
@@ -1621,10 +1623,10 @@ function drawDeepDish(ctx: Ctx, f: number, pose: Pose) {
   }
   if (atk) {
     // SLAM: sauce + cheese blobs fly up, dust puffs at the feet
-    for (const [bx, by, br, col] of [[-60, -78, 8, D_CHEESE], [-24, -96, 7, D_SAUCE], [20, -100, 9, D_CHEESE], [58, -86, 7, D_SAUCE], [84, -64, 6, D_CHEESE], [-88, -56, 6, D_SAUCE], [0, -76, 5, D_CHEESE]] as [number, number, number, string][]) {
+    for (const [bx, by, br, col] of [[-60, -72, 8, D_CHEESE], [-24, -88, 7, D_SAUCE], [20, -92, 8.4, D_CHEESE], [58, -80, 7, D_SAUCE], [84, -58, 6, D_CHEESE], [-86, -50, 6, D_SAUCE], [0, -70, 5, D_CHEESE]] as [number, number, number, string][]) {
       shape(ctx, (c) => dropPath(c, bx, by, br), { fill: col, ink: 2.4, shadow: col === D_SAUCE ? D_SAUCE_SH : D_CHEESE_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: bx - br * 0.3, y: by - br * 0.3, rx: br * 0.3, ry: br * 0.2, alpha: 0.7 }] });
     }
-    for (const [px, py, r] of [[-98, 66, 10], [-84, 72, 8], [96, 66, 10], [82, 72, 8]] as [number, number, number][]) puff(ctx, px, py, r, 0.8);
+    for (const [px, py, r] of [[-90, 62, 9], [-78, 67, 7], [88, 62, 9], [76, 67, 7]] as [number, number, number][]) puff(ctx, px, py, r, 0.8);
   }
 }
 

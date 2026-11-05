@@ -16,8 +16,8 @@
  */
 import { defineSprite } from '../sprites';
 import {
-  Ctx, Pt, Fill, INK, shape, flat, line, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath, blobPath,
-  rng, rgba, mix, shade, light, speckle, glint,
+  Ctx, Pt, Fill, shape, flat, line, ellipsePath, circlePath, roundRectPath, smoothPath, blobPath,
+  rng, rgba, mix, shade, light,
 } from '../painter';
 import type { PropPlacement, Collider } from '../stageenv';
 
@@ -292,7 +292,7 @@ const GLYPHS: Record<string, number[][]> = {
   F: [[4, 0, 0, 0, 0, 6], [0, 3, 3, 3]],
   G: [[4, 1.1, 3, 0, 1, 0, 0, 1, 0, 5, 1, 6, 3, 6, 4, 5, 4, 3.4, 2.2, 3.4]],
   H: [[0, 0, 0, 6], [4, 0, 4, 6], [0, 3, 4, 3]],
-  I: [[2, 0, 2, 6]],
+  I: [[0.5, 0, 0.5, 6]],
   J: [[4, 0, 4, 5, 3, 6, 1, 6, 0, 5]],
   K: [[0, 0, 0, 6], [4, 0, 0, 3.6], [1.4, 2.6, 4, 6]],
   L: [[0, 0, 0, 6, 4, 6]],
@@ -330,7 +330,7 @@ const GLYPHS: Record<string, number[][]> = {
   '%': [[0, 6, 4, 0], [0.6, 0.4, 1.2, 0.4, 1.2, 1.6, 0.6, 1.6, 0.6, 0.4], [2.8, 4.4, 3.4, 4.4, 3.4, 5.6, 2.8, 5.6, 2.8, 4.4]],
 };
 const GLYPH_DOTS: Record<string, Pt[]> = { '!': [[0.5, 5.8]], '.': [[0.5, 5.8]], ':': [[0.5, 1.8], [0.5, 5.2]] };
-const GLYPH_W: Record<string, number> = { I: 0, '1': 2.2, '!': 1, '.': 1, ':': 1, "'": 1, '-': 3, ' ': 2.2, '/': 3 };
+const GLYPH_W: Record<string, number> = { I: 1, '1': 2.2, '!': 1, '.': 1, ':': 1, "'": 1, '-': 3, ' ': 2.2, '/': 3 };
 
 function glyphW(ch: string): number {
   return GLYPH_W[ch] ?? 4;
@@ -876,5 +876,3 @@ defineSprite({ id: 'prop.common.puddle', w: 100, h: 60, ax: 50, ay: 30, draw: (c
 defineSprite({ id: 'prop.common.puddle_small', w: 64, h: 40, ax: 32, ay: 20, draw: (ctx) => drawPuddle(ctx, 9, 27, 15) });
 defineSprite({ id: 'prop.common.crumbs', w: 50, h: 36, ax: 25, ay: 18, draw: (ctx) => drawCrumbs(ctx, 3, 20) });
 
-// re-export a few painter bits stage modules commonly need together with these helpers
-export { INK, speckle, glint, polyPath };

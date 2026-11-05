@@ -379,3 +379,13 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .credits p { font-family: var(--font-serif); font-size: 17px; line-height: 1.5; text-align: center; margin: 8px 0; }
 .confirm-box { padding: 20px 26px; text-align: center; max-width: 440px; }
 .confirm-box p { font-size: 20px; margin: 4px 0 18px; }
+
+/* ------------------------------------------------------------------ story */
+.story .panel-body { text-align: center; }
+.story p { font-family: var(--font-serif); font-size: 19px; line-height: 1.5; margin: 10px 8px; color: var(--ink2); }
+.story-kicker { font-family: var(--font-title); font-size: 40px; color: var(--red); -webkit-text-stroke: 1.2px var(--ink); paint-order: stroke fill; margin-top: 4px; }
+.story-quote { font-family: var(--font-title) !important; font-size: 30px !important; color: var(--green-d) !important; }
+.story-lineup { display: flex; justify-content: center; gap: 4px; margin: 6px 0; }
+.story-lineup img { width: 64px; height: 64px; object-fit: contain; animation: march 0.6s ease-in-out infinite alternate; filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.25)); }
+.story-lineup img:nth-child(odd) { animation-delay: 0.3s; }
+@keyframes march { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-6px) rotate(4deg); } }

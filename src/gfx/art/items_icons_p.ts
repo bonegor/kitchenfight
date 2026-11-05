@@ -566,35 +566,57 @@ icon('icon.p.vespa', (ctx) => {
 // CORNICELLO — red lucky horn with gold cap
 // ---------------------------------------------------------------------------
 icon('icon.p.cornicello', (ctx) => {
-  rot(ctx, 0, 0, 0.12, () => {
+  rot(ctx, 0, 0, -0.08, () => {
     const horn = (c: Ctx) => {
-      c.moveTo(-8, -10);
-      c.bezierCurveTo(-9, 2, -4, 12, 9, 19);
-      c.bezierCurveTo(1, 9, 1, 0, 6, -10);
+      c.moveTo(-9.5, -9);
+      c.bezierCurveTo(-11, 4, -4, 15, 11, 21.5);
+      c.bezierCurveTo(4, 12, 2.5, 2, 7.5, -9);
       c.closePath();
     };
     S(ctx, horn, {
-      fill: radial(ctx, -4, -4, 24, [[0, '#ff7060'], [0.5, '#e0283a'], [1, '#a0141f']]),
-      ink: 2.1, shadow: '#a0141f', shadowOffset: [-2.4, -1.6],
-      gloss: [{ x: -4.6, y: -3, rx: 1.5, ry: 6, rot: -0.15, alpha: 0.85 }, { x: 1, y: 10, rx: 0.7, ry: 2.6, rot: -0.7, alpha: 0.6 }],
+      fill: radial(ctx, -5, -3, 26, [[0, '#ff7464'], [0.5, '#e0283a'], [1, '#9c121e']]),
+      ink: 2.1, shadow: '#9a1220', shadowOffset: [-2.8, -1.8],
+      gloss: [{ x: -6, y: -1, rx: 1.6, ry: 6.5, rot: -0.2, alpha: 0.85 }, { x: 2.4, y: 13, rx: 0.8, ry: 2.8, rot: -0.75, alpha: 0.55 }],
     });
-    // spiral twist lines
+    // twisted ridges: curved bands across the horn
     ctx.save();
     ctx.beginPath();
     horn(ctx);
     ctx.clip();
-    for (let i = 0; i < 5; i++) {
-      const t = i / 5;
-      const y = -6 + t * 20;
-      line(ctx, [[-10 + t * 6, y + 2], [4 + t * 3, y - 2]], 0.8, rgba('#8c0f1a', 0.55), true);
+    for (let i = 0; i < 6; i++) {
+      const t = i / 6;
+      const y = -7 + t * 25;
+      const xl = -10 + t * 10, xr = 7.5 + t * 3;
+      ctx.beginPath();
+      ctx.moveTo(xl - 2, y + 3.5);
+      ctx.quadraticCurveTo((xl + xr) / 2, y + 1.5 - t * 1.5, xr + 2, y - 2.5);
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = rgba('#8c0f1a', 0.45);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xl - 2, y + 2.3);
+      ctx.quadraticCurveTo((xl + xr) / 2, y + 0.3 - t * 1.5, xr + 2, y - 3.7);
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = rgba('#ff9a8a', 0.45);
+      ctx.stroke();
     }
     ctx.restore();
-    // gold cap + ring
-    S(ctx, (c) => roundRectPath(c, -9.5, -15, 17, 6.5, 2), { fill: goldGrad(ctx, -9, -15, 8, -9), ink: 1.8, shadow: '#c27a12', shadowOffset: [-0.8, -1] });
-    line(ctx, [[-8.5, -11.5], [6.5, -11.5]], 0.8, '#b06a10', false, 0.8);
+    // gold crown cap + ring
+    S(ctx, (c) => {
+      c.moveTo(-11, -9.5);
+      c.lineTo(9, -9.5);
+      c.quadraticCurveTo(10, -12, 8.5, -15.5);
+      c.lineTo(-9.5, -15.5);
+      c.quadraticCurveTo(-11.5, -12, -11, -9.5);
+      c.closePath();
+    }, { fill: goldGrad(ctx, -10, -16, 9, -9), ink: 1.9, shadow: '#c27a12', shadowOffset: [-0.9, -1] });
+    for (let i = 0; i < 5; i++) {
+      S(ctx, (c) => circlePath(c, -8 + i * 4, -9.6, 1.3), { fill: '#ffe680', ink: 0.9, shadow: 'none' });
+    }
+    line(ctx, [[-9.6, -12.6], [8.6, -12.6]], 0.8, '#b06a10', false, 0.8);
     ctx.save();
     ctx.beginPath();
-    ellipsePath(ctx, -1, -19, 3.4, 3.4);
+    ellipsePath(ctx, -0.5, -19.5, 3.4, 3.4);
     ctx.lineWidth = 5;
     ctx.strokeStyle = '#2b1712';
     ctx.stroke();
@@ -603,8 +625,8 @@ icon('icon.p.cornicello', (ctx) => {
     ctx.stroke();
     ctx.restore();
   });
-  inkSparkle(ctx, 13, -12, 3.6, '#fff6c8', 1);
-  inkSparkle(ctx, -14, 10, 2.6, '#fff6c8', 0.9);
+  inkSparkle(ctx, 14, -11, 3.6, '#fff6c8', 1);
+  inkSparkle(ctx, -14, 9, 2.6, '#fff6c8', 0.9);
 });
 
 // ---------------------------------------------------------------------------

@@ -93,7 +93,7 @@ function basaltWindow(ctx: Ctx, wx: number, wy: number) {
         build(ctx);
         ctx.fillStyle = sl.col;
         ctx.fill();
-        const R = rng(sl.seed + n * 7919 + m * 131);
+        const R = rng(sl.seed);
         clipped(ctx, build, () => {
           // screen-space light: warm from the upper-left, cool shadow lower-right
           ctx.fillStyle = lgrad(ctx, xc - 30, yc - 30, xc + 30, yc + 30, [[0, 'rgba(255,205,150,0.14)'], [0.5, 'rgba(255,255,255,0)'], [1, 'rgba(8,8,26,0.26)']]);

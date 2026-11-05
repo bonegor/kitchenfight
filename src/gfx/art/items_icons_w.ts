@@ -7,7 +7,7 @@ import {
   S, G, icon, goldGrad, goldBall, radial, linear, sparkle, inkSparkle, swoosh, softGlow, tube,
 } from './items_kit';
 import {
-  rollingPin, slipper, slipper34, chefKnife, olive, fork, trident, margherita, cutterWheel, chilli, moka, meteor,
+  rollingPin, slipper34, chefKnife, olive, fork, trident, margherita, cutterWheel, chilli, moka, meteor,
   basilLeaf, flame, angerMark, noodles, wing, heart, oliveLeaf, puff,
 } from './items_objects';
 
@@ -55,8 +55,8 @@ icon('icon.w.mattarello', (ctx) => {
 
 icon('icon.e.mattarello_nonna', (ctx) => {
   // double 360° spin trails
-  swoosh(ctx, 0, 0, 19, Math.PI * 1.05, Math.PI * 1.75, 3, '#fffbe0', 0.95);
-  swoosh(ctx, 0, 0, 19, Math.PI * 0.05, Math.PI * 0.75, 3, '#fffbe0', 0.95);
+  swoosh(ctx, 0, 0, 19, Math.PI * 1.05, Math.PI * 1.75, 3, '#fffbe0', 1, 0.8);
+  swoosh(ctx, 0, 0, 19, Math.PI * 0.05, Math.PI * 0.75, 3, '#fffbe0', 1, 0.8);
   rot(ctx, 0, 0, -0.45, () => rollingPin(ctx, 40, { ink: 2, gold: true }));
   heart(ctx, 13, -13, 5.5, { ink: 1.4 });
   inkSparkle(ctx, -15, -12, 4, '#fff6c8', 1);
@@ -69,11 +69,6 @@ icon('icon.e.mattarello_nonna', (ctx) => {
 icon('icon.w.ciabatta', (ctx) => {
   speedLines(ctx, -12, 4, -0.3, 9, 3, 4.6, '#ffffff', 0.9, 1.5);
   rot(ctx, 3, 0, -0.3, () => slipper34(ctx, 40, { ink: 2 }));
-}, { fit: 44 });
-
-icon('icon.w.ciabatta_side', (ctx) => {
-  speedLines(ctx, -10, 6, -0.5, 10, 3, 4.8, '#ffffff', 0.9, 1.5);
-  rot(ctx, 3, 0, -0.5, () => slipper(ctx, 40, { ink: 2 }));
 }, { fit: 44 });
 
 icon('icon.e.ira_nonna', (ctx) => {
@@ -184,7 +179,7 @@ icon('icon.w.forchette', (ctx) => {
   const base = -Math.PI / 2 + 0.2;
   for (let i = 0; i < 3; i++) {
     const a = base + (i * Math.PI * 2) / 3;
-    swoosh(ctx, 0, 0, 15.5, a - 1.75, a - 0.55, 2.2, '#fff4dc', 0.85);
+    swoosh(ctx, 0, 0, 15.5, a - 1.75, a - 0.55, 2.2, '#fff4dc', 1, 0.8);
   }
   for (let i = 0; i < 3; i++) {
     const a = base + (i * Math.PI * 2) / 3;
@@ -286,12 +281,12 @@ icon('icon.w.pizza', (ctx) => {
   ctx.rotate(-0.25);
   ctx.save();
   ctx.scale(1, 0.8);
-  swoosh(ctx, 0, 1, 23.5, Math.PI * 0.95, Math.PI * 1.6, 2.6, '#ffffff', 0.95);
+  swoosh(ctx, 0, 1, 23.5, Math.PI * 0.95, Math.PI * 1.6, 2.6, '#ffffff', 1, 0.8);
   ctx.restore();
   doughTilted(ctx);
   ctx.save();
   ctx.scale(1, 0.8);
-  swoosh(ctx, 0, 1, 23.5, Math.PI * -0.05, Math.PI * 0.6, 2.6, '#ffffff', 0.95);
+  swoosh(ctx, 0, 1, 23.5, Math.PI * -0.05, Math.PI * 0.6, 2.6, '#ffffff', 1, 0.8);
   ctx.restore();
   ctx.restore();
   puff(ctx, 20, -16, 3.8, { ink: 1, seed: 8 });
@@ -500,7 +495,7 @@ icon('icon.w.spaghetti', (ctx) => {
   });
   // the whip: strands lashing out of the twirl in an S-curve
   const whip: Pt[] = [[2, -4], [8, -12], [16, -15], [20, -8], [16, -1], [19, 6], [23, 9]];
-  swoosh(ctx, 14, -6, 13, Math.PI * 1.25, Math.PI * 1.85, 2, '#ffffff', 0.9);
+  swoosh(ctx, 14, -6, 13, Math.PI * 1.25, Math.PI * 1.85, 2, '#ffffff', 1, 0.8);
   noodles(ctx, whip, 3, 3.2, 1.9, { ink: 1.05, seed: 5, color: '#f8da78' });
   twirl(ctx, -2, -1, 10.5, 1.2);
   // a drizzle of tomato sauce on top of the twirl

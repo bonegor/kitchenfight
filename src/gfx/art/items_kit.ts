@@ -229,19 +229,23 @@ export function softGlow(ctx: Ctx, x: number, y: number, r: number, color: strin
 }
 
 /** Curved motion/speed lines (an arc of strokes). */
-export function swoosh(ctx: Ctx, x: number, y: number, r: number, a0: number, a1: number, width: number, color: string, alpha = 0.8) {
+export function swoosh(ctx: Ctx, x: number, y: number, r: number, a0: number, a1: number, width: number, color: string, alpha = 0.8, ink = 0) {
   ctx.save();
   ctx.lineCap = 'round';
-  ctx.strokeStyle = color;
   ctx.globalAlpha = alpha;
   const n = 6;
-  for (let i = 0; i < n; i++) {
-    const t0 = i / n, t1 = (i + 1) / n;
-    ctx.beginPath();
-    ctx.arc(x, y, r, a0 + (a1 - a0) * t0, a0 + (a1 - a0) * t1, a1 < a0);
-    ctx.lineWidth = Math.max(0.3, width * (0.25 + 0.75 * t1));
-    ctx.stroke();
-  }
+  const pass = (col: string, extra: number) => {
+    ctx.strokeStyle = col;
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n;
+      ctx.beginPath();
+      ctx.arc(x, y, r, a0 + (a1 - a0) * t0, a0 + (a1 - a0) * t1, a1 < a0);
+      ctx.lineWidth = Math.max(0.3, width * (0.25 + 0.75 * t1)) + extra;
+      ctx.stroke();
+    }
+  };
+  if (ink > 0) pass(INK, ink * 2);
+  pass(color, 0);
   ctx.restore();
 }
 

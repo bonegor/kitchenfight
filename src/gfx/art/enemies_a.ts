@@ -176,6 +176,25 @@ function gloveArm(ctx: Ctx, x1: number, y1: number, x2: number, y2: number, r = 
   glove(ctx, x2, y2, r, Math.atan2(y2 - my, x2 - mx));
 }
 
+/** Handlebar moustache centred at (x,y), width ≈ 2w, with a scalable outline. */
+function moustache(ctx: Ctx, x: number, y: number, w: number, color: string, ink = 0.8) {
+  shape(ctx, (c) => {
+    c.moveTo(x, y - w * 0.12);
+    c.bezierCurveTo(x - w * 0.25, y - w * 0.32, x - w * 0.55, y - w * 0.18, x - w * 0.62, y + w * 0.02);
+    c.bezierCurveTo(x - w * 0.72, y - w * 0.12, x - w * 0.82, y - w * 0.22, x - w * 0.74, y - w * 0.34);
+    c.bezierCurveTo(x - w * 0.98, y - w * 0.2, x - w * 0.86, y + w * 0.2, x - w * 0.58, y + w * 0.2);
+    c.bezierCurveTo(x - w * 0.36, y + w * 0.2, x - w * 0.14, y + w * 0.08, x, y + w * 0.04);
+    c.bezierCurveTo(x + w * 0.14, y + w * 0.08, x + w * 0.36, y + w * 0.2, x + w * 0.58, y + w * 0.2);
+    c.bezierCurveTo(x + w * 0.86, y + w * 0.2, x + w * 0.98, y - w * 0.2, x + w * 0.74, y - w * 0.34);
+    c.bezierCurveTo(x + w * 0.82, y - w * 0.22, x + w * 0.72, y - w * 0.12, x + w * 0.62, y + w * 0.02);
+    c.bezierCurveTo(x + w * 0.55, y - w * 0.18, x + w * 0.25, y - w * 0.32, x, y - w * 0.12);
+    c.closePath();
+  }, {
+    fill: color, ink, shadow: shade(color, 0.3), shadowOffset: [-w * 0.06, -w * 0.1],
+    gloss: [{ x: x - w * 0.35, y: y - w * 0.06, rx: w * 0.14, ry: w * 0.05, rot: -0.3, alpha: 0.4 }, { x: x + w * 0.3, y: y - w * 0.06, rx: w * 0.14, ry: w * 0.05, rot: 0.3, alpha: 0.4 }],
+  });
+}
+
 // ===========================================================================
 // 1. LO SPEZZASPAGHETTI — r10. A bundle of snapped dry spaghetti.
 // ===========================================================================
@@ -1150,3 +1169,681 @@ function drawAglio(ctx: Ctx, f: number) {
 }
 
 reg('aglio', 42, 52, 21, 34, drawAglio);
+
+// ===========================================================================
+// 9. BACON ABUSIVO — r13. A wavy strip of streaky bacon "disguised" as
+//    guanciale with a fake handlebar moustache. The wave travels down its body.
+// ===========================================================================
+
+const BAC_LEAN = '#df4f60';
+const BAC_LEAN_DK = '#b02c42';
+const BAC_FAT = '#fcebdd';
+const BAC_FAT_SH = '#e9bdb0';
+
+function baconSpine(f: number): { pts: Pt[]; widths: number[] } {
+  const phase = (f / 4) * TAU;
+  const pts: Pt[] = [];
+  const widths: number[] = [];
+  // wavy body: tail (left) → neck
+  for (let x = -24; x <= 0; x += 2) {
+    const sN = -x / 24; // 0 at neck, 1 at tail
+    const amp = 2.9 * Math.pow(sN, 0.7);
+    pts.push([x, 6.0 + amp * Math.sin((x + 24) * (TAU / 15) + phase)]);
+    widths.push(8.8 - sN * sN * 3.4);
+  }
+  // the neck rears up (gentle arc so the ribbon never folds) into the head
+  const head: Pt[] = [[2.6, 5.4], [5.6, 4.0], [8.6, 1.6], [10.8, -1.8], [12.0, -5.6], [12.4, -9.4], [12.0, -12.6], [11.6, -14.4]];
+  const hw = [9.2, 9.8, 10.8, 12.0, 13.2, 13.8, 12.4, 7.0];
+  head.forEach((p, i) => { pts.push(p); widths.push(hw[i]); });
+  return { pts, widths };
+}
+
+function bandPoly(pts: Pt[], widths: number[], v0: number, v1: number, wig: number): Pt[] {
+  const A: Pt[] = [], B: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const d = Math.hypot(dx, dy) || 1;
+    dx /= d; dy /= d;
+    const nx = -dy, ny = dx;
+    const h = widths[i] / 2;
+    const w0 = v0 + Math.sin(i * 1.7) * wig, w1 = v1 + Math.sin(i * 1.3 + 2) * wig;
+    A.push([pts[i][0] + nx * h * w0, pts[i][1] + ny * h * w0]);
+    B.push([pts[i][0] + nx * h * w1, pts[i][1] + ny * h * w1]);
+  }
+  return [...A, ...B.reverse()];
+}
+
+function drawBacon(ctx: Ctx, f: number) {
+  const { pts, widths } = baconSpine(f);
+  const outline = ribbon(pts, widths);
+  // rounded cut at the head, ragged at the tail
+  const body = (c: Ctx) => smoothPath(c, outline, true, 0.35);
+  shape(ctx, body, { fill: BAC_LEAN, ink: 2.0, shadow: 'none' });
+  clipped(ctx, body, () => {
+    // streaky layers (normal points to the strip's top edge… then down)
+    const bands: [number, number, string][] = [
+      [-1.4, -0.62, BAC_LEAN_DK],
+      [-0.6, -0.16, BAC_FAT],
+      [0.3, 0.58, BAC_FAT],
+    ];
+    for (const [v0, v1, col] of bands) {
+      ctx.beginPath();
+      smoothPath(ctx, bandPoly(pts, widths, v0, v1, col === BAC_FAT ? 0.08 : 0), true, 0.4);
+      ctx.fillStyle = col;
+      ctx.fill();
+    }
+    // marbling flecks in the lean
+    speckle(ctx, -6, 6, 16, 3, 10, rgba('#ffd9d2', 0.7), 0.45, 77);
+    // cel shadow on the lower edge + grease sheen on the top
+    ctx.beginPath();
+    smoothPath(ctx, bandPoly(pts, widths, 0.72, 1.4, 0), true, 0.4);
+    ctx.fillStyle = rgba('#7a1a2c', 0.4);
+    ctx.fill();
+    line(ctx, pts.map(([x, y], i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1;
+      return [x - (dy / d) * widths[i] * 0.38 + 0.2, y + (dx / d) * widths[i] * 0.38] as Pt;
+    }).slice(2, -2), 0.7, '#ffffff', true, 0.6);
+  });
+  // a few shiny grease glints on the fat
+  glint(ctx, -15.6, 4.4 + Math.sin((f / 4) * TAU + 1) * 2, 1.2, 0.6, -0.3, 0.8);
+  glint(ctx, 8.6, 0.6, 1.1, 0.6, -1.0, 0.8);
+
+  // face on the reared-up head
+  eyes(ctx, { x: 12.4, y: -8.6, r: 2.45, sp: 5.8, look: [0.35, 0.1], brow: { ang: 0.5, th: 1.15, dy: 1.3 } });
+  mouth(ctx, 13.4, -0.6, 5.0, 'grin', { teeth: true, tongue: false });
+  // the "guanciale" disguise: a big fake handlebar moustache, slightly crooked
+  ctx.save();
+  ctx.translate(13.2, -4.0);
+  ctx.rotate(-0.18 + [0, 0.06, 0, -0.06][f]);
+  moustache(ctx, 0, 0, 5.4, '#2a1814', 0.6);
+  // the little strip of tape holding it on
+  shape(ctx, (c) => polyPath(c, [[-0.8, -1.5], [0.9, -1.6], [1.0, -0.7], [-0.7, -0.6]]), { fill: '#f0e2c0', ink: 0.45, shadow: 'none' });
+  ctx.restore();
+}
+
+reg('bacon', 54, 36, 30, 19, drawBacon);
+
+// ===========================================================================
+// 10. PISELLI RIBELLI — r8. One angry little pea in a red rebel headband.
+// ===========================================================================
+
+const PEA = '#68c046';
+const PEA_SH = '#3c8a2c';
+const BAND = '#e0303a';
+
+function drawPiselli(ctx: Ctx, f: number) {
+  const flap = [0, 1, 0, -1][f];
+  // headband tails streaming behind
+  leaf(ctx, [[-5.2, -5.6], [-8.6, -7.0 + flap * 0.6], [-12.2, -6.4 + flap * 1.4]], [2.0, 1.8, 1.1], BAND, 0.9);
+  leaf(ctx, [[-5.2, -5.0], [-8.4, -3.8 - flap * 0.4], [-11.4, -2.2 - flap]], [1.9, 1.6, 1.0], '#c8242e', 0.9);
+  legs(ctx, 0.4, 4.0, f, { len: 2.9, spread: 5, thick: 2, color: '#2f5e22', shoe: SHOE, stride: 2.8 });
+  // the pea
+  shape(ctx, (c) => circlePath(c, 0, -1.4, 7.6), {
+    fill: PEA, shadow: PEA_SH, ink: 1.6, shadowOffset: [-2.0, -2.2],
+    gloss: [{ x: -3.4, y: -5.0, rx: 2.2, ry: 1.2, rot: -0.6, alpha: 0.55 }],
+  });
+  // rebel headband wrapped round the top
+  const hb = (c: Ctx) => {
+    c.moveTo(-7.5, -4.2);
+    c.quadraticCurveTo(0, -8.6, 7.5, -4.6);
+    c.lineTo(7.2, -2.2);
+    c.quadraticCurveTo(0, -6.2, -7.3, -1.8);
+    c.closePath();
+  };
+  shape(ctx, hb, { fill: BAND, ink: 1.1, shadow: '#9a1a24', shadowOffset: [-0.7, -0.9] });
+  line(ctx, [[-6.4, -3.6], [0, -6.8], [6.4, -3.9]], 0.5, '#ff8c8c', true, 0.8);
+  ball(ctx, -6.0, -3.4, 1.4, BAND, '#9a1a24', 0.8, 0.4);
+  // face
+  eyes(ctx, { x: 1.2, y: -0.2, r: 2.35, sp: 5.0, look: [0.35, 0.12], brow: { ang: 0.55, th: 1.2, dy: 1.15 } });
+  mouth(ctx, 1.6, 3.6, 4.4, 'snarl', { teeth: true, open: 1.2 });
+}
+
+reg('piselli', 30, 26, 16, 15, drawPiselli);
+
+// ===========================================================================
+// 11. ANANAS CORAZZATO — r22. The tank: a big pineapple whose diamond skin is
+//     riveted armour plate, with a war-crown of spiky leaves and steel fists.
+// ===========================================================================
+
+const PINE = '#f2b23a';
+const PINE_SH = '#c27a1e';
+const PINE_GROOVE = '#8a5a14';
+const PINE_STUD = '#6b4216';
+const LEAF_D = '#2f8a3a';
+const LEAF_L = '#5fb84a';
+const GAUNT = '#c9d3e0';
+
+function pinePath(c: Ctx) {
+  c.moveTo(0, -30.5);
+  c.bezierCurveTo(12.4, -30.5, 19.6, -20.5, 19.6, -6.5);
+  c.bezierCurveTo(19.6, 7, 11.2, 14.2, 0, 14.2);
+  c.bezierCurveTo(-11.2, 14.2, -19.6, 7, -19.6, -6.5);
+  c.bezierCurveTo(-19.6, -20.5, -12.4, -30.5, 0, -30.5);
+  c.closePath();
+}
+
+/** Half-width of the pineapple body at height y (matches pinePath roughly). */
+function pineHalfW(y: number) {
+  const t = (y + 8.2) / 22.6; // −1 top … +1 bottom
+  return 19.6 * Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(t), 2.3)));
+}
+
+function drawAnanas(ctx: Ctx, f: number) {
+  const ph = (f / 4) * TAU;
+  const sw = Math.sin(ph);
+  // crown of spiky leaves (back row first)
+  ctx.save();
+  ctx.translate(0, -27.5);
+  ctx.rotate(sw * 0.03);
+  const crown: [number, number, string][] = [
+    [-2.5, 16, LEAF_D], [-0.62, 16, LEAF_D], [-2.0, 21, LEAF_D], [-1.12, 21.5, LEAF_D],
+    [-2.95, 12.5, LEAF_L], [-0.2, 12.5, LEAF_L], [-1.57, 24.5, LEAF_L], [-2.25, 18, LEAF_L], [-0.9, 18.5, LEAF_L],
+  ];
+  for (const [a, len, col] of crown) {
+    const ux = Math.cos(a), uy = Math.sin(a);
+    const bend = (a + Math.PI / 2) * 0.35;
+    const pts: Pt[] = [[ux * 2, uy * 2], [ux * len * 0.5 - bend * 2, uy * len * 0.5], [ux * len, uy * len]];
+    shape(ctx, (c) => polyPath(c, ribbon(pts, [6.0, 4.0, 0.2])), { fill: col, ink: 1.9, shadow: shade(col, 0.3), shadowOffset: [-1.2, -0.8] });
+    line(ctx, [pts[0], pts[1], [ux * len * 0.85, uy * len * 0.85]], 0.6, light(col, 0.4), true, 0.7);
+  }
+  ctx.restore();
+
+  // far arm + steel gauntlet
+  inkLine(ctx, [[-17, 0], [-21.8, 2.4 + sw], [-23.4, 7.0 + sw]], 4.2, LIMB, true, 1.2);
+  ball(ctx, -23.4, 7.8 + sw, 3.8, GAUNT, STEEL_SH, 1.5, 0.75);
+  // stubby legs in steel sabatons
+  legs(ctx, 0, 11.4, f, { len: 6.4, spread: 15, thick: 5.2, color: LIMB, shoe: '#9aa6b9', stride: 4.6 });
+
+  // armoured body
+  shape(ctx, pinePath, {
+    fill: PINE, shadow: PINE_SH, ink: 2.6, shadowOffset: [-4.6, -3.4],
+    gloss: [{ x: -9.5, y: -17, rx: 4.4, ry: 2.4, rot: -0.7, alpha: 0.35 }],
+  });
+  // diamond plates mapped round the body
+  clipped(ctx, pinePath, () => {
+    const rows = 7, du = 0.44;
+    const map = (u: number, y: number): Pt => [pineHalfW(y) * Math.sin(u), y];
+    for (let r = 0; r < rows; r++) {
+      const y = -28 + r * 6.4;
+      const off = r % 2 ? du / 2 : 0;
+      for (let u = -1.8 + off; u <= 1.8; u += du) {
+        const T = map(u, y - 3.3), Rr = map(u + du / 2, y), B = map(u, y + 3.3), Lf = map(u - du / 2, y);
+        const C = map(u, y);
+        // groove
+        ctx.beginPath();
+        polyPath(ctx, [T, Rr, B, Lf]);
+        ctx.lineWidth = 0.95;
+        ctx.strokeStyle = rgba(PINE_GROOVE, 0.75);
+        ctx.stroke();
+        // bevel: lit upper-left edges, shaded lower-right edges
+        line(ctx, [[Lf[0] + 0.5, Lf[1]], [T[0], T[1] + 0.55], [Rr[0] - 0.4, Rr[1] - 0.1]], 0.55, '#ffe6a0', false, 0.7);
+        line(ctx, [[Rr[0] - 0.4, Rr[1] + 0.1], [B[0], B[1] - 0.5]], 0.6, rgba('#8a4a10', 0.45), false);
+        // stud / rivet with a tiny spike
+        const sr = 1.05 * Math.max(0.35, Math.cos(u));
+        ctx.beginPath();
+        circlePath(ctx, C[0], C[1] + 0.3, sr + 0.35);
+        ctx.fillStyle = rgba('#4a2c0e', 0.55);
+        ctx.fill();
+        ctx.beginPath();
+        circlePath(ctx, C[0], C[1], sr);
+        ctx.fillStyle = PINE_STUD;
+        ctx.fill();
+        ctx.beginPath();
+        circlePath(ctx, C[0] - sr * 0.35, C[1] - sr * 0.35, sr * 0.35);
+        ctx.fillStyle = 'rgba(255,240,200,0.8)';
+        ctx.fill();
+      }
+    }
+    // re-apply the big cel shadow so the plates sit in the form
+    ctx.globalAlpha = 0.38;
+    ctx.translate(-4.6, -3.4);
+    ctx.beginPath();
+    ctx.rect(-60, -80, 120, 160);
+    pinePath(ctx);
+    ctx.fillStyle = PINE_SH;
+    ctx.fill('evenodd');
+  });
+  // calm the plating behind the face so it stays readable
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = PINE;
+  ctx.beginPath();
+  ellipsePath(ctx, 2.6, -5.4, 11.6, 8.6);
+  ctx.fill();
+  ctx.restore();
+
+  // fierce face
+  eyes(ctx, { x: 2.6, y: -9.0, r: 4.4, sp: 10.8, look: [0.32, 0.15], pupil: 0.5, brow: { ang: 0.5, th: 2.6, dy: 1.25, len: 8.4 } });
+  mouth(ctx, 3.4, -0.6, 11.6, 'snarl', { teeth: true, open: 1.15 });
+  // underbite fangs
+  for (const tx of [-0.6, 7.0]) {
+    shape(ctx, (c) => polyPath(c, [[tx - 1.1, 0.4], [tx + 1.1, 0.2], [tx + 0.1, -2.6]]), { fill: '#fff8ea', ink: 0.8, shadow: 'none' });
+  }
+  // battle scar
+  line(ctx, [[-9.6, -15.6], [-6.4, -11.4]], 0.9, '#8a4a10', false, 0.9);
+  line(ctx, [[-9.2, -13.0], [-7.6, -14.0]], 0.6, '#8a4a10', false, 0.9);
+
+  // near arm + steel gauntlet
+  inkLine(ctx, [[18.6, 1.6], [22.6, 3.4 - sw], [24.0, 7.2 - sw]], 4.4, LIMB, true, 1.2);
+  ball(ctx, 24.0, 8.0 - sw, 4.0, GAUNT, STEEL_SH, 1.5, 0.75);
+  line(ctx, [[22.2, 6.8 - sw], [25.2, 5.8 - sw]], 0.6, STEEL_DK, false, 0.8);
+}
+
+reg('ananas', 62, 82, 31, 56, drawAnanas);
+
+// ===========================================================================
+// 12. PEZZO D'ANANAS — r9. A small, fast, furious pineapple chunk.
+// ===========================================================================
+
+const CHUNK = '#ffd23f';
+const CHUNK_SH = '#e8a21a';
+const RIND = '#d98a1e';
+
+function chunkPath(c: Ctx) {
+  c.moveTo(-9.6, -9.0);
+  c.quadraticCurveTo(0.4, -12.6, 10.4, -9.6);
+  c.quadraticCurveTo(9.4, -2.8, 4.6, 4.4);
+  c.quadraticCurveTo(0.6, 6.0, -3.6, 4.6);
+  c.quadraticCurveTo(-8.6, -2.0, -9.6, -9.0);
+  c.closePath();
+}
+
+function drawPezzo(ctx: Ctx, f: number) {
+  const ph = (f / 4) * TAU;
+  const sw = Math.sin(ph);
+  // flying juice drops (speed!)
+  const jd = f % 2 ? 1.2 : 0;
+  shape(ctx, (c) => circlePath(c, -11.6 - jd, -4.6 + jd, 1.1), { fill: '#ffe58a', ink: 0.7, shadow: 'none' });
+  shape(ctx, (c) => circlePath(c, -12.8 + jd, 0.6, 0.8), { fill: '#ffe58a', ink: 0.7, shadow: 'none' });
+  gloveArm(ctx, -6.4, -2, -9.6 - sw * 1.4, 2.6, 1.7, 1.2, 0.2, LIMB);
+  legs(ctx, 0.6, 4.4, f, { len: 2.8, spread: 5.4, thick: 2.1, color: LIMB, shoe: SHOE, stride: 3.6 });
+  shape(ctx, chunkPath, {
+    fill: CHUNK, shadow: CHUNK_SH, ink: 1.6, shadowOffset: [-2.2, -1.8],
+    gloss: [{ x: -5.6, y: -5.6, rx: 1.4, ry: 2.4, rot: 0.3, alpha: 0.7 }],
+  });
+  clipped(ctx, chunkPath, () => {
+    // fibres converging toward the core
+    for (let i = -4; i <= 4; i++) line(ctx, [[i * 2.3, -10], [i * 0.5 + 0.6, 6]], 0.45, '#e8a21a', false, 0.55);
+    // rind band with little diamond eyes
+    ctx.beginPath();
+    ctx.moveTo(-12, -9.8);
+    ctx.quadraticCurveTo(0.4, -13.6, 12, -10.4);
+    ctx.lineTo(12, -7.0);
+    ctx.quadraticCurveTo(0.4, -10.2, -12, -6.4);
+    ctx.closePath();
+    ctx.fillStyle = RIND;
+    ctx.fill();
+    for (let i = -3; i <= 3; i++) {
+      const x = i * 2.9 + 0.6, y = -9.5 - Math.cos(i * 0.35) * 0.9;
+      ctx.beginPath();
+      polyPath(ctx, [[x, y - 1.1], [x + 1.2, y], [x, y + 1.1], [x - 1.2, y]]);
+      ctx.fillStyle = '#9a5a12';
+      ctx.fill();
+    }
+    line(ctx, [[-12, -6.4], [0.4, -10.2], [12, -7.0]], 0.6, '#9a5a12', true, 0.8);
+  });
+  eyes(ctx, { x: 1.2, y: -3.4, r: 2.4, sp: 5.4, look: [0.38, 0.1], brow: { ang: 0.58, th: 1.3, dy: 1.2 } });
+  mouth(ctx, 1.4, 1.0, 4.8, 'snarl', { teeth: true, open: 1.2 });
+  gloveArm(ctx, 7.6, 0.2, 11.0 + sw * 1.4, 3.0, 1.7, 1.2, 0.3, LIMB);
+}
+
+reg('ananas_pezzo', 32, 28, 17, 16, drawPezzo);
+
+// ===========================================================================
+// 13. POLLO INFILTRATO — r13. A roast drumstick working undercover: spy fedora,
+//     groucho glasses-nose-moustache, sprinting on scrawny chicken feet.
+// ===========================================================================
+
+const ROAST = '#d98a3a';
+const ROAST_SH = '#a6561f';
+const ROAST_HI = '#f6c06a';
+const BONE = '#f4ecd8';
+const BONE_SH = '#cdbf9c';
+const FOOT = '#f0a23a';
+const FEDORA = '#46404c';
+const FEDORA_SH = '#2c2731';
+
+function drumPath(c: Ctx) {
+  c.moveTo(-9.0, -6.8);
+  c.bezierCurveTo(-5.6, -13.6, 7.0, -14.4, 11.8, -7.4);
+  c.bezierCurveTo(15.8, -1.4, 13.2, 7.6, 5.4, 8.6);
+  c.bezierCurveTo(-1.2, 9.6, -6.2, 4.6, -8.4, 0.6);
+  c.bezierCurveTo(-9.8, -1.6, -10.8, -4.0, -9.0, -6.8);
+  c.closePath();
+}
+
+/** Scrawny chicken leg: shank from hip to ankle, three forward toes + a back toe. */
+function chickenLeg(ctx: Ctx, hx: number, hy: number, ax: number, ay: number, toeAng: number) {
+  inkLine(ctx, [[hx, hy], [ax, ay]], 1.5, FOOT, false, 0.85);
+  for (const [da, len] of [[-0.55, 3.4], [0, 3.9], [0.55, 3.2], [Math.PI - 0.2, 2.0]] as Pt[]) {
+    const a = toeAng + da;
+    inkLine(ctx, [[ax, ay], [ax + Math.cos(a) * len, ay + Math.sin(a) * len * 0.55]], 1.15, FOOT, false, 0.8);
+  }
+  shape(ctx, (c) => circlePath(c, ax, ay, 1.15), { fill: FOOT, ink: 0.7, shadow: 'none' });
+}
+
+function drawPollo(ctx: Ctx, f: number) {
+  // running legs: [hip, ankle] per frame; the back leg is drawn first
+  const run: [Pt, Pt][][] = [
+    [[[-1, 7], [-4.4, 11.4]], [[3.6, 7.4], [6.8, 11.8]]],
+    [[[-1, 7], [-6.4, 9.4]], [[3.6, 7.4], [8.8, 11.2]]],
+    [[[-1, 7], [0.6, 11.6]], [[3.6, 7.4], [2.0, 10.6]]],
+    [[[-1, 7], [3.8, 11.0]], [[3.6, 7.4], [-1.8, 9.8]]],
+  ];
+  const [back, front] = run[f];
+  chickenLeg(ctx, back[0][0], back[0][1], back[1][0], back[1][1], 0.1);
+
+  // the bone, trailing behind like a tail
+  group(ctx, [
+    { build: (c) => polyPath(c, ribbon([[-6.4, -2.4], [-12.6, -6.4], [-16.4, -9.0]], [4.6, 3.4, 3.4])), style: { fill: BONE, shadow: BONE_SH, shadowOffset: [-0.8, -1.0] } },
+    { build: (c) => { circlePath(c, -17.6, -11.0, 2.6); circlePath(c, -19.0, -7.6, 2.5); }, style: { fill: BONE, shadow: BONE_SH, shadowOffset: [-0.8, -0.9], gloss: [{ x: -18.4, y: -12.0, rx: 0.9, ry: 0.5, alpha: 0.8 }] } },
+  ], 1.7);
+  line(ctx, [[-8.6, -4.6], [-14.0, -8.2]], 0.7, '#ffffff', false, 0.8);
+
+  // the meaty, crispy drumstick body
+  shape(ctx, drumPath, {
+    fill: ROAST, shadow: ROAST_SH, ink: 2.0, shadowOffset: [-3.0, -2.6],
+    gloss: [{ x: -2.6, y: -9.0, rx: 3.6, ry: 1.6, rot: -0.35, alpha: 0.55 }, { x: -6.0, y: -4.2, rx: 0.9, ry: 1.6, rot: 0.4, alpha: 0.5 }],
+  });
+  clipped(ctx, drumPath, () => {
+    // roasted patches + seasoning
+    ctx.fillStyle = rgba('#8f4316', 0.28);
+    ctx.beginPath();
+    ellipsePath(ctx, 6.6, 3.2, 5.6, 3.0, -0.4);
+    ellipsePath(ctx, -5.4, 2.6, 2.8, 2.0, 0.6);
+    ctx.fill();
+    speckle(ctx, 2, -1, 11, 8, 26, '#7a3a14', 0.32, 31, 0.8);
+    speckle(ctx, 1, -2, 10, 7, 8, '#4f8a2a', 0.3, 32, 0.9);
+    line(ctx, [[-4, -11.2], [3, -12.4], [8.8, -10.0]], 0.7, ROAST_HI, true, 0.8);
+  });
+
+  // groucho disguise: round glasses, big pink nose, bushy brows, moustache
+  eyes(ctx, { x: 7.4, y: -4.8, r: 2.1, sp: 5.6, look: [0.45, 0.05], lid: 'angry', pupil: 0.55, far: 0.95 });
+  for (const ex of [4.6, 10.2]) {
+    ctx.save();
+    ctx.beginPath();
+    circlePath(ctx, ex, -4.8, 2.9);
+    ctx.lineWidth = 1.05;
+    ctx.strokeStyle = '#1a1416';
+    ctx.stroke();
+    ctx.restore();
+  }
+  line(ctx, [[7.4, -5.4], [7.6, -5.8]], 1.0, '#1a1416');
+  line(ctx, [[1.7, -5.2], [-1.0, -5.8]], 0.9, '#1a1416');
+  brow(ctx, 4.4, -8.6, 4.6, 0.32, 1.6, '#1a1416');
+  brow(ctx, 10.4, -8.8, 4.8, -0.32, 1.6, '#1a1416');
+  moustache(ctx, 8.4, 1.0, 4.2, '#1a1416', 0.55);
+  shape(ctx, (c) => ellipsePath(c, 8.6, -1.4, 2.3, 2.0), {
+    fill: '#f5a2a2', ink: 0.9, shadow: '#d9787f', shadowOffset: [-0.7, -0.7],
+    gloss: [{ x: 7.9, y: -2.2, rx: 0.8, ry: 0.5, alpha: 0.85 }],
+  });
+  // sly grin under it all
+  line(ctx, [[5.4, 3.6], [8.2, 4.4], [11.4, 3.0]], 0.9, '#5b1320', true);
+
+  // spy fedora, brim pulled low
+  ctx.save();
+  ctx.translate(2.8, -12.0);
+  ctx.rotate(0.1);
+  group(ctx, [
+    {
+      build: (c) => {
+        c.moveTo(-6.0, 0.4);
+        c.quadraticCurveTo(-6.6, -5.4, -3.6, -7.4);
+        c.quadraticCurveTo(-0.8, -6.0, 0.6, -7.6);
+        c.quadraticCurveTo(4.6, -6.8, 5.8, 0.2);
+        c.closePath();
+      },
+      style: { fill: FEDORA, shadow: FEDORA_SH, shadowOffset: [-1.4, -0.8], gloss: [{ x: -3.4, y: -5.0, rx: 1.2, ry: 0.6, rot: -0.5, alpha: 0.35 }] },
+    },
+    {
+      build: (c) => {
+        c.moveTo(-10.4, 0.6);
+        c.quadraticCurveTo(-1, -2.4, 10.6, 0.4);
+        c.quadraticCurveTo(11.6, 2.6, 9.0, 2.4);
+        c.quadraticCurveTo(-1, 1.0, -9.6, 2.8);
+        c.quadraticCurveTo(-11.8, 2.6, -10.4, 0.6);
+        c.closePath();
+      },
+      style: { fill: FEDORA, shadow: FEDORA_SH, shadowOffset: [-0.8, -1.0] },
+    },
+  ], 1.6);
+  shape(ctx, (c) => {
+    c.moveTo(-6.0, -0.6);
+    c.quadraticCurveTo(0, -2.4, 5.8, -0.8);
+    c.lineTo(5.6, -2.4);
+    c.quadraticCurveTo(0, -4.0, -6.1, -2.2);
+    c.closePath();
+  }, { fill: '#1d1a20', ink: 0, shadow: 'none' });
+  line(ctx, [[-2.4, -6.2], [-0.6, -5.4], [0.8, -6.4]], 0.6, FEDORA_SH, true, 0.9);
+  ctx.restore();
+
+  chickenLeg(ctx, front[0][0], front[0][1], front[1][0], front[1][1], 0.05);
+}
+
+reg('pollo', 46, 44, 24, 28, drawPollo);
+
+// ===========================================================================
+// 14. PEPPERONI VOLANTE — r11. A spicy salami slice on little white wings,
+//     wearing a tiny green bell pepper as a hat (in Italy, "peperoni" ARE
+//     bell peppers). Red + white + green: accidentally tricolore.
+// ===========================================================================
+
+const SALAMI = '#c8321e';
+const SALAMI_SH = '#8e1c14';
+const SALAMI_RIM = '#9c2216';
+const WING = '#fbf8f0';
+const WING_SH = '#cfd3e2';
+const PEPPER = '#3faa3a';
+
+function wing(ctx: Ctx, x: number, y: number, side: number, ang: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(side, 1);
+  ctx.rotate(ang);
+  const build = (c: Ctx) => {
+    c.moveTo(0, -1.2);
+    c.quadraticCurveTo(5.6, -6.4, 10.6, -4.6);
+    c.quadraticCurveTo(10.8, -2.4, 9.0, -2.0);
+    c.quadraticCurveTo(10.0, -0.2, 8.0, 0.6);
+    c.quadraticCurveTo(8.4, 2.4, 6.0, 2.6);
+    c.quadraticCurveTo(3.4, 3.4, 0, 1.8);
+    c.closePath();
+  };
+  shape(ctx, build, { fill: WING, shadow: WING_SH, ink: 1.4, shadowOffset: [-0.6, -1.4] });
+  line(ctx, [[2.2, 0.2], [8.8, -2.0]], 0.5, WING_SH, true, 0.9);
+  line(ctx, [[2.0, 1.2], [7.6, 0.8]], 0.5, WING_SH, true, 0.9);
+  ctx.restore();
+}
+
+function drawPepperoni(ctx: Ctx, f: number) {
+  const flap = [0, -0.55, 0, 0.45][f];
+  const cy = -4.4;
+  // wings behind the slice
+  wing(ctx, -9.4, cy - 1.0, -1, flap);
+  wing(ctx, 9.6, cy - 1.4, 1, flap);
+  // slice edge (thickness) then the top face, slightly cupped
+  const rim = (c: Ctx) => ellipsePath(c, 0, cy + 1.8, 11.2, 9.0);
+  const top = (c: Ctx) => ellipsePath(c, 0, cy, 11.2, 9.0);
+  shape(ctx, rim, { fill: SALAMI_RIM, ink: 1.8, shadow: 'none' });
+  shape(ctx, top, {
+    fill: SALAMI, shadow: SALAMI_SH, ink: 1.6, shadowOffset: [-1.8, -1.6],
+    gloss: [{ x: -5.2, y: cy - 5.0, rx: 2.8, ry: 1.3, rot: -0.5, alpha: 0.5 }],
+  });
+  clipped(ctx, top, () => {
+    // curled edge: lighter rim ring
+    ctx.beginPath();
+    ellipsePath(ctx, 0, cy, 11.2, 9.0);
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = rgba('#e8644a', 0.6);
+    ctx.stroke();
+    // fat specks + peppercorns
+    speckle(ctx, 0, cy, 9.4, 7.4, 16, '#f6c9b8', 0.75, 91);
+    speckle(ctx, 0, cy, 9.4, 7.4, 7, '#5a120c', 0.38, 92);
+  });
+  // tiny bell-pepper hat
+  ctx.save();
+  ctx.translate(3.6, cy - 9.2);
+  ctx.rotate(0.28);
+  shape(ctx, (c) => {
+    c.moveTo(-3.4, -1.0);
+    c.bezierCurveTo(-4.2, 2.4, -2.6, 3.6, -1.2, 3.0);
+    c.quadraticCurveTo(0, 3.8, 1.2, 3.0);
+    c.bezierCurveTo(2.6, 3.6, 4.2, 2.4, 3.4, -1.0);
+    c.quadraticCurveTo(0, -3.0, -3.4, -1.0);
+    c.closePath();
+  }, { fill: PEPPER, shadow: '#26742a', ink: 1.2, shadowOffset: [-0.9, -0.8], gloss: [{ x: -1.8, y: -0.2, rx: 0.7, ry: 1.3, alpha: 0.7 }] });
+  line(ctx, [[0, 0], [0.2, 2.6]], 0.45, '#26742a', false, 0.8);
+  inkLine(ctx, [[0, -1.6], [0.4, -3.6], [1.8, -4.4]], 1.0, '#2d6e2a', true, 0.6);
+  ctx.restore();
+  // face: evil spicy grin
+  eyes(ctx, { x: 1.8, y: cy - 2.0, r: 2.6, sp: 5.8, look: [0.35, 0.1], lid: 'angry', pupil: 0.42, brow: { ang: 0.6, th: 1.3, dy: 1.25 } });
+  mouth(ctx, 2.2, cy + 3.4, 7.4, 'grin', { teeth: true, tongue: true });
+}
+
+reg('pepperoni', 46, 34, 23, 22, drawPepperoni);
+
+// ===========================================================================
+// 15. POLPETTA ROTOLANTE — r14. A glossy meatball tangled in spaghetti, with a
+//     dollop of sauce on top and a maniac grin. The texture ROLLS: 30° per
+//     frame (3-fold symmetric, so 4 frames = 120° loops seamlessly).
+// ===========================================================================
+
+const MEAT = '#8c4a2a';
+const MEAT_SH = '#5f2a16';
+const MEAT_HI = '#c27a4c';
+const SAUCE = '#d8341f';
+const NOODLE = '#f2d27e';
+
+function drawPolpetta(ctx: Ctx, f: number) {
+  const rot = (f / 4) * (TAU / 3);
+  const R = 13.6;
+  const ballPath = (c: Ctx) => {
+    const pts: Pt[] = [];
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * TAU + rot;
+      const k = 1 + Math.sin(i * 2.1) * 0.025 + Math.cos(i * 3.7) * 0.02;
+      pts.push([Math.cos(a) * R * k, Math.sin(a) * R * k]);
+    }
+    smoothPath(c, pts, true, 0.5);
+  };
+  // rotate a point of the surface texture
+  const P = (a: number, d: number): Pt => [Math.cos(a + rot) * d, Math.sin(a + rot) * d];
+
+  // spaghetti ends sticking out (behind the ball)
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * TAU + 0.5;
+    const p0 = P(a, R * 0.8), p1 = P(a + 0.12, R * 1.18), p2 = P(a + 0.38, R * 1.3);
+    inkLine(ctx, [p0, p1, p2], 2.0, NOODLE, true, 0.9);
+  }
+
+  shape(ctx, ballPath, { fill: MEAT, ink: 2.0, shadow: 'none' });
+  clipped(ctx, ballPath, () => {
+    // lumpy minced texture (3-fold symmetric)
+    for (let k = 0; k < 3; k++) {
+      const base = (k / 3) * TAU;
+      for (const [a, d, r, col] of [
+        [0.2, 5, 2.6, MEAT_HI], [0.9, 9.5, 2.2, MEAT_SH], [1.5, 3, 1.8, MEAT_SH], [1.8, 10.5, 2.4, MEAT_HI],
+        [0.55, 11.5, 1.4, '#6e3a1e'], [1.25, 7, 1.5, MEAT_HI],
+      ] as [number, number, number, string][]) {
+        const [x, y] = P(base + a, d);
+        ctx.beginPath();
+        ellipsePath(ctx, x, y, r, r * 0.75, base + a + rot);
+        ctx.fillStyle = rgba(col, 0.55);
+        ctx.fill();
+      }
+      for (const [a, d] of [[0.4, 8], [1.1, 4.5], [1.7, 11]] as Pt[]) {
+        const [x, y] = P(base + a, d);
+        ctx.beginPath();
+        ellipsePath(ctx, x, y, 0.8, 0.45, base + a);
+        ctx.fillStyle = '#4f8a2a';
+        ctx.fill();
+      }
+    }
+    // spaghetti strands wrapped round the ball (great-circle arcs)
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * TAU + 0.5 + rot;
+      ctx.save();
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, R * 0.98, R * 0.42, 0, -0.15, Math.PI + 0.15);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 3.6;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      ctx.lineWidth = 2.0;
+      ctx.strokeStyle = NOODLE;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, -0.5, R * 0.98, R * 0.42, 0, 0.5, Math.PI - 0.5);
+      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = '#fff6d0';
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+  // round-ball cel shading + gloss (static: light doesn't roll)
+  shadeOver(ctx, ballPath, MEAT_SH, [-3.6, -3.4], 0.55);
+  clipped(ctx, ballPath, () => {
+    glint(ctx, -6.2, -6.4, 3.2, 1.6, -0.7, 0.55);
+    glint(ctx, -9.2, -1.6, 0.8, 1.4, 0.2, 0.5);
+  });
+
+  // dollop of tomato sauce on top, dripping
+  const dr = [0, 0.5, 1.0, 0.4][f];
+  shape(ctx, (c) => {
+    c.moveTo(-10.4, -8.0);
+    c.bezierCurveTo(-9.6, -15.6, 8.6, -17.0, 11.2, -8.4);
+    c.quadraticCurveTo(10.4, -5.2, 8.6, -6.0);
+    c.quadraticCurveTo(8.2, -2.4 - dr, 6.6, -2.6 - dr);
+    c.quadraticCurveTo(5.2, -2.8 - dr, 5.0, -6.4);
+    c.quadraticCurveTo(1.0, -7.6, -3.0, -6.8);
+    c.quadraticCurveTo(-3.6, -4.0, -5.2, -4.2);
+    c.quadraticCurveTo(-6.6, -4.4, -6.8, -6.6);
+    c.quadraticCurveTo(-9.6, -5.6, -10.4, -8.0);
+    c.closePath();
+  }, {
+    fill: SAUCE, shadow: '#a01e12', ink: 1.6, shadowOffset: [-1.6, -1.4],
+    gloss: [{ x: -3.6, y: -13.0, rx: 2.6, ry: 1.0, rot: -0.2, alpha: 0.75 }, { x: 6.0, y: -11.6, rx: 0.8, ry: 0.5, alpha: 0.8 }],
+  });
+  // basil leaf garnish
+  leaf(ctx, [[1.0, -14.6], [3.6, -17.2], [6.4, -17.0]], [1.2, 3.0, 0.3], '#3f9a3a', 1.0);
+
+  // maniacal face (static — the face doesn't roll, only the meat does)
+  eye(ctx, -2.2, -1.6, 2.7, { look: [0.3, 0.1], pupil: 0.3, iris: '#e8c44a' });
+  eye(ctx, 4.6, -2.0, 3.4, { look: [0.25, 0.05], pupil: 0.26, iris: '#e8c44a' });
+  brow(ctx, -2.4, -5.6, 4.4, 0.55, 1.3);
+  brow(ctx, 4.8, -6.9, 5.2, 0.12, 1.3);
+  const gp = (c: Ctx) => {
+    c.moveTo(-4.8, 3.0);
+    c.quadraticCurveTo(1.6, 5.0, 8.8, 1.6);
+    c.quadraticCurveTo(8.0, 9.6, 1.8, 9.4);
+    c.quadraticCurveTo(-3.6, 9.0, -4.8, 3.0);
+    c.closePath();
+  };
+  shape(ctx, gp, { fill: '#5b1320', ink: 1.2, shadow: 'none' });
+  clipped(ctx, gp, () => {
+    ctx.fillStyle = '#fff8ea';
+    ctx.beginPath();
+    ctx.moveTo(-6, 2.2); ctx.quadraticCurveTo(1.6, 4.6, 10, 0.8);
+    ctx.lineTo(10, 3.6); ctx.quadraticCurveTo(1.6, 6.8, -6, 4.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-6, 9.6); ctx.quadraticCurveTo(1.8, 7.6, 10, 8.4);
+    ctx.lineTo(10, 11); ctx.lineTo(-6, 11);
+    ctx.closePath();
+    ctx.fill();
+    for (const tx of [-2.6, -0.2, 2.2, 4.6, 7.0]) {
+      line(ctx, [[tx, 2.8], [tx + 0.1, 5.0]], 0.35, '#b08a7a');
+      line(ctx, [[tx, 7.8], [tx, 9.6]], 0.35, '#b08a7a');
+    }
+    ctx.beginPath();
+    ellipsePath(ctx, 2.6, 7.6, 3.0, 1.2);
+    ctx.fillStyle = '#e8616e';
+    ctx.fill();
+  });
+}
+
+reg('polpetta', 42, 42, 21, 22, drawPolpetta);

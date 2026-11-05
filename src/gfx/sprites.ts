@@ -166,8 +166,44 @@ export async function prerenderAll(prefixes: string[] | null, onProgress?: (p: n
 }
 
 /**
+ * Fast-path transform: when the renderer declares the context's current
+ * transform as a pure uniform scale + translation (the camera), sprite draws
+ * compose their own matrix with setTransform instead of save/restore.
+ */
+let fastZ = 0, fastX = 0, fastY = 0, fastOn = false;
+export function setFastBase(z: number, ox: number, oy: number) {
+  fastZ = z; fastX = ox; fastY = oy; fastOn = true;
+}
+export function clearFastBase() {
+  fastOn = false;
+}
+
+function place(ctx: Ctx, s: Sprite, img: HTMLCanvasElement, x: number, y: number, scaleX: number, scaleY: number, rot: number) {
+  if (rot === 0 && scaleX === 1 && scaleY === 1) {
+    ctx.drawImage(img, x - s.ax, y - s.ay, s.w, s.h);
+    return;
+  }
+  if (fastOn) {
+    const z = fastZ;
+    if (rot === 0) ctx.setTransform(z * scaleX, 0, 0, z * scaleY, z * x + fastX, z * y + fastY);
+    else {
+      const c = Math.cos(rot), sn = Math.sin(rot);
+      ctx.setTransform(z * c * scaleX, z * sn * scaleX, -z * sn * scaleY, z * c * scaleY, z * x + fastX, z * y + fastY);
+    }
+    ctx.drawImage(img, -s.ax, -s.ay, s.w, s.h);
+    ctx.setTransform(z, 0, 0, z, fastX, fastY);
+    return;
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(scaleX, scaleY);
+  ctx.drawImage(img, -s.ax, -s.ay, s.w, s.h);
+  ctx.restore();
+}
+
+/**
  * Draw a sprite into a context whose transform is in WORLD UNITS.
- * Fast path when no rotation/scale.
  */
 export function drawSprite(
   ctx: Ctx,
@@ -180,31 +216,13 @@ export function drawSprite(
   rot = 0,
 ): void {
   const s = getSprite(id);
-  const img = s.frames[((frame % s.frames.length) + s.frames.length) % s.frames.length];
-  if (rot === 0 && scaleX === 1 && scaleY === 1) {
-    ctx.drawImage(img, x - s.ax, y - s.ay, s.w, s.h);
-    return;
-  }
-  ctx.save();
-  ctx.translate(x, y);
-  if (rot) ctx.rotate(rot);
-  ctx.scale(scaleX, scaleY);
-  ctx.drawImage(img, -s.ax, -s.ay, s.w, s.h);
-  ctx.restore();
+  const n = s.frames.length;
+  place(ctx, s, s.frames[((frame % n) + n) % n], x, y, scaleX, scaleY, rot);
 }
 
 /** Draw an arbitrary cached canvas belonging to sprite `s` (flash/tint) with the sprite's geometry. */
 export function drawSpriteCanvas(ctx: Ctx, s: Sprite, img: HTMLCanvasElement, x: number, y: number, scaleX = 1, scaleY = 1, rot = 0) {
-  if (rot === 0 && scaleX === 1 && scaleY === 1) {
-    ctx.drawImage(img, x - s.ax, y - s.ay, s.w, s.h);
-    return;
-  }
-  ctx.save();
-  ctx.translate(x, y);
-  if (rot) ctx.rotate(rot);
-  ctx.scale(scaleX, scaleY);
-  ctx.drawImage(img, -s.ax, -s.ay, s.w, s.h);
-  ctx.restore();
+  place(ctx, s, img, x, y, scaleX, scaleY, rot);
 }
 
 /** PNG data URL of a sprite frame (for DOM <img> icons/portraits). Cached. */

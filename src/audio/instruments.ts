@@ -267,15 +267,15 @@ const seedOf = (id: string, midi: number, v: number): number => hashStr(id) ^ Ma
 /** free-reed accordion: saw/pulse mix, presence formants, gentle top roll-off */
 const reedTimbre = (bright: number): Timbre => (k, f) =>
   (0.62 / Math.pow(k, 0.8) + (0.38 * Math.abs(Math.sin(Math.PI * k * 0.31))) / k) *
-  (1 + 1.3 * bump(f, 1350, 0.55) + 0.6 * bump(f, 3100, 0.35)) *
-  rolloff(f, 4200 * bright, 3) *
-  (f < 160 ? f / 160 : 1);
+  (1 + 1.1 * bump(f, 1300, 0.55) + 0.9 * bump(f, 3000, 0.4) + 0.35 * bump(f, 5500, 0.3)) *
+  rolloff(f, 6500 * bright, 2.5) *
+  (f < 200 ? f / 200 : 1);
 
 const stringTimbre: Timbre = (k, f) =>
   (1 / k) * (0.55 + 0.9 * bump(f, 450, 0.5) + 0.55 * bump(f, 1100, 0.45) + 0.75 * bump(f, 2800, 0.4)) * rolloff(f, 5200, 4) * (f < 180 ? (f / 180) ** 2 : 1);
 
 const tubaTimbre = (fc: number): Timbre => (k, f) =>
-  (1 / Math.pow(k, 0.5)) * (0.5 + 1.2 * bump(f, 320, 1.0) + 0.5 * bump(f, 900, 0.6)) * rolloff(f, fc, 4);
+  (1 / Math.pow(k, 0.55)) * (0.55 + 1.1 * bump(f, 190, 0.8) + 0.45 * bump(f, 1000, 0.5)) * (f > 260 && f < 600 ? 0.6 : 1) * rolloff(f, fc, 4);
 
 const sawTimbre: Timbre = (k) => 1 / k;
 const squareTimbre: Timbre = (k) => (k % 2 ? 1 / k : 0);
@@ -1004,14 +1004,14 @@ const tamb: InstDef = {
     const out = new Float32Array(len);
     if (kind === 0 || kind === 2) {
       // skin
-      const f = 205 + rng.next() * 20;
-      const amp = kind === 2 ? 0.9 : 0.55;
-      for (let i = 0; i < Math.round(0.12 * sr); i++) {
+      const f = 250 + rng.next() * 25;
+      const amp = kind === 2 ? 0.32 : 0.2;
+      for (let i = 0; i < Math.round(0.08 * sr); i++) {
         const t = i / sr;
-        out[i] += Math.sin(TAU * f * t * (1 + 0.4 * Math.exp(-t / 0.01))) * amp * Math.exp(-t / 0.035);
+        out[i] += Math.sin(TAU * f * t * (1 + 0.3 * Math.exp(-t / 0.008))) * amp * Math.exp(-t / 0.018);
       }
-      const bp = Biquad.bp(sr, 1100, 1.2);
-      for (let i = 0; i < Math.round(0.03 * sr); i++) out[i] += bp.process(rng.bi()) * amp * 1.2 * Math.exp(-i / (0.006 * sr));
+      const bp = Biquad.bp(sr, 1800, 1.0);
+      for (let i = 0; i < Math.round(0.02 * sr); i++) out[i] += bp.process(rng.bi()) * amp * 1.5 * Math.exp(-i / (0.004 * sr));
     }
     if (kind === 3) {
       // roll: many bursts, AM'd
@@ -1023,7 +1023,7 @@ const tamb: InstDef = {
     } else {
       jingles(out, sr, rng, 0, kind === 1 ? 0.55 : 1, kind === 1 ? 0.035 : 0.022, kind === 1 ? 7 : 6, kind === 2 ? 0.16 : kind === 1 ? 0.09 : 0.11);
     }
-    eq(out, [Biquad.hp(sr, 120, 0.7)]);
+    eq(out, [Biquad.hp(sr, 180, 0.7), Biquad.highShelf(sr, 7000, 2)]);
     fadeEdges(out, 0, Math.round(0.02 * sr));
     return normalize({ l: out, r: null }, kind === 1 ? 0.3 : kind === 2 ? 0.6 : kind === 3 ? 0.35 : 0.5);
   },
@@ -1235,6 +1235,68 @@ const riser: InstDef = {
   },
 };
 
+/** kitchen frying-pan / pot clang (two pans) */
+const panClang: InstDef = {
+  id: 'pan',
+  kind: 'perc',
+  variants: 2,
+  release: 0.1,
+  ring: true,
+  make(sr, _m, v) {
+    const len = Math.round(1.0 * sr);
+    const out = new Float32Array(len);
+    const f0 = v ? 512 : 418;
+    const ratios = [1, 1.58, 2.31, 3.17, 4.12, 5.6, 7.3];
+    addPartials(
+      out,
+      0,
+      sr,
+      ratios.map((r, i) => ({ f: f0 * r, amp: [1, 0.75, 0.55, 0.4, 0.28, 0.18, 0.1][i], t60: [0.85, 0.7, 0.5, 0.36, 0.26, 0.18, 0.12][i], phase: i })),
+    );
+    const nr = new Rng(77 + v);
+    const bp = Biquad.bp(sr, 3000, 0.8);
+    for (let i = 0; i < Math.round(0.006 * sr); i++) out[i] += bp.process(nr.bi()) * 1.2 * (1 - i / (0.006 * sr));
+    eq(out, [Biquad.hp(sr, 300, 0.7)]);
+    fadeEdges(out, Math.round(0.0005 * sr), Math.round(0.15 * sr));
+    return normalize({ l: trimTail(out, 2e-4), r: null }, 0.5);
+  },
+};
+
+/** muted "wah-wah" brass (v0: short wah, v1: long sad wobbling wah) */
+const wah: InstDef = {
+  id: 'wah',
+  kind: 'pluck',
+  variants: 2,
+  release: 0.12,
+  gate: 0.95,
+  make(sr, midi, v) {
+    const f0 = mtof(midi);
+    const long = v === 1;
+    const len = Math.round((long ? 3.2 : 1.4) * sr);
+    const tbl = table('wahsaw', (k, f) => (1 / Math.pow(k, 0.7)) * rolloff(f, 3500, 3), sr, f0 * 1.1, 12000);
+    const env = envADS(sr, len, 0.03, 0.6, long ? 0.85 : 0.7, 1, 1);
+    if (!long) for (let i = Math.round(0.9 * sr); i < len; i++) env[i] *= Math.max(0, 1 - (i - 0.9 * sr) / (0.5 * sr));
+    const raw = new Float32Array(len);
+    osc(raw, null, 1, 0, tbl, sr, f0, env, {
+      pitch: long
+        ? (t) => centsToRatio(-60 * Math.min(1, t / 2.6) + (35 + 25 * Math.min(1, t / 2)) * Math.sin(TAU * 5.5 * t) * Math.min(1, t / 0.5))
+        : (t) => centsToRatio(-20 * Math.exp(-t / 0.05)),
+    });
+    const flt = new Svf(sr, 400, 3);
+    for (let b = 0; b < len; b += 16) {
+      const t = b / sr;
+      let c: number;
+      if (long) c = 450 + 1300 * (0.5 - 0.5 * Math.cos(TAU * 2.6 * t)) * Math.exp(-t / 2.5);
+      else c = 350 + 1500 * Math.sin(Math.PI * Math.min(1, t / 0.45));
+      flt.set(c, 3.2);
+      const be = Math.min(len, b + 16);
+      for (let i = b; i < be; i++) raw[i] = flt.lp(raw[i]);
+    }
+    eq(raw, [Biquad.hp(sr, 90, 0.7)]);
+    return normalizeRms({ l: raw, r: null }, sr, 0.2, 0.4);
+  },
+};
+
 export const INSTRUMENTS: Record<string, InstDef> = {};
 for (const d of [
   accordion('accordion', 1, [-13, 0, 14], 0.7, 0.03),
@@ -1277,6 +1339,8 @@ for (const d of [
   shaker,
   triangleInst,
   riser,
+  panClang,
+  wah,
 ]) {
   INSTRUMENTS[d.id] = d;
 }

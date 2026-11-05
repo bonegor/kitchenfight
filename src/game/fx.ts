@@ -19,6 +19,7 @@ export interface Particle {
   bounce: boolean;
   shape: 0 | 1 | 2 | 3; // 0 circle, 1 sprite, 2 ring, 3 streak
   layer: 0 | 1; // 0 = ground (under characters), 1 = above
+  fps: number; // >0: animate sprite frames
 }
 
 export interface Decal {
@@ -72,7 +73,7 @@ export class FX {
     if (this.particles.length >= MAX_PARTICLES) return null;
     const p = this.pPool.pop() ?? ({} as Particle);
     p.z = 0; p.vz = 0; p.rot = 0; p.vr = 0; p.gravity = 0; p.drag = 0; p.sprite = null; p.frame = 0;
-    p.color = '#fff'; p.alpha = 1; p.additive = false; p.bounce = false; p.shape = 0; p.layer = 1; p.size1 = 0;
+    p.color = '#fff'; p.alpha = 1; p.additive = false; p.bounce = false; p.shape = 0; p.layer = 1; p.size1 = 0; p.fps = 0;
     this.particles.push(p);
     return p;
   }
@@ -138,7 +139,7 @@ export class FX {
   }
 
   /** Sprite particle with explicit params. */
-  sprite(x: number, y: number, sprite: string, o: { frame?: number; vx?: number; vy?: number; life?: number; size?: number; size1?: number; rot?: number; vr?: number; additive?: boolean; layer?: 0 | 1; gravity?: number; drag?: number; vz?: number; alpha?: number } = {}) {
+  sprite(x: number, y: number, sprite: string, o: { frame?: number; vx?: number; vy?: number; life?: number; size?: number; size1?: number; rot?: number; vr?: number; additive?: boolean; layer?: 0 | 1; gravity?: number; drag?: number; vz?: number; alpha?: number; fps?: number } = {}) {
     const p = this.alloc();
     if (!p) return;
     p.x = x; p.y = y;
@@ -150,6 +151,7 @@ export class FX {
     p.additive = !!o.additive; p.layer = o.layer ?? 1;
     p.gravity = o.gravity ?? 0; p.drag = o.drag ?? 0;
     p.alpha = o.alpha ?? 1;
+    p.fps = o.fps ?? 0;
   }
 
   /** Speed streak (for dashes / fast projectiles). */
@@ -296,7 +298,7 @@ export class FX {
         }
         case 1: {
           ctx.globalAlpha = Math.min(1, t * 2.2) * p.alpha;
-          drawSprite(ctx, p.sprite!, p.frame, p.x, p.y - p.z, size, size, p.rot);
+          drawSprite(ctx, p.sprite!, p.fps ? p.frame + Math.floor((p.max - p.life) * p.fps) : p.frame, p.x, p.y - p.z, size, size, p.rot);
           break;
         }
         case 2: {

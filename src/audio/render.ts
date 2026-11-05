@@ -129,8 +129,9 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const warnings = comp.warnings.slice();
   const loop = song.loopFrom !== null;
   const loopStartS = Math.round(comp.loopStart * sr);
-  const loopEndS = Math.round(comp.loopEnd * sr);
-  const loopLenS = loopEndS - loopStartS;
+  // even loop length keeps the half-rate reverb send phase-identical across the seam
+  const loopLenS = 2 * Math.round(((comp.loopEnd - comp.loopStart) * sr) / 2);
+  const loopEndS = loopStartS + loopLenS;
   const P = Math.round(LOOP_PAD * sr);
   const length = loop ? loopEndS + P : Math.round((comp.end + (song.tail ?? 2.5)) * sr);
 

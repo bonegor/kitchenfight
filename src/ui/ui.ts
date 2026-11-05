@@ -198,7 +198,35 @@ export class UI {
     return this.app.save.unlockedChars.includes(id);
   }
 
+  private storySeen = false;
+
+  showStory(next: () => void) {
+    this.storySeen = true;
+    const lineup = ['enemy.ananas', 'enemy.panna', 'enemy.ketchup', 'enemy.forbici', 'enemy.spezzato', 'enemy.cappuccino', 'enemy.polpetta']
+      .filter((id) => hasSprite(id))
+      .map((id) => img(spriteURL(id)));
+    const row = h('div', { class: 'story-lineup' }, lineup);
+    const el = h('div', { class: 'screen dim' },
+      h('div', { class: 'paper panel story', style: { width: 'min(720px,94vw)' } },
+        h('div', { class: 'checker checker-strip' }),
+        h('div', { class: 'panel-body' },
+          h('div', { class: 'story-kicker' }, 'Napoli, oggi.'),
+          h('p', {}, 'The internet has unleashed a plague of ', h('b', {}, 'culinary crimes'), ': cream in the carbonara, pineapple on the pizza, ketchup on the spaghetti, cappuccino after lunch…'),
+          row,
+          h('p', {}, 'They crawled out of viral videos and now they are marching on the kitchens of Italy. Only one brigade stands in their way.'),
+          h('p', { class: 'story-quote' }, '«Non si fa!» — Nonna'),
+        ),
+        h('div', { class: 'panel-foot' }, this.btn('Andiamo! ▶', 'big green', next, "Let's go", { 'data-nav-default': '' })),
+      ),
+    );
+    this.show(el, 'story', next);
+  }
+
   showCharSelect() {
+    if (this.app.save.runs === 0 && !this.storySeen) {
+      this.showStory(() => this.showCharSelect());
+      return;
+    }
     if (!this.isCharUnlocked(this.selectedChar)) this.selectedChar = 'enzo';
     const detail = h('div', { class: 'char-detail' });
     const grid = h('div', { class: 'char-grid' });

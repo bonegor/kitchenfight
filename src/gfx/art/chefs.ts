@@ -202,12 +202,7 @@ function drawNonna(ctx: Ctx, f: number) {
   const sw = Math.sin(ph);
   const hx = 1.5, hy = -21;
 
-  // --- bun + hairpins (behind the head; only the pin tips poke out)
-  for (const [x1, y1, x2, y2] of [[hx - 14.4, hy - 17.8, hx + 0.6, hy - 8.8], [hx + 0.8, hy - 23.4, hx - 8.2, hy - 4.6]]) {
-    line(ctx, [[x1, y1], [x2, y2]], 2.2, INK);
-    line(ctx, [[x1, y1], [x2, y2]], 0.9, '#7c5a3c');
-    ball(ctx, x1, y1, 1.25, '#3d3139', '#1d161b', 0.7, 0.7);
-  }
+  // --- bun (behind the head) with U-shaped hairpins
   shape(ctx, (c) => circlePath(c, hx - 4.2, hy - 12.6, 6.6), {
     fill: N_HAIR, shadow: N_HAIR_SH, shadowOffset: [-1.7, -1.9],
     gloss: [{ x: hx - 6.6, y: hy - 15.6, rx: 2.6, ry: 1.4, rot: -0.5, alpha: 0.75 }],
@@ -220,6 +215,24 @@ function drawNonna(ctx: Ctx, f: number) {
   ctx.lineCap = 'round';
   ctx.stroke();
   ctx.restore();
+  for (const [px, py, a] of [[hx - 10.6, hy - 14.4, 0.35], [hx - 2.6, hy - 19.6, -1.2], [hx + 1.6, hy - 15.6, -2.5]] as [number, number, number][]) {
+    const dx = Math.cos(a), dy = Math.sin(a), nx = -dy * 0.75, ny = dx * 0.75;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(px + nx + dx * 5, py + ny + dy * 5);
+    ctx.lineTo(px + nx, py + ny);
+    ctx.arc(px, py, 0.75, Math.atan2(ny, nx), Math.atan2(-ny, -nx), true);
+    ctx.lineTo(px - nx + dx * 4.4, py - ny + dy * 4.4);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.lineWidth = 0.55;
+    ctx.strokeStyle = '#8d8496';
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // --- far arm (behind the body), swinging
   inkLine(ctx, [[-9, -9], [-13 - sw * 1.2, -3.5], [-12.6 - sw * 2.6, 2]], 4.4, N_DRESS, true, 1.4);

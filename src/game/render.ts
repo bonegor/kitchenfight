@@ -4,7 +4,7 @@
 import type { Run } from './run';
 import type { Enemy, Projectile, Pickup, Area } from './entities';
 import type { PropInst } from './world';
-import { getSprite, drawSprite, getTinted, hasSprite, drawSpriteCanvas } from '../gfx/sprites';
+import { getSprite, drawSprite, getTinted, hasSprite, drawSpriteCanvas, setFastBase, clearFastBase } from '../gfx/sprites';
 import { TAU, clamp } from '../core/math';
 import { rgba } from '../gfx/painter';
 import type { Input } from '../core/input';
@@ -68,6 +68,15 @@ export class Renderer {
   private motes: Mote[] = [];
   private t = 0;
   quality: 'high' | 'low' = 'high';
+  profile = false;
+  prof: Record<string, number> = {};
+  private pt = 0;
+  private mark(name: string) {
+    if (!this.profile) return;
+    const now = performance.now();
+    this.prof[name] = (this.prof[name] ?? 0) + (now - this.pt);
+    this.pt = now;
+  }
   camX = 0;
   camY = 0;
 
@@ -137,10 +146,12 @@ export class Renderer {
     const ox = Math.round((this.W / 2 - this.camX * this.zoom + sx) * this.dpr);
     const oy = Math.round((this.H / 2 - this.camY * this.zoom + sy) * this.dpr);
     ctx.setTransform(z, 0, 0, z, ox, oy);
+    setFastBase(z, ox, oy);
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = this.quality === 'high' ? 'high' : 'low';
+    ctx.imageSmoothingQuality = 'low';
     const v = run.view;
     const x0 = v.x0 - 8, y0 = v.y0 - 8, x1 = v.x1 + 8, y1 = v.y1 + 8;
+    if (this.profile) this.pt = performance.now();
 
     // ------------------------------------------------ floor
     const ts = env.tileSize;
@@ -151,6 +162,7 @@ export class Renderer {
         ctx.drawImage(s.frames[0], tx * ts, ty * ts, ts + ov, ts + ov);
       }
     }
+    this.mark('tiles');
     // floor props
     run.world.update(v.x0, v.y0, v.x1, v.y1, dt);
     const vis = run.world.visible;
@@ -161,10 +173,19 @@ export class Renderer {
     for (const a of run.areas) if (a.alive) this.drawArea(a);
     // aura weapons
     this.drawAuras(run);
-    // pickups
+    // pickups (shadows batched in one path)
+    ctx.fillStyle = 'rgba(30,16,10,0.22)';
+    ctx.beginPath();
+    for (const p of run.pickups) {
+      if (!p.alive || p.x < x0 - 30 || p.x > x1 + 30 || p.y < y0 - 30 || p.y > y1 + 40) continue;
+      ctx.moveTo(p.x + p.r * 0.8, p.y + p.r * 0.7);
+      ctx.ellipse(p.x, p.y + p.r * 0.7, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
+    }
+    ctx.fill();
     for (const p of run.pickups) if (p.alive && p.x > x0 - 30 && p.x < x1 + 30 && p.y > y0 - 30 && p.y < y1 + 40) this.drawPickup(p);
     // ground particles
     run.fx.drawParticles(ctx, 0, x0, y0, x1, y1);
+    this.mark('ground');
 
     // ------------------------------------------------ shadows
     ctx.fillStyle = 'rgba(30,16,10,0.26)';
@@ -192,6 +213,7 @@ export class Renderer {
     items.push({ y: pl.y + 18, k: 2, ref: pl });
     for (const p of run.projectiles) if (p.alive && p.layer === 0) items.push({ y: p.y + p.r * 0.9, k: 3, ref: p });
     items.sort((a, b) => a.y - b.y);
+    this.mark('shadows+sort');
     for (const it of items) {
       if (it.k === 0) this.drawProp(it.ref);
       else if (it.k === 1) this.drawEnemy(run, it.ref);
@@ -199,6 +221,7 @@ export class Renderer {
       else this.drawProjectile(run, it.ref);
     }
 
+    this.mark('sorted');
     // ------------------------------------------------ air layer
     for (const p of run.projectiles) if (p.alive && p.layer === 1) this.drawProjectile(run, p);
     this.drawShots(run);
@@ -206,12 +229,14 @@ export class Renderer {
     for (const p of vis) if (p.layer === 'overhead') this.drawProp(p, true);
     this.emitPropFx(run, vis, dt);
 
+    this.mark('air');
     // ------------------------------------------------ lighting
     let darkness = env.ambient.darkness;
     const ramp = run.stage.nightRamp;
     if (ramp) darkness = ramp[0] + (ramp[1] - ramp[0]) * clamp(run.time / 900, 0, 1);
     run.darkness = darkness;
     // ambient tint (multiply)
+    clearFastBase();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (env.ambient.tint && env.ambient.tint !== '#ffffff') {
       ctx.globalCompositeOperation = 'multiply';
@@ -221,13 +246,17 @@ export class Renderer {
     }
     if (darkness > 0.01) this.drawLighting(run, vis, darkness, env.ambient.darkColor);
 
+    this.mark('lighting');
     // texts & bubbles (world space, above lighting)
     ctx.setTransform(z, 0, 0, z, ox, oy);
+    setFastBase(z, ox, oy);
     run.fx.drawTexts(ctx, FONT);
     run.fx.drawBubbles(ctx, FONT);
     this.drawIndicators(run);
 
+    this.mark('texts');
     // ------------------------------------------------ screen space post
+    clearFastBase();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.drawMotes(run, env.ambient.particles ?? 'none', dt);
     if (!this.vignette) this.buildVignette();
@@ -254,6 +283,7 @@ export class Renderer {
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
     if (input && input.touchActive) this.drawJoystick(input);
+    this.mark('post');
   }
 
   // =====================================================================
@@ -395,11 +425,6 @@ export class Renderer {
     const ctx = this.ctx;
     if (!hasSprite(p.sprite)) return;
     const bob = Math.sin(p.t * 4 + p.x * 0.1) * 1.8 - 2;
-    // shadow
-    ctx.fillStyle = 'rgba(30,16,10,0.22)';
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y + p.r * 0.7, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
-    ctx.fill();
     if (p.kind === 'chest') {
       // light beam
       ctx.globalCompositeOperation = 'lighter';
@@ -413,6 +438,15 @@ export class Renderer {
     }
     let frame = 0;
     if (p.kind === 'coin') frame = Math.floor(p.t * 10) & 3;
+    if (p.kind === 'xp' && p.value < 25) {
+      // soft halo so ingredients read as collectibles (and not as flying basil leaves)
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.32 + Math.sin(p.t * 6 + p.x) * 0.1;
+      const r = p.value >= 5 ? 15 : 12;
+      ctx.drawImage(glowSprite(p.value >= 5 ? '#ff9a7a' : '#d6ffb0'), p.x - r, p.y - p.z + bob - r, r * 2, r * 2);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
     const big = p.kind === 'xp' && p.value >= 25;
     if (big || p.kind === 'chest' || p.kind === 'bell' || p.kind === 'spumante' || p.kind === 'gelato') {
       ctx.globalCompositeOperation = 'lighter';
@@ -425,6 +459,18 @@ export class Renderer {
     }
     const sp = p.kind === 'chest' && p.gold ? 'pickup.chest_gold' : p.sprite;
     drawSprite(ctx, hasSprite(sp) ? sp : p.sprite, frame, p.x, p.y - p.z + bob);
+    const g = (p.t * 0.7 + (p.x * 0.013 + p.y * 0.007)) % 2.2;
+    if (g < 0.25) {
+      const k = Math.sin((g / 0.25) * Math.PI);
+      const sx = p.x + p.r * 0.35, sy = p.y - p.z + bob - p.r * 0.45;
+      ctx.fillStyle = `rgba(255,255,255,${0.9 * k})`;
+      ctx.beginPath();
+      const L = 5 * k + 1;
+      ctx.moveTo(sx, sy - L); ctx.lineTo(sx + 1.2, sy - 1.2); ctx.lineTo(sx + L, sy); ctx.lineTo(sx + 1.2, sy + 1.2);
+      ctx.lineTo(sx, sy + L); ctx.lineTo(sx - 1.2, sy + 1.2); ctx.lineTo(sx - L, sy); ctx.lineTo(sx - 1.2, sy - 1.2);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   private drawArea(a: Area) {
