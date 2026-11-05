@@ -174,8 +174,10 @@ class App {
         onBossDefeated: (e: Enemy, final: boolean) => {
           this.ui.toast((e.def.boss?.title ?? e.def.name) + ' defeated! Perfetto!', 'good');
           if (!final) {
-            this.bossMusic = false;
-            audio.playMusic(st.music, { fade: 1.2 });
+            if (!run.bosses.some((b) => b.alive && b !== e)) {
+              this.bossMusic = false;
+              audio.playMusic(st.music, { fade: 1.2 });
+            }
           } else {
             this.ui.banner('Vittoria!', 'Tradition is safe', false);
           }
