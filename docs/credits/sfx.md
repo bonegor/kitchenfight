@@ -35,8 +35,8 @@ Sound effects in this game use material from the following collections:
 | `chest_open` | -12.3 | 1 | +-0.0% / +-0% | - | snare-drum roll crescendo, then crash cymbal + bass drum + mandolin C-major strum + glockenspiel | `Snare2_rollSN_v4_rr1_Mid.wav`, `cymbal_crash2_fff1.wav`, `BDrumNew_hit_v7_rr1_Sum.wav`, `18c4 1.wav`, `22e4 1.wav`, `25g4 1.wav`, `30c5 1.wav`, `glock_loud_C7_01.wav` |
 | `chest_reward` | -15.5 | 1 | +-0.0% / +-3% | - | glockenspiel figure G-E-C-G-C with a sleigh-bell sparkle (pitch rises per reward) | `glock_loud_G5_01.wav`, `glock_medium_G5_01.wav`, `glock_loud_C5_01.wav`, `glock_loud_C6_01.wav`, `sleighbell2_hit_loud.wav` |
 | `evolution` | -11.0 | 1 | +-0.0% / +-0% | - | cymbal swell + magic shimmer into an orchestral level-up sting, tubular bell, glockenspiel | `susCymb1_cresc_1.5s.wav`, `MAGSpel_MagicSpell_OS_02`, `MUSCStngr_LevelUpOrchestral_OS_01`, `chimes_C4_ff_rr2.wav`, `glock_loud_C7_01.wav`, `cymbal_crash2_fff1.wav` |
-| `new_weapon` | -17.2 | 1 | +-0.0% / +-0% | - | trumpet fanfare G-C-E(+G) with cymbal and glockenspiel | `trumpets-stc-rr1-g4.wav`, `trumpets-stc-rr2-c#5.wav`, `trumpets-sus-e5.wav`, `trumpets-sus-g5.wav`, `susCymb1_hit_f1.wav`, `glock_loud_C6_01.wav` |
-| `pickup_xp` | -27.0 | 2 | +-1.2% / +-6% | -6 dB | glockenspiel "plink" + the synthesized chirp (keeps the combo pitch ramp crisp) | `glock_soft_G6_01.wav`, `glock_medium_G6_01.wav` |
+| `new_weapon` | -17.2 | 1 | +-0.0% / +-0% | - | trumpet fanfare G-C-E(+G) with cymbal and glockenspiel | `trumpets-stc-rr1-g4.wav`, `trumpets-stc-rr1-c#5.wav`, `trumpets-sus-e5.wav`, `trumpets-sus-g5.wav`, `susCymb1_hit_f1.wav`, `glock_loud_C6_01.wav` |
+| `pickup_xp` | -27.0 | 2 | +-1.2% / +-6% | -6 dB | glockenspiel "plink" + the synthesized chirp (keeps the combo pitch ramp crisp) | `glock_loud_G5_01.wav`, `glock_medium_G5_01.wav` |
 | `pickup_coin` | -22.1 | 3 | +-4.0% / +-8% | - | real coin chinks with a soft glockenspiel "ting" (C7) for a clear pickup pitch | `OBJCoin_CoinDrop_OS_01`, `glock_loud_C6_01.wav`, `OBJCoin_CoinsUI_LOOP_01`, `glock_medium_C6_01.wav` |
 | `pickup_heal` | -19.4 | 1 | +-0.0% / +-4% | - | a crunchy bite, then a harp glissando up (C major) and a glockenspiel ping | `GOREBone_BonesBreaking_OS_01`, `harp-c5.wav`, `harp-d#5.wav`, `harp-f#5.wav`, `harp-a5.wav`, `harp-c6.wav`, `harp-d#6.wav`, `glock_loud_C7_01.wav` |
 | `pickup_bell` | -14.6 | 1 | +-0.0% / +-3% | - | "A tavola!": a hand bell rung three times | `sus_E5_r01_main.wav` |
@@ -57,7 +57,7 @@ Sound effects in this game use material from the following collections:
 | `prop_break` | -24.5 | 3 | +-7.0% / +-8% | - | crate crack (axe chop), a ceramic/glass smash, a wooden crunch | `WEAPAxe_WoodCutAxe_OS_01`, `PLASImpt_PlasticObjDrop_OS_01`, `CERMImpt_CeramicSmallImpact_OS_01`, `GLASBrk_GlassBottleBreak_OS_01`, `OBJBook_BookClose_OS_01` |
 | `boss_warning` | -15.3 | 1 | +-0.0% / +-0% | -5 dB | bass-drum roll + hand siren under the synthesized two-tone "police" siren | `bassdrum_roll_ff.wav`, `Timpani1_Hit_v4_rr2_Sum.wav`, `Main_SirenWhistle-010.wav` |
 | `boss_roar` | -15.1 | 3 | +-3.0% / +-5% | - | giant roar / ogre bellow / villain laugh (MWAHAHA) | `CREAHmn_GiantEffort_OS_01`, `CREAHmn_OgreEffort_OS_01`, `CREAHmn_GiantHurt_OS_01`, `VOXLaff_EvilLaugh_OS_02` |
-| `boss_slam` | -15.9 | 2 | +-3.0% / +-5% | - | ground slam: deep impact, wood crash, cymbal / big drum + clang | `impact-deep-hard`, `WOODImpt_LargeWoodDrop_OS_01`, `cymbal_crash1_short1.wav`, `cinematic-drum-big`, `METLImpt_BucketDrop_OS_01`, `bassdrum_hit_ff.wav` |
+| `boss_slam` | -15.9 | 2 | +-3.0% / +-5% | - | ground slam: deep impact, wood crash, cymbal / big drum + clang | `impact-deep-hard`, `WOODImpt_LargeWoodDrop_OS_01`, `cymbal_crash1_short1.wav`, `cinematic-drum-big`, `METLImpt_MetalHitSurface_OS_05`, `bassdrum_hit_ff.wav` |
 | `boss_shoot` | -19.6 | 2 | +-6.0% / +-6% | - | big wet "blorp" launch: squish + whoosh + thump | `GORESqsh_BloodSquishSlimy_OS_04`, `WHSH_WhooshMedium_OS_01`, `106.flac`, `GORESqsh_BloodSquishSlimy_OS_02`, `WHSH_WhooshMedium_OS_03` |
 | `boss_death` | -11.0 | 1 | +-0.0% / +-0% | - | thunderous explosion + crunch, then a triumphant orchestral sting | `cinematic-thunder-big`, `boom-hit-strong`, `GOREBone_BonesBreaking_OS_02`, `cymbal_crash2_fff1.wav`, `MUSCStngr_VictoryOrchestral_OS_01` |
 | `w_mattarello` | -24.7 | 3 | +-5.0% / +-8% | - | heavy rolling-pin swing (real swoosh, pitched down) | `SWSH_Swoosh_OS_01`, `SWSH_Swoosh_OS_03`, `SWSH_Swoosh_OS_05` |
@@ -126,9 +126,8 @@ Local clone: `/home/user/facebookincubator/meta-open-sound/corpora/oculus-audio-
 - `corpora/oculus-audio-pack/ogg/GORESqsh_BloodSquishSlimy_OS_04.ogg` - used by `boss_shoot`, `enemy_death`, `enemy_death_big`, `enemy_shoot`, `w_spaghetti`
 - `corpora/oculus-audio-pack/ogg/MACHInd_Hydraulic_OS_01.ogg` - used by `w_moka`
 - `corpora/oculus-audio-pack/ogg/MAGSpel_MagicSpell_OS_02.ogg` - used by `evolution`
-- `corpora/oculus-audio-pack/ogg/METLImpt_BucketDrop_OS_01.ogg` - used by `boss_slam`
 - `corpora/oculus-audio-pack/ogg/METLImpt_MetalHitSurface_OS_02.ogg` - used by `hit_crit`
-- `corpora/oculus-audio-pack/ogg/METLImpt_MetalHitSurface_OS_05.ogg` - used by `w_moka`
+- `corpora/oculus-audio-pack/ogg/METLImpt_MetalHitSurface_OS_05.ogg` - used by `boss_slam`, `w_moka`
 - `corpora/oculus-audio-pack/ogg/MUSCStngr_LevelUpOrchestral_OS_01.ogg` - used by `evolution`
 - `corpora/oculus-audio-pack/ogg/MUSCStngr_VictoryOrchestral_OS_01.ogg` - used by `boss_death`
 - `corpora/oculus-audio-pack/ogg/OBJBag_CanvasCaseDrop_OS_01.ogg` - used by `enemy_death_big`, `w_pizza`
@@ -184,12 +183,11 @@ Local clone: `/home/user/sgossner/vcsl`
 - `Idiophones/Struck Idiophones/Glockenspiel/glock_loud_C6_01.wav` - used by `chest_drop`, `chest_reward`, `new_weapon`, `pickup_coin`, `ui_unlock`
 - `Idiophones/Struck Idiophones/Glockenspiel/glock_loud_C7_01.wav` - used by `chest_open`, `evolution`, `levelup`, `pickup_heal`
 - `Idiophones/Struck Idiophones/Glockenspiel/glock_loud_G#6_01.wav` - used by `ui_unlock`
-- `Idiophones/Struck Idiophones/Glockenspiel/glock_loud_G5_01.wav` - used by `chest_reward`
+- `Idiophones/Struck Idiophones/Glockenspiel/glock_loud_G5_01.wav` - used by `chest_reward`, `pickup_xp`
 - `Idiophones/Struck Idiophones/Glockenspiel/glock_medium_C6_01.wav` - used by `pickup_coin`, `ui_confirm`
 - `Idiophones/Struck Idiophones/Glockenspiel/glock_medium_C7_01.wav` - used by `freeze`
-- `Idiophones/Struck Idiophones/Glockenspiel/glock_medium_G5_01.wav` - used by `chest_reward`
-- `Idiophones/Struck Idiophones/Glockenspiel/glock_medium_G6_01.wav` - used by `pickup_xp`
-- `Idiophones/Struck Idiophones/Glockenspiel/glock_soft_G6_01.wav` - used by `pickup_xp`, `w_basilico`
+- `Idiophones/Struck Idiophones/Glockenspiel/glock_medium_G5_01.wav` - used by `chest_reward`, `pickup_xp`
+- `Idiophones/Struck Idiophones/Glockenspiel/glock_soft_G6_01.wav` - used by `w_basilico`
 - `Idiophones/Struck Idiophones/Gong 1/gong_f.wav` - used by `elite_spawn`
 - `Idiophones/Struck Idiophones/Hand Chimes/sus_E5_r01_main.wav` - used by `pickup_bell`
 - `Idiophones/Struck Idiophones/Mark Trees/Legacy/windchimes_desc1.wav` - used by `pickup_gelato`
@@ -263,7 +261,7 @@ Local clone: `/home/user/peastman/sso`
 - `Sonatina Symphonic Orchestra/Samples/Harp/harp-d#5.wav` - used by `pickup_heal`, `player_revive`
 - `Sonatina Symphonic Orchestra/Samples/Harp/harp-d#6.wav` - used by `pickup_heal`, `player_revive`
 - `Sonatina Symphonic Orchestra/Samples/Harp/harp-f#5.wav` - used by `pickup_heal`, `player_revive`
+- `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-stc-rr1-c#5.wav` - used by `new_weapon`
 - `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-stc-rr1-g4.wav` - used by `new_weapon`
-- `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-stc-rr2-c#5.wav` - used by `new_weapon`
 - `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-sus-e5.wav` - used by `new_weapon`
 - `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-sus-g5.wav` - used by `new_weapon`

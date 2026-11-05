@@ -166,7 +166,7 @@ await page.evaluate(() => {
    * Decoded recordings and synthesized buffers are shared between engines (AudioBuffers are context-free).
    */
   let shared = null;
-  window.__offlineEngine = async (seconds, { music = null, hideRec = null } = {}) => {
+  window.__offlineEngine = async (seconds, { music = null, hideRec = null, noRec = false, noSfx = false } = {}) => {
     const { AudioEngine, SFX, SFX_IDS } = await window.__mods;
     const off = new OfflineAudioContext(4, Math.ceil(seconds * SR), SR);
     off.destination.channelCount = 4;
@@ -216,6 +216,8 @@ await page.evaluate(() => {
       shared = { rec: eng.rec, sfxBufs: eng.sfxBufs };
       if (hideRec) eng.rec = { get: (i) => (i === hideRec ? null : shared.rec.get(i)), load() {}, lead: shared.rec.lead };
     }
+    if (noRec) eng.rec = { get: () => null, load() {}, lead: {} };
+    if (noSfx) eng.sfx = () => {};
     if (music) {
       eng.playMusic(music, { fade: 0 });
       const t1 = performance.now();
@@ -327,12 +329,71 @@ for (const r of Object.values(perId)) delete r.wav;
 fs.writeFileSync(path.join(outDir, 'per_id.json'), JSON.stringify(perId, null, 1));
 console.log(lines.join('\n'));
 
+// ------------------------------------------------------------------------------------------------ 1b. pitch ramps
+// pickup_xp combo (pitch 1 -> 2) and chest_reward steps must keep a clear, rising pitch: dominant frequency per call
+if (!onlyIds.length || onlyIds.includes('pickup_xp')) {
+  const ramp = await page.evaluate(async () => {
+    const { SR } = window.__h;
+    const out = [];
+    for (const [id, pitches] of [['pickup_xp', [1, 1.25, 1.5, 1.75, 2]], ['chest_reward', [1, 1.08, 1.16, 1.24]]]) {
+      for (const p of pitches) {
+        const { eng, off } = await window.__offlineEngine(1.2);
+        const tq = Math.round((0.1 * SR) / 128) * 128;
+        off.suspend(tq / SR).then(() => {
+          const R = Math.random;
+          const q = [0.25, 0.5, 0.5];
+          Math.random = () => (q.length ? q.shift() : 0.5);
+          try {
+            eng.sfx(id, { pitch: p });
+          } finally {
+            Math.random = R;
+          }
+          off.resume();
+        });
+        const buf = await off.startRendering();
+        const x = buf.getChannelData(2);
+        // dominant frequency 1..5 kHz (the notes; glockenspiel overtones lie above) in the first 60 ms
+        const n = Math.round(0.06 * SR);
+        const seg = x.subarray(tq, tq + n);
+        const mag = (f) => {
+          let re = 0, im = 0;
+          for (let i = 0; i < seg.length; i++) {
+            const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (seg.length - 1));
+            re += seg[i] * w * Math.cos((2 * Math.PI * f * i) / SR);
+            im -= seg[i] * w * Math.sin((2 * Math.PI * f * i) / SR);
+          }
+          return Math.hypot(re, im);
+        };
+        let bf = 0, bm = 0;
+        for (let f = 1000; f <= 5000; f += 10) {
+          const m = mag(f);
+          if (m > bm) { bm = m; bf = f; }
+        }
+        for (let f = bf - 10; f <= bf + 10; f += 0.5) {
+          const m = mag(f);
+          if (m > bm) { bm = m; bf = f; }
+        }
+        out.push({ id, pitch: p, hz: bf });
+      }
+    }
+    return out;
+  });
+  const lines2 = ['| id | pitch opt | dominant Hz | ratio to pitch 1 |', '|---|---|---|---|'];
+  const base = {};
+  for (const r of ramp) {
+    if (r.pitch === 1) base[r.id] = r.hz;
+    lines2.push(`| \`${r.id}\` | ${r.pitch} | ${r.hz.toFixed(1)} | ${(r.hz / base[r.id]).toFixed(3)} |`);
+  }
+  fs.writeFileSync(path.join(outDir, 'pitch_ramp.md'), lines2.join('\n') + '\n');
+  console.log('\n' + lines2.join('\n'));
+}
+
 // ------------------------------------------------------------------------------------------------ 2. stress
 if (!onlyIds.length) {
-  const stress = await page.evaluate(async () => {
+  const runStress = (mode) => page.evaluate(async (mode) => {
     const { SR, measure, lufs, lkMax, db } = window.__h;
     const T = 20;
-    const { eng, off, made } = await window.__offlineEngine(T + 1, { music: 'kitchen' });
+    const { eng, off, made } = await window.__offlineEngine(T + 1, { music: 'kitchen', noRec: mode === 'synth', noSfx: mode === 'music' });
     // deterministic pseudo-random
     let seed = 12345;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -426,7 +487,14 @@ if (!onlyIds.length) {
         prePeak: mpre.peak, preClip: mpre.clip },
       musicPlaying: !!eng.current,
     };
-  });
+  }, mode);
+  const stress = await runStress('recorded');
+  const stressSynth = await runStress('synth');
+  const musicOnly = await runStress('music');
+  stress.compare = {
+    synthMix: { lufs: stressSynth.mix.lufs, peak: stressSynth.mix.peak, clip: stressSynth.mix.clip, maxLk400: stressSynth.mix.maxLk400, played: stressSynth.played, cpuPct: stressSynth.cpuPct, maxActive: stressSynth.maxActive },
+    musicOnly: { lufs: musicOnly.mix.lufs, peak: musicOnly.mix.peak, maxLk400: musicOnly.mix.maxLk400 },
+  };
   stress.sfxMsAvgPerCall = stress.sfxMsTotal / stress.calls;
   fs.writeFileSync(path.join(outDir, 'stress.json'), JSON.stringify(stress, null, 1));
   console.log('\nSTRESS', JSON.stringify({ ...stress, perId: undefined }, null, 1));

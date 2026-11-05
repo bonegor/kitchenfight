@@ -294,7 +294,7 @@ class Layer:
     lp: float | None = None       # ... low-pass
     hp4: float | None = None      # steeper (4th order) high-pass
     eq: tuple = ()                # (('peak'|'low'|'high', f, dB[, q]), ...)
-    fi: float = 0.0005            # fade-in (s, on the used slice)
+    fi: float | None = None       # fade-in (s, on the used slice); default 0.5 ms at a detected onset, 3 ms after an explicit t0
     fo: float = 0.01              # fade-out (s, at the end of the slice)
     tau: float | None = None      # extra exponential decay (time constant, s) ...
     tau_at: float = 0.0           # ... starting here (s after the layer start)
@@ -302,6 +302,7 @@ class Layer:
     pan: float = 0.0              # -1..1 (stereo variants only)
     width: float = 1.0            # stereo sources: 0 = mono, 1 = as recorded
     rev: bool = False             # reversed
+    peak_at: float | None = None  # align: start the slice so the loudest 1 ms within 120 ms of the onset lands here (s)
 
 
 def L(src: str, **kw) -> Layer:
@@ -384,10 +385,11 @@ def harp(m: int, **kw) -> Layer:
 
 
 def trumpets(m: int, art: str = 'stc-rr1', **kw) -> Layer:
-    """SSO trumpet section (samples at e, g, a#, c# per octave)"""
+    """SSO trumpet section (samples at e, g, a#, c# per octave), tuned exactly to MIDI note m.
+    (trumpets-stc-rr2-c#5 actually sounds ~D5: the measured f0, not the file name, sets the pitch.)"""
     names = {52: 'e3', 55: 'g3', 58: 'a#3', 61: 'c#4', 64: 'e4', 67: 'g4', 70: 'a#4', 73: 'c#5', 76: 'e5', 79: 'g5', 82: 'a#5', 85: 'c#6', 88: 'e6'}
     base = min(names, key=lambda k: abs(k - m))
-    return L(SSOS + f'Trumpets/trumpets-{art}-{names[base]}.wav', semis=m - base, **kw)
+    return L(SSOS + f'Trumpets/trumpets-{art}-{names[base]}.wav', note=m, f0='acf', expect=base, **kw)
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -463,7 +465,7 @@ def build_design() -> dict:
                                       L(VI + 'Clash Cymbals 2/cymbal_crash2_fff1.wav', at=0.79, dur=1.4, fo=0.9, hp=400, gain=-10))],
                             pv=0.0, vv=0.0, stereo=True, note='cymbal swell + magic shimmer into an orchestral level-up sting, tubular bell, glockenspiel')
 
-    D['new_weapon'] = Design(-17.2, [V(trumpets(67, at=0.0, dur=0.16, fo=0.05, gain=-1), trumpets(72, art='stc-rr2', at=0.105, dur=0.16, fo=0.05, gain=-1),
+    D['new_weapon'] = Design(-17.2, [V(trumpets(67, at=0.0, dur=0.16, fo=0.05, gain=-1), trumpets(72, art='stc-rr1', at=0.105, dur=0.16, fo=0.05, gain=-1),
                                        trumpets(76, art='sus', at=0.21, dur=0.65, fo=0.3, gain=0),
                                        trumpets(79, art='sus', at=0.21, dur=0.65, fo=0.3, gain=-5),
                                        L(VI + 'Suspended Cymbal 1/susCymb1_hit_f1.wav', at=0.21, gain=-12, dur=0.7, fo=0.4, hp=300),
@@ -471,7 +473,7 @@ def build_design() -> dict:
                              pv=0.0, vv=0.0, note='trumpet fanfare G-C-E(+G) with cymbal and glockenspiel')
 
     # ---------------------------------------------------------------- pickups
-    D['pickup_xp'] = Design(-27.0, [V(glock(103, dyn=d, dur=0.12, tau=0.03, tau_at=0.005, fo=0.03, hp=900)) for d in ('soft', 'medium')],
+    D['pickup_xp'] = Design(-27.0, [V(glock(91, dyn=d, dur=0.13, tau=0.035, tau_at=0.005, fo=0.03, hp=700)) for d in ('loud', 'medium')],
                             pv=0.012, vv=0.06, synth=-6.0, note='glockenspiel "plink" + the synthesized chirp (keeps the combo pitch ramp crisp)')
     D['pickup_coin'] = Design(-22.1, [V(L('ocu:OBJCoin_CoinDrop_OS_01', dur=0.22, fo=0.08, hp=800), glock(96, at=0.004, dur=0.25, tau=0.06, fo=0.08, gain=-4)),
                                       V(L('ocu:OBJCoin_CoinsUI_LOOP_01', t0=1.185, dur=0.17, fo=0.07, hp=800), glock(96, at=0.004, dur=0.25, tau=0.06, fo=0.08, gain=-8)),
@@ -489,14 +491,14 @@ def build_design() -> dict:
                                             L('ocu:GLASImpt_GlassBottleDrop_OS_01', at=0.32, dur=0.4, fo=0.2, gain=-7, hp=600),
                                             L('kit:celebration-applause-small', at=0.18, dur=1.3, fi=0.15, fo=0.6, gain=-8))],
                                   pv=0.0, vv=0.03, stereo=True, note='party-popper cork, fizz, a glass clink and a little applause: SALUTE!')
-    D['pickup_gelato'] = Design(-14.2, [V(L('ocu:UIMisc_BelltreeDown_OS_01', t0=0.30, dur=1.05, fo=0.5, width=1.0),
+    D['pickup_gelato'] = Design(-14.2, [V(L('ocu:UIMisc_BelltreeDown_OS_01', t0=0.30, dur=1.05, fi=0.01, fo=0.5, width=1.0),
                                           L(VI + 'Flexatone/flexatone_fast.wav', t0=0.0, dur=0.7, fi=0.05, fo=0.35, gain=-9, hp=600),
                                           L(VI + 'Mark Trees/Legacy/windchimes_desc1.wav', t0=0.4, dur=0.9, fi=0.05, fo=0.5, gain=-12))],
                                 pv=0.0, vv=0.03, stereo=True, note='descending bell tree and mark tree with a shivering flexatone "brrr"')
 
     # ---------------------------------------------------------------- player (gender/species-neutral: there are 7 chefs incl. a cat)
-    D['player_hurt'] = Design(-26.0, [V(L('ocu:FGHTImpt_Kick_OS_0' + k, dur=0.16, tau=0.05, hp4=140, eq=(('peak', 300, 3, 0.8),), fo=0.04),
-                                        L(SLAP + f'slapstick_quiet_rr{r}.wav', gain=-9, dur=0.08, tau=0.02, hp=700))
+    D['player_hurt'] = Design(-26.0, [V(L('ocu:FGHTImpt_Kick_OS_0' + k, dur=0.16, tau=0.05, tau_at=0.006, hp4=140, eq=(('peak', 300, 3, 0.8),), fo=0.04, peak_at=0.005),
+                                        L(SLAP + f'slapstick_quiet_rr{r}.wav', gain=-9, dur=0.08, tau=0.02, hp=700, peak_at=0.005))
                                       for k, r in (('2', 1), ('3', 2), ('4', 1))],
                               pv=0.05, vv=0.08, synth=-3.0, note='body thump + slap, layered with the synthesized cartoon "oof"')
     D['player_death'] = Design(-17.2, [V(L(SIREN + '002.wav', t0=0.24, dur=1.75, rate=1.75, fi=0.02, fo=0.05, hp=300, gain=-2),
@@ -520,15 +522,16 @@ def build_design() -> dict:
     for body, crack, cg in (('ocu:FGHTImpt_PunchHarder_OS_01', SLAP + 'slapstick_quiet_rr1.wav', -10), ('ocu:FGHTImpt_Kick_OS_04', SLAP + 'slapstick_quiet_rr2.wav', -9),
                             ('ocu:FGHTImpt_Kick_OS_03', FPC + 'HandClap/01_03.flac', -12), ('ocu:FGHTImpt_PunchHarder_OS_03', SLAP + 'slapstick_quiet_rr1.wav', -8),
                             ('ocu:FGHTImpt_Kick_OS_02', FPC + 'HandClap/01_06.flac', -12), ('ocu:FGHTImpt_PunchHarder_OS_04', SLAP + 'slapstick_quiet_rr2.wav', -10)):
-        hits.append(V(L(body, dur=0.13, tau=0.035, hp4=160, eq=(('peak', 350, 3, 0.8),), fo=0.04),
-                      L(crack, gain=cg, dur=0.07, tau=0.015, hp=900)))
+        # body and crack transients aligned (no flam): both peak 4 ms into the sound
+        hits.append(V(L(body, dur=0.13, tau=0.035, tau_at=0.006, hp4=160, eq=(('peak', 350, 3, 0.8),), fo=0.04, peak_at=0.004),
+                      L(crack, gain=cg, dur=0.07, tau=0.015, tau_at=0.004, hp=900, peak_at=0.004)))
     D['hit'] = Design(-28.5, hits, pv=0.07, vv=0.12, note='cartoon smack: a real punch (low end cut) + slapstick/hand-clap crack; 6 round-robins')
     crits = []
     for body, metal, mg in (('ocu:FGHTImpt_PunchHarder_OS_02', VI + 'Brake Drum/BrakeDrum1_Hammer_v2_rr1_Mid.wav', -3),
                             ('ocu:FGHTImpt_Kick_OS_04', VI + 'Brake Drum/BrakeDrum2_Hammer1_v2_rr1_Mid.wav', -3),
                             ('ocu:FGHTImpt_PunchHarder_OS_03', 'ocu:METLImpt_MetalHitSurface_OS_02', -5)):
-        crits.append(V(L(body, dur=0.14, tau=0.04, hp4=130, fo=0.04),
-                       L(metal, gain=mg, dur=0.32, tau=0.09, hp=400, fo=0.08)))
+        crits.append(V(L(body, dur=0.14, tau=0.04, tau_at=0.006, hp4=130, fo=0.04, peak_at=0.004),
+                       L(metal, gain=mg, dur=0.32, tau=0.09, hp=400, fo=0.08, peak_at=0.004)))
     D['hit_crit'] = Design(-26.4, crits, pv=0.05, vv=0.08, note='frying-pan BONK: punch + struck brake drum / metal clang')
     deaths = []
     for (t0, take), conga in zip(((0.064, '1'), (0.152, '2'), (0.382, '3'), (1.152, '3'), (0.808, '4')),
@@ -584,7 +587,7 @@ def build_design() -> dict:
                                       L('ocu:WOODImpt_LargeWoodDrop_OS_01', dur=0.45, gain=-4, hp=40, fo=0.15),
                                       L(VI + 'Clash Cymbals 1/cymbal_crash1_short1.wav', dur=0.6, gain=-14, hp=500, fo=0.3)),
                                     V(L('kit:cinematic-drum-big', dur=1.0, fo=0.5),
-                                      L('ocu:METLImpt_BucketDrop_OS_01', dur=0.5, gain=-10, hp=150, fo=0.2),
+                                      L('ocu:METLImpt_MetalHitSurface_OS_05', dur=0.5, gain=-10, hp=150, tau=0.15, fo=0.2, peak_at=0.006),
                                       L(VM + 'Bass Drum 2/bassdrum_hit_ff.wav', dur=0.8, gain=-4, hp=30, fo=0.4))],
                             pv=0.03, vv=0.05, note='ground slam: deep impact, wood crash, cymbal / big drum + clang')
     D['boss_shoot'] = Design(-19.6, [V(L('ocu:GORESqsh_BloodSquishSlimy_OS_04', t0=1.652, dur=0.22, tau=0.08, hp=200, fo=0.08),
@@ -674,7 +677,7 @@ def build_design() -> dict:
                        pv=0.1, vv=0.1, note='tiny fire crackle')
     D['freeze'] = Design(-22.0, [V(L('ocu:GLASImpt_GlassBottleDrop_OS_01', dur=0.3, fo=0.12, hp=800),
                                    glock(108, dyn='medium', dur=0.5, fo=0.3, gain=-8),
-                                   L('ocu:UIMisc_BelltreeDown_OS_01', t0=0.33, dur=0.5, fo=0.3, gain=-10))],
+                                   L('ocu:UIMisc_BelltreeDown_OS_01', t0=0.33, dur=0.5, fi=0.01, fo=0.3, gain=-10))],
                          pv=0.05, vv=0.05, note='icy glass clink + glockenspiel + bell-tree (not used by the game yet)')
     return D
 
@@ -689,6 +692,12 @@ def render_layer(ly: Layer, stereo: bool) -> np.ndarray:
         a = onset_of(x)
     else:
         a = int(round(ly.t0 * SR))
+    if ly.peak_at is not None:
+        # transient alignment for layering: put the attack's loudest millisecond at `peak_at`
+        k = max(1, int(0.001 * SR))
+        seg = (x[a:a + int(0.12 * SR)] ** 2).mean(axis=1)
+        e = np.convolve(seg, np.ones(k) / k, mode='same')
+        a = max(0, a + int(np.argmax(e)) - int(ly.peak_at * SR))
     b = len(x) if ly.dur is None else min(len(x), a + int(round(ly.dur * SR)))
     y = np.array(x[a:b], dtype=np.float64)
     if ly.width != 1.0:
@@ -703,7 +712,8 @@ def render_layer(ly: Layer, stereo: bool) -> np.ndarray:
         y = np.stack([m * math.cos(th) * math.sqrt(2), m * math.sin(th) * math.sqrt(2)], axis=1)
     if ly.rev:
         y = y[::-1].copy()
-    y = fade(y, ly.fi, ly.fo)
+    fi = ly.fi if ly.fi is not None else (0.0005 if ly.t0 is None else 0.003)
+    y = fade(y, fi, ly.fo)
     rate = ly.rate * 2 ** (ly.semis / 12)
     if ly.note is not None:
         rate *= mtof(ly.note) / f0_of(ly.src, ly.f0, ly.expect)
