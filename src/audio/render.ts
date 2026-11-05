@@ -163,11 +163,17 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     const pan = clamp((chDef.pan ?? 0) + e.pan, -1, 1);
     const a = ((pan + 1) * Math.PI) / 4;
     const vr = Math.max(0, e.vr) % Math.max(1, inst.variants);
+    let layer = 0;
+    try {
+      layer = inst.layerOf ? inst.layerOf(e.v) | 0 : 0;
+    } catch {
+      layer = 0;
+    }
     mixEvs.push({
       st,
       gate: Math.max(1, Math.round(e.d * sr)),
       inst,
-      key: `${inst.id}|${e.m}|${vr}|${sr}`,
+      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}`,
       gl: amp * Math.cos(a) * Math.SQRT2,
       gr: amp * Math.sin(a) * Math.SQRT2,
       bl: amp * (pan > 0 ? 1 - pan : 1),
@@ -195,7 +201,9 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
 
   // needed sample length per unique sample (seconds; 0 = natural length)
   const need = new Map<string, number>();
+  const keyInst = new Map<string, InstDef>();
   for (const ev of mixEvs) {
+    keyInst.set(ev.key, ev.inst);
     if (ev.inst.ring) {
       need.set(ev.key, 0);
       continue;
@@ -222,23 +230,24 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const prof: RenderStats['prof'] = {};
   let made = 0;
   for (const [key, n] of need) {
-    const [id, midiS, vrS] = key.split('|');
-    const inst = INSTRUMENTS[id];
+    const [id, midiS, vrS, layerS] = key.split('|');
+    const inst = keyInst.get(key) ?? INSTRUMENTS[id];
     const lenSec = n === 0 ? 0 : Math.max(0.5, Math.ceil(n * 4) / 4);
     const tt = performance.now();
     if (inst.kind === 'sustain') {
-      local.set(key, inst.make(sr, +midiS, +vrS, Math.max(lenSec, 0.5)));
+      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings));
       track(prof, id, performance.now() - tt);
       made++;
     } else {
       const have = globalCache.get(key);
-      const ok = !!have && (naturalKeys.has(key) || (n !== 0 && have.l.length / sr >= lenSec - 0.001));
+      const ok = !!have && (naturalKeys.has(key) || (n !== 0 && (have.l.length - (have.pre ?? 0)) / sr >= lenSec - 0.001));
       if (have && ok) {
         globalCache.delete(key);
         globalCache.set(key, have);
       } else {
-        const smp = inst.make(sr, +midiS, +vrS, lenSec);
-        cachePut(key, smp, n === 0 || smp.l.length / sr < lenSec - 0.01);
+        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings);
+        const pre = smp.pre ?? 0;
+        cachePut(key, smp, n === 0 || (smp.l.length - pre) / sr < lenSec - 0.01);
         track(prof, id, performance.now() - tt);
         made++;
       }
@@ -344,6 +353,18 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   };
 }
 
+/** Instrument sample, never throwing (a broken instrument renders silence + a warning). */
+function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[]): Sample {
+  try {
+    const s = inst.make(sr, midi, vr, lenSec, layer);
+    if (s && s.l && s.l.length) return s;
+    warnings.push(`empty sample ${inst.id} ${midi}`);
+  } catch (e) {
+    warnings.push(`instrument ${inst.id} failed: ${String(e)}`);
+  }
+  return { l: new Float32Array(Math.max(1, Math.round(0.01 * sr))), r: null };
+}
+
 function track(prof: RenderStats['prof'], id: string, ms: number): void {
   const p = (prof[id] = prof[id] ?? { synth: 0, n: 0, mixed: 0 });
   p.synth += ms;
@@ -356,12 +377,14 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const sr2 = s.r;
   const slen = sl.length;
   const ring = !!ev.inst.ring;
-  const gateEnd = ring ? slen : Math.min(slen, ev.gate);
-  const total = ring ? slen : Math.min(slen, ev.gate + ev.relN);
-  const i0 = ev.st < 0 ? -ev.st : 0;
-  const iEnd = Math.min(total, len - ev.st);
+  // recorded samples start `pre` samples before their onset: start early so the onset is on time
+  const pre = s.pre ?? 0;
+  const st = ev.st - pre;
+  const gateEnd = ring ? slen : Math.min(slen, pre + ev.gate);
+  const total = ring ? slen : Math.min(slen, pre + ev.gate + ev.relN);
+  const i0 = st < 0 ? -st : 0;
+  const iEnd = Math.min(total, len - st);
   if (iEnd <= i0) return;
-  const st = ev.st;
   const a = Math.max(i0, Math.min(gateEnd, iEnd));
   const k = ev.relK;
   const gs = ev.gs;

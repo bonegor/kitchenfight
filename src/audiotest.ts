@@ -9,6 +9,7 @@ import { renderSong } from './audio/render';
 import { renderSfx, SFX, SFX_IDS } from './audio/sfx';
 import { SONGS } from './audio/songs/index';
 import { renderVoice } from './audio/voice';
+import { bankTransfer, loadSampleBank } from './audio/samplebank';
 import RenderWorker from './audio/worker?worker&inline';
 
 const root = document.getElementById('root') as HTMLDivElement;
@@ -227,6 +228,65 @@ const at = {
     const t0 = performance.now();
     const d = renderVoice(sr, text, mood);
     return { ms: performance.now() - t0, seconds: d.length / sr, wav: wavB64([d], sr) };
+  },
+  /**
+   * Recorded instrument samples, end to end in this browser: decode the MP3 sprites (this
+   * browser's decoder), install them in a fresh render worker, render a track there.
+   * Returns timings, decoder shifts found by the marker alignment, memory and the WAV.
+   */
+  async samplerTrack(id: MusicId = 'kitchen', sr = 48000, wantWav = true) {
+    const w = new RenderWorker();
+    let seq = 0;
+    const waiters = new Map<number, (m: Record<string, unknown>) => void>();
+    w.onmessage = (e: MessageEvent) => {
+      const m = e.data as Record<string, unknown>;
+      if (typeof m.progress === 'number') return;
+      const f = waiters.get(m.seq as number);
+      if (f) {
+        waiters.delete(m.seq as number);
+        f(m);
+      }
+    };
+    const ask = (msg: Record<string, unknown>, transfer?: Transferable[]) =>
+      new Promise<Record<string, unknown>>((resolve) => {
+        const s = ++seq;
+        waiters.set(s, resolve);
+        w.postMessage({ ...msg, seq: s }, transfer ?? []);
+      });
+    lastLong = 0;
+    const t0 = performance.now();
+    const acks: Array<Promise<Record<string, unknown>>> = [];
+    const loaded = await loadSampleBank(2, (def, pcm) => {
+      acks.push(ask({ type: 'bankSet', set: def, pcm }, bankTransfer(pcm)));
+    });
+    const tDecoded = performance.now();
+    await Promise.all(acks);
+    const done = await ask({ type: 'bankDone' });
+    const tReady = performance.now();
+    const r = await ask({ type: 'music', id, sr });
+    const tRendered = performance.now();
+    w.terminate();
+    const left = r.left as Float32Array;
+    const right = r.right as Float32Array;
+    return {
+      id,
+      decodeMs: tDecoded - t0,
+      installMs: tReady - tDecoded,
+      readyMs: tReady - t0,
+      renderMs: tRendered - tReady,
+      workerRenderMs: r.ms,
+      stats: loaded?.stats ?? null,
+      report: done.report,
+      longestFrameGap: lastLong,
+      length: left.length,
+      loopStart: r.loopStart,
+      loopEnd: r.loopEnd,
+      wav: wantWav ? wavB64([left, right], sr) : '',
+    };
+  },
+  /** Engine status: sample bank state + which cached tracks used recorded samples. */
+  samplerStatus() {
+    return (audio as unknown as { samplerStatus?: () => unknown }).samplerStatus?.() ?? null;
   },
   /** Exercise the public API end-to-end on the real AudioContext. */
   async apiSmoke() {

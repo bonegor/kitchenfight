@@ -5,12 +5,17 @@
  */
 import type { MusicId, SfxId, VoiceMood } from './audio';
 import { Slicer } from './dsp';
-import { renderSong } from './render';
+import { INSTRUMENTS } from './instruments';
+import { clearSampleCache, renderSong } from './render';
+import { addSampleSet, finishSampleBank, installSampleBank, type BankData, type SampleSetDef, type SetPcm } from './sampled';
 import { renderSfx } from './sfx';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
 
 export type WorkerReq =
+  | { type: 'bank'; seq: number; bank: BankData }
+  | { type: 'bankSet'; seq: number; set: SampleSetDef; pcm: SetPcm }
+  | { type: 'bankDone'; seq: number }
   | { type: 'music'; seq: number; id: MusicId; sr: number }
   | { type: 'sfx'; seq: number; sr: number; list: Array<[SfxId, number]> }
   | { type: 'voice'; seq: number; sr: number; text: string; mood: VoiceMood };
@@ -22,7 +27,21 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
   const req = e.data;
   const { seq } = req;
   try {
-    if (req.type === 'music') {
+    if (req.type === 'bankSet') {
+      // one decoded sample set (sent as soon as it is decoded)
+      const t0 = performance.now();
+      const ok = addSampleSet(req.set, req.pcm);
+      post({ seq, ok, ms: performance.now() - t0 });
+    } else if (req.type === 'bankDone' || req.type === 'bank') {
+      // recorded instrument samples: replace the synthesized instruments of the same ids
+      const t0 = performance.now();
+      const register = (defs: Parameters<Parameters<typeof finishSampleBank>[0]>[0]) => {
+        for (const d of defs) INSTRUMENTS[d.id] = d;
+      };
+      const rep = req.type === 'bank' ? installSampleBank(req.bank, register) : finishSampleBank(register);
+      clearSampleCache();
+      post({ seq, ok: rep.ok, report: { ...rep, ms: performance.now() - t0 } });
+    } else if (req.type === 'music') {
       const song = SONGS[req.id];
       if (!song) throw new Error('unknown track ' + req.id);
       let lastP = -1;

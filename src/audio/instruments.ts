@@ -34,6 +34,8 @@ const SINE = (() => {
 export interface Sample {
   l: Float32Array;
   r: Float32Array | null;
+  /** samples before the musical onset (recorded samples): the mixer starts the note this early */
+  pre?: number;
 }
 
 export interface InstDef {
@@ -49,7 +51,9 @@ export interface InstDef {
   sustainLen?: number;
   /** default gate (fraction of the written duration) */
   gate?: number;
-  make(sr: number, midi: number, variant: number, lenSec: number): Sample;
+  /** velocity → velocity layer (sampled instruments); part of the sample cache key */
+  layerOf?(v: number): number;
+  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number): Sample;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1445,6 +1449,316 @@ const wah: InstDef = {
   },
 };
 
+// ---------------------------------------------------------------------------------------------
+// Synthesized fallbacks for the instruments added with the recorded sample bank (Audio 2.0).
+// They only play when the samples are unavailable (decode failure, main-thread fallback), so a
+// song never goes silent; they borrow the existing building blocks.
+// ---------------------------------------------------------------------------------------------
+
+/** single reed / double reed wind: odd-harmonic (clarinet) or bright formant (oboe/bassoon) table */
+function reedWind(id: string, kindOf: 'clar' | 'oboe' | 'bsn'): InstDef {
+  const timbre: Timbre =
+    kindOf === 'clar'
+      ? (k, f) => (k % 2 ? 1 / k : 0.08 / k) * rolloff(f, 3200, 3)
+      : kindOf === 'oboe'
+        ? (k, f) => (1 / Math.pow(k, 0.7)) * (0.4 + 1.2 * bump(f, 1400, 0.5) + 0.6 * bump(f, 3000, 0.4)) * rolloff(f, 5500, 3)
+        : (k, f) => (1 / Math.pow(k, 0.8)) * (0.5 + 1.2 * bump(f, 500, 0.6)) * rolloff(f, 2400, 3);
+  return {
+    id,
+    kind: 'sustain',
+    variants: 1,
+    release: 0.08,
+    sustainLen: 2.2,
+    gate: 0.9,
+    make(sr, midi, _v, lenSec) {
+      const f0 = mtof(midi);
+      const len = Math.round(lenSec * sr);
+      const tbl = table('w' + kindOf, timbre, sr, f0, 12000);
+      const env = envADS(sr, len, 0.035, 0.3, 0.85, 1, 1.2);
+      const l = new Float32Array(len);
+      osc(l, null, 1, 0, tbl, sr, f0, env, { vibRate: 5.2, vibDepth: kindOf === 'clar' ? 3 : 9, vibDelay: 0.25, vibRamp: 0.3 });
+      return normalizeRms({ l, r: null }, sr, 0.18);
+    },
+  };
+}
+
+/** bowed solo string (cello / contrabass) */
+function bowed(id: string, bright: number): InstDef {
+  return {
+    id,
+    kind: 'sustain',
+    variants: 1,
+    release: 0.16,
+    sustainLen: 2.6,
+    gate: 0.96,
+    make(sr, midi, _v, lenSec) {
+      const f0 = mtof(midi);
+      const len = Math.round(lenSec * sr);
+      const tbl = table('bowed' + bright, (k, f) => stringTimbre(k, f, f0) * rolloff(f, 4000 * bright, 3), sr, f0, 10000);
+      const env = envADS(sr, len, 0.08, 0.4, 0.88, 1, 1.3);
+      const l = new Float32Array(len);
+      const r = new Float32Array(len);
+      osc(l, r, 0.7, 0.6, tbl, sr, f0, env, { vibRate: 5.3, vibDepth: 14, vibDelay: 0.18, vibRamp: 0.4 });
+      osc(l, r, 0.4, 0.5, tbl, sr, f0, env, { detune: 5, phase: 0.3, vibRate: 5.0, vibDepth: 10, vibDelay: 0.2, vibRamp: 0.4 });
+      return normalizeRms({ l, r }, sr, 0.18);
+    },
+  };
+}
+
+/** plucked string family (harp, piano-ish, steel guitar) on the Karplus–Strong core */
+function plucked(id: string, o: { t60: number; damp: number; exciteHz: number; pick: number; hp: number; target: number; len: number }): InstDef {
+  return {
+    id,
+    kind: 'pluck',
+    variants: 2,
+    release: 0.2,
+    gate: 1,
+    make(sr, midi, v, lenSec) {
+      const f = mtof(midi);
+      const len = Math.round(want(o.len, lenSec) * sr);
+      const out = new Float32Array(len);
+      const t60 = clamp(o.t60 * Math.pow(262 / f, 0.45), 0.4, 6);
+      ksString(out, 0, sr, f, { t60, damp: o.damp, exciteHz: o.exciteHz * (v ? 0.85 : 1), pick: o.pick, seed: seedOf(id, midi, v) });
+      eq(out, [Biquad.hp(sr, o.hp, 0.7)]);
+      fadeEdges(out, 0, Math.round(0.05 * sr));
+      return normalize({ l: trimTail(out, 2e-4), r: null }, o.target);
+    },
+  };
+}
+
+/** struck bar / bell: inharmonic partials */
+function bars(id: string, ratios: number[], amps: number[], t60: number, len: number, target: number, ring = true): InstDef {
+  return {
+    id,
+    kind: 'pluck',
+    variants: 1,
+    release: 0.3,
+    ring,
+    gate: 1,
+    make(sr, midi) {
+      const f = mtof(midi);
+      const n = Math.round(len * sr);
+      const out = new Float32Array(n);
+      addPartials(out, 0, sr, ratios.map((r, i) => ({ f: f * r, amp: amps[i] ?? 0.1, t60: t60 / (1 + i * 0.8) })).filter((p) => p.f < sr * 0.45));
+      const nr = new Rng(seedOf(id, midi, 0));
+      const hp = Biquad.hp(sr, 2500, 0.7);
+      for (let i = 0; i < Math.round(0.002 * sr); i++) out[i] += hp.process(nr.bi()) * 0.2;
+      fadeEdges(out, Math.round(0.0005 * sr), Math.round(0.08 * sr));
+      return normalize({ l: trimTail(out, 2e-4), r: null }, target);
+    },
+  };
+}
+
+/** short filtered noise / resonant click percussion */
+function clickPerc(id: string, o: { f: number; q: number; decay: number; len: number; noise: number; tone: number; target: number; variants?: number; bursts?: number[] }): InstDef {
+  return {
+    id,
+    kind: 'perc',
+    variants: o.variants ?? 2,
+    release: 0.03,
+    ring: true,
+    make(sr, _m, v) {
+      const n = Math.round(o.len * sr);
+      const out = new Float32Array(n);
+      const rng = new Rng(hashStr(id) + v * 131);
+      const bursts = o.bursts ?? [0];
+      for (const b of bursts) {
+        const s0 = Math.round((b + 0.0015 * v) * sr);
+        const bp = Biquad.bp(sr, o.f * (1 + 0.04 * v), o.q);
+        for (let i = s0; i < n; i++) {
+          const t = (i - s0) / sr;
+          const e = Math.exp(-t / o.decay);
+          if (e < 1e-4) break;
+          out[i] += bp.process(rng.bi() * o.noise * e) + Math.sin(TAU * o.f * t) * o.tone * e;
+        }
+      }
+      fadeEdges(out, 0, Math.round(0.01 * sr));
+      return normalize({ l: out, r: null }, o.target);
+    },
+  };
+}
+
+const flexatone: InstDef = {
+  id: 'flexatone',
+  kind: 'perc',
+  variants: 4,
+  release: 0.1,
+  ring: true,
+  make(sr, _m, v) {
+    const len = Math.round((v === 3 ? 2.0 : 1.2) * sr);
+    const out = new Float32Array(len);
+    const f0 = 900 + 120 * v;
+    let ph = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      const f = f0 * (1 + 0.06 * Math.sin(TAU * (7 + v) * t));
+      ph += (TAU * f) / sr;
+      out[i] = (Math.sin(ph) + 0.25 * Math.sin(2 * ph)) * Math.exp(-t / 0.5) * Math.min(1, t / 0.004);
+    }
+    fadeEdges(out, 0, Math.round(0.08 * sr));
+    return normalize({ l: out, r: null }, 0.35);
+  },
+};
+
+const ratchet: InstDef = {
+  id: 'ratchet',
+  kind: 'perc',
+  variants: 3,
+  release: 0.1,
+  ring: true,
+  make(sr, _m, v) {
+    const len = Math.round(0.9 * sr);
+    const out = new Float32Array(len);
+    const rng = new Rng(777 + v);
+    const rate = v === 1 ? 14 : 26;
+    for (let k = 0; k * (1 / rate) < 0.8; k++) {
+      const s0 = Math.round((k / rate) * sr);
+      const bp = Biquad.bp(sr, 2200 + rng.next() * 900, 3);
+      for (let i = 0; i < Math.round(0.012 * sr) && s0 + i < len; i++) out[s0 + i] += bp.process(rng.bi()) * Math.exp(-i / (0.003 * sr));
+    }
+    fadeEdges(out, 0, Math.round(0.05 * sr));
+    return normalize({ l: out, r: null }, 0.4);
+  },
+};
+
+const toyWhistle: InstDef = {
+  id: 'toyWhistle',
+  kind: 'perc',
+  variants: 4,
+  release: 0.1,
+  ring: true,
+  make(sr, _m, v) {
+    const len = Math.round((v === 2 ? 1.0 : 0.6) * sr);
+    const l = new Float32Array(len);
+    const rng = new Rng(4040 + v);
+    let p1 = 0;
+    let p2 = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      const fall = v === 3 ? 1 - 0.25 * Math.min(1, t / 0.6) : 1;
+      const f1 = (v === 1 ? 1180 : 940) * fall;
+      p1 += (TAU * f1) / sr;
+      p2 += (TAU * f1 * 1.26) / sr;
+      const gate = v === 2 ? (t < 0.35 || t > 0.5 ? 1 : 0.05) : 1;
+      const e = Math.min(1, t / 0.02) * Math.min(1, (len - i) / (0.08 * sr)) * gate;
+      l[i] = (Math.sin(p1) * 0.6 + Math.sin(p2) * 0.4 + rng.bi() * 0.05) * e;
+    }
+    return normalize({ l, r: null }, 0.35);
+  },
+};
+
+const orchHit: InstDef = {
+  id: 'orchHit',
+  kind: 'pluck',
+  variants: 1,
+  release: 0.2,
+  ring: true,
+  make(sr, midi) {
+    const f0 = mtof(midi);
+    const len = Math.round(0.9 * sr);
+    const l = new Float32Array(len);
+    const r = new Float32Array(len);
+    const env = envADS(sr, len, 0.004, 0.18, 0.0, 1, 1);
+    const saw = table('saw', sawTimbre, sr, f0, 12000);
+    for (const [ratio, g] of [[1, 0.6], [1.5, 0.35], [2, 0.45], [0.5, 0.5]] as Array<[number, number]>) osc(l, r, g, g * 0.9, saw, sr, f0 * ratio, env, { detune: 6 * ratio, phase: ratio * 0.17 });
+    const rng = new Rng(seedOf('orchHit', midi, 0));
+    for (let i = 0; i < Math.round(0.08 * sr); i++) {
+      const n = rng.bi() * 0.4 * Math.exp(-i / (0.02 * sr));
+      l[i] += n;
+      r[i] += n;
+    }
+    return normalize({ l, r }, 0.45);
+  },
+};
+
+/** suspended cymbal: v0 hit, v1 roll (swelling noise) */
+const cymbal: InstDef = {
+  id: 'cymbal',
+  kind: 'perc',
+  variants: 2,
+  release: 0.6,
+  make(sr, _m, v, lenSec) {
+    const roll = v === 1;
+    const len = Math.round((roll ? Math.max(1, lenSec) + 1.2 : 2.6) * sr);
+    const l = new Float32Array(len);
+    const r = new Float32Array(len);
+    const rng = new Rng(9090 + v);
+    const kd = Math.exp(-1 / (0.9 * sr));
+    let e = 1;
+    const fl = [Biquad.hp(sr, 3000, 0.7), Biquad.peak(sr, 7500, 0.8, 3)];
+    const fr = [Biquad.hp(sr, 3000, 0.7), Biquad.peak(sr, 7500, 0.8, 3)];
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      const a = roll ? Math.min(1, t / Math.max(0.3, lenSec)) * (0.8 + 0.2 * Math.sin(TAU * 18 * t)) : e * Math.min(1, i / (0.002 * sr));
+      l[i] = rng.bi() * a;
+      r[i] = rng.bi() * a;
+      e *= kd;
+    }
+    eq(l, fl);
+    eq(r, fr);
+    fadeEdges(l, 0, Math.round(0.2 * sr));
+    fadeEdges(r, 0, Math.round(0.2 * sr));
+    return normalize({ l, r }, 0.35);
+  },
+};
+
+/** big orchestral bass drum: v0 hit, v1 roll */
+const bassDrum: InstDef = {
+  id: 'bassDrum',
+  kind: 'perc',
+  variants: 2,
+  release: 0.4,
+  make(sr, _m, v, lenSec) {
+    const roll = v === 1;
+    const len = Math.round((roll ? Math.max(1, lenSec) + 1 : 1.6) * sr);
+    const out = new Float32Array(len);
+    const rng = new Rng(5150 + v);
+    const lp = new Svf(sr, 180, 0.8);
+    let ph = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      if (roll) {
+        out[i] = lp.lp(rng.bi()) * 3 * Math.min(1, t / 0.4) * (0.85 + 0.15 * Math.sin(TAU * 13 * t));
+      } else {
+        ph += (TAU * (52 + 30 * Math.exp(-t / 0.05))) / sr;
+        out[i] = Math.sin(ph) * Math.exp(-t / 0.45) * Math.min(1, t / 0.003) + lp.lp(rng.bi()) * 0.6 * Math.exp(-t / 0.08);
+      }
+    }
+    fadeEdges(out, 0, Math.round(0.15 * sr));
+    return normalize({ l: out, r: null }, 0.6);
+  },
+};
+
+const NEW_SYNTH: InstDef[] = [
+  reedWind('clarinet', 'clar'),
+  reedWind('oboe', 'oboe'),
+  reedWind('bassoon', 'bsn'),
+  flute('piccolo', 0.6),
+  brass('trumpet', 1.15),
+  brass('trombone', 0.8),
+  brass('horn', 0.5),
+  bowed('cello', 1),
+  bowed('contrabass', 0.6),
+  plucked('harp', { t60: 3.2, damp: 0.08, exciteHz: 5000, pick: 0.3, hp: 60, target: 0.45, len: 3 }),
+  plucked('piano', { t60: 4.5, damp: 0.12, exciteHz: 7000, pick: 0.12, hp: 30, target: 0.45, len: 3.5 }),
+  plucked('steelGuitar', { t60: 2.8, damp: 0.06, exciteHz: 9000, pick: 0.15, hp: 70, target: 0.45, len: 2.6 }),
+  bars('celesta', [1, 3.9, 9.5], [1, 0.25, 0.06], 1.6, 2, 0.4, false),
+  bars('xylophone', [1, 3.93, 9.1], [1, 0.5, 0.1], 0.5, 0.9, 0.5),
+  clickPerc('castanets', { f: 2600, q: 4, decay: 0.008, len: 0.12, noise: 1, tone: 0.2, target: 0.45, variants: 4, bursts: [0, 0.018] }),
+  clickPerc('anvil', { f: 1850, q: 30, decay: 0.35, len: 1.2, noise: 0.6, tone: 0.8, target: 0.5 }),
+  clickPerc('slapstick', { f: 1800, q: 0.8, decay: 0.012, len: 0.2, noise: 1.6, tone: 0, target: 0.6 }),
+  clickPerc('woodblock', { f: 1100, q: 12, decay: 0.03, len: 0.2, noise: 0.4, tone: 0.9, target: 0.5 }),
+  clickPerc('vibraslap', { f: 3100, q: 6, decay: 0.15, len: 1, noise: 1, tone: 0.1, target: 0.4, bursts: [0, 0.03, 0.06, 0.09, 0.12, 0.16, 0.2, 0.25] }),
+  clickPerc('claves', { f: 2500, q: 25, decay: 0.04, len: 0.2, noise: 0.2, tone: 1, target: 0.5 }),
+  clickPerc('tamtam', { f: 220, q: 1.2, decay: 2.2, len: 5, noise: 1, tone: 0.2, target: 0.45 }),
+  flexatone,
+  ratchet,
+  toyWhistle,
+  orchHit,
+  cymbal,
+  bassDrum,
+];
+
 export const INSTRUMENTS: Record<string, InstDef> = {};
 for (const d of [
   accordion('accordion', 1, [-13, 0, 14], 0.7, 0.03),
@@ -1490,6 +1804,19 @@ for (const d of [
   riser,
   panClang,
   wah,
+  ...NEW_SYNTH,
 ]) {
   INSTRUMENTS[d.id] = d;
+}
+
+/** Long names from the Audio 2.0 brief resolve to the same instruments as the short ids. */
+for (const [alias, id] of Object.entries({
+  harpsichord: 'harpsi',
+  uprightBass: 'ubass',
+  tubularBell: 'bell',
+  timpani: 'timp',
+  panClang: 'pan',
+  triangleInst: 'triangle',
+})) {
+  INSTRUMENTS[alias] = { ...INSTRUMENTS[id], id: alias };
 }
