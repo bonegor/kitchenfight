@@ -138,6 +138,9 @@ export class Projectile {
   reset() {
     this.alive = true;
     this.weapon = null;
+    this.r = 6;
+    this.kind = 'straight';
+    this.sprite = '';
     this.vx = this.vy = 0;
     this.frame = 0;
     this.scale = 1;

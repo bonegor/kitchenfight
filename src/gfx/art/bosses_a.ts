@@ -98,6 +98,130 @@ function effortMarks(ctx: Ctx, x: number, y: number, r: number, a0: number, a1: 
 }
 
 // ---------------------------------------------------------------------------
+// Shared: villain mouth with pointy teeth, block lettering, steam puffs
+// ---------------------------------------------------------------------------
+
+/**
+ * Big villain mouth. (x,y) = centre of the top lip line, w×h = size.
+ * frown > 0 pulls the corners down. Pointy teeth top (and bottom when open).
+ */
+function bossMouth(ctx: Ctx, x: number, y: number, w: number, h: number, o: { frown?: number; tongue?: boolean; bottomTeeth?: boolean; ink?: number } = {}) {
+  const fr = (o.frown ?? 0.25) * h;
+  const build = (c: Ctx) => {
+    c.moveTo(x - w / 2, y + fr);
+    c.quadraticCurveTo(x, y - h * 0.3, x + w / 2, y + fr * 0.8);
+    c.quadraticCurveTo(x + w * 0.1, y + h * 1.25, x - w / 2, y + fr);
+    c.closePath();
+  };
+  shape(ctx, build, { fill: '#5b1320', ink: o.ink ?? BI, shadow: 'none' });
+  clipped(ctx, build, () => {
+    if (o.tongue) {
+      ctx.fillStyle = '#e8616e';
+      ctx.beginPath();
+      ellipsePath(ctx, x + w * 0.08, y + h * 0.95, w * 0.26, h * 0.42);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ellipsePath(ctx, x + w * 0.02, y + h * 0.8, w * 0.08, h * 0.1);
+      ctx.fill();
+    }
+    const n = Math.max(3, Math.round(w / (h * 0.62)));
+    const tw = w / n;
+    ctx.fillStyle = '#fff8ea';
+    ctx.strokeStyle = 'rgba(90,40,30,0.5)';
+    ctx.lineWidth = 0.9;
+    for (let i = 0; i < n; i++) {
+      const tx = x - w / 2 + (i + 0.5) * tw;
+      const t = (tx - (x - w / 2)) / w;
+      const lipY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y - h * 0.3) + t * t * (y + fr * 0.8);
+      ctx.beginPath();
+      ctx.moveTo(tx - tw * 0.52, lipY - 4);
+      ctx.lineTo(tx + tw * 0.52, lipY - 4);
+      ctx.lineTo(tx + tw * 0.08, lipY + h * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (o.bottomTeeth) {
+      for (let i = 0; i < n - 1; i++) {
+        const tx = x - w / 2 + (i + 1) * tw;
+        const t = (tx - (x - w / 2)) / w;
+        const lowY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y + h * 1.25) + t * t * (y + fr * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(tx - tw * 0.45, lowY + 4);
+        ctx.lineTo(tx + tw * 0.45, lowY + 4);
+        ctx.lineTo(tx - tw * 0.05, lowY - h * 0.34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+/** Chunky block letters (P, A, N only — enough for "PANNA"). (x,y) = top-left of the first glyph. */
+function blockText(ctx: Ctx, text: string, x: number, y: number, h: number, gap: number, fill: string, shadowCol: string, wobble: number[] = []) {
+  const w = h * 0.74;
+  const t = h * 0.27;
+  const glyph = (c: Ctx, ch: string) => {
+    if (ch === 'P') {
+      c.moveTo(0, h);
+      c.lineTo(0, 0);
+      c.lineTo(w * 0.5, 0);
+      c.quadraticCurveTo(w * 0.98, 0, w * 0.98, h * 0.27);
+      c.quadraticCurveTo(w * 0.98, h * 0.54, w * 0.5, h * 0.54);
+      c.lineTo(0, h * 0.54);
+    } else if (ch === 'A') {
+      c.moveTo(0, h);
+      c.lineTo(w * 0.42, 0);
+      c.lineTo(w * 0.58, 0);
+      c.lineTo(w, h);
+      c.moveTo(w * 0.2, h * 0.66);
+      c.lineTo(w * 0.8, h * 0.66);
+    } else if (ch === 'N') {
+      c.moveTo(0, h);
+      c.lineTo(0, 0);
+      c.lineTo(w, h);
+      c.lineTo(w, 0);
+    }
+  };
+  const passes: [string, number, number, number][] = [
+    [shadowCol, t + 4.4, 1.6, 2],
+    [INK, t + 3.6, 0, 0],
+    [fill, t, 0, 0],
+  ];
+  for (const [col, lw, ox, oy] of passes) {
+    for (let i = 0; i < text.length; i++) {
+      ctx.save();
+      ctx.translate(x + i * (w + gap) + w / 2 + ox, y + h / 2 + oy);
+      ctx.rotate(wobble[i] ?? 0);
+      ctx.translate(-w / 2, -h / 2);
+      ctx.beginPath();
+      glyph(ctx, text[i]);
+      ctx.lineWidth = lw;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+/** Soft translucent steam/pressure puff (no outline). */
+function puff(ctx: Ctx, x: number, y: number, r: number, alpha = 0.75) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  circlePath(ctx, x, y, r);
+  circlePath(ctx, x + r * 0.8, y + r * 0.2, r * 0.7);
+  circlePath(ctx, x - r * 0.7, y + r * 0.3, r * 0.6);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
 // IL BARONE KETCHUP — pompous squeeze-bottle aristocrat.
 // ---------------------------------------------------------------------------
 const K_RED = '#e5352f', K_RED_SH = '#a5172b';
@@ -723,130 +847,6 @@ function drawAlfredo(ctx: Ctx, f: number, pose: Pose) {
   }
 }
 
-
-// ---------------------------------------------------------------------------
-// Shared: villain mouth with pointy teeth, block lettering
-// ---------------------------------------------------------------------------
-
-/**
- * Big villain mouth. (x,y) = centre of the top lip line, w×h = size.
- * frown > 0 pulls the corners down. Pointy teeth top (and bottom when open).
- */
-function bossMouth(ctx: Ctx, x: number, y: number, w: number, h: number, o: { frown?: number; tongue?: boolean; bottomTeeth?: boolean; ink?: number } = {}) {
-  const fr = (o.frown ?? 0.25) * h;
-  const build = (c: Ctx) => {
-    c.moveTo(x - w / 2, y + fr);
-    c.quadraticCurveTo(x, y - h * 0.3, x + w / 2, y + fr * 0.8);
-    c.quadraticCurveTo(x + w * 0.1, y + h * 1.25, x - w / 2, y + fr);
-    c.closePath();
-  };
-  shape(ctx, build, { fill: '#5b1320', ink: o.ink ?? BI, shadow: 'none' });
-  clipped(ctx, build, () => {
-    if (o.tongue) {
-      ctx.fillStyle = '#e8616e';
-      ctx.beginPath();
-      ellipsePath(ctx, x + w * 0.08, y + h * 0.95, w * 0.26, h * 0.42);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.beginPath();
-      ellipsePath(ctx, x + w * 0.02, y + h * 0.8, w * 0.08, h * 0.1);
-      ctx.fill();
-    }
-    const n = Math.max(3, Math.round(w / (h * 0.62)));
-    const tw = w / n;
-    ctx.fillStyle = '#fff8ea';
-    ctx.strokeStyle = 'rgba(90,40,30,0.5)';
-    ctx.lineWidth = 0.9;
-    for (let i = 0; i < n; i++) {
-      const tx = x - w / 2 + (i + 0.5) * tw;
-      const t = (tx - (x - w / 2)) / w;
-      const lipY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y - h * 0.3) + t * t * (y + fr * 0.8);
-      ctx.beginPath();
-      ctx.moveTo(tx - tw * 0.52, lipY - 4);
-      ctx.lineTo(tx + tw * 0.52, lipY - 4);
-      ctx.lineTo(tx + tw * 0.08, lipY + h * 0.42);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
-    if (o.bottomTeeth) {
-      for (let i = 0; i < n - 1; i++) {
-        const tx = x - w / 2 + (i + 1) * tw;
-        const t = (tx - (x - w / 2)) / w;
-        const lowY = (1 - t) * (1 - t) * (y + fr) + 2 * t * (1 - t) * (y + h * 1.25) + t * t * (y + fr * 0.8);
-        ctx.beginPath();
-        ctx.moveTo(tx - tw * 0.45, lowY + 4);
-        ctx.lineTo(tx + tw * 0.45, lowY + 4);
-        ctx.lineTo(tx - tw * 0.05, lowY - h * 0.34);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-    }
-  });
-}
-
-/** Chunky block letters (P, A, N only — enough for "PANNA"). (x,y) = top-left of the first glyph. */
-function blockText(ctx: Ctx, text: string, x: number, y: number, h: number, gap: number, fill: string, shadowCol: string, wobble: number[] = []) {
-  const w = h * 0.74;
-  const t = h * 0.27;
-  const glyph = (c: Ctx, ch: string) => {
-    if (ch === 'P') {
-      c.moveTo(0, h);
-      c.lineTo(0, 0);
-      c.lineTo(w * 0.5, 0);
-      c.quadraticCurveTo(w * 0.98, 0, w * 0.98, h * 0.27);
-      c.quadraticCurveTo(w * 0.98, h * 0.54, w * 0.5, h * 0.54);
-      c.lineTo(0, h * 0.54);
-    } else if (ch === 'A') {
-      c.moveTo(0, h);
-      c.lineTo(w * 0.42, 0);
-      c.lineTo(w * 0.58, 0);
-      c.lineTo(w, h);
-      c.moveTo(w * 0.2, h * 0.66);
-      c.lineTo(w * 0.8, h * 0.66);
-    } else if (ch === 'N') {
-      c.moveTo(0, h);
-      c.lineTo(0, 0);
-      c.lineTo(w, h);
-      c.lineTo(w, 0);
-    }
-  };
-  const passes: [string, number, number, number][] = [
-    [shadowCol, t + 4.4, 1.6, 2],
-    [INK, t + 3.6, 0, 0],
-    [fill, t, 0, 0],
-  ];
-  for (const [col, lw, ox, oy] of passes) {
-    for (let i = 0; i < text.length; i++) {
-      ctx.save();
-      ctx.translate(x + i * (w + gap) + w / 2 + ox, y + h / 2 + oy);
-      ctx.rotate(wobble[i] ?? 0);
-      ctx.translate(-w / 2, -h / 2);
-      ctx.beginPath();
-      glyph(ctx, text[i]);
-      ctx.lineWidth = lw;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = col;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-}
-
-/** Soft translucent steam/pressure puff (no outline). */
-function puff(ctx: Ctx, x: number, y: number, r: number, alpha = 0.75) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  circlePath(ctx, x, y, r);
-  circlePath(ctx, x + r * 0.8, y + r * 0.2, r * 0.7);
-  circlePath(ctx, x - r * 0.7, y + r * 0.3, r * 0.6);
-  ctx.fill();
-  ctx.restore();
-}
 
 // ---------------------------------------------------------------------------
 // LA PANNA COLOSSALE — a colossal carton of heavy cream with an angry cow label.

@@ -214,11 +214,29 @@ function drawPastaChips(ctx: Ctx, f: number) {
   shape(ctx, (c) => ellipsePath(c, 0.2, -7.8, RXt - 2.2, 1.5), { fill: '#8a4318', ink: 0, shadow: 'none' });
 
   // crazy face (mismatched eyes)
-  eye(ctx, -2.6, -1.8, 2.05, { look: [-0.05, 0.25], pupil: 0.42, ink: 0.95 });
-  eye(ctx, 2.7, -2.4, 2.65, { look: [0.42, -0.12], pupil: 0.38, ink: 1 });
-  brow(ctx, -2.8, -5.2, 3.2, -0.45, 1);
-  brow(ctx, 2.9, -6.3, 3.6, 0.35, 1);
-  mouth(ctx, 0.4, 2.4, 8.2, 'grin', { open: 1.15, tongue: true });
+  eye(ctx, -2.6, -2, 2.1, { look: [0.1, 0.32], pupil: 0.3, ink: 0.95 });
+  eye(ctx, 2.8, -2.6, 2.75, { look: [0.45, -0.2], pupil: 0.26, ink: 1 });
+  brow(ctx, -2.9, -5.4, 3.2, -0.5, 1);
+  brow(ctx, 3, -6.7, 3.6, 0.42, 1);
+  // manic grin, all teeth
+  const gm = (c: Ctx) => {
+    c.moveTo(-4.4, 1.2);
+    c.quadraticCurveTo(0.4, 2.6, 5.4, 0.6);
+    c.quadraticCurveTo(4.6, 6, 0.4, 6);
+    c.quadraticCurveTo(-3.8, 5.8, -4.4, 1.2);
+    c.closePath();
+  };
+  shape(ctx, gm, { fill: '#5b1320', ink: 1, shadow: 'none' });
+  clipTo(ctx, gm, () => {
+    ctx.fillStyle = '#fff8ea';
+    ctx.fillRect(-5, 0, 11, 2.6);
+    ctx.fillRect(-5, 4.4, 11, 2);
+    ctx.strokeStyle = 'rgba(80,40,30,0.45)';
+    ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    for (let i = -2; i <= 3; i++) { ctx.moveTo(i * 1.7 - 0.2, 0); ctx.lineTo(i * 1.7 - 0.2, 6.6); }
+    ctx.stroke();
+  });
   ctx.restore();
 
   // farfalle bow on top
@@ -252,10 +270,11 @@ function drawFantasma(ctx: Ctx, f: number) {
 
   // fork + twirl on top (behind the sheet's top edge)
   ctx.save();
-  ctx.translate(2.8, -24.4);
-  ctx.rotate(0.38);
-  inkLine(ctx, [[0, 0], [0, -11.4]], 1.5, '#e5eaf2', false, 0.95);
-  shape(ctx, (c) => ellipsePath(c, 0, -11.8, 1.3, 1.9), { fill: '#e5eaf2', ink: 1, shadow: 'none' });
+  ctx.translate(3.4, -25);
+  ctx.rotate(0.62);
+  inkLine(ctx, [[0, 0], [0, -9]], 1.5, '#e5eaf2', false, 0.95);
+  shape(ctx, (c) => ellipsePath(c, 0, -9.4, 1.3, 1.9), { fill: '#e5eaf2', ink: 1, shadow: 'none' });
+  line(ctx, [[-0.4, -1], [-0.4, -8]], 0.5, '#ffffff', false, 0.8);
   ctx.restore();
 
   // the sheet
@@ -306,12 +325,13 @@ function drawFantasma(ctx: Ctx, f: number) {
     line(ctx, [[1.6, -24], [2.2, -6], [1.4, 12]], 0.5, PAPER_SH, true, 0.7);
     // ragù soaking through
     ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = '#c4572f';
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#b8542c';
     ctx.beginPath();
-    blobPath(ctx, -10.4, 6.4, 3.6, 2.6, 0.25, 9, 4);
-    blobPath(ctx, 9.8, 5.4, 2.6, 2, 0.25, 8, 6);
-    blobPath(ctx, -4, -23.6, 3.4, 2, 0.2, 8, 9);
+    blobPath(ctx, -9.6, 11.4, 4.4, 3.2, 0.3, 9, 4);
+    blobPath(ctx, -9.2, 7.2, 1.2, 2.6, 0.2, 6, 5);
+    blobPath(ctx, 10.6, 11, 3.4, 2.6, 0.3, 8, 6);
+    blobPath(ctx, -3.4, -23.4, 3.4, 2, 0.2, 8, 9);
     ctx.fill();
     ctx.restore();
   });

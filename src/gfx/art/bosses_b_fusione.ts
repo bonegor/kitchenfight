@@ -19,7 +19,7 @@ import {
 } from './bosses_b_kit';
 
 export const FUSIONE_R = 70;
-const W = 264, H = 244, AX = 124, AY = 164;
+const W = 300, H = 232, AX = 144, AY = 152;
 
 const CRUST = '#e8a24c';
 const CRUST_SH = '#b8682a';
@@ -549,12 +549,12 @@ defineSprite({
       // wind-up: every eye snaps open, jaws clenched, bottle cocked, tentacles coil, aura surges
       drawFusione(ctx, {
         f: 0, lean: -0.05, mouth: 'clench', eyesWide: true, ketchupAng: 0.08, ketchupJet: false,
-        cartonAng: -0.55, creamSplash: false, tentacleFlare: -1, aura: 1,
+        cartonAng: -0.44, creamSplash: false, tentacleFlare: -1, aura: 1,
       });
     } else {
       // attack: ROAR, ketchup jet, cream splash, tentacles flare
       drawFusione(ctx, {
-        f: 2, lean: 0.06, mouth: 'roar', eyesWide: true, ketchupAng: 0.62, ketchupJet: true,
+        f: 2, lean: 0.04, mouth: 'roar', eyesWide: true, ketchupAng: 0.46, ketchupJet: true,
         cartonAng: -0.15, creamSplash: true, tentacleFlare: 1, aura: 1,
       });
     }

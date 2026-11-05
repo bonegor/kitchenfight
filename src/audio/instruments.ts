@@ -778,6 +778,40 @@ const synthBass: InstDef = {
   },
 };
 
+/** bright Italo-disco pluck (saw + square, fast filter decay) */
+const synthPluck: InstDef = {
+  id: 'synthPluck',
+  kind: 'pluck',
+  variants: 1,
+  release: 0.04,
+  gate: 0.8,
+  make(sr, midi, _v, lenSec) {
+    const f0 = mtof(midi);
+    const len = Math.round(want(0.7, lenSec) * sr);
+    const saw = table('saw', sawTimbre, sr, f0, 14000);
+    const env = envADS(sr, len, 0.002, 0.16, 0.25, 1, 1);
+    const l = new Float32Array(len);
+    const r = new Float32Array(len);
+    oscMulti(l, r, saw, sr, f0, env, [
+      { gl: 0.9, gr: 0.3, detune: -7, phase: 0.1 },
+      { gl: 0.3, gr: 0.9, detune: 7, phase: 0.6 },
+    ]);
+    const fl = new Svf(sr, 3000, 1.3);
+    const fr = new Svf(sr, 3000, 1.3);
+    for (let b = 0; b < len; b += 16) {
+      const c = 700 + 5200 * Math.exp(-(b / sr) / 0.07);
+      fl.set(c, 1.3);
+      fr.set(c, 1.3);
+      const be = Math.min(len, b + 16);
+      for (let i = b; i < be; i++) {
+        l[i] = fl.lp(l[i]);
+        r[i] = fr.lp(r[i]);
+      }
+    }
+    return normalize({ l, r }, 0.4);
+  },
+};
+
 /** FM electric piano (DX-style tine), stereo auto-pan */
 const epiano: InstDef = {
   id: 'epiano',
@@ -1041,9 +1075,9 @@ const kick: InstDef = {
     let ph = 0;
     for (let i = 0; i < len; i++) {
       const t = i / sr;
-      const f = 48 + 120 * Math.exp(-t / 0.032) + 40 * Math.exp(-t / 0.004);
+      const f = 54 + 110 * Math.exp(-t / 0.03) + 45 * Math.exp(-t / 0.004);
       ph += (TAU * f) / sr;
-      out[i] = Math.sin(ph) * Math.exp(-t / 0.16) * (t < 0.002 ? t / 0.002 : 1);
+      out[i] = Math.sin(ph) * Math.exp(-t / 0.12) * (t < 0.002 ? t / 0.002 : 1);
     }
     const nr = new Rng(77);
     const hp = Biquad.hp(sr, 3000, 0.7);
@@ -1323,6 +1357,7 @@ for (const d of [
   pizz,
   uprightBass,
   synthBass,
+  synthPluck,
   epiano,
   roboArp,
   glock,

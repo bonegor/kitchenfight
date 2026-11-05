@@ -169,7 +169,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const spread = P.spread ?? 0;
         for (let i = 0; i < n; i++) {
           const off = n > 1 ? (i / (n - 1) - 0.5) * spread * 2 : 0;
-          shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.6);
+          shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.5);
         }
         e.attackPose = 0.3;
         e.face = t.dx > 0 ? 1 : -1;

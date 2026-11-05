@@ -17,7 +17,7 @@ import {
 } from './bosses_b_kit';
 
 export const MICROONDE_R = 56;
-const W = 196, H = 192, AX = 98, AY = 128;
+const W = 204, H = 194, AX = 102, AY = 128;
 
 const CASE = '#4cb5a6';
 const CASE_SH = '#2c7f7a';
@@ -514,10 +514,10 @@ defineSprite({
       // DING! the jaw gapes, a radial pulse blasts out, the bell rings
       ctx.save();
       ctx.globalAlpha = 0.9;
-      strokePath(ctx, (c) => ellipsePath(c, -4, 8, 92, 62), '#ffd27a', 5, 0.55);
-      strokePath(ctx, (c) => ellipsePath(c, -4, 8, 80, 54), '#fff3c0', 3, 0.7);
+      strokePath(ctx, (c) => ellipsePath(c, -4, 2, 88, 54), '#ffd27a', 5, 0.55);
+      strokePath(ctx, (c) => ellipsePath(c, -4, 2, 77, 47), '#fff3c0', 3, 0.7);
       ctx.restore();
-      softGlow(ctx, -9, 4, 80, GLOW_HI, 0.6);
+      softGlow(ctx, -9, -4, 66, GLOW_HI, 0.6);
       burstLines(ctx, -9, 6, 36, 60, 14, '#fff3c0', 3, 7, 0, TAU, 0.75);
       drawMicroonde(ctx, { f: 2, lean: 0.04, crouch: -3, eyes: 'wide', mouth: 2, heat: 1, mitts: 'wide', ding: true, shake: false });
     }

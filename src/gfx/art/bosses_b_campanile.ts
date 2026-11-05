@@ -17,7 +17,7 @@ import {
 } from './bosses_b_kit';
 
 export const CAMPANILE_R = 52;
-const W = 168, H = 228, AX = 80, AY = 170;
+const W = 188, H = 230, AX = 82, AY = 172;
 
 const CUP = '#b9693c';
 const CUP_SH = '#874227';
@@ -541,7 +541,7 @@ defineSprite({
       swoosh(ctx, 52, -10, 30, -1.6, 0.2, 10, '#ffffff', 0.45);
       drawCampanile(ctx, {
         f: 2, lean: 0.06, topLean: 0.08, bell: 0.95, clapper: 1.25, mood: 'shout', foam: 1,
-        spoon: [70, -6], spoonAng: 1.0, minute: 0.1, ring: true,
+        spoon: [62, -10], spoonAng: 0.6, minute: 0.1, ring: true,
       });
     }
   },

@@ -18,7 +18,7 @@ import {
 } from './bosses_b_kit';
 
 export const INFLUENCER_R = 52;
-const W = 200, H = 204, AX = 86, AY = 146;
+const W = 210, H = 216, AX = 94, AY = 158;
 
 const PINK = '#ff4f9e';
 const PINK_SH = '#c4266f';
@@ -551,8 +551,8 @@ defineSprite({
       });
     } else {
       // FLASH: blinding burst from the ring light, hearts everywhere, pan shoved forward
-      softGlow(ctx, HEAD.x, HEAD.y, 96, '#ffffff', 0.9);
-      burstLines(ctx, HEAD.x, HEAD.y, 56, 84, 16, '#ffffff', 4, 21, 0, TAU, 0.9);
+      softGlow(ctx, HEAD.x, HEAD.y, 82, '#ffffff', 0.9);
+      burstLines(ctx, HEAD.x, HEAD.y, 56, 76, 16, '#ffffff', 4, 21, 0, TAU, 0.9);
       drawInfluencer(ctx, {
         f: 2, lean: 0.06, face: 'scream', ringGlow: 1, stick: [-42, -30], stickAng: -2.2,
         pan: [40, 6], panTilt: 0.28, flash: true, hearts: 0.5,

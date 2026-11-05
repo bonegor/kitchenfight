@@ -34,6 +34,8 @@ class App {
   private last = performance.now();
   private fps = 60;
   bossMusic = false;
+  private slowT = 0;
+  private autoLowDone = false;
 
   constructor() {
     (window as any).__kf = this; // handy for debugging & automated playtests
@@ -183,6 +185,7 @@ class App {
         onToast: (t, k) => this.ui.toast(t, k),
       };
       const run = new Run(st, ch, this.save, hooks);
+      audio.setMusicMuffled(false);
       this.run = run;
       this.mode = 'game';
       this.bossMusic = false;
@@ -243,6 +246,7 @@ class App {
       }
     }
     this.persist();
+    audio.setMusicMuffled(false);
     audio.playMusic(victory ? 'victory' : 'gameover', { fade: 0.3, restart: true });
     this.ui.showResults(run, victory, unlocks, newRecord && run.time > 30);
     this.mode = 'menu';
@@ -251,6 +255,7 @@ class App {
   }
 
   toTitle() {
+    audio.setMusicMuffled(false);
     this.ui.closeOverlay();
     this.ui.removeHud();
     this.run = null;
@@ -336,6 +341,17 @@ class App {
       if (overlay) this.ui.handleInput(inp);
       else if (inp.consume('pause') && run.state === 'playing') this.ui.showPause();
       run.input = inp;
+      // auto performance mode on slow devices
+      if (!this.autoLowDone && run.state === 'playing' && this.save.settings.quality === 'high') {
+        this.slowT = this.fps < 36 ? this.slowT + dt : Math.max(0, this.slowT - dt * 2);
+        if (this.slowT > 5) {
+          this.autoLowDone = true;
+          this.save.settings.quality = 'low';
+          this.applySettings();
+          this.persist();
+          this.ui.toast('Performance mode on — change it in Settings.', 'info');
+        }
+      }
       this.renderer.updateCamera(run, step);
       run.update(step);
       this.renderer.render(run, step, inp);

@@ -16,7 +16,7 @@ import {
 } from './bosses_b_kit';
 
 export const ANANAS_R = 60;
-const W = 240, H = 222, AX = 98, AY = 152;
+const W = 252, H = 232, AX = 98, AY = 162;
 
 // palette
 const GOLD = '#f6bd35';
@@ -266,7 +266,7 @@ function peel(ctx: Ctx, hd: number, f: number, glowing: boolean, sliceGone: bool
     c.quadraticCurveTo(6, -hd + 16, 4, -neck + 2);
     c.closePath();
   };
-  if (glowing) softGlow(ctx, 0, -hd - 2, 46, '#ffe066', 0.8);
+  if (glowing) softGlow(ctx, 0, -hd - 2, 38, '#ffe066', 0.8);
   S(ctx, head, { fill: '#e2ab68', ink: OUT_IN / 1.2, shadow: WOOD_SH, shadowOffset: [-3, -2.4], gloss: [{ x: -10, y: -hd - 12, rx: 3, ry: 6, rot: 0.3, alpha: 0.35 }] });
   // wood grain
   for (const gx of [-9, -2, 6, 12]) line(ctx, [[gx, -hd + 10], [gx * 1.1, -hd - 4], [gx * 0.95, -hd - 18]], 0.9, WOOD_SH, true, 0.5);

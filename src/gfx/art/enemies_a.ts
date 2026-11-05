@@ -24,8 +24,8 @@
  */
 import { defineSprite } from '../sprites';
 import {
-  Ctx, Pt, INK, shape, group, flat, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath,
-  line, inkLine, legs, arm, eye, brow, mouth, speckle, glint, rng, shade, light, rgba, mix,
+  Ctx, Pt, INK, shape, group, ellipsePath, circlePath, roundRectPath, polyPath, smoothPath,
+  line, inkLine, legs, eye, brow, mouth, speckle, glint, rng, shade, light, rgba,
 } from '../painter';
 import type { EyeOpts, ShapeStyle } from '../painter';
 
@@ -151,15 +151,6 @@ function sparkle(ctx: Ctx, x: number, y: number, r: number, alpha = 1) {
   ctx.fill();
   ctx.restore();
 }
-
-/** Mitten hand at the end of a rubber-hose arm. */
-function hoseArm(ctx: Ctx, x1: number, y1: number, x2: number, y2: number, hand: string, thick = 1.7, handR = 2.1, bend = 0.15) {
-  const mx = (x1 + x2) / 2 + (y2 - y1) * bend;
-  const my = (y1 + y2) / 2 - (x2 - x1) * bend;
-  inkLine(ctx, [[x1, y1], [mx, my], [x2, y2]], thick, LIMB, true, 0.9);
-  ball(ctx, x2, y2, handR, hand, shade(hand, 0.25), 1, 0.45);
-}
-
 
 /** White cartoon glove (ball + cuff); `ang` = direction the forearm points. */
 function glove(ctx: Ctx, x: number, y: number, r: number, ang: number, color = '#fbf6ea', sh = '#c9cede') {
@@ -893,9 +884,13 @@ function leaf(ctx: Ctx, pts: Pt[], widths: number[], fill: string, ink = 1.1) {
   shape(ctx, (c) => smoothPath(c, ribbon(pts, widths), true, 0.4), { fill, ink, shadow: shade(fill, 0.3), shadowOffset: [-0.7, -0.7] });
 }
 
-function drawCipolla(ctx: Ctx, f: number) {
+/** peel = how many armour layers are gone (0 = full onion, 2 = down to the pale core). */
+function drawCipolla(ctx: Ctx, f: number, peel = 0) {
   const ph = (f / 4) * TAU;
   const sw = Math.sin(ph);
+  const onion = [ONION, '#bb4f8a', '#d886b6'][peel];
+  const onionSh = [ONION_SH, '#8c3066', '#b05c90'][peel];
+  const onionLn = [ONION_LN, '#7d2558', '#a24f82'][peel];
   legs(ctx, 0.6, 9.2, f, { len: 3.4, spread: 8, thick: 3.1, color: '#3b3340', shoe: SHOE, stride: 3.2 });
 
   // sprouts + dry papery neck
@@ -903,9 +898,13 @@ function drawCipolla(ctx: Ctx, f: number) {
   leaf(ctx, [[0.2, -23.6], [-1.6, -27.4], [-5.2 - sw * 0.3, -28.6]], [2.2, 1.6, 0.3], '#5fae3c');
   shape(ctx, (c) => polyPath(c, [[-1.8, -22.6], [-0.8, -26.4], [0.4, -25.2], [1.2, -27.0], [2.0, -25.0], [3.2, -22.4]]), { fill: PAPER, ink: 1.1, shadow: PAPER_SH, shadowOffset: [-0.6, -0.4] });
 
-  // the bulb
+  // the bulb (each lost layer leaves it a little smaller and paler)
+  ctx.save();
+  ctx.translate(0, 6.2);
+  ctx.scale(1 - peel * 0.05, 1 - peel * 0.06);
+  ctx.translate(0, -6.2);
   shape(ctx, onionPath, {
-    fill: ONION, shadow: ONION_SH, ink: 2.1, shadowOffset: [-3.4, -2.8],
+    fill: onion, shadow: onionSh, ink: 2.1, shadowOffset: [-3.4, -2.8],
     gloss: [{ x: -7, y: -15.5, rx: 3.6, ry: 1.9, rot: -0.65, alpha: 0.4 }],
   });
   clipped(ctx, onionPath, () => {
@@ -916,7 +915,7 @@ function drawCipolla(ctx: Ctx, f: number) {
         c.bezierCurveTo(x + dx, -17, x + dx, 1, kk * 5 + dx, 6.2);
       };
       ctx.beginPath(); p(ctx, 0);
-      ctx.lineWidth = 0.75; ctx.strokeStyle = rgba(ONION_LN, 0.6); ctx.stroke();
+      ctx.lineWidth = 0.75; ctx.strokeStyle = rgba(onionLn, 0.6); ctx.stroke();
       ctx.beginPath(); p(ctx, -0.9);
       ctx.lineWidth = 0.6; ctx.strokeStyle = rgba(ONION_HI, 0.45); ctx.stroke();
     }
@@ -938,6 +937,18 @@ function drawCipolla(ctx: Ctx, f: number) {
   }, { fill: PAPER, ink: 1.2, shadow: PAPER_SH, shadowOffset: [-0.8, -0.8] });
   line(ctx, [[-10.6, -17.6], [-15.4, -18.8 + flap]], 0.5, PAPER_SH, true, 0.9);
   line(ctx, [[-12.4, -14.6], [-15.6, -16.6]], 0.5, PAPER_SH, true, 0.9);
+  if (peel >= 1) {
+    // a second layer hanging off the right shoulder
+    shape(ctx, (c) => {
+      c.moveTo(9.4, -18.6);
+      c.quadraticCurveTo(15.6, -20.6 - flap, 19.0, -17.6 - flap);
+      c.quadraticCurveTo(16.6, -17.0, 16.4, -14.6);
+      c.quadraticCurveTo(15.6, -12.0, 13.8, -10.6);
+      c.quadraticCurveTo(12.8, -15.2, 9.4, -18.4);
+      c.closePath();
+    }, { fill: '#e7a6c8', ink: 1.2, shadow: '#c27aa2', shadowOffset: [-0.8, -0.8] });
+  }
+  ctx.restore();
 
   // sunglasses + brows + grim mouth
   const lensL = (c: Ctx) => {
@@ -977,6 +988,13 @@ function drawCipolla(ctx: Ctx, f: number) {
       ctx.moveTo(5.8, -9.4); ctx.lineTo(8.2, -12.6);
       ctx.stroke();
     });
+  }
+  if (peel >= 2) {
+    // onions make everyone cry — even themselves
+    const tl = [3.4, 4.6, 5.6, 4.0][f];
+    for (const [tx, ty] of [[-6.2, -9.0], [8.8, -9.2]] as Pt[]) {
+      shape(ctx, (c) => dropPath(c, tx, ty, tl, 1.9), { fill: '#bfe6ff', ink: 0.8, shadow: '#8cc4ea', shadowOffset: [-0.4, -0.4], gloss: [{ x: tx - 0.4, y: ty + tl - 1.2, rx: 0.4, ry: 0.3, alpha: 0.9 }] });
+    }
   }
   brow(ctx, -4.2, -16.9, 5.6, 0.36, 1.6);
   brow(ctx, 6.4, -17.3, 6.4, -0.36, 1.6);
@@ -1044,7 +1062,10 @@ function drawCipolla(ctx: Ctx, f: number) {
   line(ctx, [[10.0, -5.8], [15.4, -13.6]], 0.6, COAT_DK, true, 0.6);
 }
 
-reg('cipolla', 44, 55, 22, 36, drawCipolla);
+reg('cipolla', 44, 55, 22, 36, (ctx, f) => drawCipolla(ctx, f, 0));
+// optional armour states (engine: swap by remaining layers — 3 → 'enemy.cipolla', 2 → peel1, ≤1 → peel2)
+reg('cipolla_peel1', 44, 55, 22, 36, (ctx, f) => drawCipolla(ctx, f, 1));
+reg('cipolla_peel2', 44, 55, 22, 36, (ctx, f) => drawCipolla(ctx, f, 2));
 
 // ===========================================================================
 // 8. AGLIO IN CAMICIA — r14. A smug garlic bulb in a crisp white shirt and
@@ -1078,8 +1099,7 @@ function drawAglio(ctx: Ctx, f: number) {
 
   legs(ctx, 0, 8.0, f, { len: 3.9, spread: 7.4, thick: 2.8, color: '#3a3446', shoe: SHOE, stride: 3 });
   // far arm: fist on the hip, elbow out (smug)
-  inkLine(ctx, [[-7.4, -0.4], [-12.4, 1.6], [-11.2, 5.6]], 2.9, '#dfe3ec', true, 1.1);
-  ball(ctx, -10.4, 6.0, 2.0, GARLIC, GARLIC_SH, 1.0, 0.5);
+  inkLine(ctx, [[-7.4, -0.6], [-12.8, 1.6], [-10.6, 5.4]], 2.9, '#e2e6ee', true, 1.1);
 
   // shirt torso, tucked into trousers
   const torso = (c: Ctx) => {
@@ -1101,6 +1121,8 @@ function drawAglio(ctx: Ctx, f: number) {
     ctx.fill();
   });
   line(ctx, [[-9, 6.5], [0, 7.9], [9.2, 6.3]], 0.8, INK, true, 0.8);
+  // fist planted on the hip, over the shirt edge
+  ball(ctx, -9.0, 5.4, 2.05, GARLIC, GARLIC_SH, 1.0, 0.5);
   // breast pocket with a pen
   line(ctx, [[-6.6, 1.0], [-3.2, 1.0], [-3.4, 4.2], [-6.4, 4.2], [-6.6, 1.0]], 0.5, '#9aa3b8', false);
   inkLine(ctx, [[-5.4, 1.2], [-5.0, -0.8]], 0.8, '#3f7fd6', false, 0.5);
@@ -1181,7 +1203,6 @@ reg('aglio', 42, 52, 21, 34, drawAglio);
 const BAC_LEAN = '#df4f60';
 const BAC_LEAN_DK = '#b02c42';
 const BAC_FAT = '#fcebdd';
-const BAC_FAT_SH = '#e9bdb0';
 
 function baconSpine(f: number): { pts: Pt[]; widths: number[] } {
   const phase = (f / 4) * TAU;

@@ -154,6 +154,7 @@ def({
       p.h = 62 * s.area;
       p.ox = (dir * p.w) / 2 + dir * 6;
       p.oy = -6 + Math.floor(i / 2) * 22;
+      p.r = 1;
       p.faceVel = false;
       run.sfx('w_mattarello', { pitch: 0.95 + Math.random() * 0.1 });
     });
@@ -179,6 +180,7 @@ def({
     p.dir = run.player.face;
     p.arc = 1; // full spin
     p.radius = 92 * s.area;
+    p.r = 1;
     p.faceVel = false;
     p.glow = '#ffd34d';
     p.onHit = (_p, e) => {

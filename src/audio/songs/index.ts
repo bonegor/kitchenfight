@@ -5,10 +5,12 @@ import { title } from './title';
 import { menu } from './menu';
 import { kitchen } from './kitchen';
 import { trattoria } from './trattoria';
+import { streets } from './streets';
 
 export const SONGS: Partial<Record<MusicId, SongDef>> = {
   title,
   menu,
   kitchen,
   trattoria,
+  streets,
 };
