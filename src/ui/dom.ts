@@ -54,7 +54,7 @@ export class Nav {
     root.querySelectorAll<HTMLElement>('[data-nav]').forEach((el) => this.wire(el));
     if (focusFirst) {
       const def = root.querySelector<HTMLElement>('[data-nav-default]') ?? root.querySelector<HTMLElement>('[data-nav]');
-      if (def) this.focus(def, false);
+      if (def) this.focus(def, false, false);
     }
   }
 
@@ -75,7 +75,7 @@ export class Nav {
     el.addEventListener('mouseenter', () => this.focus(el, true));
   }
 
-  focus(el: HTMLElement, sound = true) {
+  focus(el: HTMLElement, sound = true, scroll = true) {
     if (this.cur === el) return;
     this.cur?.classList.remove('focus');
     this.cur = el;
@@ -83,7 +83,7 @@ export class Nav {
     if (sound) audio.sfx('ui_hover', { volume: 0.5 });
     el.dispatchEvent(new CustomEvent('navfocus'));
     // keep keyboard/gamepad focus visible, including content that overflows a screen
-    if (!sound || el.matches(':hover') === false) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (scroll && (!sound || !el.matches(':hover'))) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   private items(): HTMLElement[] {
