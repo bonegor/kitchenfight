@@ -26,6 +26,8 @@ const MAX_SFX_VOICES = 40;
 /** cached music budget (seconds of stereo audio) */
 const MUSIC_CACHE_SECONDS = 280;
 const DEFAULT_SR = 48000;
+/** TS 5.9 typed-array generics: Web Audio wants ArrayBuffer-backed arrays (ours always are). */
+const f32 = (a: Float32Array): Float32Array<ArrayBuffer> => a as Float32Array<ArrayBuffer>;
 
 interface Track {
   id: MusicId;
@@ -254,8 +256,11 @@ export class AudioEngine implements AudioAPI {
       if (!SONGS[id]) return;
       const fade = Math.max(0, opts?.fade ?? 1);
       if (!opts?.restart) {
+        if (this.current?.id === id) {
+          this.wanted = null; // cancel any other pending request, keep playing
+          return;
+        }
         if (this.wanted === id) return;
-        if (!this.wanted && this.current?.id === id) return;
       }
       this.wanted = id;
       this.wantedFade = fade;
@@ -380,13 +385,34 @@ export class AudioEngine implements AudioAPI {
     if (!ctx || !t.raw) return null;
     try {
       const b = ctx.createBuffer(2, t.raw.left.length, t.sr);
-      b.copyToChannel(t.raw.left, 0);
-      b.copyToChannel(t.raw.right, 1);
+      b.copyToChannel(f32(t.raw.left), 0);
+      b.copyToChannel(f32(t.raw.right), 1);
       t.buffer = b;
       t.raw = null;
       return b;
     } catch {
       return null;
+    }
+  }
+
+  /** Copy worker PCM into an AudioBuffer in small slices (keeps frames smooth). */
+  private async toBufferChunked(t: Track): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx || !t.raw || t.buffer) return;
+    try {
+      const { left, right } = t.raw;
+      const b = ctx.createBuffer(2, left.length, t.sr);
+      const CH = 1 << 18;
+      for (let a = 0; a < left.length; a += CH) {
+        const e = Math.min(left.length, a + CH);
+        b.copyToChannel(f32(left.subarray(a, e)), 0, a);
+        b.copyToChannel(f32(right.subarray(a, e)), 1, a);
+        await yieldToLoop();
+      }
+      t.buffer = b;
+      t.raw = null;
+    } catch {
+      /* keep raw; bufferOf() retries synchronously */
     }
   }
 
@@ -474,10 +500,7 @@ export class AudioEngine implements AudioAPI {
           seconds: msg.length / msg.sr,
           used: performance.now(),
         };
-        if (this.ctx) {
-          await yieldToLoop();
-          this.bufferOf(track);
-        }
+        if (this.ctx) await this.toBufferChunked(track);
         return track;
       }
       this.workerBroken = true;
@@ -590,8 +613,8 @@ export class AudioEngine implements AudioAPI {
     try {
       const r = renderSfx(id, ctx.sampleRate, v);
       const b = ctx.createBuffer(r.r ? 2 : 1, r.l.length, ctx.sampleRate);
-      b.copyToChannel(r.l, 0);
-      if (r.r) b.copyToChannel(r.r, 1);
+      b.copyToChannel(f32(r.l), 0);
+      if (r.r) b.copyToChannel(f32(r.r), 1);
       this.sfxBufs.set(key, b);
       return b;
     } catch {
@@ -706,7 +729,7 @@ export class AudioEngine implements AudioAPI {
       if (!buf) {
         const data = renderVoice(ctx.sampleRate, String(text ?? ''), mood);
         buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
-        buf.copyToChannel(data, 0);
+        buf.copyToChannel(f32(data), 0);
         this.voiceCache.set(key, buf);
         if (this.voiceCache.size > 24) this.voiceCache.delete(this.voiceCache.keys().next().value as string);
       }

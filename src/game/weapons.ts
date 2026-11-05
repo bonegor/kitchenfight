@@ -456,7 +456,7 @@ def({
     const s = w.stats(run);
     const n = s.amount;
     const list: Projectile[] = (w.state.list ??= []);
-    for (let i = list.length - 1; i >= 0; i--) if (!list[i].alive) list.splice(i, 1);
+    for (let i = list.length - 1; i >= 0; i--) if (!list[i].alive || list[i].weapon !== w) list.splice(i, 1);
     if (w.state.n !== n || list.length !== n) {
       for (const p of list) p.alive = false;
       list.length = 0;
@@ -808,7 +808,7 @@ def({
     const s = w.stats(run);
     const n = Math.max(1, Math.floor(s.amount / 3));
     const list: Projectile[] = (w.state.list ??= []);
-    for (let i = list.length - 1; i >= 0; i--) if (!list[i].alive) list.splice(i, 1);
+    for (let i = list.length - 1; i >= 0; i--) if (!list[i].alive || list[i].weapon !== w) list.splice(i, 1);
     while (list.length < n) {
       const p = baseProj(run, w, s, '');
       p.kind = 'tornado';
