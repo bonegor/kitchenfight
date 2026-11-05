@@ -248,6 +248,9 @@ class App {
         if (s.unlockAfter === run.stage.id && !this.save.unlockedStages.includes(s.id)) {
           this.save.unlockedStages.push(s.id);
           unlocks.push({ icon: 'icon.star', text: `New kitchen unlocked: ${s.name}!` });
+          // the stage picker opens on the new kitchen (and warms its music) next time
+          this.save.lastStage = s.id;
+          this.ui.selectedStage = s.id;
         }
       }
     }

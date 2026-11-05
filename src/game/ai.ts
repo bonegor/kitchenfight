@@ -521,6 +521,7 @@ function summon(run: Run, e: Enemy, id: string, n: number) {
 
 /** Jump to (tx,ty) over `time`, slam on landing. */
 function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
+  e.onLand = null;
   e.slamR = r;
   e.state = 50;
   e.leapT = time;
@@ -574,6 +575,9 @@ function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: numbe
     if (leapUpdate(run, e, dt)) {
       e.state = 0;
       e.timer = 0.6;
+      const land = e.onLand;
+      e.onLand = null;
+      land?.();
     }
     return;
   }
@@ -673,9 +677,10 @@ const PATTERNS: Record<string, Pattern> = {
           danger(run, p.x, p.y, e.r * 2, 1, 0);
           leap(e, p.x, p.y, 1, e.r * 2);
           e.attackPose = 1;
-          run.schedule(1.02, () => {
-            if (e.alive) for (let i = 0; i < 4; i++) hazard(run, 'cream', e.x + Math.cos(i * 1.57) * 60, e.y + Math.sin(i * 1.57) * 45, 40, 6, 0.4);
-          });
+          // cream splashes out where she lands
+          e.onLand = () => {
+            for (let i = 0; i < 4; i++) hazard(run, 'cream', e.x + Math.cos(i * 1.57) * 60, e.y + Math.sin(i * 1.57) * 45, 40, 6, 0.4);
+          };
         }
         return true;
       }

@@ -304,6 +304,7 @@ export class Run {
     e.bossStep = 0;
     e.leapT = 0;
     e.leapDur = 0;
+    e.onLand = null;
     e.lastHit = {};
     this.enemies.push(e);
     if (e.boss) this.bosses.push(e);
@@ -874,6 +875,10 @@ export class Run {
     this.coins += v;
     return v;
   }
+  /** How many coins addCoins(n) would credit right now (for labels). */
+  coinsFor(n: number): number {
+    return Math.floor(this.coinFrac + n * this.stats.greed + 1e-9);
+  }
 
   // ======================================================================
   // chests
@@ -1158,7 +1163,9 @@ export class Run {
       if (e.freeze > 0) e.freeze -= dt;
       if (e.stun > 0) e.stun -= dt;
       if (!isFrozen && (e.stun <= 0 || e.boss)) {
-        updateEnemy(this, e, dt * (1 - e.slowAmt) * (e.buff > 0 ? 1.35 : 1));
+        // an airborne boss ignores slows, so its slam lands exactly when the warning circle ends
+        const slow = e.boss && e.state === 50 ? 0 : e.slowAmt;
+        updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
       }
       if (!e.alive) continue;
       // obstacle collision (flyers ignore)

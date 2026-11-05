@@ -48,7 +48,7 @@ export class UI {
   private toastsEl: HTMLElement | null = null;
   private lastHud: Record<string, any> = {};
   private selectedChar = 'enzo';
-  private selectedStage = 'kitchen';
+  selectedStage = 'kitchen';
   private levelBanish = false;
   /** armed while the 'press any key' gate is showing (gamepad confirm uses it) */
   loadingStart: (() => void) | null = null;
@@ -321,6 +321,9 @@ export class UI {
     );
     this.show(el, 'charselect', () => this.showTitle());
     audio.playMusic('menu');
+    // the stage picker comes next: start rendering its default stage's music now
+    const st = this.isStageUnlocked(this.selectedStage) ? this.selectedStage : 'kitchen';
+    audio.preload([stageById(st).music]).catch(() => undefined);
   }
 
   // ------------------------------------------------------------------ stage select
@@ -330,9 +333,18 @@ export class UI {
   }
 
   showStageSelect() {
-    audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
     const grid = h('div', { class: 'stage-grid' });
     if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = 'kitchen';
+    audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
+    // Warm the music of the stage the player is looking at. Debounced: the render worker can't
+    // cancel a track, so browsing across cards must not queue a ~100 s render per card.
+    let warmT = 0;
+    const warm = (id: string) => {
+      clearTimeout(warmT);
+      warmT = window.setTimeout(() => {
+        if (this.screen === el) audio.preload([stageById(id).music]).catch(() => undefined);
+      }, 300);
+    };
     const char = charById(this.selectedChar);
     for (const st of STAGES) {
       const unlocked = this.isStageUnlocked(st.id);
@@ -354,12 +366,17 @@ export class UI {
         ),
       );
       setTimeout(() => renderStagePreview(cv, st, char.sprite), 0);
-      card.addEventListener('navfocus', () => (this.selectedStage = st.id));
+      card.addEventListener('navfocus', () => {
+        this.selectedStage = st.id;
+        if (unlocked) warm(st.id);
+      });
       card.addEventListener('click', () => {
         if (!unlocked) {
           audio.sfx('ui_error');
           return;
         }
+        clearTimeout(warmT);
+        audio.preload([st.music]).catch(() => undefined); // renders while the run loads
         audio.sfx('ui_confirm');
         this.selectedStage = st.id;
         this.app.save.lastChar = this.selectedChar;
@@ -584,7 +601,7 @@ export class UI {
     } else if (c.type === 'coins') {
       name = 'Mancia';
       ico = 'icon.coin';
-      desc = `A generous tip: +${Math.max(1, Math.round(25 * run.stats.greed))} coins.`;
+      desc = `A generous tip: +${run.coinsFor(25)} coins.`;
       lvText = 'Tip';
     } else {
       name = 'Pranzo della Nonna';

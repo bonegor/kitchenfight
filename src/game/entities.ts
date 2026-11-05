@@ -60,6 +60,8 @@ export class Enemy {
   bossStep = 0; // index into the boss attack rotation
   leapT = 0; // remaining leap time
   leapDur = 0; // total leap time
+  /** fired once when the current boss leap lands (cleared by every new leap) */
+  onLand: (() => void) | null = null;
   /** last time hit per weapon slot (for persistent hitboxes) */
   lastHit: Record<number, number> = {};
 }
