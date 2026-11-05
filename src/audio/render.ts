@@ -47,6 +47,8 @@ export interface RenderOpts {
   solo?: string[];
   /** skip master gain/clip (dev measurement) */
   raw?: boolean;
+  /** progress 0..1 */
+  onProgress?: (p: number) => void;
 }
 
 /** seconds of material repeated after the loop end */
@@ -211,6 +213,10 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
 
   // synthesize unique samples (yield between samples), then mix
   slicer.phase = 'synth';
+  const prog = opts.onProgress ?? (() => {});
+  prog(0.02);
+  let synthDone = 0;
+  const synthTotal = need.size;
   const tSynth = performance.now();
   const local = new Map<string, Sample>();
   const prof: RenderStats['prof'] = {};
@@ -237,6 +243,8 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
         made++;
       }
     }
+    synthDone++;
+    if ((synthDone & 7) === 0) prog(0.02 + 0.43 * (synthDone / Math.max(1, synthTotal)));
     if (slicer.due()) await slicer.yield();
   }
   const synthMs = performance.now() - tSynth;
@@ -253,6 +261,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     const pr = (prof[ev.inst.id] = prof[ev.inst.id] ?? { synth: 0, n: 0, mixed: 0 });
     pr.mixed += ev.inst.ring ? s.l.length : Math.min(s.l.length, ev.gate + ev.relN);
     mixInto(L, R, send, s, ev);
+    if ((k & 255) === 0) prog(0.45 + 0.3 * (k / mixEvs.length));
     if ((k & 7) === 0 && slicer.due()) await slicer.yield();
   }
   const mixMs = performance.now() - tMix;
@@ -260,6 +269,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
 
   // reverb
   slicer.phase = 'reverb';
+  prog(0.75);
   const tRev = performance.now();
   await applyReverb(send, L, R, sr, song.reverb, slicer);
   const revMs = performance.now() - tRev;
@@ -268,6 +278,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   let peak = 0;
   let clipped = 0;
   slicer.phase = 'master';
+  prog(0.93);
   if (!opts.raw) {
     const g = dbToGain(song.gainDb);
     const hpL = Biquad.hp(sr, 22, 0.6);
@@ -307,6 +318,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
       }
     }
   }
+  prog(1);
   return {
     sr,
     left: L,

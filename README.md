@@ -11,6 +11,17 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
 (54 documented "crimes" with sources, e.g. Italians rank *ketchup on pasta* as their
 #1 food crime in a 2022 YouGov survey).
 
+<p align="center">
+  <img src="docs/screenshots/title.jpg" width="49%" alt="Title screen" />
+  <img src="docs/screenshots/kitchen.jpg" width="49%" alt="La Cucina — the kitchen stage" />
+  <img src="docs/screenshots/trattoria.jpg" width="49%" alt="La Trattoria at night" />
+  <img src="docs/screenshots/streets.jpg" width="49%" alt="I Vicoli di Napoli with the Cappuccino Clock Tower boss" />
+  <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="La Food Court with the Cursed Microwave" />
+  <img src="docs/screenshots/levelup.jpg" width="49%" alt="Level-up cards" />
+  <img src="docs/screenshots/chefs.jpg" width="49%" alt="Seven playable chefs" />
+  <img src="docs/screenshots/ricettario.jpg" width="49%" alt="Il Ricettario — the encyclopedia of food crimes" />
+</p>
+
 ## ▶ Play
 
 | How | Steps |

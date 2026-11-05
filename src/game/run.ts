@@ -588,7 +588,7 @@ export class Run {
     this.dmgBy[src] = (this.dmgBy[src] ?? 0) + d;
     p.iframes = 0.5;
     p.hurtT = 0.3;
-    this.fx.hurt = Math.min(1, this.fx.hurt + 0.5 + d / 30);
+    this.fx.hurt = Math.min(1, this.fx.hurt + 0.35 + d / 40);
     this.fx.shake(0.18 + Math.min(0.3, d / 60));
     this.fx.number(p.x, p.y - 40, d, false, '#ff5a4f');
     this.sfx('player_hurt', { volume: 0.8 });

@@ -272,9 +272,9 @@ export class Renderer {
     const lowHp = run.player.hp < run.stats.maxHp * 0.3 && run.state !== 'dead';
     const hurt = Math.max(run.fx.hurt, lowHp ? 0.25 + 0.2 * Math.sin(this.t * 6) : 0);
     if (hurt > 0.01) {
-      const g = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, Math.min(this.canvas.width, this.canvas.height) * 0.3, this.canvas.width / 2, this.canvas.height / 2, Math.hypot(this.canvas.width, this.canvas.height) / 2);
+      const g = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, Math.min(this.canvas.width, this.canvas.height) * 0.42, this.canvas.width / 2, this.canvas.height / 2, Math.hypot(this.canvas.width, this.canvas.height) / 2);
       g.addColorStop(0, 'rgba(200,20,10,0)');
-      g.addColorStop(1, `rgba(200,20,10,${Math.min(0.7, hurt * 0.6)})`);
+      g.addColorStop(1, `rgba(200,20,10,${Math.min(0.5, hurt * 0.45)})`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
