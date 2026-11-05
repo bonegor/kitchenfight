@@ -7,9 +7,11 @@
  * - Decoding starts as soon as the engine exists, on an OfflineAudioContext (no user gesture needed). Until every
  *   variant of an id is decoded the engine keeps playing the synthesized version, which also stays the fallback
  *   for every failure (no OfflineAudioContext, fetch or decode errors, ...). Nothing here throws.
- * - MP3 decoders differ in how much encoder delay / padding they strip, so each decoded buffer is re-aligned:
- *   the near-silent lead-in is cut (the build already trimmed the asset to 0.5 ms before its attack), leaving the
- *   attack <= ~1 ms after the BufferSource start whatever the browser's decoder did; the silent tail is cut too.
+ * - MP3 decoders differ in how much encoder delay / padding they strip, so each decoded buffer is re-aligned: the
+ *   manifest stores where each asset's attack lies in the gapless original (first samples above -6 / -12 / -20 dB
+ *   re peak, ~0.5 ms in); the decoder's extra lead is estimated from them (median), snapped to the LAME delays a
+ *   decoder can leave (0, 529, 576 or 1105 samples at 48 kHz) and cut, which also removes the MP3 pre-echo a
+ *   non-gapless decoder leaves in front of the attack. Silent tails are cut too.
  */
 import type { SfxId } from './audio';
 import manifestJson from './assets/sfx/manifest.json';
@@ -29,7 +31,8 @@ interface ManifestId {
 interface Manifest {
   version: number;
   sr: number;
-  assets: Record<string, { ch: number; dur: number; lk: number }>;
+  /** ch: channels, dur: s, lk: LK100 (dB), a: attack anchors (first samples above -6/-12/-20 dB re peak) in the gapless original */
+  assets: Record<string, { ch: number; dur: number; lk: number; a?: number[] }>;
   ids: Record<string, ManifestId>;
 }
 
@@ -49,6 +52,10 @@ const MANIFEST = manifestJson as unknown as Manifest;
 const URLS = import.meta.glob('./assets/sfx/*.mp3', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 /** lead-in below this (re the buffer's peak) is considered silence (decoder delay / priming) */
 const LEAD_DB = -50;
+/** attack anchors used for alignment (re the buffer's peak); must match build_sfx.py measure() */
+const ANCHOR_DB = [-6, -12, -20];
+/** extra lead an MP3 decoder can leave, in samples at 48 kHz: none (gapless), LAME decoder delay, encoder delay, both */
+const MP3_LEADS = [0, 529, 576, 1105];
 /** tail below this (re peak) is cut */
 const TAIL_DB = -70;
 /** kept before the first sample above LEAD_DB (s) */
@@ -71,8 +78,13 @@ function decode(ac: BaseAudioContext, data: ArrayBuffer): Promise<AudioBuffer> {
   });
 }
 
-/** Trim decoder delay / priming (near-silent lead-in) and the silent tail. Returns null for an all-silent buffer. */
-export function alignBuffer(ac: BaseAudioContext, b: AudioBuffer): { buf: AudioBuffer; lead: number } | null {
+/**
+ * Trim decoder delay / priming and the silent tail. With `anchors` (the asset's first samples above ANCHOR_DB in the
+ * gapless original, at `anchorSr`) the decoder's extra lead is measured and cut so the attack lands where it was
+ * encoded; without them, everything before the first sample above LEAD_DB (minus 0.5 ms) is cut.
+ * Returns null for a silent buffer.
+ */
+export function alignBuffer(ac: BaseAudioContext, b: AudioBuffer, anchors?: number[], anchorSr = 48000): { buf: AudioBuffer; lead: number } | null {
   const n = b.length;
   const nc = b.numberOfChannels;
   const chans: Float32Array[] = [];
@@ -85,14 +97,26 @@ export function alignBuffer(ac: BaseAudioContext, b: AudioBuffer): { buf: AudioB
   if (!(pk > 1e-6)) return null;
   const lo = pk * dbToGain(LEAD_DB);
   const tl = pk * dbToGain(TAIL_DB);
-  let i0 = n;
+  const first = (thr: number): number => {
+    let best = n;
+    for (const d of chans) for (let i = 0; i < best; i++) if (d[i] > thr || d[i] < -thr) { best = i; break; }
+    return best;
+  };
+  const i0 = first(lo);
   let i1 = -1;
-  for (const d of chans) {
-    for (let i = 0; i < i0; i++) if (d[i] > lo || d[i] < -lo) { i0 = i; break; }
-    for (let i = n - 1; i > i1; i--) if (d[i] > tl || d[i] < -tl) { i1 = i; break; }
-  }
+  for (const d of chans) for (let i = n - 1; i > i1; i--) if (d[i] > tl || d[i] < -tl) { i1 = i; break; }
   const sr = b.sampleRate;
-  const start = Math.max(0, i0 - Math.round(PREROLL * sr));
+  const scale = sr / anchorSr;
+  let start = Math.max(0, i0 - Math.round(PREROLL * sr));
+  if (anchors && anchors.length === ANCHOR_DB.length) {
+    // the decoder's extra lead, estimated at three attack levels (pre-echo can only make the low ones early)
+    const shifts = ANCHOR_DB.map((d, k) => first(pk * dbToGain(d)) - anchors[k] * scale).sort((a, c) => a - c);
+    let shift = shifts[1];
+    const snap = MP3_LEADS.map((v) => v * scale).reduce((a, c) => (Math.abs(c - shift) < Math.abs(a - shift) ? c : a));
+    if (Math.abs(snap - shift) <= 0.004 * sr) shift = snap;
+    // plausible: < 50 ms; negative (the decoder cut more than expected) leaves nothing to trim
+    if (Math.abs(shift) < 0.05 * sr) start = Math.max(0, Math.round(shift));
+  }
   const end = Math.min(n, i1 + 1 + Math.round(0.002 * sr));
   if (start === 0 && end === n) return { buf: b, lead: 0 };
   const len = Math.max(1, end - start);
@@ -187,7 +211,7 @@ export class SfxSamples {
           const res = await fetch(url);
           if (!res.ok) throw new Error('http ' + res.status);
           const decoded = await decode(ac, await res.arrayBuffer());
-          const al = alignBuffer(ac, decoded);
+          const al = alignBuffer(ac, decoded, MANIFEST.assets[name]?.a, MANIFEST.sr || 48000);
           if (!al) throw new Error('silent');
           bufs.set(name, al.buf);
           this.lead[name] = al.lead;
