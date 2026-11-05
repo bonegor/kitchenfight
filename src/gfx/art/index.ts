@@ -1,5 +1,6 @@
 /** Imports every art module (they self-register sprites / stage envs). */
 import './hero';
+import './extra';
 import './chefs';
 import './enemies_a';
 import './enemies_b';

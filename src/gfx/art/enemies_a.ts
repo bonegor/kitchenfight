@@ -21,6 +21,10 @@
  *   pollo         r13  roast drumstick in a spy fedora + groucho disguise, on chicken feet
  *   pepperoni     r11  flying salami slice, little white wings, bell-pepper hat (tricolore!)
  *   polpetta      r14  glossy meatball wrapped in spaghetti, sauce cap; texture rolls
+ *
+ * Extras: enemy.cipolla_peel1 / enemy.cipolla_peel2 — same onion with 1 / 2 armour layers gone
+ * (paler, smaller, more skin flaps; peel2 cries onion tears). Optional: swap by remaining layers.
+ * pepperoni is a flyer: its lowest pixel is ~y=+7.5, so a ground shadow at y≈+r reads as altitude.
  */
 import { defineSprite } from '../sprites';
 import {
@@ -893,16 +897,16 @@ function drawCipolla(ctx: Ctx, f: number, peel = 0) {
   const onionLn = [ONION_LN, '#7d2558', '#a24f82'][peel];
   legs(ctx, 0.6, 9.2, f, { len: 3.4, spread: 8, thick: 3.1, color: '#3b3340', shoe: SHOE, stride: 3.2 });
 
+  // the bulb (each lost layer leaves it a little smaller and paler) — sprouts ride along
+  ctx.save();
+  ctx.translate(0, 6.2);
+  ctx.scale(1 - peel * 0.05, 1 - peel * 0.06);
+  ctx.translate(0, -6.2);
   // sprouts + dry papery neck
   leaf(ctx, [[0.4, -23.6], [2.0, -28.4], [5.6 + sw * 0.3, -31.6]], [2.6, 1.9, 0.3], SPROUT);
   leaf(ctx, [[0.2, -23.6], [-1.6, -27.4], [-5.2 - sw * 0.3, -28.6]], [2.2, 1.6, 0.3], '#5fae3c');
   shape(ctx, (c) => polyPath(c, [[-1.8, -22.6], [-0.8, -26.4], [0.4, -25.2], [1.2, -27.0], [2.0, -25.0], [3.2, -22.4]]), { fill: PAPER, ink: 1.1, shadow: PAPER_SH, shadowOffset: [-0.6, -0.4] });
 
-  // the bulb (each lost layer leaves it a little smaller and paler)
-  ctx.save();
-  ctx.translate(0, 6.2);
-  ctx.scale(1 - peel * 0.05, 1 - peel * 0.06);
-  ctx.translate(0, -6.2);
   shape(ctx, onionPath, {
     fill: onion, shadow: onionSh, ink: 2.1, shadowOffset: [-3.4, -2.8],
     gloss: [{ x: -7, y: -15.5, rx: 3.6, ry: 1.9, rot: -0.65, alpha: 0.4 }],

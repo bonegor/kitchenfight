@@ -307,7 +307,7 @@ export class Renderer {
     const ctx = this.ctx;
     const def = e.def;
     let sid = def.sprite;
-    let frame = Math.floor(e.anim) & 3;
+    let frame = e.boss ? Math.floor(this.t * 7 + e.id) & 3 : Math.floor(e.anim) & 3;
     if (e.boss && e.attackPose > 0 && hasSprite(sid + '.attack')) {
       sid = sid + '.attack';
       frame = e.telegraph > 0 ? 0 : 1;
@@ -719,6 +719,19 @@ export class Renderer {
   }
 
   private emitPropFx(run: Run, vis: PropInst[], dt: number) {
+    // pigeons take off when the chef gets close
+    const pl = run.player;
+    for (let i = vis.length - 1; i >= 0; i--) {
+      const p = vis[i];
+      if (!p.sprite.includes('pigeon')) continue;
+      const dx = p.x - pl.x, dy = p.y - pl.y;
+      if (dx * dx + dy * dy > 120 * 120) continue;
+      run.world.destroy(p);
+      vis.splice(i, 1);
+      const dir = dx >= 0 ? 1 : -1;
+      run.fx.sprite(p.x, p.y - 6, 'fx.pigeon_fly', { vx: dir * (120 + Math.random() * 60), vy: -60 - Math.random() * 40, vz: 140, life: 1.6, size: dir, size1: dir * 0.75, fps: 12, frame: 0 });
+      run.fx.burst(p.x, p.y - 4, 3, { sprite: 'fx.feather', speed: 60, size: 1, life: 1.4, gravity: 30, up: 40, shrink: false, spin: 4 });
+    }
     if (this.quality === 'low') return;
     for (const p of vis) {
       if (!p.fx) continue;

@@ -1075,7 +1075,7 @@ const kick: InstDef = {
     let ph = 0;
     for (let i = 0; i < len; i++) {
       const t = i / sr;
-      const f = 54 + 110 * Math.exp(-t / 0.03) + 45 * Math.exp(-t / 0.004);
+      const f = 49 + 115 * Math.exp(-t / 0.03) + 45 * Math.exp(-t / 0.004); // settles on G1
       ph += (TAU * f) / sr;
       out[i] = Math.sin(ph) * Math.exp(-t / 0.12) * (t < 0.002 ? t / 0.002 : 1);
     }

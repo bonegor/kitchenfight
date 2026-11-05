@@ -1,7 +1,7 @@
 /**
  * BOSS — IL MICROONDE MALEDETTO (The Cursed Microwave). Radius 56.
  *
- * A hulking retro-teal microwave in 3/4 view on stubby chrome legs. The LED display
+ * A hulking retro radioactive-avocado microwave in 3/4 view on stubby chrome legs. The LED display
  * glares with two angry 7-segment eyes; the window is a fanged mouth glowing orange,
  * and inside a sad plate of rubbery pasta really spins on the turntable (its face turns
  * away and back over the 4 frames). A desk-bell "DING" antenna wobbles on top, oven
@@ -19,10 +19,10 @@ import {
 export const MICROONDE_R = 56;
 const W = 204, H = 194, AX = 102, AY = 128;
 
-const CASE = '#4cb5a6';
-const CASE_SH = '#2c7f7a';
-const CASE_DK = '#22605e';
-const CASE_HI = '#94e6d4';
+const CASE = '#9fc43a';
+const CASE_SH = '#628c22';
+const CASE_DK = '#466a18';
+const CASE_HI = '#d6f08a';
 const PANEL = '#ece5d2';
 const PANEL_SH = '#c9bfa6';
 const CHROME = '#dfe6ee';
@@ -442,7 +442,7 @@ function drawMicroonde(ctx: Ctx, p: Pose) {
   for (let i = 0; i < 5; i++) {
     const vy = FY0 + 2 + i * 9;
     const vx0 = FX0 + DX + 4, vx1 = FX0 - 3;
-    line(ctx, [[vx0, vy + 2], [vx1, vy + 6]], 3.6, '#16302f');
+    line(ctx, [[vx0, vy + 2], [vx1, vy + 6]], 3.6, '#23340e');
     line(ctx, [[vx0 + 1, vy + 2.2], [vx1 - 1, vy + 5.8]], 1.6, GLOW, false, 0.55 + p.heat * 0.4);
   }
   // rust spots on the side

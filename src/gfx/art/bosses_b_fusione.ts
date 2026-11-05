@@ -269,11 +269,12 @@ function cupEye(ctx: Ctx, x: number, y: number, f: number, wide: boolean) {
     S(ctx, (c) => { c.moveTo(x - 8, y - 4); c.quadraticCurveTo(x, y - 14, x + 8, y - 4); c.closePath(); }, { fill: '#fff8ea', ink: OUT_S + 0.2, shadow: 'none' });
     line(ctx, [[x - 7, y - 6], [x, y - 4.6], [x + 7, y - 6]], 1.6, INK, true);
   } else {
-    lidEye(ctx, x, y - 9, 8, { side: 1, lidOuter: wide ? 0 : 0.14, lidInner: wide ? 0.12 : 0.36, look: [0.35, 0.3], iris: '#6a3fd8', pupil: 0.24, lidColor: '#fff4e0', ink: 1.8, glow: wide ? '#fff27a' : undefined });
-    // veins
-    line(ctx, [[x - 7.5, y - 6], [x - 4.6, y - 7]], 0.7, '#e8616e', false, 0.8);
+    lidEye(ctx, x + 0.5, y - 12, 9.4, { side: 1, lidOuter: wide ? 0 : 0.1, lidInner: wide ? 0.08 : 0.3, look: [0.38, 0.32], iris: '#7a3fe8', pupil: 0.22, lidColor: '#c98a5a', ink: 2, glow: wide ? '#fff27a' : undefined });
+    // bloodshot veins
+    line(ctx, [[x - 8.4, y - 9], [x - 5.6, y - 10.4], [x - 4.6, y - 9.2]], 0.8, '#e8455e', true, 0.85);
+    line(ctx, [[x + 8.6, y - 8.6], [x + 6.4, y - 9.6]], 0.8, '#e8455e', false, 0.85);
     // foam lip over the bottom of the eyeball
-    S(ctx, (c) => { circlePath(c, x - 7, y - 3, 3.6); circlePath(c, x, y - 2, 4); circlePath(c, x + 7, y - 3, 3.6); }, { fill: '#fff8ea', ink: OUT_S, shadow: '#e7cfac', shadowOffset: [-0.8, -0.8] });
+    S(ctx, (c) => { circlePath(c, x - 8, y - 2.4, 3.2); circlePath(c, x - 1, y - 1.6, 3.4); circlePath(c, x + 7, y - 2.4, 3.2); }, { fill: '#fff8ea', ink: OUT_S, shadow: '#e7cfac', shadowOffset: [-0.8, -0.8] });
   }
 }
 

@@ -87,6 +87,53 @@ Dispensa** (the pantry).
 - **Cesta da Picnic** — picnic-basket chest (from elites & bosses).
 - Breakable props (flour sacks, tomato crates, barrels, bins) drop pickups.
 
+## The crimes (enemies & bosses)
+Every enemy is a documented Italian food pet peeve — sources and quotes in `RESEARCH.md`, shown in-game in *Il Ricettario*.
+
+| Enemy | English | Behaviour | The crime |
+|---|---|---|---|
+| Lo Spezzaspaghetti | The Spaghetti-Snapper | swarm | Breaking spaghetti to fit the pot |
+| Spruzzatore Rosso | The Red Squirter | ranged | Ketchup on pasta |
+| Panna Invasora | Invading Cream | puddler | Cream in carbonara |
+| Forbici Furiose | Furious Scissors | charger | Cutting spaghetti with scissors (or a knife) |
+| Pasta Scotta | Mushy Pasta | hopper | Overcooked, mushy pasta |
+| Lo Sciacquapasta | The Pasta-Rinser | hopper | Rinsing cooked pasta |
+| Cipolla Clandestina | Stowaway Onion | chase | Onion in carbonara (or gricia) |
+| Aglio in Camicia | Garlic in Its Shirt | support | Garlic in amatriciana |
+| Bacon Abusivo | Unlicensed Bacon | slither | Bacon or ham instead of guanciale |
+| Piselli Ribelli | Rebel Peas | swarm | Peas (and ham, and mushrooms) in carbonara |
+| Ananas Corazzato | Armoured Pineapple | chase | Pineapple on pizza |
+| Pezzo d'Ananas | Pineapple Chunk | chase | Tinned pineapple chunks |
+| Pollo Infiltrato | Undercover Chicken | leaper | Chicken in pasta |
+| Peperone Equivoco | The Misunderstood Pepper | orbiter | "Pepperoni" pizza |
+| Polpetta Rotolante | Rolling Meatball | roller | Spaghetti and meatballs |
+| Fetta Hawaiana | Hawaiian Slice | chase | Ham & pineapple "Hawaiian" pizza |
+| Cappuccino Ritardatario | Latecomer Cappuccino | chase | Cappuccino after 11 a.m. (or with a meal) |
+| Alfredo il Colloso | Alfredo the Gluey | puddler | Creamy chicken "Alfredo" |
+| Spargipolvere | The Dust-Sprinkler | lobber | Powdered "parmesan" in a shaker |
+| Margherita Macchiata | Stained Margherita | burster | Ketchup on pizza |
+| Frappè Zuccheroso | Sugar-Rush Frappé | charger | Giant whipped-cream "coffee" drinks |
+| Il Telefonino Virale | The Viral Phone | ranged | Viral "Italian" recipe videos |
+| Pentola Fredda | The Cold Pot | aura | Starting pasta in cold water |
+| Vongola Formaggiosa | The Cheesy Clam | strafe | Grated cheese on seafood pasta |
+| Lasagna Surgelata | Frozen Lasagna | chase | Frozen microwave lasagna |
+| La Pentola Unica | The Single Pot | devourer | One-pot "carbonara" |
+| Glassa Balsamica | Balsamic Glaze | puddler | Sugary balsamic glaze on everything |
+| Patatine di Pasta | Pasta Crisps | swarm | Air-fried "pasta chips" |
+| Scatoletta Maledetta | The Cursed Little Can | kamikaze | Canned carbonara |
+| Spaghetti Fantasma | Ghost Spaghetti | ghost | Spaghetti bolognese |
+| Il Barone del Ketchup | The Ketchup Baron | boss | Ketchup on pasta — Italy's #1 food crime |
+| Il Barattolo Alfredo | The Alfredo Jar | boss | Jarred "Alfredo" sauce |
+| Il Colosso di Panna | The Cream Colossus | boss | Cream in carbonara — the original sin |
+| Lo Scatolone | The Big Can | boss | Canned spaghetti in sweet sauce |
+| Il Pizzone Abissale | The Abyssal Deep-Dish | boss | Chicago deep-dish "pizza" |
+| Il Re Ananas | The Pineapple King | boss | The King of all pizza crimes |
+| Il Campanile del Cappuccino | The Cappuccino Clock Tower | boss | Cappuccino after lunch, with dinner, with pizza… |
+| L'Influencer della Padella Unica | The One-Pan Influencer | boss | The viral recipe factory |
+| Il Microonde Maledetto | The Cursed Microwave | boss | Microwaving pasta |
+| Il Mostro della Fusione | The Fusion Abomination | boss | Every crime at once |
+
+
 ## Meta progression — La Dispensa (permanent power-ups, bought with coins)
 Might, Armor, Max HP, Recovery, Cooldown, Area, Projectile speed, Duration,
 Amount, Move speed, Magnet, Luck, Growth, Greed, Revival (“Bis!”), Reroll, Skip,
