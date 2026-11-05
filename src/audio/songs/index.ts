@@ -7,6 +7,8 @@ import { kitchen } from './kitchen';
 import { trattoria } from './trattoria';
 import { streets } from './streets';
 import { foodcourt } from './foodcourt';
+import { boss } from './boss';
+import { finalboss } from './finalboss';
 
 export const SONGS: Partial<Record<MusicId, SongDef>> = {
   title,
@@ -15,4 +17,6 @@ export const SONGS: Partial<Record<MusicId, SongDef>> = {
   trattoria,
   streets,
   foodcourt,
+  boss,
+  finalboss,
 };

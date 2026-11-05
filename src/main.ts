@@ -21,6 +21,7 @@ import { stageById, STAGES } from './game/stages';
 import { charById, CHARACTERS } from './game/passives';
 import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
 import type { Enemy } from './game/entities';
+import { awardMedals } from './game/medals';
 
 class App {
   save: SaveData = loadSave();
@@ -245,6 +246,7 @@ class App {
         unlocks.push({ icon: c.sprite, text: `New chef unlocked: ${c.name}, ${c.title}!` });
       }
     }
+    for (const m of awardMedals(this.save, run, victory)) unlocks.push({ icon: m.icon, text: `Medal: ${m.name} — ${m.desc}` });
     this.persist();
     audio.setMusicMuffled(false);
     audio.playMusic(victory ? 'victory' : 'gameover', { fade: 0.3, restart: true });

@@ -628,7 +628,7 @@ const warble: InstDef = {
   make(sr, midi, _v, lenSec) {
     const f0 = mtof(midi);
     const len = Math.round(lenSec * sr);
-    const tbl = table('warble', (k) => (k === 1 ? 1 : k === 2 ? 0.18 : k === 3 ? 0.22 : k === 5 ? 0.06 : 0), sr, f0, 12000, 'zero');
+    const tbl = table('warble2', (k, f) => (k === 1 ? 1 : (k % 2 ? 0.55 : 0.3) / Math.pow(k, 1.05)) * rolloff(f, 5200, 3) * (1 + 0.8 * bump(f, 2400, 0.5)), sr, f0, 12000);
     const env = envADS(sr, len, 0.02, 0.4, 0.8, 1, 1);
     const l = new Float32Array(len);
     const r = new Float32Array(len);

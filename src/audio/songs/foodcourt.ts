@@ -98,7 +98,7 @@ export const foodcourt: SongDef = {
       chords: B_CH,
       parts: [
         mel('vibes', B_MEL, { vel: 0.8 }),
-        mel('warble', B_MEL, { vel: 0.5, oct: -1 }),
+        mel('lead', B_MEL, { vel: 0.45 }),
         comp('ep', 'c:2 r:1 c:1 r:2 c:2 c:1 c:1 r:2 c:1 r:1 c:1 r:1', { lo: 'Gb4', hi: 'Eb5', vel: 0.55, n: 3 }),
         pad('choir', { lo: 'Gb4', hi: 'Eb5', vel: 0.5, n: 3 }),
         bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.8 }),
@@ -112,7 +112,7 @@ export const foodcourt: SongDef = {
       chords: C_CH,
       parts: [
         mel('warble', C_MEL, { vel: 0.85 }),
-        mel('lead', C_MEL, { vel: 0.5, oct: -1 }),
+        mel('lead', C_MEL, { vel: 0.45, minDur: 8 }),
         pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.6, n: 3 }),
         pad('choir', { lo: 'F4', hi: 'Db5', vel: 0.45, n: 3 }),
         bass('sbass', '1:4 r:12', { lo: 'Bb1', hi: 'Bb2', vel: 0.85 }),

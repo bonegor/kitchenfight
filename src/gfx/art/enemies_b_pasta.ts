@@ -3,8 +3,8 @@
  * Fantasma, Lasagna Surgelata, Vongola Formaggiosa.
  */
 import {
-  Ctx, Pt, INK, shape, group, line, inkLine, ellipsePath, circlePath, roundRectPath, polyPath,
-  smoothPath, blobPath, speckle, glint, legs, eye, brow, mouth, shade, rng,
+  Ctx, Pt, shape, group, line, inkLine, ellipsePath, circlePath, roundRectPath, polyPath,
+  smoothPath, blobPath, speckle, glint, legs, eye, brow, shade, rng,
 } from '../painter';
 import {
   TAU, LIMB, enemySprite, cyc, dripPath, hoseArm, cheeks, clipTo, twinkle, snowflake, wash,
@@ -168,8 +168,6 @@ function farfalle(ctx: Ctx, x: number, y: number, s: number, rot: number, flap: 
 }
 
 function drawPastaChips(ctx: Ctx, f: number) {
-  const { s } = cyc(f);
-
   legs(ctx, 0.6, 5.4, f, { len: 2.8, spread: 6.4, thick: 1.8, color: LIMB, shoe: '#2d2422', stride: 3.4 });
 
   // crumbs flying off behind
@@ -231,7 +229,6 @@ function drawPastaChips(ctx: Ctx, f: number) {
 
   // farfalle bow on top
   farfalle(ctx, -4, -11.4, 0.92, -0.45, f % 2 ? 0.72 : 1);
-  void s;
 }
 
 enemySprite('pastachips', 30, 34, 21, drawPastaChips);
@@ -397,7 +394,7 @@ const LAS_TOP = '#e98b3b';
 const ICEB = '#d4f1ff';
 
 function drawSurgelata(ctx: Ctx, f: number) {
-  const { ph, s } = cyc(f);
+  const { s } = cyc(f);
   const dx = 6.4, dy = -5.4;
   const L = -20, R = 16, T = -18, B = 6;
 
@@ -474,7 +471,6 @@ function drawSurgelata(ctx: Ctx, f: number) {
       ctx.closePath();
       ctx.fillStyle = shade(col, 0.2);
       ctx.fill();
-      void i;
     });
     wash(ctx, (c) => polyPath(c, side), '#bfe4ff', 0.38);
   });
@@ -563,7 +559,6 @@ function drawSurgelata(ctx: Ctx, f: number) {
   // drifting snowflakes
   snowflake(ctx, L - 6 + s, T - 8 - f * 0.8, 2, '#ffffff', 0.85, 0.9);
   snowflake(ctx, L + 12, T - 16 + s, 1.5, '#ffffff', 0.7, 0.8);
-  void ph; void INK;
 }
 
 enemySprite('surgelata', 66, 74, 48, drawSurgelata, 33);
@@ -713,4 +708,3 @@ function drawVongola(ctx: Ctx, f: number) {
 
 enemySprite('vongola', 50, 44, 25, drawVongola);
 
-void mouth; void glint; void TAU;

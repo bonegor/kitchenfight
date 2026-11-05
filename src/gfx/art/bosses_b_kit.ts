@@ -159,7 +159,7 @@ export function fist(
   }, { fill, ink, shadow: sh, shadowOffset: [-r * 0.24, -r * 0.26], gloss: [{ x: -r * 0.3, y: -r * 0.45, rx: r * 0.35, ry: r * 0.2, rot: -0.3, alpha: 0.6 }] });
   // finger creases (knuckle side)
   for (const k of [-0.32, 0.08, 0.46]) {
-    line(ctx, [[r * 0.42, k * r - r * 0.06], [r * 1.0, k * r + r * 0.02]], Math.max(0.9, ink * 0.5), o.crease ?? shade(fill, 0.35));
+    line(ctx, [[r * 0.42, k * r - r * 0.06], [r * 1.0, k * r + r * 0.02]], Math.max(0.9, ink * 0.5), o.crease ?? (o.fill ? shade(fill, 0.35) : '#aeb3c6'));
   }
   // thumb
   if (o.thumbUp) {
@@ -350,7 +350,7 @@ export function bladeRib(bx: number, by: number, ang: number, len: number, bend:
  * Pineapple leaf crown. (x,y) = where the leaves sprout. `f` animates a sway.
  * `spread` (1 = normal) fans the leaves out, `scale` sizes everything.
  */
-export function pineappleCrown(ctx: Ctx, x: number, y: number, scale: number, f: number, o: { spread?: number; flare?: number; sway?: number; ink?: number } = {}) {
+export function pineappleCrown(ctx: Ctx, x: number, y: number, scale: number, f: number, o: { spread?: number; flare?: number; sway?: number; ink?: number; lite?: boolean } = {}) {
   const spread = o.spread ?? 1;
   const flare = o.flare ?? 0;
   const ink = o.ink ?? OUT_IN;
@@ -381,6 +381,7 @@ export function pineappleCrown(ctx: Ctx, x: number, y: number, scale: number, f:
     { fill: '#4cc25a', sh: '#2c9447', rib: '#a8f09a' },
   ];
   leaves.forEach(([off, len, w, layer], i) => {
+    if (o.lite && layer < 2 && Math.abs(off) > 1.0) return; // outer leaves hidden anyway
     const side = off < 0 ? -1 : 1;
     const wob = Math.sin(ph + i * 1.7) * 0.045 * sway * (layer === 0 ? 1.2 : 0.8);
     const a = UP + off * spread * (1 + flare * 0.18) + wob;
@@ -390,7 +391,7 @@ export function pineappleCrown(ctx: Ctx, x: number, y: number, scale: number, f:
     const bx = x + Math.sin(off) * 5 * scale, by = y + (layer === 2 ? 3 : 1) * scale;
     const col = cols[layer];
     S(ctx, (c) => bladePath(c, bx, by, a, L, W, bend), { fill: col.fill, ink, shadow: col.sh, shadowOffset: [-W * 0.32, -W * 0.18] });
-    line(ctx, bladeRib(bx, by, a, L, bend, 0.78), Math.max(0.8, W * 0.16), col.rib, true, 0.85);
+    if (layer > 0) line(ctx, bladeRib(bx, by, a, L, bend, 0.78), Math.max(0.8, W * 0.16), col.rib, true, 0.85);
   });
 }
 

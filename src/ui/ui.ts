@@ -14,6 +14,7 @@ import type { Enemy } from '../game/entities';
 import type { SaveData } from '../core/save';
 import { formatTime, clamp } from '../core/math';
 import { renderStagePreview } from './preview';
+import { MEDALS } from '../game/medals';
 import type { Input } from '../core/input';
 
 export interface AppAPI {
@@ -931,6 +932,11 @@ export class UI {
             return h('tr', {}, h('td', {}, st.name), h('td', { class: 'num' }, formatTime(r?.bestTime ?? 0)), h('td', { class: 'num' }, String(r?.wins ?? 0)), h('td', { class: 'num' }, String(r?.bestKills ?? 0)), h('td', { class: 'num' }, String(r?.bestLevel ?? 0)));
           })),
         ),
+        h('h3', { class: 'medals-h' }, 'Medaglie'),
+        h('div', { class: 'medals' }, MEDALS.map((m) => {
+          const got = s.achievements.includes(m.id);
+          return h('div', { class: 'medal' + (got ? ' got' : '') }, img(icon(m.icon)), h('div', {}, h('b', {}, m.name), h('div', { class: 'sub' }, m.desc)));
+        })),
         h('p', { class: 'controls-help' }, `Crimes catalogued: ${[...seen].filter((k) => k.startsWith('e:')).length} / ${REGULAR_ENEMY_IDS.length + BOSS_IDS.length} · Weapons discovered: ${[...seen].filter((k) => k.startsWith('w:')).length} / ${Object.keys(WEAPONS).length}`),
       );
     }

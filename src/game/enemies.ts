@@ -87,7 +87,7 @@ E({
   id: 'spezzato', name: 'Lo Spezzaspaghetti', en: 'The Spaghetti-Snapper', sprite: 'enemy.spezzato',
   radius: 10, hp: 7, speed: 78, damage: 4, xp: 1, behavior: 'swarm', params: { wobble: 0.6 },
   color: 'yellow', juice: '#f3d27a', chunk: 'bread',
-  info: { crime: 'Breaking spaghetti to fit the pot', why: 'Long pasta is meant to be twirled. Snapping it leaves short, uneven pieces — just wait a few seconds and it softens into the pot by itself.', severity: 4, quote: 'Lidia Bastianich stopped a TV host mid-snap and called it a "criminal offense".' },
+  info: { crime: 'Breaking spaghetti to fit the pot', why: 'Long pasta is meant to be twirled. Snapping it leaves short, uneven pieces — just wait a few seconds and it softens into the pot by itself.', severity: 4, quote: 'TV chef Lidia Bastianich reportedly stopped a host mid-snap and called it a "criminal offense".' },
 });
 E({
   id: 'ketchup', name: 'Spruzzatore Rosso', en: 'The Red Squirter', sprite: 'enemy.ketchup',
@@ -129,13 +129,13 @@ E({
   id: 'aglio', name: 'Aglio in Camicia', en: 'Garlic in Its Shirt', sprite: 'enemy.aglio',
   radius: 14, hp: 22, speed: 40, damage: 6, xp: 3, behavior: 'support', params: { r: 110, every: 1.2 },
   color: 'cream', juice: '#f4ecd6', chunk: 'cheese',
-  info: { crime: 'Garlic in amatriciana', why: "Amatrice's recipe — EU-protected since 2020 — is guanciale, tomato, Pecorino, a splash of white wine, pepper or chilli. No garlic. No onion.", severity: 4, quote: 'In 2015 a star chef revealed his secret on TV: garlic "in its shirt". The town of Amatrice replied with the true recipe, and he said it was "only a joke".' },
+  info: { crime: 'Garlic in amatriciana', why: "Amatrice's recipe — EU-protected since 2020 — is guanciale, tomato, Pecorino, a splash of white wine, pepper or chilli. No garlic. No onion.", severity: 4, quote: 'In 2015 a star chef revealed his TV "secret": garlic in its skin. The town of Amatrice answered with the true recipe; the chef said it was only a joke.' },
 });
 E({
   id: 'bacon', name: 'Bacon Abusivo', en: 'Unlicensed Bacon', sprite: 'enemy.bacon',
   radius: 13, hp: 14, speed: 66, damage: 6, xp: 2, behavior: 'slither', params: { amp: 1.0, freq: 5 },
   color: 'pink', juice: '#e57a7a', chunk: 'tomato',
-  info: { crime: 'Bacon or ham instead of guanciale', why: 'Guanciale — cured pork cheek — melts into sweet, clean fat. Smoky bacon changes the flavour; ham makes it another dish entirely.', severity: 3, quote: 'Told that ham would make a "British carbonara", Gino D\'Acampo shot back: "If my grandmother had wheels, she would have been a bike!"' },
+  info: { crime: 'Bacon or ham instead of guanciale', why: 'Guanciale — cured pork cheek — melts into sweet, clean fat. Smoky bacon changes the flavour; ham makes it another dish entirely.', severity: 3, quote: 'Told that ham would make a "British carbonara", Gino D\'Acampo famously shot back (as reported): "If my grandmother had wheels, she would have been a bike!"' },
 });
 E({
   id: 'piselli', name: 'Piselli Ribelli', en: 'Rebel Peas', sprite: 'enemy.piselli',
@@ -147,7 +147,7 @@ E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
   radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', split: { into: 'ananas_pezzo', count: 4 },
-  info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: '"Pineapple, a fruit, on a pizza?" — Gino D\'Acampo' },
+  info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: '"Pineapple, a fruit, on a pizza?" — Gino D\'Acampo on British TV (as reported)' },
 });
 E({
   id: 'ananas_pezzo', name: "Pezzo d'Ananas", en: 'Pineapple Chunk', sprite: 'enemy.ananas_pezzo',
@@ -213,7 +213,7 @@ E({
   id: 'smartphone', name: 'Il Telefonino Virale', en: 'The Viral Phone', sprite: 'enemy.smartphone',
   radius: 13, hp: 18, speed: 50, damage: 6, xp: 3, behavior: 'ranged', params: { min: 180, max: 280, cd: 3.4, shot: 'proj.e_generic', shotSpeed: 160, count: 2, spread: 0.24 },
   color: 'pink', juice: '#9ad7ff', chunk: 'glass',
-  info: { crime: 'Viral "Italian" recipe videos', why: 'Countertop spaghetti, oven-"boiled" raw spaghetti, gummy-candy pizza… every year a new video makes Italians reach for the comment box.', severity: 4, quote: 'Michelin-starred chef Bruno Barbieri posted his horrified reaction to TikTok\'s oven-baked raw spaghetti.' },
+  info: { crime: 'Viral "Italian" recipe videos', why: 'Countertop spaghetti, oven-"boiled" raw spaghetti, gummy-candy pizza… every year a new video makes Italians reach for the comment box.', severity: 4, quote: 'A Michelin-starred Italian TV chef posted a horrified reaction video to a viral recipe that "boiled" raw spaghetti in the oven.' },
 });
 E({
   id: 'pentola', name: 'Pentola Fredda', en: 'The Cold Pot', sprite: 'enemy.pentola',
@@ -255,13 +255,13 @@ E({
   id: 'scatoletta', name: 'Scatoletta Maledetta', en: 'The Cursed Little Can', sprite: 'enemy.scatoletta',
   radius: 14, hp: 16, speed: 80, damage: 16, xp: 3, behavior: 'kamikaze', params: { trigger: 62, fuse: 0.8, blast: 72 },
   color: 'cream', juice: '#f3e2b5', chunk: 'glass',
-  info: { crime: 'Canned carbonara', why: 'Carbonara is an emulsion made to order. A shelf-stable tin is its exact opposite — yet one launched in the UK in 2024.', severity: 4, quote: 'Roman chef Alessandro Pipero likened it to "cat food"; Gianfranco Vissani: "This is how you destroy Italian culture."' },
+  info: { crime: 'Canned carbonara', why: 'Carbonara is an emulsion made to order. A shelf-stable tin is its exact opposite — yet one launched in the UK in 2024.', severity: 4, quote: 'When a canned carbonara launched in 2024, Italian chefs were reported likening it to "cat food" — and calling it a way to "destroy Italian culture".' },
 });
 E({
   id: 'fantasma', name: 'Spaghetti Fantasma', en: 'Ghost Spaghetti', sprite: 'enemy.fantasma',
   radius: 15, hp: 26, speed: 58, damage: 8, xp: 3, behavior: 'ghost', params: { period: 1.6 }, flying: true,
   color: 'red', juice: '#c8421e', chunk: 'bread',
-  info: { crime: 'Spaghetti bolognese', why: "Bologna's ragù goes on fresh egg tagliatelle or into lasagne, not on dried spaghetti. It flickers in and out of existence — hit it while it's solid. (Fun fact: most Italians in the YouGov poll actually shrugged.)", severity: 3, quote: '"Spaghetti bolognese doesn\'t actually exist, yet it\'s famous the world over." — Bologna mayor Virginio Merola, 2019' },
+  info: { crime: 'Spaghetti bolognese', why: "Bologna's ragù goes on fresh egg tagliatelle or into lasagne, not on dried spaghetti. It flickers in and out of existence — hit it while it's solid. (Fun fact: most Italians in the YouGov poll actually shrugged.)", severity: 3, quote: '"Spaghetti bolognese doesn\'t actually exist, yet it\'s famous the world over." — the mayor of Bologna on Italian radio, 2019 (as reported)' },
 });
 
 // ---------------------------------------------------------------------------

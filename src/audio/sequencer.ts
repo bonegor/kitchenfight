@@ -409,6 +409,9 @@ export const pad =
     const out: Ev[] = [];
     let prev: number[] | null = null;
     const [from, to] = patRange(ctx, o);
+    // notes still held (for legato common tones): midi → event
+    let held = new Map<number, Ev>();
+    let heldEnd = -1;
     for (const span of ctx.chords) {
       const s0 = Math.max(span.s, from);
       const s1 = Math.min(span.s + span.d, to);
@@ -418,7 +421,20 @@ export const pad =
       const every = o.every ?? s1 - s0;
       for (let s = s0; s < s1 - 1e-9; s += every) {
         const d = Math.min(every, s1 - s);
-        for (const m of voicing) out.push({ s, d, m, v: o.vel ?? 0.6, ch, gate: o.gate ?? 1, pan: o.pan, vr: o.vr });
+        const next = new Map<number, Ev>();
+        for (const m of voicing) {
+          const h = held.get(m);
+          if (h && Math.abs(heldEnd - s) < 1e-9 && !o.every) {
+            h.d += d; // tie the common tone
+            next.set(m, h);
+          } else {
+            const e: Ev = { s, d, m, v: o.vel ?? 0.6, ch, gate: o.gate ?? 1, pan: o.pan, vr: o.vr };
+            out.push(e);
+            next.set(m, e);
+          }
+        }
+        held = next;
+        heldEnd = s + d;
       }
     }
     return out;
@@ -489,6 +505,18 @@ export function harmNote(m: number, c: Chord, scale: number[], sixth: boolean): 
     if (set.has(pcm(x))) count++;
   }
   return x;
+}
+
+const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+/** Transpose a chord string (e.g. 'Am:6 | E7:6') by semitones. */
+export function transposeChords(str: string, semis: number, flats = true): string {
+  const names = flats ? FLAT_NAMES : SHARP_NAMES;
+  return str.replace(/([A-G][#b]?)([^\s/:|]*)(?:\/([A-G][#b]?))?/g, (_m, root: string, q: string, b?: string) => {
+    const r = names[(parseChord(root).root + semis + 1200) % 12];
+    const bb = b ? '/' + names[(parseChord(b).root + semis + 1200) % 12] : '';
+    return r + q + bb;
+  });
 }
 
 /** Transform helpers */

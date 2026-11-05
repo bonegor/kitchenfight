@@ -150,6 +150,30 @@ function pineappleSkin(ctx: Ctx) {
   });
 }
 
+/**
+ * The armour lattice never animates, so it is painted once into an offscreen layer
+ * (at 4 px/unit — sharper than the sprite cache) and blitted into every frame.
+ */
+let skinLayer: { c: HTMLCanvasElement; x: number; y: number; w: number; h: number } | null = null;
+const SKIN_RES = 4;
+function drawSkinLayer(ctx: Ctx) {
+  if (!skinLayer) {
+    const pad = 4;
+    const w = BODY.rx * 2 * (1 + BODY.k) + pad * 2, h = BODY.ry * 2 + pad * 2;
+    const x = BODY.cx - w / 2, y = BODY.cy - h / 2;
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w * SKIN_RES);
+    c.height = Math.ceil(h * SKIN_RES);
+    const g = c.getContext('2d')!;
+    g.scale(SKIN_RES, SKIN_RES);
+    g.translate(-x, -y);
+    pineappleSkin(g);
+    skinLayer = { c, x, y, w, h };
+  }
+  const L = skinLayer;
+  ctx.drawImage(L.c, L.x, L.y, L.w, L.h);
+}
+
 /** Hibiscus flower for the lei. */
 function hibiscus(ctx: Ctx, x: number, y: number, r: number, col: string, rot: number) {
   ctx.save();
@@ -160,7 +184,8 @@ function hibiscus(ctx: Ctx, x: number, y: number, r: number, col: string, rot: n
       const a = (i / 5) * TAU;
       ellipsePath(c, Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55, r * 0.55, r * 0.42, a);
     }
-  }, { fill: col, ink: OUT_S * 0.9, shadow: shade(col, 0.25), shadowOffset: [-r * 0.2, -r * 0.2] });
+  }, { fill: col, ink: OUT_S * 0.9, shadow: 'none' });
+  fillPath(ctx, (c) => ellipsePath(c, r * 0.25, r * 0.3, r * 0.75, r * 0.5, 0.6), shade(col, 0.2), 0.45);
   fillPath(ctx, (c) => circlePath(c, 0, 0, r * 0.3), shade(col, 0.45));
   fillPath(ctx, (c) => circlePath(c, r * 0.05, -r * 0.05, r * 0.14), '#ffe14a');
   ctx.restore();
@@ -169,7 +194,7 @@ function hibiscus(ctx: Ctx, x: number, y: number, r: number, col: string, rot: n
 /** Flower lei draped across the belly. */
 function lei(ctx: Ctx, f: number) {
   const ph = phase(f);
-  const bounce = Math.sin(ph * 2) * 1.2;
+  const bounce = Math.cos(ph * 2) * 1.6; // bobs on every step
   const pts: Pt[] = [];
   for (let i = 0; i <= 10; i++) {
     const t = i / 10;
@@ -181,7 +206,7 @@ function lei(ctx: Ctx, f: number) {
   line(ctx, pts, 2.2, '#2b7a35', true, 1);
   const cols = ['#ff4f8b', '#fff1f0', '#ff9a2e', '#b45be6', '#ff4f8b', '#fff1f0', '#ff9a2e', '#ff4f8b', '#b45be6'];
   // little leaves between flowers
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 10; i += 2) {
     const p = pts[i], q = pts[i + 1];
     const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
     shape(ctx, (c) => ellipsePath(c, mx, my + 2, 4, 2, 0.6 + (i % 2) * 1.6), { fill: '#3fb04b', ink: 1.1, shadow: 'none' });
@@ -567,7 +592,7 @@ function drawAnanas(ctx: Ctx, p: Pose) {
 
   // ---- the body
   shape(ctx, bodyPath, { fill: GOLD, ink: OUT, shadow: 'none' });
-  pineappleSkin(ctx);
+  drawSkinLayer(ctx);
 
   // ---- front leaves (short ones sprouting over the top of the body)
   frontTuft(ctx, 2, leafY + 2, f, p.spread, p.flare);

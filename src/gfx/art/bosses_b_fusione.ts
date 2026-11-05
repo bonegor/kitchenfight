@@ -152,8 +152,8 @@ function drumstickLeg(ctx: Ctx, hx: number, hy: number, fx: number, fy: number, 
   };
   S(ctx, meat, { fill: CHICKEN, ink: OUT_IN, shadow: CHICKEN_SH, shadowOffset: [-4, -3], gloss: [{ x: -5, y: -6, rx: 3, ry: 5, rot: 0.3, alpha: 0.35 }] });
   clipTo(ctx, meat, () => {
-    speckle(ctx, 0, 0, 13, 17, 26, '#f4b45a', 1.5, seed, 0.9);
-    speckle(ctx, 2, 3, 13, 17, 16, '#8a4416', 1, seed + 5, 0.6);
+    speckle(ctx, 0, 0, 13, 17, 18, '#f4b45a', 1.7, seed, 0.9);
+    speckle(ctx, 2, 3, 13, 17, 10, '#8a4416', 1.1, seed + 5, 0.6);
   });
   ctx.restore();
 }
@@ -381,7 +381,7 @@ function drawFusione(ctx: Ctx, p: Pose) {
   ctx.save();
   ctx.translate(-22, PZ.y - PZ.ry + 12);
   ctx.rotate(-0.42);
-  pineappleCrown(ctx, 0, 0, 0.74, f, { spread: 0.62 + p.aura * 0.1, flare: p.tentacleFlare > 0 ? 0.7 : 0 });
+  pineappleCrown(ctx, 0, 0, 0.74, f, { spread: 0.62 + p.aura * 0.1, flare: p.tentacleFlare > 0 ? 0.7 : 0, lite: true });
   ctx.restore();
   // wild spaghetti hair sprouting from the top
   for (const [hx, ang, len, k] of [[8, -1.75, 26, 0], [20, -1.35, 22, 1], [-4, -2.05, 20, 2]] as [number, number, number, number][]) {
@@ -402,7 +402,7 @@ function drawFusione(ctx: Ctx, p: Pose) {
   // ---- THE PIZZA BODY
   // stuffed crust ring
   S(ctx, pizzaPath, { fill: CRUST, ink: OUT, shadow: CRUST_SH, shadowOffset: [-8, -7], gloss: [{ x: -40, y: -50, rx: 12, ry: 4, rot: -0.7, alpha: 0.35 }] });
-  speckle(ctx, PZ.x, PZ.y, PZ.rx - 3, PZ.ry - 3, 40, '#c87a34', 1.1, 3, 0.55);
+  speckle(ctx, PZ.x, PZ.y, PZ.rx - 3, PZ.ry - 3, 26, '#c87a34', 1.2, 3, 0.55);
   // crust cracks bursting with stuffed cheese
   for (const a of [-2.4, -1.1, 0.2, 1.3, 2.3, 3.0]) {
     const cx = PZ.x + Math.cos(a) * (PZ.rx - 5), cy = PZ.y + Math.sin(a) * (PZ.ry - 5);
@@ -445,7 +445,7 @@ function drawFusione(ctx: Ctx, p: Pose) {
       ctx.save();
       ctx.translate(hx, hy);
       ctx.rotate(R(i) * 2);
-      shape(ctx, (c) => roundRectPath(c, -4, -3.4, 8, 6.8, 1.4), { fill: '#f590a8', ink: 1.3, shadow: '#d8607e', shadowOffset: [-1, -1] });
+      shape(ctx, (c) => roundRectPath(c, -4, -3.4, 8, 6.8, 1.4), { fill: '#f590a8', ink: 1.3, shadow: 'none' });
       ctx.restore();
     }
     for (let i = 0; i < 4; i++) {
@@ -453,13 +453,14 @@ function drawFusione(ctx: Ctx, p: Pose) {
       ctx.save();
       ctx.translate(hx, hy);
       ctx.rotate(R(i + 9) * 2);
-      shape(ctx, (c) => polyPath(c, [[-4, -2.6], [4, -3], [3, 3], [-3, 2.8]]), { fill: '#fff07a', ink: 1.3, shadow: '#f2c23a', shadowOffset: [-0.8, -0.8] });
+      shape(ctx, (c) => polyPath(c, [[-4, -2.6], [4, -3], [3, 3], [-3, 2.8]]), { fill: '#fff07a', ink: 1.3, shadow: 'none' });
       ctx.restore();
     }
     for (let i = 0; i < 8; i++) {
       const px = -50 + R(i + 30) * 100, py = -62 + R(i + 50) * 90;
       if (Math.abs(px - 4) < 34 && py > -40 && py < 30) continue; // keep the face clear
-      shape(ctx, (c) => circlePath(c, px, py, 2.2), { fill: '#6fd04a', ink: 0.9, shadow: 'none', gloss: [{ x: px - 0.7, y: py - 0.8, rx: 0.8, ry: 0.5, alpha: 0.9 }] });
+      shape(ctx, (c) => circlePath(c, px, py, 2.2), { fill: '#6fd04a', ink: 0.9, shadow: 'none' });
+      fillPath(ctx, (c) => circlePath(c, px - 0.7, py - 0.8, 0.7), '#ffffff', 0.85);
     }
   });
   // glistening grease highlight

@@ -3,7 +3,7 @@
  */
 import {
   Ctx, Pt, shape, group, line, inkLine, ellipsePath, circlePath, smoothPath, blobPath, speckle, glint,
-  legs, mouth, shade, rng,
+  legs, eye, mouth, shade, rng,
 } from '../painter';
 import {
   TAU, LIMB, enemySprite, cyc, dripPath, hoseArm, eyePair, cheeks, clipTo,
@@ -267,20 +267,15 @@ function drawMacchiata(ctx: Ctx, f: number) {
     }
   });
 
-  // the crime: two glossy zig-zags of ketchup squeezed over the cheese
+  // ketchup splats & a stray squiggle, spinning with the pizza
   for (let k = 0; k < 2; k++) {
-    const a0 = spin * 2 + k * Math.PI - 0.55;
+    const a0 = spin * 2 + k * Math.PI + 0.5;
     const pts: Pt[] = [];
-    for (let i = 0; i <= 8; i++) {
-      const a = a0 + i * 0.135;
-      pts.push(P(a, i % 2 === 0 ? 0.5 : 0.88));
-    }
-    inkLine(ctx, pts, 1.05, KETCHUP, false, 0.6);
-    glint(ctx, pts[3][0], pts[3][1] - 0.2, 0.5, 0.28, 0, 0.9);
-  }
-  for (let k = 0; k < 4; k++) {
-    const [x, y] = P(spin + k * (Math.PI / 2) + 1.2, 0.95);
-    shape(ctx, (c) => circlePath(c, x, y, 0.85), { fill: KETCHUP, ink: 0.55, shadow: KETCHUP_SH, shadowOffset: [-0.3, -0.3] });
+    for (let i = 0; i <= 5; i++) pts.push(P(a0 + i * 0.16, i % 2 === 0 ? 0.74 : 0.92));
+    inkLine(ctx, pts, 1, KETCHUP, false, 0.55);
+    glint(ctx, pts[1][0], pts[1][1] - 0.2, 0.45, 0.25, 0, 0.9);
+    const [x, y] = P(a0 + 1.7, 0.8);
+    shape(ctx, (c) => blobPath(c, x, y, 1.3, 0.9, 0.3, 7, k + 3), { fill: KETCHUP, ink: 0.55, shadow: KETCHUP_SH, shadowOffset: [-0.3, -0.3] });
   }
 
   // central melted-mozzarella pool carrying the face (stays upright)
@@ -289,16 +284,23 @@ function drawMacchiata(ctx: Ctx, f: number) {
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * TAU;
       const k = 1 + 0.08 * Math.sin(i * 2.3 + 1);
-      pts.push([cx + 0.7 + Math.cos(a) * 6.9 * k, cy - 1.3 + Math.sin(a) * 5.1 * k]);
+      pts.push([cx + 0.7 + Math.cos(a) * 8.2 * k, cy - 1 + Math.sin(a) * 5.8 * k]);
     }
     smoothPath(c, pts, true);
   };
-  shape(ctx, pool, { fill: '#fff8e8', ink: 1.2, shadow: '#efd6ae', shadowOffset: [-1.3, -1.2], gloss: [{ x: cx - 3.6, y: cy - 4.8, rx: 1.8, ry: 0.7, rot: -0.3, alpha: 0.9 }] });
+  shape(ctx, pool, { fill: '#fff8e8', ink: 1.2, shadow: '#efd6ae', shadowOffset: [-1.3, -1.2], gloss: [{ x: cx - 4.4, y: cy - 4.8, rx: 1.8, ry: 0.7, rot: -0.3, alpha: 0.9 }] });
 
-  eyePair(ctx, cx + 1, cy - 3.2, 2.6, { sp: 7, look: [0.4, 0.14], near: 1.08, brow: 0.55, browDy: 1.45, browTh: 1.45, squash: 1.02 });
-  mouth(ctx, cx + 1.4, cy + 1.6, 6.6, 'snarl', { open: 1.05 });
-  // ketchup smeared on its cheek
-  shape(ctx, (c) => ellipsePath(c, cx - 5.3, cy + 1.5, 1.4, 0.8, 0.3), { fill: KETCHUP, ink: 0.6, shadow: 'none' });
+  // the face — drawn in ketchup: V-brows and a jagged snarl
+  eye(ctx, cx - 2.7, cy - 2.2, 2.8, { look: [0.42, 0.14], lid: 'angry-l', pupil: 0.52, squash: 1.04 });
+  eye(ctx, cx + 4.4, cy - 2.4, 3.05, { look: [0.42, 0.14], lid: 'angry-r', pupil: 0.52, squash: 1.04 });
+  inkLine(ctx, [[cx - 6, cy - 7.2], [cx - 0.6, cy - 5.4]], 1.3, KETCHUP, false, 0.6);
+  inkLine(ctx, [[cx + 1.6, cy - 5.6], [cx + 7.6, cy - 7.6]], 1.3, KETCHUP, false, 0.6);
+  const zz: Pt[] = [];
+  for (let i = 0; i <= 7; i++) zz.push([cx - 4.2 + i * 1.35, cy + 2.4 + (i % 2 ? 1.3 : -0.2) + (i === 0 || i === 7 ? -0.9 : 0)]);
+  inkLine(ctx, zz, 1.35, KETCHUP, false, 0.6);
+  glint(ctx, cx - 4.6, cy - 6.4, 0.5, 0.25, 0.3, 0.9);
+  // a drip of ketchup running off the snarl
+  shape(ctx, (c) => dripPath(c, cx + 4.6, cy + 3.2, 1, 2.2 + (f % 2) * 0.6), { fill: KETCHUP, ink: 0.55, shadow: 'none' });
 }
 
 enemySprite('macchiata', 46, 42, 24, drawMacchiata);

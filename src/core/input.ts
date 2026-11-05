@@ -140,7 +140,12 @@ export class Input {
       mx /= l; my /= l;
     }
     // gamepad
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let pads: (Gamepad | null)[] = [];
+    try {
+      pads = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+    } catch {
+      pads = []; // blocked by permissions policy (e.g. sandboxed iframe)
+    }
     for (const p of pads) {
       if (!p || !p.connected) continue;
       const ax = p.axes[0] ?? 0, ay = p.axes[1] ?? 0;
@@ -211,8 +216,12 @@ export class Input {
     this.pressedQ.clear();
   }
   get hasGamepad() {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (const p of pads) if (p && p.connected) return true;
+    try {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const p of pads) if (p && p.connected) return true;
+    } catch {
+      /* not allowed here */
+    }
     return false;
   }
 }

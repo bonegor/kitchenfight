@@ -4,11 +4,11 @@
  */
 import {
   Ctx, Pt, INK, shape, group, line, inkLine, ellipsePath, circlePath, roundRectPath, polyPath,
-  speckle, glint, legs, eye, brow, mouth, shade, light, rng, vgrad,
+  speckle, glint, legs, eye, brow, mouth, shade, rng, vgrad,
 } from '../painter';
 import {
-  TAU, LIMB, GLOVE, enemySprite, cyc, dripPath, cylPath, ringPath, heartPath, steamCurl, hoseArm,
-  eyePair, cheeks, clipTo, shakeLines, mitt, twinkle,
+  TAU, LIMB, enemySprite, cyc, dripPath, cylPath, ringPath, heartPath, steamCurl, hoseArm,
+  eyePair, cheeks, clipTo, shakeLines,
 } from './enemies_b_kit';
 import { moustache } from './hero';
 
@@ -54,7 +54,9 @@ function drawCappuccino(ctx: Ctx, f: number) {
   const { ph, s } = cyc(f);
 
   // legs under the saucer
-  legs(ctx, 0, 8.6, f, { len: 4.4, spread: 11, thick: 2.4, color: LIMB, shoe: '#3a2620', stride: 4.2 });
+  legs(ctx, 0, 7.4, f, { len: 5.6, spread: 11, thick: 2.4, color: LIMB, shoe: '#3a2620', stride: 4.6 });
+  ctx.save();
+  ctx.translate(0, -1.8);
 
   // saucer
   shape(ctx, (c) => ellipsePath(c, 0, 8.8, 13, 3.4), { fill: CUP_SH, ink: 2, shadow: 'none' });
@@ -140,6 +142,7 @@ function drawCappuccino(ctx: Ctx, f: number) {
   // steam
   steamCurl(ctx, -3.4, -26, 8, ph, 1.5, 0.55);
   steamCurl(ctx, 4.6, -26.8, 7, ph + 2.2, 1.3, 0.45);
+  ctx.restore();
 }
 
 enemySprite('cappuccino', 48, 56, 38, drawCappuccino, 25);
@@ -459,36 +462,30 @@ function drawSmartphone(ctx: Ctx, f: number) {
     polyPath(ctx, [[-7, -12], [7, -24], [7, -19], [-7, -7]]);
     ctx.fill();
     ctx.restore();
-    // pixel face (angry V-brows, chunky eyes, evil grin)
-    const p = 1.55;
-    const ox = -6.2, oy = -19.8;
-    const map = [
-      'B......B',
-      '.BB..BB.',
-      '..B..B..',
-      '.EE..EE.',
-      '.EE..EE.',
-      '........',
-      'M......M',
-      '.MMMMMM.',
-    ];
+    // pixel face: chunky square eyes, stepped V-brows, lopsided smirk
+    const px = (x: number, y: number, w: number, h: number) => ctx.fillRect(x, y, w, h);
+    const u = 1.45;
     ctx.fillStyle = PIX;
-    map.forEach((row, j) => {
-      for (let i = 0; i < row.length; i++) {
-        if (row[i] === '.') continue;
-        ctx.fillRect(ox + i * p, oy + j * p, p + 0.05, p + 0.05);
-      }
-    });
-    // eye glints (looking right) + teeth
+    px(-5.4, -16, 4.3, 4.3);
+    px(1.2, -16, 4.6, 4.6);
+    for (let i = 0; i < 3; i++) {
+      px(-6.2 + i * u, -20.4 + i * u * 0.55, u + 0.05, u);
+      px(5.3 - i * u, -20.6 + i * u * 0.55, u + 0.05, u);
+    }
+    // smirk: flat on the left, hooked up on the right
+    for (let i = 0; i < 6; i++) px(-4.6 + i * u, -8.6, u + 0.05, u);
+    px(-4.6 + 6 * u, -8.6 - u, u + 0.05, u);
+    px(-4.6 + 7 * u - 0.3, -8.6 - 2 * u, u + 0.05, u);
+    px(-4.6 - u, -8.6 + 0.2, u, u * 0.8);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ox + 2 * p + 0.3, oy + 3 * p + 0.25, 0.85, 0.85);
-    ctx.fillRect(ox + 6 * p + 0.3, oy + 3 * p + 0.25, 0.85, 0.85);
-    ctx.fillRect(ox + 2 * p + 0.2, oy + 7 * p + 0.1, 0.8, 0.8);
-    ctx.fillRect(ox + 5 * p + 0.2, oy + 7 * p + 0.1, 0.8, 0.8);
+    px(-2.6, -15.4, 1.2, 1.2);
+    px(4.1, -15.4, 1.3, 1.3);
+    px(-3.1, -8.6 + u, 1.1, 0.9);
+    px(0.2, -8.6 + u, 1.1, 0.9);
     // pink pixel blush
-    ctx.fillStyle = 'rgba(255,90,140,0.55)';
-    ctx.fillRect(ox - 0.2, oy + 5 * p, p, p * 0.8);
-    ctx.fillRect(ox + 7 * p + 0.2, oy + 5 * p, p, p * 0.8);
+    ctx.fillStyle = 'rgba(255,90,140,0.6)';
+    px(-6.4, -11.2, 1.6, 1.1);
+    px(5.4, -11.4, 1.6, 1.1);
   });
   // status bar: REC dot (blinking) + battery
   const rec = f < 2;
@@ -520,4 +517,3 @@ function drawSmartphone(ctx: Ctx, f: number) {
 
 enemySprite('smartphone', 42, 52, 33, drawSmartphone);
 
-void light; void speckle; void mitt; void twinkle; void GLOVE; void eyePair;

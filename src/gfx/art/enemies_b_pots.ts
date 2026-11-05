@@ -7,12 +7,11 @@ import {
   smoothPath, speckle, glint, legs, eye, brow, mouth, shade, rng,
 } from '../painter';
 import {
-  TAU, LIMB, enemySprite, cyc, dripPath, cylPath, ringPath, hoseArm, eyePair, cheeks, clipTo,
+  LIMB, enemySprite, cyc, dripPath, cylPath, ringPath, hoseArm, eyePair, cheeks, clipTo,
   shakeLines, twinkle, snowflake, puff, steamCurl,
 } from './enemies_b_kit';
 
 const PASTA = '#f6d27a';
-const PASTA_SH = '#d9a447';
 
 // ---------------------------------------------------------------------------
 // 8. PENTOLA FREDDA — r15. A frozen pot with icicle eyebrows and a block of
@@ -608,4 +607,3 @@ function drawParmesan(ctx: Ctx, f: number) {
 
 enemySprite('parmesan', 42, 56, 37, drawParmesan);
 
-void mouth; void eyePair; void TAU; void twinkle;

@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "build:single": "tsc --noEmit && vite build --mode single",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:play": "npm run build:single && node -e \"const fs=require('fs');fs.mkdirSync('play',{recursive:true});fs.copyFileSync('dist-single/index.html','play/kitchenfight.html')\""
   },
   "devDependencies": {
     "@fontsource/lilita-one": "^5.2.5",
