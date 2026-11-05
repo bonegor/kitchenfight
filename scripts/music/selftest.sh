@@ -121,14 +121,14 @@ export const funiculiDoubled: SongDef = {
   },
 };
 
-// instrument ids the synth registry does not know yet (sampler adds them later): render-song.mjs
-// must list them as SKIPPED instead of failing
+// an instrument id the registry does not know: render-song.mjs must list it as SKIPPED
+// instead of failing
 export const funiculiNewInstruments: SongDef = {
   ...funiculiRefrain,
   id: 'funiculiNewInstruments',
   channels: {
     ...funiculiRefrain.channels,
-    mel: { inst: 'clarinet', gain: -2, pan: 0, send: 0.18 },
+    mel: { inst: 'kazooNotReal', gain: -2, pan: 0, send: 0.18 },
   },
 };
 SCRATCH_SONG
@@ -307,7 +307,7 @@ echo "== 3c. export-song reproduces the sequencer (all game tracks: events, form
 GREP='^ok +title' check 'export-song == compileSong for all 10 tracks' 0 node scripts/music/selftest/formcheck.mjs
 
 echo "== 4. render-song"
-GREP='SKIPPED \(unknown instrument ids\): mel=clarinet' check 'unknown instrument listed as skipped (exit 1)' 1 node scripts/music/render-song.mjs --file $FIX --export funiculiNewInstruments "$T/x.wav" --no-channels
+GREP='SKIPPED \(unknown instrument ids\): mel=kazooNotReal' check 'unknown instrument listed as skipped (exit 1)' 1 node scripts/music/render-song.mjs --file $FIX --export funiculiNewInstruments "$T/x.wav" --no-channels
 GREP='seam mismatch -1[0-9][0-9]' check 'game track renders, seamless loop (menu)' 0 node scripts/music/render-song.mjs menu "$T/m.wav" --no-channels
 GREP='^ok$' check 'K-weighting = ITU-R BS.1770 coefficients at 48 kHz' 0 node -e "import('./scripts/music/render-song.mjs').then(({ kWeightCoefs }) => {
   const { shelf, rlb } = kWeightCoefs(48000);

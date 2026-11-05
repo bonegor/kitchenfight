@@ -15,6 +15,9 @@
  *   --target -16.4    loudness target in LUFS (default -16.4 = what the current tracks measure, -16.3..-16.5)
  *   --tol-lu 1.5      allowed deviation from the target before warning (LU)
  *   --json            machine-readable report on stdout
+ *   --synth           render with the synthesized instruments only (default: when the worktree has
+ *                     the recorded-instrument bank, it is installed exactly like the game's music
+ *                     worker does, so levels and balance are measured on the real samples)
  *
  * Report: duration, loop window (intro / loop body, seconds and bars), sample peak (dBFS),
  * RMS (dBFS), integrated loudness (ITU-R BS.1770 K-weighting and gating, LUFS; agrees with
@@ -25,14 +28,15 @@
  * solo levels (LUFS, peak, share of the mix) and warnings — sequencer warnings (bad bar lengths),
  * channels whose instrument id the renderer does not know (they are SKIPPED: silent in the game
  * until the sampler provides them), clipping, level off target, inaudible channels.
- * Sampled instruments: in Node there are no decoded sample banks, so every instrument renders
- * with its synth version (the sampler team provides the sampled renderer).
+ * Sampled instruments: the MP3 sprites in src/audio/assets/inst are decoded with ffmpeg and
+ * registered through src/audio/sampled.ts (installSampleBank), as in the game; pass --synth to
+ * hear the synth fallbacks instead (also used automatically when the bank is missing).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { extractSong } from './export-song.mjs';
-import { loadAudio, parseArgs, resolveSong } from './lib/bundle.mjs';
+import { installSamples, loadAudio, parseArgs, resolveSong } from './lib/bundle.mjs';
 
 const db = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
 const fmt = (x, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : '-inf');
@@ -352,7 +356,7 @@ async function main() {
     if (e.code === 'EPIPE') process.exit(0);
     throw e;
   });
-  const { pos, opt } = parseArgs(process.argv.slice(2), ['float', 'no-channels', 'json', 'help']);
+  const { pos, opt } = parseArgs(process.argv.slice(2), ['float', 'no-channels', 'json', 'help', 'synth']);
   if (opt.help || (!pos.length && !opt.all)) {
     const src = fs.readFileSync(new URL(import.meta.url), 'utf8');
     process.stdout.write(src.slice(src.indexOf('/**') + 3, src.indexOf('*/')).replace(/^ \* ?/gm, '') + '\n');
@@ -361,7 +365,9 @@ async function main() {
   const sr = opt.sr ? Number(opt.sr) : 48000;
   const loops = opt.loops ? Number(opt.loops) : 1;
   const o = { sr, channels: !opt['no-channels'], target: opt.target !== undefined ? Number(opt.target) : -16.4, tolLu: opt['tol-lu'] !== undefined ? Number(opt['tol-lu']) : 1.5 };
-  const mods = await loadAudio({ render: true, songFile: opt.file });
+  const mods = await loadAudio({ render: true, songFile: opt.file, samples: !opt.synth });
+  const bank = opt.synth ? null : installSamples(mods);
+  if (!opt.json) process.stdout.write(bank ? `instruments: recorded samples (${bank.sets} sets, decoded in ${bank.ms} ms)\n` : 'instruments: SYNTH fallbacks only (--synth or no sample bank in this worktree)\n');
   const jobs = [];
   if (opt.all) {
     const dir = typeof opt.all === 'string' ? opt.all : pos[0];

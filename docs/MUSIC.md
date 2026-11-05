@@ -227,8 +227,12 @@ Warnings cover:
 - seam mismatch;
 - channels whose loudest 3 s are more than 30 LU below the mix.
 
-In Node there are no decoded sample banks, so sampled instruments render with their synth
-fallback. The sampler team will provide a sampled renderer.
+Renders use the recorded instruments: render-song decodes the MP3 sprites in
+`src/audio/assets/inst/` with ffmpeg (about 6 s) and registers them through
+`src/audio/sampled.ts` (`installSampleBank`), exactly as the game's music worker does. The first
+report line says which bank was used. `--synth` renders the synth fallbacks instead (also the
+automatic fallback when the worktree has no sample bank). Measure levels and balance on sample
+renders: the recorded bank measures about 2 LU quieter than the synth versions of the old tracks.
 
 ### `selftest.sh`: check the tools
 
