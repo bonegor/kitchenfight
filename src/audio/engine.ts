@@ -15,6 +15,7 @@ import type { AudioAPI, MusicId, SfxId, SfxOpts, VoiceMood } from './audio';
 import { clamp, Slicer, yieldToLoop } from './dsp';
 import { renderSong } from './render';
 import { SFX, SFX_IDS, renderSfx } from './sfx';
+import { SfxSamples } from './sfxsamples';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
 import RenderWorker from './worker?worker&inline';
@@ -54,6 +55,8 @@ interface Voice {
   src: AudioBufferSourceNode;
   gain: GainNode;
   end: number;
+  /** second source of a layered sfx (recorded + synthesized) */
+  extra?: AudioBufferSourceNode;
 }
 
 interface Pending {
@@ -157,7 +160,8 @@ export class AudioEngine implements AudioAPI {
   private musicWorker = new WorkerPort();
   private fxWorker = new WorkerPort();
 
-  // sfx
+  // sfx: recorded MP3 variants (sfxsamples.ts) when decoded, else the synthesized buffers
+  private rec = new SfxSamples();
   private sfxBufs = new Map<string, AudioBuffer>();
   private sfxState = new Map<SfxId, { last: number; voices: Voice[]; lastVariant: number }>();
   private activeVoices = 0;
@@ -169,6 +173,15 @@ export class AudioEngine implements AudioAPI {
 
   private suspendedByVisibility = false;
   private listening = false;
+
+  constructor() {
+    // decode the recorded sfx in the background right away (OfflineAudioContext: no user gesture needed)
+    try {
+      setTimeout(() => this.rec.load(), 0);
+    } catch {
+      /* ignore: retried at unlock */
+    }
+  }
 
   get ready(): boolean {
     return !!this.ctx && this.ctx.state === 'running';
@@ -196,6 +209,7 @@ export class AudioEngine implements AudioAPI {
           /* ignore */
         }
         void this.prerenderSfx();
+        this.rec.load(this.ctx); // no-op unless it could not start without a context
         // tracks rendered before unlock become AudioBuffers lazily; start a wanted track now
         if (this.wanted) {
           const id = this.wanted;
@@ -713,7 +727,7 @@ export class AudioEngine implements AudioAPI {
       const now = ctx.currentTime;
       let st = this.sfxState.get(id);
       if (!st) {
-        st = { last: -1, voices: [], lastVariant: -1 };
+        st = { last: -Infinity, voices: [], lastVariant: -1 };
         this.sfxState.set(id, st);
       }
       if (now - st.last < (def.minGap ?? 0.02)) return;
@@ -724,24 +738,39 @@ export class AudioEngine implements AudioAPI {
         const old = st.voices.shift();
         if (old) this.killVoice(old, now);
       }
-      if (this.activeVoices >= MAX_SFX_VOICES) return;
-      const nv = def.variants ?? 1;
+      if (this.activeVoices >= MAX_SFX_VOICES && !def.priority) return;
+      const rec = this.rec.get(id);
+      const nv = rec ? rec.bufs.length : def.variants ?? 1;
       let variant = nv > 1 ? Math.floor(Math.random() * nv) : 0;
       if (nv > 1 && variant === st.lastVariant) variant = (variant + 1) % nv;
       st.lastVariant = variant;
-      const buf = this.makeSfxBuffer(id, variant);
+      const buf = rec ? rec.bufs[variant] : this.makeSfxBuffer(id, variant);
       if (!buf) return;
-      const pv = def.pitchVar ?? 0.03;
-      const vv = def.volVar ?? 0.06;
+      // recorded + synthesized layer (e.g. pickup_xp keeps its clear synthesized pitch on top of the glockenspiel)
+      const synBuf = rec && rec.synth > 0 ? this.makeSfxBuffer(id, variant % (def.variants ?? 1)) : null;
+      const pv = rec ? rec.pitchVar : def.pitchVar ?? 0.03;
+      const vv = rec ? rec.volVar : def.volVar ?? 0.06;
       const rate = clamp(num(opts?.pitch, 1) * (1 + (Math.random() * 2 - 1) * pv), 0.25, 4);
       const vol = clamp(num(opts?.volume, 1), 0, 2) * (1 + (Math.random() * 2 - 1) * vv);
       if (vol <= 0.001) return;
+      const recGain = rec ? rec.gains[variant] ?? 1 : 1;
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.playbackRate.value = rate;
       const g = ctx.createGain();
-      g.gain.value = vol;
+      g.gain.value = vol * recGain;
       src.connect(g);
+      let extra: AudioBufferSourceNode | null = null;
+      let extraGain: GainNode | null = null;
+      if (synBuf && rec) {
+        extra = ctx.createBufferSource();
+        extra.buffer = synBuf;
+        extra.playbackRate.value = rate;
+        extraGain = ctx.createGain();
+        extraGain.gain.value = rec.synth / Math.max(1e-6, recGain);
+        extra.connect(extraGain);
+        extraGain.connect(g);
+      }
       let pan: StereoPannerNode | null = null;
       const p = num(opts?.pan, 0);
       if (Math.abs(p) > 0.01 && typeof ctx.createStereoPanner === 'function') {
@@ -750,14 +779,19 @@ export class AudioEngine implements AudioAPI {
         g.connect(pan);
         pan.connect(this.sfxVol);
       } else g.connect(this.sfxVol);
-      const voice: Voice = { src, gain: g, end: now + buf.duration / rate + 0.02 };
+      const dur = Math.max(buf.duration, synBuf ? synBuf.duration : 0);
+      const voice: Voice = { src, gain: g, end: now + dur / rate + 0.02, extra: extra ?? undefined };
       st.voices.push(voice);
       st.last = now;
       this.activeVoices++;
-      src.onended = () => {
+      // the longer source ends the voice (and frees the shared nodes)
+      const last = extra && synBuf && synBuf.duration > buf.duration ? extra : src;
+      last.onended = () => {
         this.activeVoices = Math.max(0, this.activeVoices - 1);
         try {
           src.disconnect();
+          extra?.disconnect();
+          extraGain?.disconnect();
           g.disconnect();
           pan?.disconnect();
         } catch {
@@ -765,6 +799,7 @@ export class AudioEngine implements AudioAPI {
         }
       };
       src.start(now);
+      extra?.start(now);
     } catch {
       /* ignore */
     }
@@ -776,6 +811,7 @@ export class AudioEngine implements AudioAPI {
       v.gain.gain.setValueAtTime(v.gain.gain.value, now);
       v.gain.gain.linearRampToValueAtTime(0, now + 0.015);
       v.src.stop(now + 0.02);
+      v.extra?.stop(now + 0.02);
     } catch {
       /* ignore */
     }

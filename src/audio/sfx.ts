@@ -27,6 +27,8 @@ export interface SfxDef {
   stereo?: boolean;
   /** if true, a new trigger past maxVoices is dropped instead of stealing the oldest */
   drop?: boolean;
+  /** rare, important cue: still plays when the global voice cap is reached */
+  priority?: boolean;
   gen(g: Gen): void;
 }
 
@@ -307,6 +309,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   ui_confirm: {
+    priority: true,
     len: 0.5,
     gain: -9,
     maxVoices: 2,
@@ -318,6 +321,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   ui_buy: {
+    priority: true,
     len: 0.75,
     gain: -8,
     maxVoices: 2,
@@ -333,6 +337,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   ui_error: {
+    priority: true,
     len: 0.26,
     gain: -15,
     maxVoices: 1,
@@ -345,6 +350,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   ui_unlock: {
+    priority: true,
     len: 1.2,
     gain: -8,
     maxVoices: 1,
@@ -370,6 +376,7 @@ export const SFX: Record<SfxId, SfxDef> = {
 
   // ---------------------------------------------------------------- progression
   levelup: {
+    priority: true,
     len: 1.4,
     gain: -5,
     maxVoices: 1,
@@ -391,6 +398,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   chest_drop: {
+    priority: true,
     len: 0.7,
     gain: -7,
     maxVoices: 2,
@@ -405,6 +413,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   chest_open: {
+    priority: true,
     len: 1.7,
     gain: -6,
     maxVoices: 1,
@@ -428,6 +437,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   chest_reward: {
+    priority: true,
     len: 1.1,
     gain: -8,
     maxVoices: 2,
@@ -439,6 +449,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   evolution: {
+    priority: true,
     len: 2.6,
     gain: -4,
     maxVoices: 1,
@@ -469,6 +480,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   new_weapon: {
+    priority: true,
     len: 0.9,
     gain: -7,
     maxVoices: 1,
@@ -513,6 +525,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   pickup_heal: {
+    priority: true,
     len: 0.7,
     gain: -10,
     maxVoices: 2,
@@ -525,6 +538,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   pickup_bell: {
+    priority: true,
     len: 1.6,
     gain: -6,
     maxVoices: 1,
@@ -537,6 +551,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   pickup_spumante: {
+    priority: true,
     len: 1.5,
     gain: -6,
     maxVoices: 1,
@@ -553,6 +568,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   pickup_gelato: {
+    priority: true,
     len: 1.1,
     gain: -8,
     maxVoices: 1,
@@ -567,6 +583,7 @@ export const SFX: Record<SfxId, SfxDef> = {
 
   // ---------------------------------------------------------------- player
   player_hurt: {
+    priority: true,
     len: 0.2,
     gain: -11,
     variants: 3,
@@ -581,6 +598,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   player_death: {
+    priority: true,
     len: 1.5,
     gain: -6,
     maxVoices: 1,
@@ -594,6 +612,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   player_revive: {
+    priority: true,
     len: 1.4,
     gain: -6,
     maxVoices: 1,
@@ -607,6 +626,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   low_hp: {
+    priority: true,
     len: 0.5,
     gain: -6,
     maxVoices: 1,
@@ -737,6 +757,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   elite_spawn: {
+    priority: true,
     len: 1.3,
     gain: -6,
     maxVoices: 1,
@@ -769,6 +790,7 @@ export const SFX: Record<SfxId, SfxDef> = {
 
   // ---------------------------------------------------------------- bosses
   boss_warning: {
+    priority: true,
     len: 2.1,
     gain: -6,
     maxVoices: 1,
@@ -794,6 +816,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   boss_roar: {
+    priority: true,
     len: 1.4,
     gain: -5,
     maxVoices: 1,
@@ -812,6 +835,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   boss_slam: {
+    priority: true,
     len: 1.0,
     gain: -4,
     maxVoices: 2,
@@ -838,6 +862,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     },
   },
   boss_death: {
+    priority: true,
     len: 3.0,
     gain: -3,
     maxVoices: 1,
