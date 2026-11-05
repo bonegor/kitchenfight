@@ -113,12 +113,13 @@ export function heartPath(c: Ctx, x: number, y: number, s: number) {
 
 /** A drip hanging from (x,y): top width w, total length len, bulb at the bottom. */
 export function dripPath(c: Ctx, x: number, y: number, w: number, len: number) {
+  // wound clockwise (like arc/ellipse/roundRect) so it unions cleanly with puffs in the same path
   const rb = Math.max(0.6, w * 0.42);
   const cy = y + len - rb;
-  c.moveTo(x - w / 2, y - 0.5);
-  c.bezierCurveTo(x - w / 2, y + (cy - y) * 0.45, x - rb * 0.8, cy - rb * 1.2, x - rb, cy);
-  c.arc(x, cy, rb, Math.PI, 0, true);
-  c.bezierCurveTo(x + rb * 0.8, cy - rb * 1.2, x + w / 2, y + (cy - y) * 0.45, x + w / 2, y - 0.5);
+  c.moveTo(x + w / 2, y - 0.5);
+  c.bezierCurveTo(x + w / 2, y + (cy - y) * 0.45, x + rb * 0.8, cy - rb * 1.2, x + rb, cy);
+  c.arc(x, cy, rb, 0, Math.PI, false);
+  c.bezierCurveTo(x - rb * 0.8, cy - rb * 1.2, x - w / 2, y + (cy - y) * 0.45, x - w / 2, y - 0.5);
   c.closePath();
 }
 
@@ -137,7 +138,7 @@ export function fist(
   y: number,
   r: number,
   rot: number,
-  o: { fill?: string; shadow?: string; cuff?: string; ink?: number; thumbUp?: boolean } = {},
+  o: { fill?: string; shadow?: string; cuff?: string; ink?: number; thumbUp?: boolean; crease?: string } = {},
 ) {
   const fill = o.fill ?? '#fbf6ea';
   const sh = o.shadow ?? '#c9cbdb';
@@ -158,7 +159,7 @@ export function fist(
   }, { fill, ink, shadow: sh, shadowOffset: [-r * 0.24, -r * 0.26], gloss: [{ x: -r * 0.3, y: -r * 0.45, rx: r * 0.35, ry: r * 0.2, rot: -0.3, alpha: 0.6 }] });
   // finger creases (knuckle side)
   for (const k of [-0.32, 0.08, 0.46]) {
-    line(ctx, [[r * 0.42, k * r - r * 0.06], [r * 1.0, k * r + r * 0.02]], Math.max(0.9, ink * 0.5), shade(fill, 0.35));
+    line(ctx, [[r * 0.42, k * r - r * 0.06], [r * 1.0, k * r + r * 0.02]], Math.max(0.9, ink * 0.5), o.crease ?? shade(fill, 0.35));
   }
   // thumb
   if (o.thumbUp) {
@@ -299,9 +300,10 @@ export function gem(ctx: Ctx, x: number, y: number, r: number, fill: string, ink
 export function bubblePath(c: Ctx, x: number, y: number, w: number, h: number, tail: number) {
   const r = Math.min(w, h) * 0.45;
   roundRectPath(c, x - w / 2, y - h / 2, w, h, r);
-  c.moveTo(x - w * 0.12, y + h / 2 - 0.5);
+  // tail wound the same way as the rounded rect (clockwise) so the overlap doesn't punch a hole
+  c.moveTo(x + w * 0.14, y + h / 2 - 0.5);
   c.lineTo(x - w * 0.18 + tail, y + h / 2 + h * 0.42);
-  c.lineTo(x + w * 0.14, y + h / 2 - 0.5);
+  c.lineTo(x - w * 0.12, y + h / 2 - 0.5);
   c.closePath();
 }
 

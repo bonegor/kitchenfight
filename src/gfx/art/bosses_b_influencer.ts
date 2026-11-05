@@ -465,7 +465,7 @@ function drawInfluencer(ctx: Ctx, p: Pose) {
   const [sx, sy] = p.stick;
   limb(ctx, [[-18, -6], [sx - 6, (sy - 6) / 2 + 8], [sx, sy + 2]], 10, LILAC, OUT_IN, LILAC_SH);
   selfieStick(ctx, sx, sy, p.stickAng, 66, f);
-  fist(ctx, sx, sy, 7, p.stickAng, { fill: SKIN, shadow: SKIN_SH, cuff: LILAC, ink: OUT_IN });
+  fist(ctx, sx, sy, 7, p.stickAng, { fill: SKIN, shadow: SKIN_SH, cuff: LILAC, ink: OUT_IN, crease: '#e8a690' });
 
   // body: lilac hoodie + white apron with a heart
   const torso = (c: Ctx) => {
@@ -514,7 +514,7 @@ function drawInfluencer(ctx: Ctx, p: Pose) {
   const [px, py] = p.pan;
   oneSadPan(ctx, px + 37, py - 2, p.panTilt, f, p.flash);
   limb(ctx, [[19, -6], [px - 8, py + 10], [px - 1, py + 1]], 10, LILAC, OUT_IN, LILAC_SH);
-  fist(ctx, px, py, 7.4, p.panTilt, { fill: SKIN, shadow: SKIN_SH, cuff: LILAC, ink: OUT_IN });
+  fist(ctx, px, py, 7.4, p.panTilt, { fill: SKIN, shadow: SKIN_SH, cuff: LILAC, ink: OUT_IN, crease: '#e8a690' });
 
   ctx.restore();
 

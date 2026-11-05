@@ -129,7 +129,7 @@ function drawAlfredo(ctx: Ctx, f: number) {
   line(ctx, [[14.6, 6], [17.4, 7.6], [19.6, 6.6]], 0.7, '#fffaf0', true, 0.85);
 }
 
-enemySprite('alfredo', 52, 58, 38, drawAlfredo);
+enemySprite('alfredo', 52, 62, 39, drawAlfredo);
 
 // ---------------------------------------------------------------------------
 // 13. PATATINE DI PASTA — r9. A manic air-fried rigatone chip with a
@@ -170,7 +170,7 @@ function farfalle(ctx: Ctx, x: number, y: number, s: number, rot: number, flap: 
 function drawPastaChips(ctx: Ctx, f: number) {
   const { s } = cyc(f);
 
-  legs(ctx, 0.6, 5.6, f, { len: 3.4, spread: 6.4, thick: 1.8, color: LIMB, shoe: '#2d2422', stride: 3.4 });
+  legs(ctx, 0.6, 5.4, f, { len: 2.8, spread: 6.4, thick: 1.8, color: LIMB, shoe: '#2d2422', stride: 3.4 });
 
   // crumbs flying off behind
   for (let k = 0; k < 2; k++) {

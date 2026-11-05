@@ -308,9 +308,21 @@ export class Renderer {
     const def = e.def;
     let sid = def.sprite;
     let frame = e.boss ? Math.floor(this.t * 7 + e.id) & 3 : Math.floor(e.anim) & 3;
+    // behaviour-specific key frames (the art has poses for these)
+    if (def.behavior === 'charger') {
+      if (e.state === 1) frame = 1;
+      else if (e.state === 2) frame = e.timer < 0.12 ? 3 : 1;
+    } else if (def.behavior === 'hopper') {
+      frame = e.state === 1 ? 3 : e.squash > 0.3 ? 1 : 0;
+    }
     if (e.boss && e.attackPose > 0 && hasSprite(sid + '.attack')) {
       sid = sid + '.attack';
       frame = e.telegraph > 0 ? 0 : 1;
+    }
+    if (def.layers && e.layers < def.layers) {
+      const lost = def.layers - e.layers;
+      const peeled = def.sprite + (lost === 1 ? '_peel1' : '_peel2');
+      if (hasSprite(peeled)) sid = peeled;
     }
     if (!hasSprite(sid)) sid = def.sprite;
     const s = getSprite(sid);

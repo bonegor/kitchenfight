@@ -105,6 +105,8 @@ function foamCrown(ctx: Ctx, cx: number, rimY: number, rx: number, f: number, sw
     puffs.push([cx - rx * 0.6 + t * rx * 1.2, rimY - rx * 0.22 - Math.sin(t * Math.PI) * rx * 0.06 - swell * 3, rx * 0.22 * (1 + swell * 0.15)]);
   }
   const foam = (c: Ctx) => {
+    // continuous base so no rim outline peeks between the puffs
+    ellipsePath(c, cx, rimY - 1.5, rx * 0.97, rx * 0.15);
     for (const [x, y, r] of puffs) circlePath(c, x, y, r);
     for (const [dx, len] of drips) dripPath(c, cx + dx, rimY + 1, rx * 0.16, len + Math.sin(ph + dx) * 2 + swell * 3);
   };

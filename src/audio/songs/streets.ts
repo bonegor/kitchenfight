@@ -48,7 +48,7 @@ export const streets: SongDef = {
   humanize: 0.002,
   reverb: { rt60: 1.3, size: 0.95, damp: 0.5, predelay: 0.025, er: 0.4, hp: 320, lp: 7000, wet: 0.85 },
   channels: {
-    kick: { inst: 'kick', gain: -9, pan: 0, send: 0.0, hum: 0 },
+    kick: { inst: 'kick', gain: -11, pan: 0, send: 0.0, hum: 0 },
     clap: { inst: 'clap', gain: -10, pan: 0.05, send: 0.25, hum: 0 },
     hatO: { inst: 'hatO', gain: -15, pan: 0.3, send: 0.08, hum: 0 },
     hatC: { inst: 'hatC', gain: -17, pan: -0.25, send: 0.05, hum: 0 },

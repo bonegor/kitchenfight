@@ -169,7 +169,14 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const spread = P.spread ?? 0;
         for (let i = 0; i < n; i++) {
           const off = n > 1 ? (i / (n - 1) - 0.5) * spread * 2 : 0;
-          shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.5);
+          const sh = shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.5);
+          if (P.muzzle) {
+            sh.x = e.x + P.muzzle[0] * e.face * e.scale;
+            sh.y = e.y + P.muzzle[1] * e.scale;
+            sh.vx = Math.cos(Math.atan2(run.player.y - sh.y, run.player.x - sh.x) + off) * (P.shotSpeed ?? 160);
+            sh.vy = Math.sin(Math.atan2(run.player.y - sh.y, run.player.x - sh.x) + off) * (P.shotSpeed ?? 160);
+            sh.rot = Math.atan2(sh.vy, sh.vx);
+          }
         }
         e.attackPose = 0.3;
         e.face = t.dx > 0 ? 1 : -1;
@@ -249,7 +256,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
       e.y += e.vy * dt;
       if (Math.abs(e.vx) > 5) e.face = e.vx > 0 ? 1 : -1;
       e.aux += (Math.hypot(e.vx, e.vy) / e.r) * dt * (e.vx >= 0 ? 1 : -1);
-      e.anim += dt * 6;
+      e.anim += (dt * Math.hypot(e.vx, e.vy)) / 14;
       break;
     }
     case 'orbiter': {

@@ -39,6 +39,14 @@ function icicle(ctx: Ctx, x: number, y: number, w: number, len: number, rot = 0)
 }
 
 function drawPentola(ctx: Ctx, f: number) {
+  // lift the whole pot a touch so the boots land at y ≈ +r
+  ctx.save();
+  ctx.translate(0, -1.6);
+  paintPentola(ctx, f);
+  ctx.restore();
+}
+
+function paintPentola(ctx: Ctx, f: number) {
   const { ph, s } = cyc(f);
   const chatter = f % 2;
   const RIM = -9; // rim height
@@ -171,7 +179,7 @@ function drawPentola(ctx: Ctx, f: number) {
   steamCurl(ctx, -2.6, -27.6, 4.6, ph, 1.2, 0.5, '#e8f7ff');
 }
 
-enemySprite('pentola', 44, 52, 33, drawPentola);
+enemySprite('pentola', 46, 56, 37, drawPentola);
 
 // ---------------------------------------------------------------------------
 // 11. LA PENTOLA UNICA — r17. A dented, greedy stockpot overflowing with
@@ -321,7 +329,7 @@ function drawPentolaUnica(ctx: Ctx, f: number) {
   hoseArm(ctx, 16.4, -4.6, hx, hy + 1, { bend: 0.2, thick: 2.1, handR: 2.7 });
 }
 
-enemySprite('pentolaunica', 52, 58, 37, drawPentolaUnica);
+enemySprite('pentolaunica', 58, 60, 38, drawPentolaUnica);
 
 // ---------------------------------------------------------------------------
 // 14. SCATOLETTA MALEDETTA — r14. A cursed can of carbonara: rattling,
@@ -340,7 +348,7 @@ function drawScatoletta(ctx: Ctx, f: number) {
   const bulge = [1, 1.035, 1, 1.07][f];
   const lift = [0.4, 1.6, 0.8, 2.8][f];
 
-  legs(ctx, 0, 10, f, { len: 3.8, spread: 11, thick: 2.4, color: LIMB, shoe: '#2d2422', stride: 3.4 });
+  legs(ctx, 0, 10, f, { len: 2.8, spread: 11, thick: 2.4, color: LIMB, shoe: '#2d2422', stride: 3.4 });
 
   ctx.save();
   ctx.translate(0, 10);
@@ -511,7 +519,7 @@ function questionMark(ctx: Ctx, x: number, y: number, h: number, col: string) {
 function drawParmesan(ctx: Ctx, f: number) {
   const { s } = cyc(f);
 
-  legs(ctx, 0, 9.6, f, { len: 4.2, spread: 9, thick: 2.3, color: LIMB, shoe: '#2d2422', stride: 3.6 });
+  legs(ctx, 0, 9.6, f, { len: 3.2, spread: 9, thick: 2.3, color: LIMB, shoe: '#2d2422', stride: 3.6 });
 
   // standing flip lid (we see its underside) with a big "?" on it
   const lid = (c: Ctx) => {

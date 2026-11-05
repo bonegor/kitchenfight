@@ -91,7 +91,7 @@ E({
 });
 E({
   id: 'ketchup', name: 'Spruzzatore Rosso', en: 'The Red Squirter', sprite: 'enemy.ketchup',
-  radius: 14, hp: 13, speed: 52, damage: 6, xp: 2, behavior: 'ranged', params: { min: 150, max: 260, cd: 3.4, shot: 'proj.e_ketchup', shotSpeed: 140, count: 1, spread: 0 },
+  radius: 14, hp: 13, speed: 52, damage: 6, xp: 2, behavior: 'ranged', params: { min: 150, max: 260, cd: 3.4, shot: 'proj.e_ketchup', shotSpeed: 140, count: 1, spread: 0, muzzle: [4.6, -35] },
   color: 'red', juice: '#d8231f', chunk: 'plastic',
   info: { crime: 'Ketchup on pasta', why: "Sweet, vinegary and processed — the opposite of a slow-cooked tomato sauce. In a 2022 YouGov survey Italians rated it their #1 food crime (net score −82).", severity: 5, quote: '"The most distressing abuse of Italian food is having ketchup with pasta." — YouGov' },
 });

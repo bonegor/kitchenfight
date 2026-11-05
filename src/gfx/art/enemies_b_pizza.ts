@@ -165,7 +165,7 @@ function drawHawaiana(ctx: Ctx, f: number) {
   ctx.restore();
 }
 
-enemySprite('hawaiana', 46, 50, 31, drawHawaiana);
+enemySprite('hawaiana', 52, 54, 32, drawHawaiana);
 
 // ---------------------------------------------------------------------------
 // 5. MARGHERITA MACCHIATA — r14. A ketchup-stained pizza spinning like a UFO.

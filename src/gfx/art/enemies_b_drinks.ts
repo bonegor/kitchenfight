@@ -142,7 +142,7 @@ function drawCappuccino(ctx: Ctx, f: number) {
   steamCurl(ctx, 4.6, -26.8, 7, ph + 2.2, 1.3, 0.45);
 }
 
-enemySprite('cappuccino', 48, 52, 34, drawCappuccino, 25);
+enemySprite('cappuccino', 48, 56, 38, drawCappuccino, 25);
 
 // ---------------------------------------------------------------------------
 // 6. FRAPPÈ ZUCCHEROSO — r14. A sugar-rushing iced coffee cup: whipped-cream
@@ -287,7 +287,7 @@ function drawFrappe(ctx: Ctx, f: number) {
   hoseArm(ctx, 9.8, -1, 15.6 + s * 2.2, 3.6 + s * 2, { bend: 0.25, thick: 1.9, handR: 2.5 });
 }
 
-enemySprite('frappe', 42, 56, 38, drawFrappe);
+enemySprite('frappe', 48, 58, 39, drawFrappe);
 
 // ---------------------------------------------------------------------------
 // 12. GLASSA BALSAMICA — r13. A smug, monocled squeeze bottle of balsamic
@@ -313,7 +313,7 @@ function drawGlassa(ctx: Ctx, f: number) {
   shape(ctx, (c) => ellipsePath(c, -13, 14.2, 3, 1), { fill: GLAZE, ink: 0.9, shadow: 'none', gloss: [{ x: -13.8, y: 13.9, rx: 0.9, ry: 0.3, alpha: 0.7 }] });
 
   // legs (spats!)
-  legs(ctx, 0, 8.5, f, { len: 4.6, spread: 8, thick: 2, color: LIMB, shoe: '#1d1418', stride: 3.6 });
+  legs(ctx, 0, 8.5, f, { len: 3.8, spread: 8, thick: 2, color: LIMB, shoe: '#1d1418', stride: 3.6 });
 
   // far arm akimbo (hand on hip, elbow out)
   hoseArm(ctx, -8.6, -5.4, -9.2, 2.6, { bend: -0.62, thick: 1.8, handR: 2.2 });
@@ -426,17 +426,17 @@ function drawSmartphone(ctx: Ctx, f: number) {
   }
 
   // tripod (selfie-stick legs)
-  const hip: Pt = [0, 8];
-  const footL: Pt = [-7.6 + (side < 0 ? lift * 1.2 : 0), 14.2 - (side < 0 ? lift * 1.6 : 0)];
-  const footR: Pt = [7.6 + (side > 0 ? -lift * 1.2 : 0), 14.2 - (side > 0 ? lift * 1.6 : 0)];
-  inkLine(ctx, [hip, [1.6, 12.6]], 1.5, '#9ea6b6', false, 1);
+  const hip: Pt = [0, 7];
+  const footL: Pt = [-7.4 + (side < 0 ? lift * 1.2 : 0), 12.4 - (side < 0 ? lift * 1.6 : 0)];
+  const footR: Pt = [7.4 + (side > 0 ? -lift * 1.2 : 0), 12.4 - (side > 0 ? lift * 1.6 : 0)];
+  inkLine(ctx, [hip, [1.6, 11.2]], 1.5, '#9ea6b6', false, 1);
   inkLine(ctx, [hip, footL], 1.6, '#d3d8e2', false, 1.05);
   inkLine(ctx, [hip, footR], 1.6, '#d3d8e2', false, 1.05);
   for (const p of [footL, footR]) shape(ctx, (c) => ellipsePath(c, p[0], p[1] + 0.4, 1.6, 1.1), { fill: '#2b2427', ink: 0.9, shadow: 'none' });
   // stick + joint
-  inkLine(ctx, [[0, 0], [0, 8.4]], 2, '#dfe4ec', false, 1.1);
-  shape(ctx, (c) => roundRectPath(c, -1.8, 4.2, 3.6, 1.8, 0.6), { fill: '#6d7486', ink: 0.8, shadow: 'none' });
-  shape(ctx, (c) => circlePath(c, 0, 8.2, 1.7), { fill: '#4b5163', ink: 1, shadow: 'none' });
+  inkLine(ctx, [[0, 0], [0, 7.4]], 2, '#dfe4ec', false, 1.1);
+  shape(ctx, (c) => roundRectPath(c, -1.8, 3.6, 3.6, 1.8, 0.6), { fill: '#6d7486', ink: 0.8, shadow: 'none' });
+  shape(ctx, (c) => circlePath(c, 0, 7.2, 1.7), { fill: '#4b5163', ink: 1, shadow: 'none' });
 
   ctx.save();
   ctx.rotate(-0.06);
@@ -459,34 +459,36 @@ function drawSmartphone(ctx: Ctx, f: number) {
     polyPath(ctx, [[-7, -12], [7, -24], [7, -19], [-7, -7]]);
     ctx.fill();
     ctx.restore();
-    // pixel face (angry brows, chunky eyes, evil grin)
-    const p = 2;
-    const ox = -5.6, oy = -19.4;
+    // pixel face (angry V-brows, chunky eyes, evil grin)
+    const p = 1.55;
+    const ox = -6.2, oy = -19.8;
     const map = [
-      'B....B',
-      '.B..B.',
-      'EE..EE',
-      'EE..EE',
-      '......',
-      'M....M',
-      '.MMMM.',
+      'B......B',
+      '.BB..BB.',
+      '..B..B..',
+      '.EE..EE.',
+      '.EE..EE.',
+      '........',
+      'M......M',
+      '.MMMMMM.',
     ];
     ctx.fillStyle = PIX;
     map.forEach((row, j) => {
       for (let i = 0; i < row.length; i++) {
         if (row[i] === '.') continue;
-        const x = ox + i * p + (row[i] === 'B' ? 0 : 0), y = oy + j * p;
-        ctx.fillRect(x, y, p + 0.05, p + 0.05);
+        ctx.fillRect(ox + i * p, oy + j * p, p + 0.05, p + 0.05);
       }
     });
-    // eye glints looking right
+    // eye glints (looking right) + teeth
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ox + 1 * p + 0.25, oy + 2 * p + 0.25, 0.9, 0.9);
-    ctx.fillRect(ox + 5 * p + 0.25, oy + 2 * p + 0.25, 0.9, 0.9);
-    // teeth pixels
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ox + 2 * p + 0.2, oy + 6 * p, 0.9, 0.9);
-    ctx.fillRect(ox + 3.5 * p + 0.2, oy + 6 * p, 0.9, 0.9);
+    ctx.fillRect(ox + 2 * p + 0.3, oy + 3 * p + 0.25, 0.85, 0.85);
+    ctx.fillRect(ox + 6 * p + 0.3, oy + 3 * p + 0.25, 0.85, 0.85);
+    ctx.fillRect(ox + 2 * p + 0.2, oy + 7 * p + 0.1, 0.8, 0.8);
+    ctx.fillRect(ox + 5 * p + 0.2, oy + 7 * p + 0.1, 0.8, 0.8);
+    // pink pixel blush
+    ctx.fillStyle = 'rgba(255,90,140,0.55)';
+    ctx.fillRect(ox - 0.2, oy + 5 * p, p, p * 0.8);
+    ctx.fillRect(ox + 7 * p + 0.2, oy + 5 * p, p, p * 0.8);
   });
   // status bar: REC dot (blinking) + battery
   const rec = f < 2;
