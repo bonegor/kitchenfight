@@ -312,9 +312,10 @@ export async function analyseSong(mods, song, o = {}) {
       const rs = await renderSong(song, sr, { slicer: new Slicer(1e9), solo: [c.ch] });
       const s2 = stats(rs.left, rs.right, a, b);
       const l2 = loudness(rs.left, rs.right, sr, a, b);
+      const sw = stats(rs.left, rs.right, 0, rs.length);
       const row = {
         ch: c.ch, inst: c.inst, notes: c.events, gainDb: c.gain, lufs: l2.lufs, shortTermMaxLufs: l2.shortTermMax,
-        peakDbfs: db(s2.peak), rmsDbfs: db(s2.rms), relLu: l2.lufs - ld.lufs, relStLu: l2.shortTermMax - ld.lufs,
+        peakDbfs: db(s2.peak), rmsDbfs: db(s2.rms), rmsWholeDbfs: db(sw.rms), relLu: l2.lufs - ld.lufs, relStLu: l2.shortTermMax - ld.lufs,
       };
       rep.channels.push(row);
       // sparse accents (crash, glock) have a low integrated level: judge audibility by their loudest 3 s
