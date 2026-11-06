@@ -296,14 +296,14 @@ async function renderPattern(A, id) {
     const t = i * gap + 0.5;
     const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, inst.layerOf ? inst.layerOf(n.v) : 0) : null;
     const set = choice ? A.SAMPLE_SETS.find((x) => x.name === choice.set) : null;
-    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0 };
+    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, cents: choice ? choice.cents : 0, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0 };
   });
   const base = path.join(OUT, id);
   writeWav(base + '.wav', [r.left, r.right], SR);
   const setDef = spec ? A.SAMPLE_SETS.find((x) => x.name === spec.set) : null;
   // width: mono sets that play a second take on the right channel (analysis recovers the zone itself)
   const width = spec && spec.width !== undefined && setDef && setDef.ch === 1 ? spec.width : null;
-  fs.writeFileSync(base + '.json', JSON.stringify({ id, sr: SR, kind: inst.kind, ring: !!inst.ring, release: inst.release, unpitched: !!spec?.unpitched, sampled: !SYNTH, gap, width, shortArt: inst.shortArt ?? null, notes: meta, warnings: r.stats.warnings }, null, 1));
+  fs.writeFileSync(base + '.json', JSON.stringify({ id, sr: SR, kind: inst.kind, ring: !!inst.ring, release: inst.release, unpitched: !!spec?.unpitched, sampled: !SYNTH, gap, width, sumOnset: !!(spec && spec.sumOnset && width !== null), shortArt: inst.shortArt ?? null, notes: meta, warnings: r.stats.warnings }, null, 1));
   return { id, notes: notes.length, seconds: r.length / SR, ms: r.stats.ms, ...levels(r.left, r.right), warnings: r.stats.warnings };
 }
 

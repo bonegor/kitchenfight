@@ -36,16 +36,20 @@ from scipy import signal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from instrument_dsp import (attack_points, crossfade_loop, db, dc_block, decode_mp3, encode_mp3, envelope,  # noqa: E402
-                            fade, find_loop, flatten_loop_envelope, ftom, load_audio, loop_corr, loudness,
-                            max_short_loudness, measure_pitch, measure_pitch_centroid, measure_pitch_hfit,
-                            measure_pitch_hsum, measure_pitch_track, mtof, note_name, onset_index, resample, rms,
-                            seam_click, to_mono)
+                            decay_slope, env_range_db, fade, find_loop, flatten_loop_envelope, flatten_sustain_loop, ftom,
+                            load_audio, loop_corr, loudness,
+                            max_short_loudness, measure_pitch, measure_pitch_centroid, measure_pitch_decay,
+                            measure_pitch_hfit, measure_pitch_hsum, measure_pitch_track, mtof, note_name, onset_index,
+                            onset10_index, resample, rms, seam_click, single_reed, to_mono, yin_f0)
 from instrument_sources import REPOS, Region, Sources, parse_sfz  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT_DIR = os.path.join(ROOT, 'src', 'audio', 'assets', 'inst')
 
 MARKER = 2048  # impulse position in every sprite (samples)
+LOOP_RANGE_TOL = 2.5  # dB a sustained loop's level range may exceed the sustain's own range before it
+BEAT_TOL = 0.0025  # s: a beat further than this from the perceptual onset (the attack test's) is moved there
+DECAY_AM_LIM = 6.0  # dB: modulation (around the decay line) a decaying loop may hold before a flatter one is sought
 MARKER_AMP = 0.9
 MARKER_WINDOW = MARKER + 4096  # the runtime searches [0, MARKER_WINDOW) for the impulse
 DATA0 = MARKER + 6144  # first zone starts here (beyond any decoder delay + pre-echo)
@@ -121,12 +125,15 @@ class SetSpec:
     partials: int = 4  # partials combined by the centroid pitch (1 for inharmonic mallets/bells)
     # 'centroid' | 'hsum' = harmonic-sum (voice ensembles) | 'hfit' = least-squares harmonic-series
     # fit over harmonics pitch_hmin..pitch_hmax (low strings with a weak fundamental) | 'strike' =
-    # tubular-bell strike tone: modes 4:5:6 ~ 2:3:4 of it, an octave below the 4th mode
+    # tubular-bell strike tone: modes 4:5:6 ~ 2:3:4 of it, an octave below the 4th mode | 'decay' =
+    # decaying section tones (pizzicato): pooled frame-wise harmonic medians + YIN over the decay
     pitch_method: str = 'centroid'
     pitch_hmin: int = 1
     pitch_hmax: int = 6
     pitch_win: tuple[float, float] = (0.05, 0.4)
     octave: float | None = None  # known octave correction (None = vote by measuring)
+    max_disagree: float = 0.0  # > 0: drop takes whose independent pitch readings disagree by more (cents)
+    single_reed: bool = False  # sustain + loops of whole beat cycles: keep the lower reed of a musette
     min_decay: float = 3.0  # dB/s floor for decaying loops
     trust_below: float = -1  # zones with nominal pitch below / above these use the nominal pitch
     trust_above: float = 999  # (inharmonic instruments, piano extremes with a too weak fundamental)
@@ -220,6 +227,13 @@ def accordion_cands(src: Sources) -> list[Cand]:
     # FreePats names its files one octave above scientific pitch (file "B3" sounds B2 = MIDI 47);
     # the SFZ keycenters are right and the measured pitch confirms them.
     return sfz_cands('accordion', 'PRESET Button Accordion HN tuned.sfz', use_volume=False)(src)
+
+
+def accordion_dry_cands(src: Sources) -> list[Cand]:
+    # the dry accordion voicings play the accompaniment register: every other recording, B2..D5, and
+    # the top one (G5: the same playable range as the lead)
+    keep = {47, 50, 54, 57, 60, 64, 67, 71, 74, 79}
+    return [c for c in accordion_cands(src) if round(c.nominal) in keep]
 
 
 def mandolin_cands(src: Sources) -> list[Cand]:
@@ -356,20 +370,27 @@ SETS: list[SetSpec] = [
     SetSpec('accordion', 'accordion', accordion_cands, 'sustain', quality=4, pre_ms=3, octave=0, max_attack=0.07,
             use_sfz_loop=True, max_sfz_end=2.6, xfade=0.03, pitch_harmonics=1, ext_up=5,
             note='FreePats Hohner button accordion, SFZ loop points (musette beat cycles)'),
+    SetSpec('accdry', 'accordion', accordion_dry_cands, 'sustain', sr=24000, quality=5, pre_ms=3, octave=0,
+            max_attack=0.07, use_sfz_loop=True, max_sfz_end=2.6, xfade=0.03, pitch_harmonics=1, ext_down=5, ext_up=5,
+            single_reed=True,
+            note='the same FreePats accordion, one reed: after the recorded attack the musette is crossfaded into its '
+                 'lower reed alone (the higher reed cleared from the loop spectrum: in a loop of whole beat cycles each '
+                 'reed has its own partials); for the accordionDry / accChord voicings'),
     SetSpec('mandolin', 'mandolin', mandolin_cands, 'decay', quality=4, octave=0, t_store=0.7, loop_len=0.12,
-            loud_win=(0.0, 0.25), min_decay=8, note="Terkelsen's mandolin, 2 velocity layers"),
+            loud_win=(0.0, 0.25), min_decay=3, note="Terkelsen's mandolin, 2 velocity layers"),
     SetSpec('guitar', 'meta', meta_guitar_cands('nylon', ['Vel01Finger', 'Vel03Pick'], 3, 40, 83), 'decay',
             quality=4.5, octave=0, t_store=0.95, loop_len=0.16, loud_win=(0.0, 0.3), min_decay=4,
             note='Meta nylon guitar: fingerstyle + firm pick layers'),
     SetSpec('steelguitar', 'meta', meta_guitar_cands('steel', ['Vel02'], 3, 40, 84), 'decay',
             quality=5, octave=0, t_store=0.95, loop_len=0.16, loud_win=(0.0, 0.3), min_decay=4),
-    SetSpec('piano', 'meta', meta_piano_cands, 'decay', partials=2, quality=4.5, octave=0, t_store=0.9, loop_len=0.2,
+    SetSpec('piano', 'meta', meta_piano_cands, 'decay', partials=1, quality=4.5, octave=0, t_store=0.9, loop_len=0.2,
             loud_win=(0.0, 0.4), min_decay=2, pitch_harmonics=1, ext_down=3, ext_up=3, trust_below=40,
-            note='Meta upright piano: mp + ff layers, a zone every major third'),
+            note='Meta upright piano: mp + ff layers, a zone every major third; pitch = the fundamental (the '
+                 'stretched upper partials would read a shifted note differently from its recording)'),
     SetSpec('harpsichord', 'vcsl', harpsichord_cands, 'decay', quality=5, t_store=0.8, loop_len=0.12,
             loud_win=(0.0, 0.3), min_decay=4, note='VCSL Italian harpsichord (stop 1)'),
     SetSpec('harp', 'sso', sso_cands('Harp', r'harp-([a-g]#?\d)\.wav'), 'decay', quality=5, t_store=1.0,
-            loop_len=0.2, loud_win=(0.0, 0.3), min_decay=3),
+            loop_len=0.2, loud_win=(0.0, 0.3), min_decay=1.5),
     # --- strings -------------------------------------------------------------------------------
     SetSpec('violin', 'sso', sso_cands('Violin', r'violin-([a-g]#?\d)\.wav'), 'sustain', quality=4.5,
             pre_ms=5, slow_onset=True, max_attack=0.08, loop_min=0.45, loop_max=0.95, loop_len=0.55, xfade=0.09,
@@ -383,17 +404,21 @@ SETS: list[SetSpec] = [
         sso_cands('1st Violins', r'1st-violins-stc-rr2-([a-g]#?\d)\.wav', rr=1),
         sso_cands('Celli', r'celli-stc-rr1-([a-g]#?\d)\.wav', rr=0, hi=54),
         sso_cands('Celli', r'celli-stc-rr2-([a-g]#?\d)\.wav', rr=1, hi=54)),
-            'oneshot', quality=5, t_store=0.42, fade_out=0.1, loud_win=(0.0, 0.15), pitch_win=(0.03, 0.2),
-            attack='perceptual', note='SSO 1st violins + celli staccato, 2 round robins'),
+            'oneshot', quality=5, t_store=0.42, fade_out=0.1, loud_win=(0.0, 0.15), pitch_win=(0.03, 0.3),
+            attack='perceptual', pitch_method='decay',
+            note='SSO 1st violins + celli staccato, 2 round robins; pitch = the pooled frame-wise reading over 30-300 ms '
+                 '(a section staccato glides after the bow stroke)'),
     SetSpec('pizz', 'sso', join(sso_cands('1st Violins', r'1st-violins-piz-rr1-([a-g]#?\d)\.wav', rr=0),
                                 sso_cands('1st Violins', r'1st-violins-piz-rr2-([a-g]#?\d)\.wav', rr=1),
                                 sso_cands('Celli', r'celli-piz-rr1-([a-g]#?\d)\.wav', rr=0, hi=54),
                                 sso_cands('Celli', r'celli-piz-rr2-([a-g]#?\d)\.wav', rr=1, hi=54)),
-            'oneshot', quality=5, t_store=0.6, fade_out=0.15, loud_win=(0.0, 0.2), pitch_win=(0.02, 0.15),
-            attack='perceptual',
-            note='SSO 1st violins + celli pizzicato, 2 round robins (rr2 files are a semitone off their names: measured)'),
+            'oneshot', quality=5, t_store=0.6, fade_out=0.15, loud_win=(0.0, 0.2), pitch_win=(0.03, 0.4),
+            attack='perceptual', pitch_method='decay', max_disagree=20,
+            note='SSO 1st violins + celli pizzicato, 2 round robins (rr2 files are a semitone off their names: measured); '
+                 'pitch = the pooled frame-wise reading over 30-400 ms (the pitch settles after the pluck); takes whose '
+                 'players disagree (independent readings > 20 cents apart) are left out'),
     SetSpec('ubass', 'sso', join(sso_cands('Bass', r'bass-piz-rr\d-([a-g]#?\d)\.flac')), 'decay', sr=24000, quality=5,
-            t_store=0.85, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=4, pitch_harmonics=1,
+            t_store=0.85, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=2, pitch_harmonics=1,
             pitch_method='hfit', pitch_hmin=2, pitch_hmax=6, pitch_win=(0.05, 0.6),
             note='SSO solo double bass pizzicato; pitch by a harmonic-series fit over harmonics 2-6 (the fundamental '
                  'of the low strings is 30-40 dB under the 2nd harmonic)'),
@@ -433,7 +458,7 @@ SETS: list[SetSpec] = [
     # --- voices / organ ------------------------------------------------------------------------
     SetSpec('choir', 'sso', sfz_cands('sso', f'{SSO}/Chorus - Performance/Mixed Chorus.sfz', every=2, use_volume=False),
             'sustain', quality=5, pre_ms=10, slow_onset=True, loop_min=0.35, loop_max=0.9, loop_len=0.6, xfade=0.15,
-            octave=0, pitch_method='hsum', fade_in=0.15, max_pre=0.06, ext_up=7,
+            octave=0, pitch_method='hsum', fade_in=0.15, max_pre=0.06, ext_up=5,
             note='SSO mixed chorus "aah", every other semitone, attack offset as in the SFZ (the zones start '
                  'mid-sound: the SFZ ampeg_attack is applied as a 0.15 s fade-in); pitch by harmonic sum '
                  '(the SFZ tune values are off by up to 45 cents on the male chorus)'),
@@ -441,7 +466,7 @@ SETS: list[SetSpec] = [
             loop_len=0.3, xfade=0.05, note="SSO pipe organ: open diapason 8' + principal 4' + fifteenth 2'"),
     # --- mallets / bells -----------------------------------------------------------------------
     SetSpec('glock', 'sso', sso_cands('Percussion', r'glockenspiel-([a-g]#?\d)\.wav'), 'decay', partials=1, quality=5,
-            t_store=0.7, loop_len=0.08, loud_win=(0.0, 0.3), min_decay=3, pitch_harmonics=1),
+            t_store=0.7, loop_len=0.08, loud_win=(0.0, 0.3), min_decay=1.5, pitch_harmonics=1),
     SetSpec('xylophone', 'sso', sso_cands('Percussion', r'xylophone-([a-g]#?\d)\.wav'), 'oneshot', partials=1, quality=5,
             t_store=0.45, fade_out=0.1, loud_win=(0.0, 0.15), pitch_harmonics=1),
     SetSpec('vibes', 'sso', sso_cands('Vibraphone', r'vibraphone-([a-g]#?\d)\.flac'), 'decay', partials=1, quality=5,
@@ -451,7 +476,7 @@ SETS: list[SetSpec] = [
             'decay', partials=1, quality=5, t_store=0.7, loop_len=0.1, loud_win=(0.0, 0.3), min_decay=3, pitch_harmonics=1),
     SetSpec('chimes', 'sso', sso_cands('Percussion', r'chimes-([a-g]#?\d)\.wav', every=2), 'decay', partials=1, quality=5.5,
             t_store=1.8, loop_len=0.3, loud_win=(0.0, 0.5), min_decay=2, pitch_harmonics=1, octave=12,
-            pitch_method='strike', ext_down=7,
+            pitch_method='strike', ext_down=5,
             note='SSO chimes (tubular bells), mapped by their strike tone: modes 4:5:6 of each bell are ~2:3:4 '
                  '(measured); the strike tone, an octave below the 4th mode, is an octave above the file names '
                  '("chimes-c4" strikes C5 -24 cents)'),
@@ -598,11 +623,23 @@ def measure_zone_pitch(spec: SetSpec, x: np.ndarray, sr: int, w0: int, w1: int, 
         # conventionally an octave below the 4th mode (the bell maker tunes that mode)
         p4 = measure_pitch_centroid(x, sr, w0, w1, nominal + 12, span=span, harmonics=1)
         return None if p4 is None else p4 - 12
+    if spec.pitch_method == 'decay':
+        # decaying section tones (pizzicato: several players, a pitch glide after the pluck): the
+        # harmonic-comb track over the first 150 ms finds the note (file names can be a semitone
+        # off), the pooled frame-wise estimate over the whole window (the early decay, where the
+        # pitch settles after the pluck) measures it
+        sp = min(span, 1.0)
+        meth = lambda y, r, a, b, e: measure_pitch_hsum(y, r, a, b, e, span=sp, harmonics=8)  # noqa: E731
+        coarse, _ = measure_pitch_track(x, sr, w0, min(w1, w0 + int(0.15 * sr)), nominal, meth, frame=0.1)
+        pm, dinf = measure_pitch_decay(x, sr, w0, w1, coarse if coarse is not None else nominal, span_cents=80)
+        if dinf.get('spread') is not None:
+            info['pitch_spread'] = dinf['spread']
+        return pm if pm is not None else coarse
     if spec.pitch_method == 'hsum' or spec.partials > 1:
         # harmonic tones (strings, winds, brass, voices, plucked strings): per frame the harmonic
         # comb that fits the spectrum best (no peak-prominence test: vibrato smears the partials of
         # a short frame, and a frame that cannot be measured must not drop out of the mean)
-        # (piano: 2 harmonics — its stretched partials would pull a long comb sharp)
+        # (a set with partials=1 — piano, mallets — takes the fundamental alone, below)
         sp = min(span, 1.0)
         nh = 8 if spec.partials >= 4 or spec.pitch_method == 'hsum' else max(2, spec.partials)
         meth = lambda y, r, a, b, e: measure_pitch_hsum(y, r, a, b, e, span=sp, harmonics=nh)  # noqa: E731
@@ -699,6 +736,22 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
                 info['relabeled'] = round(pitch - nominal, 2)  # sample is off its file name/SFZ key
         else:
             info['pitch_fallback'] = None if pm is None else round(pm, 2)
+        if spec.max_disagree and 'pitch_fallback' not in info:
+            # a take whose players disagree has no pitch to tune it to: two independent readings of
+            # the same window (median YIN of 50 ms frames, a harmonic comb over the whole window)
+            # must agree with the measured pitch, else the take is dropped (its neighbours cover it)
+            m = to_mono(x)
+            ys = []
+            for a in range(w0, w1 - int(0.05 * sr) + 1, int(0.01 * sr)):
+                f = yin_f0(m[a:a + int(0.05 * sr)], sr, mtof(pitch - 2), mtof(pitch + 2))
+                if f:
+                    ys.append(ftom(f))
+            comb = measure_pitch_hsum(x, sr, w0, min(x.shape[1], w0 + int(0.42 * sr)), pitch, span=1.0, harmonics=8)
+            dy = (float(np.median(ys)) - pitch) * 100 if ys else 0.0
+            dc = (comb - pitch) * 100 if comb is not None else 0.0
+            info['pitch_check'] = (round(dy, 1), round(dc, 1))
+            if max(abs(dy), abs(dc)) > spec.max_disagree:
+                info['drop'] = f'players disagree: YIN {dy:+.0f} c, comb {dc:+.0f} c re {pitch:.2f}'
     info['nominal'] = nominal
 
     loop = None
@@ -712,24 +765,67 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
             ls, le = loop_src
             corr = loop_corr(x, sr, ls, le)
             info['loop'] = 'sfz'
-        else:
+        flatten = False
+        if not use_sfz:
             L = int(loop_len * sr)
             if per:
                 L = int(round(max(1, round(L / per)) * per))
             span = max(0.15 * L, 1.2 * per) if per else 0.15 * L
-            # waveform correlation, then envelope match (+-60 ms) so the seam joins equal levels
-            ls, le, corr = find_loop(x, sr, pre + fin + int(spec.loop_min * sr), pre + fin + int(spec.loop_max * sr),
-                                     int(L - span), int(L + span), n_starts=24, env_ctx=0.06, env_k=0.06)
+            # waveform correlation, then envelope match (+-60 ms) so the seam joins equal levels. The
+            # loop must not pump: its level range as it loops (20 ms RMS) may exceed the sustain's own
+            # range before the earliest loop start by LOOP_RANGE_TOL at most (a breath dip, a re-bow or
+            # the note's release inside it would come back at every pass). Where the default window
+            # has no such loop, a loop half as long (it fits between the dips) and then later starts are
+            # searched; if none has, the flattest loop found is pulled back into that range
+            # (flatten_sustain_loop).
+            r0 = min(x.shape[1] - 1, pre + fin + int(0.15 * sr))
+            r1 = min(x.shape[1], max(r0 + int(0.1 * sr), pre + fin + int(spec.loop_min * sr)))
+            lim = env_range_db(x, sr, r0, r1) + LOOP_RANGE_TOL
+            L2 = int(round(max(1, round(L / 2 / per)) * per)) if per else L // 2
+            span2 = max(0.15 * L2, 1.2 * per) if per else 0.15 * L2
+            found = None
+            for k, (a_s, b_s, ln, sp) in enumerate(((spec.loop_min, spec.loop_max, L, span),
+                                                   (spec.loop_min, spec.loop_max, L2, span2),
+                                                   (spec.loop_max, spec.loop_max + 0.6, L, span))):
+                a = pre + fin + int(a_s * sr)
+                b = min(pre + fin + int(b_s * sr), x.shape[1] - int(ln + sp) - int(0.03 * sr))
+                if b <= a:
+                    continue
+                cl, ce, cc = find_loop(x, sr, a, b, int(ln - sp), int(ln + sp), n_starts=24, env_ctx=0.06,
+                                       env_k=0.06, range_lim=lim)
+                rg = env_range_db(x, sr, cl, ce, circular=True)
+                if found is None or (rg <= lim) > (found[3] <= lim) or (rg > lim and found[3] > lim and rg < found[3]):
+                    found = (cl, ce, cc, rg, k)
+                if rg <= lim:
+                    break
+            ls, le, corr, rg, k = found
             info['loop'] = 'found'
+            info['loop_range'] = (round(rg, 1), round(lim, 1))
+            if k:
+                info['loop_window'] = ('', 'short', 'later')[k]
+            flatten = rg > lim
         info['loop_corr'] = round(corr, 4)
         xf = int(min(spec.xfade * sr, (le - ls) / 3))
         x = crossfade_loop(x, ls, le, xf)
-        # the loop (as it plays: after the crossfade) is what long notes sound like: (re)measure the
-        # pitch over it
+        if flatten:
+            x, rg2 = flatten_sustain_loop(x, sr, ls, le, lim)
+            info['loop_flattened'] = round(rg2, 1)
+        if spec.single_reed and c.pitched:
+            # musette → one reed (dry accordion voicings): attack as recorded, then the lower reed alone;
+            # what is left of the other reed's beating (its partials' leakage) is levelled to +-1 dB
+            x, ls, le, rinfo = single_reed(x, sr, pre + fin + int(0.08 * sr), ls, le, mtof(pitch))
+            info.update(rinfo)
+            if 'kept' in rinfo.get('reed', ''):
+                x, rg2 = flatten_sustain_loop(x, sr, ls, le, 2.0)
+                info['reed_loop_range'] = round(rg2, 1)
+        # the loop (as it plays: after the crossfade, repeated) is what long notes sound like: (re)measure
+        # the pitch over 1.3-2.5 s of a held note (the instrument suite's window: a frame-wise reading
+        # of one pass of a loop of beating reeds / vibrato weighs its frames differently)
         if c.pitched and not info.get('trusted') and 'pitch_fallback' not in info and le - ls > int(0.15 * sr):
             linfo: dict = {}
-            pl = measure_zone_pitch(spec, x, sr, ls, le, round(pitch * 2) / 2 if spec.pitch_method == 'hsum' else pitch,
-                                    0.6, linfo)
+            held = played_note(x, ls, le, pre + int(2.6 * sr))
+            pl = measure_zone_pitch(spec, held, sr, pre + int(1.3 * sr), pre + int(2.5 * sr),
+                                    round(pitch * 2) / 2 if spec.pitch_method == 'hsum' else pitch, 0.6, linfo)
             if pl is not None and abs(pl - pitch) < 0.6:
                 info['pitch_attack'] = round(pitch, 3)
                 pitch = pl
@@ -760,18 +856,49 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
         if ls_target > pre + int(0.12 * sr) and end <= x.shape[1]:
             span = max(0.1 * L, 1.2 * per) if per else 0.1 * L  # at least a period either way
             ls, le, corr = find_loop(x, sr, ls_target - int(0.03 * sr), ls_target, int(L - span), int(L + span))
-            # beating string courses / partials: pull the envelope onto its decay line (natural
-            # signal, eased in before the loop) so the repeated loop does not flutter; the decay
-            # rate comes from the same fit
+            am = env_range_db(x, sr, ls, le, detrend=True)
+            if am > DECAY_AM_LIM:
+                # a beat null (or swell) inside the loop: more than the envelope correction can take
+                # out, it would flutter at the loop rate — earlier starts, the flattest loop that
+                # correlates
+                l2, e2, c2 = find_loop(x, sr, max(pre + int(0.15 * sr), ls_target - int(0.3 * sr)), ls_target,
+                                       int(L - span), int(L + span), env_ctx=0.03, env_k=0.02, range_lim=DECAY_AM_LIM,
+                                       range_detrend=True)
+                am2 = env_range_db(x, sr, l2, e2, detrend=True)
+                if am2 < am:
+                    info['loop_moved_am'] = (round(am, 1), round(am2, 1))
+                    ls, le, corr, am = l2, e2, c2, am2
+            # the decay the loop must continue: the recording's own over the 400 ms before the loop
+            # (at least 150 ms, else including the loop) — a fit over the loop and the 80 ms before it
+            # follows the beating of courses / partials instead (tails that froze or died)
+            d0 = max(pre + int(0.06 * sr), ls - int(0.4 * sr))
+            slope_pre = decay_slope(x, sr, d0, ls if ls - d0 >= int(0.15 * sr) else le, per)
+            if (slope_pre is None or slope_pre > -spec.min_decay) and ls - (pre + int(0.06 * sr)) >= int(0.15 * sr):
+                # a beat swelling over those 400 ms (the envelope rises): the whole stored decay
+                s_all = decay_slope(x, sr, pre + int(0.06 * sr), ls, per)
+                if s_all is not None and (slope_pre is None or s_all < slope_pre):
+                    slope_pre = s_all
+            # beating string courses / partials: pull the envelope onto that decay line (natural
+            # signal, eased in before the loop) so the repeated loop does not flutter
             a0 = max(pre + int(0.05 * sr), ls - int(0.08 * sr))
-            x, slope, resid = flatten_loop_envelope(x, sr, a0, ls, le, per)
+            x, slope, resid = flatten_loop_envelope(x, sr, a0, ls, le, per, slope=slope_pre)
             info['loop_am_db'] = round(resid, 1)
+            info['decay_pre'] = None if slope_pre is None else round(slope_pre, 1)
             decay = float(min(-spec.min_decay, slope))
             # flatten the loop region so the runtime decay continues the natural one
             k = math.log(10) / 20 * (-decay)
             idx = np.arange(ls, le)
             x = x.copy()
             x[:, ls:le] *= np.exp(k * (idx - ls) / sr)
+            # what the envelope correction left between the loop's two ends (a level step at every
+            # seam): levelled by a tilt across the loop body, before the crossfade joins its end to
+            # the material leading into ls
+            w = int(max(0.02 * sr, 3 * per if per else 0))
+            if le - ls > 4 * w:
+                tilt = db(rms(to_mono(x[:, ls:ls + w]))) - db(rms(to_mono(x[:, le - w:le])))
+                if abs(tilt) > 0.3:
+                    x[:, ls:le] *= 10 ** (tilt * (idx - ls) / (le - 1 - ls) / 20)
+                    info['loop_tilt_db'] = round(tilt, 1)
             xf = int(min(0.03 * sr, (le - ls) / 3))
             x = crossfade_loop(x, ls, le, xf)
             loop = (ls, le)
@@ -787,12 +914,24 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     if fin > 0:
         x = fade(x, min(fin, x.shape[1] // 2), 0)
     info['fade_in_ms'] = round(fin * 1000 / sr, 1)
+    # the beat where the finished zone is heard to start (struck / plucked / section attacks, not
+    # swells): the first point where the RMS over the preceding 5 ms comes within 10 dB of its maximum
+    # over the 0.5 s after the beat (full band; the attack test of the instrument suite). The attack
+    # model's onset can sit up to 12 ms off it (a slow low string, quill / finger noise, the fade-in
+    # of a section attack, a band-limited reading of a note whose peak comes later)
+    swell = (c.onset_db if c.onset_db is not None else spec.onset_db) <= -15
+    if amode in ('transient', 'perceptual') and not swell:
+        info['beat_check'] = True  # re-checked on the decoded MP3 (build_set)
+        on10 = onset10_index(x, sr, pre)
+        if abs(on10 - pre) > int(BEAT_TOL * sr):
+            info['beat_moved_ms'] = round((on10 - pre) * 1000 / sr, 1)
+            pre = on10
     # loudness → gain
     if spec.loud_max:
         lu = max_short_loudness(x, sr, pre, x.shape[1])
     elif loop and mode == 'sustain':
-        # what a typical note plays: the early sustain and the loop (not the first 100 ms)
-        lu = loudness(x, sr, min(loop[0], pre + int(0.1 * sr)), loop[1])
+        # what a held note plays (the loop repeated): its body from 0.1 to 2.5 s, as the suite measures
+        lu = loudness(played_note(x, loop[0], loop[1], pre + int(2.5 * sr)), sr, pre + int(0.1 * sr), pre + int(2.5 * sr))
     else:
         lu = loudness(x, sr, pre + int(spec.loud_win[0] * sr), pre + int(spec.loud_win[1] * sr))
     # every transient / perceptual zone keeps pre_ms of pre-roll before its attack, padded with
@@ -814,6 +953,15 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     if loop:
         info['seam'] = round(seam_click(x, loop[0], loop[1]), 2)
     return Zone(c, x, pitch, pre, loop, decay, gain, lu_n, info)
+
+
+def played_note(x: np.ndarray, ls: int, le: int, n: int) -> np.ndarray:
+    """A sustained zone as a held note plays it: up to le, then [ls, le) repeated, n samples long."""
+    x = np.atleast_2d(x)
+    if n <= le:
+        return x[:, :n]
+    reps = int(math.ceil((n - le) / max(1, le - ls)))
+    return np.concatenate([x[:, :le], np.tile(x[:, ls:le], (1, reps))], axis=1)[:, :n]
 
 
 def key_ranges(zones: list[Zone], ext_down: int = 5, ext_up: int = 5) -> dict[int, tuple[int, int]]:
@@ -863,6 +1011,9 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
         print(f'  octave votes {votes} -> {octave:+.0f}', flush=True)
     for c in cands:
         zones.append(process_zone(spec, src, c, octave))
+    # takes without a definite pitch (spec.max_disagree): left out, their neighbours cover their keys
+    dropped = [z for z in zones if z.info.get('drop')]
+    zones = [z for z in zones if not z.info.get('drop')]
     ranges = key_ranges(zones, spec.ext_down, spec.ext_up)
     # sprite
     sr = spec.sr
@@ -896,6 +1047,18 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
     dec, dsr = decode_mp3(mp3)
     mk = int(np.argmax(np.abs(to_mono(dec)[:MARKER_WINDOW])))
     shift = mk - MARKER
+    # the beat on what plays: coding noise can move the -10 dB point of an attack that hovers near it
+    # (a build-up, a plateau) by several ms, so the perceptual onset is measured again on the decoded
+    # sprite (never earlier than pre_ms of pre-roll: the MP3 pre-echo guard)
+    for zd, z in zip(zdefs, zones):
+        if not z.info.get('beat_check'):
+            continue
+        dz = to_mono(dec)[zd['o'] + shift:zd['o'] + shift + zd['n']]
+        on = max(min(zd['pre'], int(round(spec.pre_ms * sr / 1000))), onset10_index(dz, sr, zd['pre']))
+        if abs(on - zd['pre']) > int(BEAT_TOL * sr):
+            z.info['beat_moved_ms'] = round(z.info.get('beat_moved_ms', 0.0) + (on - zd['pre']) * 1000 / sr, 1)
+            z.info['beat_decoded'] = True
+            zd['pre'] = on
     snrs = []
     seams = []
     lp = signal.butter(6, 8000, fs=sr, output='sos')
@@ -929,9 +1092,21 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
                       + (f" h1-fit={inf['h1_vs_fit_cents']}c" if 'h1_vs_fit_cents' in inf else '')
                       + (f" rise={inf['rise_ms']}ms" if inf.get('rise_ms') else '')
                       + (f" spread={inf['pitch_spread']}c" if inf.get('pitch_spread') is not None else '')
+                      + (f" check(yin,comb)={inf['pitch_check']}c" if inf.get('pitch_check') is not None else '')
+                      + (f" range={inf['loop_range'][0]}/{inf['loop_range'][1]}dB" if inf.get('loop_range') else '')
+                      + (f" win={inf['loop_window']}" if inf.get('loop_window') else '')
+                      + (f" FLATTENED->{inf['loop_flattened']}dB" if 'loop_flattened' in inf else '')
+                      + (f" beat{inf['beat_moved_ms']:+}ms" if 'beat_moved_ms' in inf else '')
+                      + (f" decpre={inf['decay_pre']}" if inf.get('decay_pre') is not None else '')
+                      + (f" reed: {inf['reed']}" if inf.get('reed') else '')
+                      + (f" loopAMmoved={inf['loop_moved_am']}" if 'loop_moved_am' in inf else '')
+                      + (f" tilt={inf['loop_tilt_db']}dB" if 'loop_tilt_db' in inf else '')
+                      + (f" range={inf['reed_loop_range']}dB" if 'reed_loop_range' in inf else '')
                       + (f" PITCH-FALLBACK({inf['pitch_fallback']})" if 'pitch_fallback' in inf else '')
                       + (f" relabeled{inf['relabeled']:+.2f}" if 'relabeled' in inf else '')
                       + (' narrow' if inf.get('narrow') is not None and 'pitch_fallback' not in inf else ''))
+    for z in dropped:
+        report.append(f"  DROPPED {z.cand.label} L{z.cand.layer} R{z.cand.rr}: {z.info['drop']}")
     sources = sorted({z.cand.path for z in zones} | {mp for z in zones for mp, _ in z.cand.mix})
     return {'name': spec.name, 'repo': spec.repo, 'sources': sources, 'note': spec.note,
             'file': f'{spec.name}/{spec.name}.mp3', 'sr': sr, 'ch': spec.channels,
@@ -1028,7 +1203,7 @@ def write_credits(sets: list[dict]) -> None:
     L = ['# Music instrument samples — sources, licenses, credits', '',
          'Generated by `scripts/audio/build_instruments.py` (do not edit by hand). The recorded instruments in',
          '`src/audio/assets/inst/` are excerpts of the sample libraries below: trimmed, DC-filtered, resampled (32 kHz;',
-         '24 kHz for the bass instruments, 44.1 kHz for some percussion), mono unless noted, looped/crossfaded,',
+         '24 kHz for the bass instruments and the dry accordion, 44.1 kHz for some percussion), mono unless noted, looped/crossfaded,',
          'loudness-normalised and MP3-encoded (libmp3lame VBR) — modified versions of the originals.',
          f'Total: {len(sets)} MP3 sprites, {total:,} bytes = {total / 1e6:.3f} MB (SI; {total / 1048576:.2f} MiB).', '',
          '## Attribution lines (for the game credits)', '',
@@ -1074,14 +1249,20 @@ def write_credits(sets: list[dict]) -> None:
           '  10-25 ms fade-in — so they speak at once; longer notes keep the recorded (slower) attack.',
           '- Timing: every recording is aligned on its perceptual onset (the attack is on the beat; pick / bow noise and',
           '  slow attack build-ups sound just before it).',
-          '- `accordion`, `accordionDry` and `accChord` play the same recording: a musette (two reeds about +5 and +28',
-          '  cents, beating about 7 Hz at C5). `accordionDry` / `accChord` only change the tone (low-pass, high-pass) and',
-          '  the stereo width — the source has no single-reed register, so they beat like the lead.',
-          '- Stereo: mono recordings of ensembles and cymbals (`strings`, `strStab`, `choir`, `choirO`, the accordions,',
+          '- `accordion` plays the recorded musette (two reeds about +5 and +28 cents, beating about 7 Hz at C5);',
+          '  `accordionDry` / `accChord` play its lower reed alone (set `accdry`: the recorded attack, then the higher',
+          '  reed removed from the loop spectrum), mono, with their own tone (low-pass, high-pass) — no musette beating.',
+          '- Stereo: mono recordings of ensembles and cymbals (`strings`, `strStab`, `choir`, `choirO`, `accordion`,',
           '  `brass`, `brassSoft`, `organ`, `crash`, `tamtam`) play a second take or the neighbouring recording on the',
           '  right channel; `cymbal` is a stereo recording.',
           '- Variants keep the synth meaning: `timpani` variant 1 is the soft stroke (-4.5 dB); `tamb` accents (4, 5)',
           '  are +2 dB, shakes (2, 3) -3.5 dB; `cymbal` / `bassDrum` variant 1 is the roll at any velocity.',
+          '- Notes written without a variant cycle the takes only, never an articulation: `bassDrum` / `cymbal` / `ratchet`',
+          '  / `toyWhistle` stay on variant 0, `timpani` alternates its two takes at the same level (variant 2 = the',
+          '  second take at full level), `tamb` and `flexatone` alternate their two plain takes; ask for a roll, a shake or',
+          '  the soft stroke with `vr`.',
+          '- `strStab`: two takes sound together (stereo width), so the beat is on the onset of their sum; short notes',
+          '  (a gate shorter than the attack takes to peak) start on their own onset.',
           '- `steelGuitar` has one velocity layer (Meta Vel02; the 5 MB budget leaves no room for Vel01 / Vel03).',
           '', 'Share-alike: the files derived from CC BY-SA 3.0 sources (`horns`, `orchhit`) are themselves CC BY-SA 3.0;',
           'the files derived from Sonatina Symphonic Orchestra are under CC Sampling Plus 1.0.', '',

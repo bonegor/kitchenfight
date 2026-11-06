@@ -142,10 +142,12 @@ const S = (id: string, set: string, kind: SampledSpec['kind'], release: number, 
  * by scripts/audio/calibrate_instruments.mjs (synth vs sampled loudness at equal velocity).
  */
 export const SAMPLED_SPECS: SampledSpec[] = [
-  // accordion family (one recorded instrument, three voicings)
+  // accordion family (one recorded instrument, three voicings): the lead plays the musette (two reeds
+  // beating), the dry and chord voicings its lower reed alone ('accdry', derived by the build)
   S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, width: 0.65, gainDb: 6.7 }),
-  S('accordionDry', 'accordion', 'sustain', 0.05, { gate: 0.92, lp: 4200, width: 0.8, gainDb: 6.2 }),
-  S('accChord', 'accordion', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, width: 0.85, gainDb: 7.4 }),
+  // (mono: a second recording on the right channel would beat against the first)
+  S('accordionDry', 'accdry', 'sustain', 0.05, { gate: 0.92, lp: 4200, gainDb: 5.4 }),
+  S('accChord', 'accdry', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, gainDb: 6.7 }),
   // plucked
   S('mandolin', 'mandolin', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.5], gainDb: 2.7 }),
   S('guitar', 'guitar', 'pluck', 0.12, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.7], gainDb: 3.4 }),
@@ -155,7 +157,7 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('harp', 'harp', 'pluck', 0.3, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 2.7 }),
   // strings
   S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, short: 0.3, gainDb: 6.3 }),
-  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, width: 0.65, short: 0.3, gainDb: 5.6 }),
+  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, width: 0.65, short: 0.3, gainDb: 6 }),
   S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', width: 0.65, sumOnset: true, gainDb: 6.1 }),
   S('pizz', 'pizz', 'pluck', 0.08, { gate: 1, choke: true, variants: 2, rr: 'set', gainDb: 1.5 }),
   S('ubass', 'ubass', 'pluck', 0.08, { gate: 0.9, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.2 }),
@@ -163,13 +165,13 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('contrabass', 'contrabass', 'sustain', 0.18, { gate: 0.95, short: 0.3, gainDb: 4.9 }),
   // brass
   S('brass', 'brass', 'sustain', 0.09, { gate: 0.92, width: 0.88, gainDb: 2.7 }),
-  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, width: 0.88, gainDb: 5.5 }),
+  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, width: 0.88, gainDb: 6 }),
   S('tuba', 'tuba', 'sustain', 0.07, { gate: 0.85, gainDb: 5.6 }),
   S('trumpet', 'trumpet', 'sustain', 0.09, { gate: 0.92, gainDb: 4.8 }),
   S('trombone', 'trombone', 'sustain', 0.1, { gate: 0.92, gainDb: 4.4 }),
   S('horn', 'horn', 'sustain', 0.12, { gate: 0.92, gainDb: 4.8 }),
   // woodwinds
-  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, short: 0.2, gainDb: 6.9 }),
+  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, short: 0.2, gainDb: 6.3 }),
   S('piccolo', 'piccolo', 'sustain', 0.07, { gate: 0.9, gainDb: 4.8 }),
   S('clarinet', 'clarinet', 'sustain', 0.08, { gate: 0.9, gainDb: 4.6 }),
   S('oboe', 'oboe', 'sustain', 0.08, { gate: 0.9, gainDb: 4.4 }),
@@ -550,7 +552,7 @@ function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: 
     return { zone: z, midi: z.p, cents: micro ? MICRO_CENTS : 0, gain: vg * (micro ? MICRO_GAIN : 1), fold: 0 };
   }
   // fold into the playable range by octaves (the build extends the outermost zones' key ranges
-  // by a fourth — a fifth for the chorus, down a fifth for the chimes)
+  // by a fourth: no note is shifted further than that from its recording)
   let lo = Infinity;
   let hi = -Infinity;
   for (const z of pool) {
@@ -857,6 +859,9 @@ function widen(a: Rendered, b: Rendered, width: number): Rendered {
 
 /** furthest the summed takes' onset may move the beat from the takes' own (s) */
 const SUM_ONSET_MAX = 0.025;
+/** furthest a short note's own onset may sit from the whole note's (s): a take whose bow noise
+ *  builds up for 30-40 ms before its main rise sounds, cut short, mostly that build-up */
+const SHORT_ONSET_MAX = 0.045;
 /** release tail the mixer plays after the gate, in time constants (render.ts TAIL_TAU) */
 const MIX_TAIL_TAU = 3.6;
 
@@ -894,10 +899,10 @@ function heardOnset(chans: Float32Array[], sr: number, pre: number, cut = Infini
  * sumOnset sets, short notes: a note gated while its spread attack is still rising peaks lower,
  * so its own -10 dB point sits earlier in the sample than the whole note's. Returns gate (output
  * samples) → onset index, the fixed point p = onset(the note cut at p + gate) — the mixer cuts a
- * note `gate` samples after the onset it starts it on (memoised; within SUM_ONSET_MAX of `pre`).
+ * note `gate` samples after the onset it starts it on (memoised; within SHORT_ONSET_MAX of `pre`).
  */
 function shortOnsets(chans: Float32Array[], sr: number, pre: number, release: number): (gate: number) => number {
-  const lim = Math.round(SUM_ONSET_MAX * sr);
+  const lim = Math.round(SHORT_ONSET_MAX * sr);
   const rel = Math.max(0.001, release);
   const k = Math.exp(-1 / (rel * sr));
   const tail = Math.round(MIX_TAIL_TAU * rel * sr);
@@ -920,10 +925,19 @@ function shortOnsets(chans: Float32Array[], sr: number, pre: number, release: nu
   };
 }
 
+/** A low-passed voicing (spec.lp) loses its notes' fundamentals near and above the cutoff: the gain
+ *  that keeps its loudness even across the range (1 / |H(f0)| of the 2-pole low-pass, <= +6 dB). */
+function lpCompensation(lp: number | undefined, midi: number): number {
+  if (!lp) return 1;
+  const r = (440 * Math.pow(2, (midi - 69) / 12)) / lp;
+  return Math.min(2, Math.sqrt(1 + r * r * r * r));
+}
+
 function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false): Sample {
   const ch = chooseZone(spec, set, midi, variant, layer);
   if (!ch) return { l: new Float32Array(1), r: null };
   const z = ch.zone;
+  gain *= lpCompensation(spec.lp, ch.midi);
   let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short);
   let summed = false;
   if (spec.width !== undefined && set.ch.length === 1) {

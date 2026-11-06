@@ -53,6 +53,8 @@ const A = await loadAudio();
 installBank(A);
 const bySet = new Map();
 for (const spec of A.SAMPLED_SPECS) if (!bySet.has(spec.set) && !spec.lp && !spec.hp) bySet.set(spec.set, spec);
+// a set only tone-filtered voicings play (the dry accordion): graded through the first of them
+for (const spec of A.SAMPLED_SPECS) if (!bySet.has(spec.set)) bySet.set(spec.set, spec);
 
 const frames = (x, at, n, len) => {
   // RMS of 1 ms frames [at + k*n, at + (k+1)*n)

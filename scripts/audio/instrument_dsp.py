@@ -313,6 +313,22 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
     return int(st), int(on), int(fin), info
 
 
+def onset10_index(x: np.ndarray, sr: int, pre: int, rel_db: float = -10.0, look: float = 0.5) -> int:
+    """The perceptual onset of a note whose beat is now at `pre`: the first t (window end, exclusive)
+    where the RMS over the preceding 5 ms comes within rel_db of its maximum over [1, pre + look]."""
+    m = to_mono(x) if np.ndim(x) > 1 else np.asarray(x, dtype=np.float64)
+    n = min(len(m), pre + int(look * sr))
+    if n < 2:
+        return pre
+    W = max(1, int(round(0.005 * sr)))
+    cs = np.concatenate([[0.0], np.cumsum(m[:n] ** 2)])
+    t = np.arange(1, n + 1)
+    p = (cs[t] - cs[np.maximum(0, t - W)]) / W
+    if p.max() <= 0:
+        return pre
+    return int(t[int(np.argmax(p >= p.max() * 10 ** (rel_db / 10)))])
+
+
 def onset_index(x: np.ndarray, sr: int, rel_db: float = -30.0, slow: bool = False) -> int:
     """Index where the note starts: first point where the 2 ms envelope crosses rel_db below the
     early peak, refined back to where the signal leaves the noise floor."""
@@ -614,6 +630,83 @@ def measure_pitch_track(x: np.ndarray, sr: int, start: int, end: int, expected_m
     return mean, info
 
 
+def measure_pitch_decay(x: np.ndarray, sr: int, start: int, end: int, expected_midi: float,
+                        span_cents: float = 70.0, hmax: int = 10, floor_db: float = -30.0,
+                        frame: float = 0.06, hop: float = 0.01) -> tuple[float | None, dict]:
+    """Pitch of a decaying, spread tone (section pizzicato: several players, a pitch glide after the
+    pluck) as heard over [start, end): a frame-wise track (frames of max(`frame`, 6 periods), every
+    `hop`) with two estimates per frame — the median over the prominent harmonics h = 1..hmax of
+    (peak frequency / h) within +-span_cents of h * f(expected), and YIN within +-2 semitones — pooled
+    and reduced to their weighted median (weight: frame RMS, i.e. louder frames count more, frames
+    more than floor_db under the loudest are left out). One window over the whole decay would weigh the
+    spectrum's shape instead (a comb over 30-450 ms reads a section pizz up to 60 cents off its
+    frames); the early frames alone miss where the pitch settles after the pluck.
+    Returns (midi or None, {'spread': p90 - p10 of the pooled estimates in cents, 'frames': n})."""
+    m = to_mono(np.atleast_2d(x))
+    end = min(end, len(m))
+    f0 = mtof(expected_midi)
+    F = int(max(frame, 6.0 / f0) * sr)
+    H = max(1, int(hop * sr))
+    info: dict = {}
+    if end - start < F:
+        return None, info
+    w = signal.windows.blackmanharris(F)
+    N = 1 << int(math.ceil(math.log2(F * 8)))
+    f = np.fft.rfftfreq(N, 1 / sr)
+    starts = list(range(start, end - F + 1, H))
+    pw = np.array([float(np.mean(m[a:a + F] ** 2)) for a in starts])
+    if not len(pw) or pw.max() <= 0:
+        return None, info
+    est: list[float] = []
+    wts: list[float] = []
+    for a, p in zip(starts, pw):
+        if p < pw.max() * 10 ** (floor_db / 10):
+            continue
+        seg = m[a:a + F]
+        S = np.abs(np.fft.rfft((seg - np.mean(seg)) * w, N))
+        L = np.log(S + 1e-20)
+        hs = []
+        for h in range(1, hmax + 1):
+            fh = h * f0
+            if fh > 0.45 * sr:
+                break
+            lo = np.searchsorted(f, fh * 2 ** (-span_cents / 1200))
+            hi = np.searchsorted(f, fh * 2 ** (span_cents / 1200))
+            if hi <= lo + 2:
+                continue
+            k = lo + int(np.argmax(S[lo:hi]))
+            if k <= lo or k >= hi - 1:
+                continue  # the band's maximum is on its edge: no peak of this harmonic inside
+            blo = np.searchsorted(f, fh - 0.5 * f0)
+            bhi = np.searchsorted(f, fh + 0.5 * f0)
+            if 20 * math.log10((S[k] + 1e-20) / (np.median(S[blo:bhi]) + 1e-20)) < 10:
+                continue
+            a_, b_, c_ = L[k - 1], L[k], L[k + 1]
+            den = a_ - 2 * b_ + c_
+            dk = 0.5 * (a_ - c_) / den if abs(den) > 1e-12 else 0.0
+            hs.append(1200 * math.log2((k + dk) * sr / N / h / f0))
+        wt = math.sqrt(p)
+        if hs:
+            est.append(float(np.median(hs)))
+            wts.append(wt)
+        yf = yin_f0(seg, sr, mtof(expected_midi - 2), mtof(expected_midi + 2))
+        if yf:
+            c = 1200 * math.log2(yf / f0)
+            if abs(c) <= 200:
+                est.append(c)
+                wts.append(wt)
+    if len(est) < 3:
+        return None, info
+    e = np.array(est)
+    wa = np.array(wts)
+    o = np.argsort(e)
+    cw = np.cumsum(wa[o]) / np.sum(wa)
+    med = float(e[o][min(len(e) - 1, int(np.searchsorted(cw, 0.5)))])
+    info['frames'] = len(starts)
+    info['spread'] = round(float(np.percentile(e, 90) - np.percentile(e, 10)), 1)
+    return expected_midi + med / 100, info
+
+
 def measure_pitch_narrow(x: np.ndarray, sr: int, start: int, end: int, nominal_midi: float,
                          span: float = 1.4, harmonics: int = 3) -> float | None:
     """Fallback pitch measurement when the octave is already known: strongest spectral peak of
@@ -666,16 +759,42 @@ def loop_corr(x: np.ndarray, sr: int, ls: int, le: int, w: float = 0.015) -> flo
     return float(np.dot(a, b) / (math.sqrt(float(np.dot(a, a) * np.dot(b, b))) + 1e-12))
 
 
+def env_range_db(x: np.ndarray, sr: int, a: int, b: int, circular: bool = False, win: float = 0.02,
+                 hop: float = 0.005, detrend: bool = False) -> float:
+    """Level range (max - min, dB) of the `win` RMS envelope over [a, b), every `hop`; circular: the
+    span as a loop plays it (its start follows its end), so a dip anywhere in it counts once per pass;
+    detrend: around its straight dB line (a decaying span: the modulation on top of the decay)."""
+    m = to_mono(x) if x.ndim > 1 else x
+    seg = np.asarray(m[a:b], dtype=np.float64)
+    W = max(1, int(win * sr))
+    if circular:
+        seg = np.concatenate([seg, seg[:W]])
+    if len(seg) <= W:
+        return 0.0
+    cs = np.concatenate([[0.0], np.cumsum(seg * seg)])
+    st = np.arange(0, len(seg) - W + 1, max(1, int(hop * sr)))
+    p = (cs[st + W] - cs[st]) / W
+    d = 10 * np.log10(p + 1e-20)
+    if detrend and len(d) > 2:
+        t = np.arange(len(d))
+        d = d - np.polyval(np.polyfit(t, d, 1), t)
+    return float(d.max() - d.min())
+
+
 def find_loop(x: np.ndarray, sr: int, start_min: int, start_max: int, len_min: int, len_max: int,
               w: float = 0.02, n_starts: int = 16, env_ctx: float = 0.0, env_k: float = 0.05,
-              top: int = 6) -> tuple[int, int, float]:
+              top: int = 6, range_lim: float | None = None, range_detrend: bool = False) -> tuple[int, int, float]:
     """Pick (loop_start, loop_end) with len_min <= le - ls <= len_max maximising the normalised
     correlation between the windows around ls and le (FFT cross-correlation per candidate start),
     with a penalty for level mismatch so the envelope is continuous across the seam.
     env_ctx > 0 (sustained loops): the best `top` candidates per start are re-ranked by how well the
     10 ms envelope (dB) within +-env_ctx of le matches the one around ls (shape AND level: a loop
     whose end sits on a vibrato / bow swell crest and whose start sits in a trough plays a level
-    bump at every seam even when the waveforms correlate), penalty env_k per dB of mean mismatch."""
+    bump at every seam even when the waveforms correlate), penalty env_k per dB of mean mismatch.
+    range_lim (dB, with env_ctx): a candidate whose level range as it loops (20 ms RMS, env_range_db)
+    exceeds it ranks below every candidate that does not (a breath dip or the note's release inside
+    the loop would pump at the loop rate); range_detrend: measured around the span's decay line (a
+    beat null inside a decaying loop would flutter at the loop rate)."""
     m = to_mono(x)
     W = int(w * sr)
     n = len(m)
@@ -726,19 +845,70 @@ def find_loop(x: np.ndarray, sr: int, start_min: int, start_max: int, len_min: i
         ib = np.clip(e + offs, 0, n - 1)
         mism = float(np.mean(np.abs(ev[ia] - ev[ib])))
         tot = sc - env_k * mism
+        if range_lim is not None:
+            rg = env_range_db(m, sr, s, e, circular=not range_detrend, detrend=range_detrend)
+            if rg > range_lim:
+                tot -= 100.0 + rg
         if tot > best[2]:
             best = (s, e, tot)
     return best
 
 
+def flatten_sustain_loop(x: np.ndarray, sr: int, ls: int, le: int, range_db: float, limit_db: float = 8.0,
+                         win: float = 0.02, ease: float = 0.06) -> tuple[np.ndarray, float]:
+    """A sustained loop that still pumps (a level dip it could not avoid): where its envelope as it
+    loops (`win` RMS, computed circularly so the correction is continuous across the seam) strays
+    more than range_db / 2 from its median level, it is pulled back to that band (gain limited to
+    +-limit_db); the natural movement inside the band (vibrato, bow) is kept. The gain at the loop
+    start is eased in over the `ease` seconds before it (no step entering the loop). Returns the new
+    signal and the range left."""
+    y = np.array(x, copy=True)
+    m = to_mono(y) if y.ndim > 1 else y
+    L = le - ls
+    W = max(8, int(win * sr))
+    if L <= 2 * W:
+        return y, env_range_db(y, sr, ls, le, circular=True)
+    loop = np.asarray(m[ls:le], dtype=np.float64)
+    ext = np.concatenate([loop[-W:], loop, loop[:W]])
+    k = np.ones(W) / W
+    env = np.sqrt(np.convolve(ext * ext, k, mode='same'))[W:W + L]
+    ldb = 20 * np.log10(env + 1e-12)
+    dev = ldb - np.median(ldb)
+    h = max(0.75, range_db / 2)
+    g_db = np.clip(np.clip(dev, -h, h) - dev, -limit_db, limit_db)
+    g = 10 ** (g_db / 20)
+    y[..., ls:le] *= g
+    e = min(ls, int(ease * sr))
+    if e > 0:
+        r = np.linspace(0.0, 1.0, e)
+        y[..., ls - e:ls] *= 10 ** (g_db[0] * (0.5 - 0.5 * np.cos(np.pi * r)) / 20)
+    return y, env_range_db(y, sr, ls, le, circular=True)
+
+
+def decay_slope(x: np.ndarray, sr: int, a: int, b: int, period: float | None) -> float | None:
+    """Decay rate (dB/s) of [a, b): least-squares line through the dB envelope (RMS over
+    max(20 ms, 2 periods)). Over a few hundred ms it averages out the beating of string courses and
+    partials, which a fit over one loop and the 80 ms before it does not (+-40 dB/s errors)."""
+    m = to_mono(np.atleast_2d(x))
+    win = max(0.02, 2.0 * period / sr if period else 0.02)
+    pad = int(win * sr)
+    b0 = max(0, a - pad)
+    env = envelope(m[b0:min(len(m), b + pad)], sr, win)[a - b0:a - b0 + (b - a)]
+    if len(env) < int(0.05 * sr):
+        return None
+    ldb = 20 * np.log10(env + 1e-12)
+    return float(np.polyfit(np.arange(len(ldb)), ldb, 1)[0] * sr)
+
+
 def flatten_loop_envelope(x: np.ndarray, sr: int, a: int, ls: int, le: int, period: float | None,
-                          limit_db: float = 6.0) -> tuple[np.ndarray, float, float]:
+                          limit_db: float = 6.0, slope: float | None = None) -> tuple[np.ndarray, float, float]:
     """Decaying loops, on the natural (not yet decay-compensated) signal: remove the slow amplitude
     modulation (beating string courses / partials) around the exponential decay inside [a, le), so
     a repeated loop does not flutter at the loop rate. The envelope (RMS over max(20 ms, 2 periods))
-    is pulled onto its straight dB decay line (fitted over [a, le)), the gain limited to +-limit_db
+    is pulled onto its straight dB decay line (fitted over [a, le); with `slope` (dB/s, measured over a
+    longer stretch, see decay_slope) only its level is fitted), the gain limited to +-limit_db
     and eased in over [a, ls) so the material before the loop keeps its natural shape. Returns the
-    new signal, the fitted decay (dB/s) and the modulation inside the loop before the correction
+    new signal, the line's decay (dB/s) and the modulation inside the loop before the correction
     (98th - 2nd percentile of the detrended envelope, dB)."""
     y = np.array(x, copy=True)
     m = to_mono(y)
@@ -751,7 +921,11 @@ def flatten_loop_envelope(x: np.ndarray, sr: int, a: int, ls: int, le: int, peri
         return y, 0.0, 0.0
     ldb = 20 * np.log10(env + 1e-12)
     t = np.arange(len(ldb))
-    coef = np.polyfit(t, ldb, 1)
+    if slope is None:
+        coef = np.polyfit(t, ldb, 1)
+    else:
+        k = slope / sr
+        coef = np.array([k, float(np.mean(ldb - k * t))])
     trend = np.polyval(coef, t)
     dev = ldb - trend
     loop_dev = dev[ls - a:]
@@ -762,6 +936,68 @@ def flatten_loop_envelope(x: np.ndarray, sr: int, a: int, ls: int, le: int, peri
     ease[:r] = 0.5 - 0.5 * np.cos(np.linspace(0, math.pi, r))
     y[..., a:le] *= 10 ** (g_db * ease / 20)
     return y, float(coef[0] * sr), resid
+
+
+def single_reed(x: np.ndarray, sr: int, c0: int, ls: int, le: int, f0: float, fade: float = 0.04,
+                span_cents: float = 45.0) -> tuple[np.ndarray, int, int, dict]:
+    """A musette (two reeds tuned a little apart, beating) reduced to its lower reed. The loop
+    [ls, le) holds whole beat cycles, so in the DFT of exactly one loop the two reeds' partials sit
+    on separate bins: reed A's h-th partial on h*kA, reed B's on h*kB (kB - kA = the beat cycles in
+    the loop). Reed B's bins are cleared, which leaves one period of reed A (with the bellows noise
+    between the partials), seamless by construction. The zone keeps its recorded attack up to c0 and
+    crossfades (over `fade` s, phase-aligned by circular cross-correlation, level-matched) into reed
+    A repeated; its loop is one period of that. Returns (signal, new ls, new le, info)."""
+    m = to_mono(np.atleast_2d(x))
+    L = le - ls
+    X = np.fft.rfft(m[ls:le])
+    binhz = sr / L
+    k0 = f0 / binhz
+    lo = max(1, int(np.floor(k0 * 2 ** (-span_cents / 1200))))
+    hi = int(np.ceil(k0 * 2 ** (span_cents / 1200))) + 1
+    mag = np.abs(X)
+    info: dict = {}
+    # the stronger reed: the largest bin near f0; the other: the largest bin within 40 cents of it
+    # (the reeds sit 15-35 cents apart, 1-3 bins in a loop of 1-2 beat cycles; a reed's own
+    # neighbouring bins are 25-30 dB down, the other reed about level with it)
+    hi = min(hi, len(X) - 1)
+    k1 = lo + int(np.argmax(mag[lo:hi]))
+    nb_max = max(1, int(np.ceil(k1 * (2 ** (40 / 1200) - 1))))
+    cand = [k for k in range(k1 - nb_max, k1 + nb_max + 1) if k != k1 and 0 < k < len(X)]
+    k2 = max(cand, key=lambda k: mag[k]) if cand else k1
+    if k2 == k1 or mag[k2] < mag[k1] * 10 ** (-12 / 20):
+        info['reed'] = 'no second reed found'
+        return np.atleast_2d(x), ls, le, info
+    kA, kB = sorted((k1, k2))
+    nb = kB - kA
+    Y = X.copy()
+    h = 1
+    while h * kB < len(X) - 1:
+        # each harmonic: reed B's partial sits on h*kB, reed A's on h*kA — refined to the local peak
+        # when they are 3+ bins apart (a reed's upper partials can sit a bin off h x its fundamental);
+        # reed B's peak and its leakage (the bins within (gap - 1) / 2 of it) are cleared, reed A's
+        # peak is never touched
+        ka, kb = h * kA, h * kB
+        if kb - ka >= 3:
+            ka = max((ka - 1, ka, ka + 1), key=lambda j: mag[j])
+            kb = max((j for j in (kb - 1, kb, kb + 1) if j < len(X)), key=lambda j: mag[j])
+        w = max(0, (kb - ka - 1) // 2)
+        Y[max(ka + 1, kb - w):kb + w + 1] = 0
+        h += 1
+    yA = np.fft.irfft(Y, L)
+    # crossfade from the recorded attack into reed A: the offset of reed A's period that best matches
+    # the recording at c0 (so reed A carries on in phase while reed B fades out)
+    F = int(fade * sr)
+    seg = np.zeros(L)
+    seg[:F] = m[c0:c0 + F]
+    corr = np.fft.irfft(np.conj(np.fft.rfft(seg)) * np.fft.rfft(yA), L)
+    d = int(np.argmax(corr))
+    g = float(np.sqrt(np.mean(m[c0:c0 + F] ** 2) / (np.mean(yA ** 2) + 1e-20)))
+    rep = np.tile(yA * g, (F + L) // L + 2)[d:d + F + L]
+    w = 0.5 - 0.5 * np.cos(np.pi * (np.arange(F) + 0.5) / F)
+    out = np.concatenate([m[:c0], m[c0:c0 + F] * (1 - w) + rep[:F] * w, rep[F:F + L]])
+    info['reed'] = f'kept {kA * binhz:.2f} Hz, cleared {kB * binhz:.2f} Hz ({1200 * math.log2(kB / kA):.0f} c, {nb} beat cycles/loop)'
+    info['reed_gain_db'] = round(20 * math.log10(g + 1e-12), 1)
+    return out[None, :], c0 + F, c0 + F + L, info
 
 
 def crossfade_loop(x: np.ndarray, ls: int, le: int, xf: int) -> np.ndarray:

@@ -6,13 +6,15 @@
 # 1. resampler unit test (tuning, passband, aliasing/interpolation residual)
 # 2. test patterns of every sampled instrument + analysis (tuning, placement, onset, loudness
 #    evenness, release clicks, loop seams) — verdicts against the Audio 2.0 limits
-# 3. attack timing of every zone (time from the beat to -10 dB of the note's peak, how soon
-#    sustained notes speak, first-sample steps, note-on HF bursts)
+# 3. attack timing of every zone (time from the beat to -10 dB of the note's peak, on what a centred
+#    note plays — two takes summed for the `width` sets; short notes of strStab; how soon sustained
+#    notes speak, first-sample steps, note-on HF bursts)
 # 4. loop quality of every looped zone (level steps at the seam, flutter of decaying loops at the
 #    loop rate, HF ticks at the seam)
 # 5. song-DSL semantics (tremolo, tambourine articulations, rolls at every velocity, variant
 #    loudness, chords, round robins, velocity)
-# 6. the 10 songs rendered with samples (and with the synth for comparison): peak / RMS / warnings
+# 6. the 10 songs rendered with samples (and with the synth for comparison): peak / RMS / loop seam
+#    (the material before loopEnd must equal the material before loopStart) / warnings
 # 7. MP3 decoder-delay robustness: patterns rendered from MP3s decoded WITHOUT trimming the
 #    encoder delay must be sample-identical to the normal render (marker alignment)
 # Every step runs; the summary at the end lists each step's verdict (exit code 1 if any failed).

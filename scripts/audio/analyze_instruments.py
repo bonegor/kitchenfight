@@ -7,7 +7,9 @@ Usage:
   /home/user/.venv-audio/bin/python scripts/audio/analyze_instruments.py OUT [--json OUT/analysis.json]
 
 Per note (exact start sample from the pattern JSON; instruments that play a second take on the
-right channel (`width`) are measured on the zone itself, recovered from L/R):
+right channel (`width`) are measured on the zone itself, recovered from L/R — except the onset of
+`sumOnset` instruments (strStab), whose beat is on the two takes' sum: measured on the mono sum, and
+not graded on placement, which the sum onset moves on purpose):
   tuning   measured pitch vs the requested (octave-folded) MIDI note, cents   (pitched only; the
            build's own estimator, build_instruments.measure_zone_pitch — a frame-wise track for
            sustained / plucked tones — so this verifies the renderer, the loop and the MP3, not the
@@ -70,7 +72,8 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
         return None
     x, zsr = sprite(n['set'])
     zone = to_mono(x)[z['o']:z['o'] + min(z['n'], z.get('ls', z['n']))]
-    ratio = 2 ** ((n['folded'] - z['p']) / 12) if not n.get('unpitched') else 1.0
+    # (cents: the micro-variation of a repeated take — round robin without a second recording)
+    ratio = 2 ** ((n['folded'] - z['p']) / 12 + n.get('cents', 0) / 1200) if not n.get('unpitched') else 2 ** (n.get('cents', 0) / 1200)
     inc = ratio * zsr / out_sr
     # reference at the output rate: zone index i -> output (i - pre) / inc after the onset
     t_out = np.arange(int(len(zone) / inc))
@@ -82,8 +85,10 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
     M = 64 if n.get('unpitched') else max(2, min(64, int(out_sr / mtof(n['folded']) / 2) - 1))
     if a < M or L < 256:
         return None
-    seg = rendered[a - M:a + L + M]
-    r = ref[:L]
+    # first differences (whitened): the correlation of low-frequency content (a bass-drum roll, a low
+    # note) is flat over many samples, its maximum anywhere in that plateau
+    seg = np.diff(rendered[a - M:a + L + M + 1])
+    r = np.diff(ref[:L + 1])
     c = signal.correlate(seg, r, mode='valid')
     k = int(np.argmax(c))
     if 0 < k < len(c) - 1:
@@ -175,13 +180,14 @@ def analyze(path_json: str) -> dict:
         a = max(0, s - int(0.06 * sr))
         b = min(len(m), s + int((gap - 0.15) * sr))
         seg = x[:, a:b]
-        # onset: perceptual (5 ms RMS within 10 dB of its maximum over the note's first 0.5 s)
-        onset_ms = onset_5ms(m, s, sr, a, min(b, s + int(0.5 * sr)))
+        # onset: perceptual (5 ms RMS within 10 dB of its maximum over the note's first 0.5 s); on what
+        # is heard (the mono sum) for instruments whose beat is the onset of their two takes together
+        onset_ms = onset_5ms(to_mono(x) if meta.get('sumOnset') else m, s, sr, a, min(b, s + int(0.5 * sr)))
         rec = {'m': n['m'], 'folded': n['folded'], 'v': n['v'], 'vr': n['vr'], 'layer': n['layer'], 'onset_ms': round(onset_ms, 3)}
         rec['fold'] = bool(n.get('fold'))
         # sample-exact placement of the zone
         n2 = dict(n, unpitched=unpitched)
-        lag = placement_lag(m, s, n2, sr)
+        lag = None if meta.get('sumOnset') else placement_lag(m, s, n2, sr)
         if lag is not None:
             rec['place'] = round(lag, 2)
         sp = SPEC.get(n.get('set') or '')
