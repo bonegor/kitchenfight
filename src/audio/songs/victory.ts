@@ -1,67 +1,271 @@
 /**
- * VICTORY — "Brindisi della Vittoria": triumphant Italian fanfare / brindisi waltz (plays once).
- * D major, 3/4, ♩ = 132, ~13 s. Brass fanfare → accordion + mandolin waltz tune → big final
- * chord with timpani roll, cymbal, glockenspiel sparkle, and a cheeky two-stab "button".
+ * VICTORY — Verdi, *Aida* (1871), Act II: the Triumphal March, the famous "Aida trumpets" theme.
+ * A♭ major (Verdi's key for the first trumpet statement; the reference lead sheet is in G),
+ * 4/4, ♩ = 154 (an alla-breve march: the oom-pah moves in half notes).
+ *
+ * Form (16 bars, 24.9 s): march (12) = timpani + cymbal roll and the trumpet pickup, then the
+ * whole 12-bar trumpet theme once (a b a b') — trumpets in unison over the band (tuba/pizz oom,
+ * string after-beats, snare), horns join at b, violins double the tune an octave up and the bass
+ * drum / piatti join at a'; castanets wink in the trumpets' rests → fin (1) = tutti A♭ with crash,
+ * then the cheeky band tag: the accordion echoes the trumpets' triplet, castanets rattle, V7–I
+ * button → tail (3, loop) = the band at rest under the results screen: accordion right hand on
+ * the guide tones, oom-pah from upright bass + accordion chord buttons, strings, horn, castanets.
+ * Levels: loop body (tail) -16.4 LUFS, march -14.8 LUFS (the fanfare sits 1.6 LU above the bed).
+ * Melody verified against wf_aida_march.abc bars 1–12 (see docs/music/victory.md).
  */
-import { bass, comp, hits, mel, pad, type SongDef } from '../sequencer';
+import { comp, hits, mel, pad, type SongDef } from '../sequencer';
 
-const CH = 'D:6 | D:6 | A7:6 | A7:6 | D:6 | G:6 | D/A:3 A7:3 | D:6 | A7:3 D:3';
-const TUNE = `
-  D5:1 D5 D5 F#5:1 A5:2 | D6:4 C#6:1 B5:1 | A5:3 G5:1 E5:2 | C#5:2 E5:2 A5:2 |
-  F#5:3 G5:1 A5:2 | B5:3 A5:1 G5:2 | F#5:2 A5:1 E5:2 G5:1 | D5:6 | r:6 |`;
+/** chord track of the reference lead sheet (bars 1–12), transposed G → A♭ */
+const CH_MARCH =
+  'Ab:16 | Ab:12 Eb7:4 | Ab:16 | Eb7:8 Ab:8 | Eb7:8 Ab:4 Eb:4 | Ab:4 Eb:4 Cm:4 Fm:4 | Bb7:8 Eb7sus4:4 Eb:4 | ' +
+  'Ab:12 Eb7:4 | Ab:16 | Eb7:8 Ab:8 | Eb7:8 Ab:4 Eb:4 | Ab:4 Eb:4 Cm:4 Eb7:4';
+
+/** a: "A♭ — B♭-E♭-B♭ | C C C C-D♭-A♭ | C. B♭ A♭" (reference bars 2–4 / 8–10) */
+const THEME_A = `
+  Ab4:12 Bb4:4/3 Eb4 Bb4 | C5:4 C5 C5 C5:4/3 Db5 Ab4 | C5:6 Bb4:2 Ab4:4 r:4 |`;
+/** b: half cadence on E♭ (reference bars 5–7) */
+const THEME_B = `
+  Bb4:2 C5 C5:3 Bb4:1 Ab4:2 r:2 Bb4:3 C5:1 | C5:4 Bb4:3 C5:1 C5:4 Ab4:3 Bb4:1 | Bb4:4 F4:4/3 F4 F4 F4:4 G4:4 |`;
+/** b': full cadence (reference bars 11–12; the final A♭ is the first note of 'fin') */
+const THEME_B2 = `
+  Bb4:2 C5 C5:3 Bb4:1 Ab4:2 r:2 Bb4:3 C5:1 | C5:4 Bb4:3 C5:1 C5:4 Bb4:4/3 C5 Bb4 |`;
+/** the whole first statement: accented pickup bar + a b a b' (reference bars 1–12) */
+const THEME = 'r:12 Eb4!:4 |' + THEME_A + THEME_B + THEME_A + THEME_B2;
+/** phrase dynamics, velocity per bar of THEME: a forte, b a shade lighter, a' b' forte again */
+const DYN = [0.9, 0.9, 0.9, 0.9, 0.85, 0.84, 0.84, 0.9, 0.9, 0.9, 0.9, 0.92];
+/** THEME with the bar's velocity (× k) written into every note */
+const shaped = (k: number): string =>
+  THEME.split('|')
+    .filter((b) => b.trim())
+    .map((b, i) =>
+      b
+        .trim()
+        .split(/\s+/)
+        .map((t) => (t.startsWith('r') ? t : `${t}@${(DYN[i] * k).toFixed(3)}`))
+        .join(' '),
+    )
+    .join(' | ') + ' |';
+
+/** after-beats (beats 2 and 4; a chord per beat where the harmony moves every beat). Under a
+ *  melody C over E♭7 the after-beat leaves out the 7th (D♭ against C), E♭7sus4 → E♭ resolves */
+const P_A = 'r:4 Ab3+C4+Eb4:2 r:6';
+const AB = {
+  b2: `${P_A} G3+Db4+Eb4:2 r:2 |`,
+  b3: `${P_A} Ab3+C4+Eb4:2 r:2 |`,
+  b4: 'r:4 G3+Bb3+Eb4:2 r:6 Ab3+C4+Eb4:2 r:2 |',
+  b5: 'r:4 G3+Bb3+Eb4:2 r:6 G3+Bb3+Eb4:2 r:2 |',
+  b6: 'Ab3+C4+Eb4:2 r:2 G3+Bb3+Eb4:2 r:2 G3+C4+Eb4:2 r:2 Ab3+C4+F4:2 r:2 |',
+  b7: 'r:4 Ab3+Bb3+D4:2 r:2 Ab3+Bb3+Eb4:2 r:2 G3+Bb3+Eb4:2 r:2 |',
+  b12: 'Ab3+C4+Eb4:2 r:2 G3+Bb3+Eb4:2 r:2 G3+C4+Eb4:2 r:2 G3+Db4+Eb4:2 r:2 |',
+};
+const AFTER = ['r:16 |', AB.b2, AB.b3, AB.b4, AB.b5, AB.b6, AB.b7, AB.b2, AB.b3, AB.b4, AB.b5, AB.b12].join(' ');
+
+/** horn section, bars 5–12: three voices with tied common tones (bar 7: B♭7 → E♭7sus4 → E♭) */
+const HRN_LO = 'Eb3:16 | _:12 F3:4 | _:8 Eb3:8 | _:16 | _:16 | _:16 | _:16 | _:16 |';
+const HRN_MID = 'G3:8 Ab3:4 G3:4 | Ab3:4 G3:8 Ab3:4 | _:12 G3:4 | Ab3:12 G3:4 | Ab3:16 | G3:8 Ab3:8 | G3:8 Ab3:4 G3:4 | Ab3:4 G3:12 |';
+const HRN_TOP = 'Bb3:8 C4:4 Bb3:4 | C4:4 Bb3:4 C4:8 | D4:8 Db4:4 Bb3:4 | C4:12 Db4:4 | C4:16 | Bb3:8 C4:8 | Bb3:8 C4:4 Bb3:4 | C4:4 Bb3:4 C4:4 Db4:4 |';
+
+/** oom (beats 1 and 3; every beat where the harmony moves every beat) — tuba, F1–E♭2 */
+const OOM = [
+  'r:16',
+  'Ab1:4 r:4 Eb2:4 r:4',
+  'Ab1:4 r:4 C2:4 r:4', // walks A♭–C–E♭ into the E♭7 bar
+  'Eb2:4 r:4 Ab1:4 r:4',
+  'Eb2:4 r:4 Ab1:4 Eb2:4', // beat 4 follows the chord change (E♭)
+  'Ab1:4 G1 C2 F1',
+  'Bb1:4 r:4 Eb2:8',
+  'Ab1:4 r:4 Eb2:4 r:4',
+  'Ab1:4 r:4 C2:4 r:4',
+  'Eb2:4 r:4 Ab1:4 r:4',
+  'Eb2:4 r:4 Ab1:4 Eb2:4',
+  'Ab1:4 G1 C2 Eb2',
+].join(' | ');
+
+/** timpani roll: strokes every 2/3 step (≈ 15 per second at ♩ = 154), crescendo */
+const roll = (at: number, steps: number, note: string, v0: number, v1: number): Array<[number, string, number]> => {
+  const n = Math.round(steps * 1.5);
+  return Array.from({ length: n }, (_, i): [number, string, number] => [at + (i * 2) / 3, note, v0 + ((v1 - v0) * i) / Math.max(1, n - 1)]);
+};
+/** suspended-cymbal roll swell: overlapping roll segments of rising velocity (variant 1 = roll) */
+const swell = (at: number, steps: number, v0: number, v1: number, seg = 2): Array<[number, number, number, number]> => {
+  const n = Math.max(1, Math.round(steps / seg));
+  return Array.from({ length: n }, (_, i): [number, number, number, number] => [at + i * seg, 60, v0 + ((v1 - v0) * i) / Math.max(1, n - 1), seg]);
+};
+const TRIP = (at: number, v: number): Array<[number, number, number]> => [
+  [at, 60, v],
+  [at + 4 / 3, 60, v * 0.8],
+  [at + 8 / 3, 60, v * 0.9],
+];
+const bar = (n: number): number => (n - 1) * 16; // step of bar n (1-based) in the march section
 
 export const victory: SongDef = {
   id: 'victory',
-  bpm: 132,
-  stepsPerBeat: 2,
-  barSteps: 6,
-  scale: 'D major',
-  gainDb: -2.7,
+  bpm: 154,
+  stepsPerBeat: 4,
+  barSteps: 16,
+  scale: 'Ab major',
+  gainDb: -0.6,
   humanize: 0.003,
-  tail: 2.6,
-  reverb: { rt60: 1.8, size: 1.2, damp: 0.5, predelay: 0.02, er: 0.35, hp: 260, lp: 7500, wet: 1.5 },
+  reverb: { rt60: 1.9, size: 1.25, damp: 0.5, predelay: 0.022, er: 0.35, hp: 240, lp: 7500, wet: 1.45 },
   channels: {
-    brass: { inst: 'brass', gain: -3, pan: 0.1, send: 0.25 },
-    acc: { inst: 'accordion', gain: -3, pan: -0.1, send: 0.2 },
-    mand: { inst: 'mandolin', gain: -4, pan: -0.35, send: 0.22 },
-    str: { inst: 'strings', gain: -11, pan: 0, send: 0.3, hum: 0 },
-    stab: { inst: 'strStab', gain: -9, pan: 0.3, send: 0.2, hum: 0 },
-    gtr: { inst: 'guitar', gain: -9, pan: 0.35, send: 0.15 },
-    tuba: { inst: 'tuba', gain: -5, pan: 0, send: 0.05, hum: 0 },
-    timp: { inst: 'timp', gain: -5, pan: 0, send: 0.2, hum: 0 },
-    crash: { inst: 'crash', gain: -12, pan: -0.2, send: 0.25, hum: 0 },
-    glock: { inst: 'glock', gain: -12, pan: 0.4, send: 0.3, hum: 0 },
-    tri: { inst: 'triangle', gain: -16, pan: 0.45, send: 0.3, hum: 0 },
-    tamb: { inst: 'tamb', gain: -8, pan: 0.28, send: 0.1, hum: 0.5 },
+    tpt: { inst: 'trumpet', gain: -0.9, pan: 0.08, send: 0.2 },
+    tptS: { inst: 'brass', gain: -9.5, pan: -0.12, send: 0.22 },
+    hrn: { inst: 'brassSoft', gain: -11, pan: -0.32, send: 0.3, hum: 0.6 },
+    str: { inst: 'strings', gain: -7.5, pan: -0.22, send: 0.28, hum: 0.5 },
+    stab: { inst: 'strStab', gain: -5.5, pan: 0.26, send: 0.16, hum: 0.5 },
+    vlnM: { inst: 'strStab', gain: -4, pan: -0.24, send: 0.24, hum: 0.5 },
+    tuba: { inst: 'tuba', gain: -5.5, pan: 0, send: 0.06, hum: 0.4 },
+    pizz: { inst: 'pizz', gain: -6, pan: 0.32, send: 0.12, hum: 0.4 },
+    timp: { inst: 'timpani', gain: -6.5, pan: -0.06, send: 0.2, hum: 0.3 },
+    snare: { inst: 'snare', gain: -7, pan: 0.16, send: 0.14, hum: 0.4 },
+    bd: { inst: 'bassDrum', gain: -8, pan: 0, send: 0.2, hum: 0 },
+    crash: { inst: 'crash', gain: -13, pan: -0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -6.5, pan: 0.25, send: 0.25, hum: 0 },
+    glock: { inst: 'glock', gain: -16, pan: 0.4, send: 0.3, hum: 0 },
+    acc: { inst: 'accordion', gain: -6, pan: -0.1, send: 0.18 },
+    cast: { inst: 'castanets', gain: -9, pan: 0.36, send: 0.12, hum: 0.5 },
+    // tail (loop) only
+    accR: { inst: 'accordion', gain: -1.9, pan: -0.08, send: 0.2, hum: 0.6 },
+    accC: { inst: 'accChord', gain: -6.2, pan: -0.16, send: 0.12, hum: 0.5 },
+    ubass: { inst: 'uprightBass', gain: -2.2, pan: 0.1, send: 0.08, hum: 0.5 },
+    strT: { inst: 'strings', gain: -4.7, pan: 0.18, send: 0.3, hum: 0.5 },
+    hrnT: { inst: 'brassSoft', gain: -4.7, pan: -0.3, send: 0.3, hum: 0.5 },
   },
   sections: {
-    main: {
-      bars: 9,
-      chords: CH,
+    // pickup bar (roll) + the whole 12-bar trumpet theme: reference bars 1–12
+    march: {
+      bars: 12,
+      chords: CH_MARCH,
       parts: [
-        mel('brass', 'D5:1 D5 D5 F#5:1 A5:2 | D6:6 | r:6 | r:6 | r:6 | r:6 | r:6 | D5:6 | r:1 A4:1 r:1 D5:1 r:2 |', { vel: 0.95 }),
-        mel('acc', TUNE, { vel: 0.85 }),
-        mel('mand', TUNE, { vel: 0.7, oct: 1, tremMin: 2 }),
-        mel('glock', 'r:6 | r:6 | r:6 | r:6 | r:6 | r:6 | r:6 | D6:1 F#6 A6 D7:3 | r:6 |', { vel: 0.7 }),
-        pad('str', { lo: 'F#4', hi: 'D5', vel: 0.55, n: 3, to: 8 }),
-        comp('stab', 'r:6 | r:6 | r:2 c:2 c:2 | r:2 c:2 c:2 | r:2 c:2 c:2 | r:2 c:2 c:2 | r:2 c:2 c:2 | C:6 | r:1 C:1 r:1 C:1 r:2', { lo: 'F#4', hi: 'D5', vel: 0.6 }),
-        comp('gtr', 'r:2 c:2 c:2', { lo: 'D3', hi: 'D4', vel: 0.6, strum: 0.012, from: 2, to: 7 }),
-        bass('tuba', '1:2 r:4', { lo: 'D1', hi: 'D2', vel: 0.85, from: 2, to: 7 }),
-        hits('tuba', [[42, 'D2', 0.9, 6], [49, 'A1', 0.9, 1], [51, 'D2', 1.0, 2]]),
+        mel('tpt', shaped(1), {}),
+        mel('tptS', shaped(0.8), {}),
+        // horns: three legato voices from b on (E♭ inner pedal; the 7th only where it resolves)
+        mel('hrn', HRN_LO, { vel: 0.5, at: bar(5) }),
+        mel('hrn', HRN_MID, { vel: 0.5, at: bar(5) }),
+        mel('hrn', HRN_TOP, { vel: 0.5, at: bar(5) }),
+        // violins double the tune an octave up for a' b' (sustain + marcato layer: the sustain
+        // samples swell in slowly, the marcato layer articulates the triplets and dotted figures)
+        mel('str', THEME_A + THEME_B2, { vel: 0.62, oct: 1, at: bar(8) }),
+        mel('vlnM', THEME_A + THEME_B2, { vel: 0.6, oct: 1, at: bar(8) }),
+        mel('stab', AFTER, { vel: 0.62 }),
+        mel('tuba', OOM, { vel: 0.82 }),
+        mel('pizz', OOM, { vel: 0.7, oct: 1 }),
+        // percussion
         hits('timp', [
-          [0, 'D2', 0.9],
-          [6, 'A2', 0.95],
-          ...Array.from({ length: 10 }, (_, i): [number, string, number] => [36 + i * 0.5, 'A2', 0.3 + i * 0.06]),
-          [42, 'D2', 1.0],
-          [49, 'A2', 0.9],
-          [51, 'D2', 1.0],
+          ...roll(0, 15, 'Eb2', 0.22, 0.62),
+          [bar(2), 'Ab2', 0.86],
+          [bar(4), 'Eb2', 0.6],
+          [bar(5), 'Eb2', 0.7],
+          [bar(6), 'Ab2', 0.62],
+          ...roll(bar(7) + 8, 8, 'Eb2', 0.3, 0.6),
+          [bar(8), 'Ab2', 0.9],
+          [bar(8) + 8, 'Eb2', 0.66],
+          [bar(9), 'Ab2', 0.78],
+          [bar(9) + 8, 'Eb2', 0.66],
+          [bar(10), 'Eb2', 0.78],
+          [bar(10) + 8, 'Ab2', 0.7],
+          [bar(11), 'Eb2', 0.78],
+          [bar(11) + 8, 'Ab2', 0.7],
+          [bar(12), 'Ab2', 0.8],
+          ...roll(bar(12) + 8, 8, 'Eb2', 0.35, 0.75),
         ]),
-        hits('crash', [[6, 60, 0.8], [42, 60, 0.9]]),
-        hits('tri', [[12, 60, 0.6], [24, 60, 0.6], [42, 60, 0.8]]),
-        hits('tamb', [[12, 60, 0.6], [18, 60, 0.6], [24, 60, 0.6], [30, 60, 0.6], [36, 60, 0.7], [42, 60, 0.9]], 4),
+        // the band's wink: castanets answer in the trumpets' rest (bars 4 and 10, beat 4)
+        hits('cast', [4, 10].flatMap((b): Array<[number, number, number]> => [
+          [bar(b) + 12, 60, 0.5],
+          [bar(b) + 13, 60, 0.4],
+          [bar(b) + 14, 60, 0.62],
+        ])),
+        // (roll velocities stay below 0.7: above it the sampler picks the cymbal's hit layer)
+        hits('cym', [...swell(2, 14, 0.22, 0.6), ...swell(bar(7) + 8, 8, 0.25, 0.55), ...swell(bar(12) + 8, 8, 0.3, 0.64)], 1),
+        hits('crash', [
+          [bar(2), 60, 0.82, 8],
+          [bar(8), 60, 0.95, 8],
+          [bar(9), 60, 0.42, 4],
+          [bar(10), 60, 0.42, 4],
+          [bar(11), 60, 0.45, 4],
+        ]),
+        hits('bd', [
+          [bar(2), 60, 0.9, 8],
+          [bar(5), 60, 0.6, 4],
+          [bar(8), 60, 0.9, 8],
+          ...[9, 10, 11].flatMap((b): Array<[number, number, number, number]> => [
+            [bar(b), 60, 0.62, 4],
+            [bar(b) + 8, 60, 0.5, 4],
+          ]),
+          [bar(12), 60, 0.62, 4],
+        ], 0),
+        hits('snare', [
+          // after-beats, with the trumpets' triplet pickups doubled
+          [bar(2), 60, 0.7],
+          ...[2, 3, 4, 5, 6, 8, 9, 10, 11, 12].map((b): [number, number, number] => [bar(b) + 4, 60, 0.42]),
+          ...[5, 6, 11].map((b): [number, number, number] => [bar(b) + 12, 60, 0.42]),
+          ...TRIP(bar(2) + 12, 0.5),
+          ...TRIP(bar(3) + 12, 0.5),
+          ...TRIP(bar(7) + 4, 0.5),
+          [bar(7) + 8, 60, 0.45],
+          [bar(8), 60, 0.78],
+          ...TRIP(bar(8) + 12, 0.55),
+          ...TRIP(bar(9) + 12, 0.55),
+          // 16th build into the final chord
+          ...Array.from({ length: 8 }, (_, i): [number, number, number] => [bar(12) + 8 + i, 60, 0.3 + i * 0.06]),
+        ]),
+      ],
+    },
+    // the theme's final A♭ (tutti, crash), then the cheeky band tag: accordion + castanets
+    fin: {
+      bars: 1,
+      chords: 'Ab:12 Eb7:2 Ab:2',
+      parts: [
+        mel('tpt', 'Ab4:6@0.92 r:10', {}),
+        mel('tptS', 'Ab4+C5+Eb5:6 r:10', { vel: 0.55 }),
+        mel('hrn', 'Eb3+Ab3+C4:6 r:10', { vel: 0.6 }),
+        mel('str', 'Ab3+Eb4+C5+Ab5:6 r:10', { vel: 0.58 }),
+        mel('stab', 'Ab3+C4+Eb4:2@0.5 r:10 G3+Db4+Eb4:2@0.62 Ab3+C4+Eb4:2@0.72', {}),
+        mel('tuba', 'Ab1:6 r:10', { vel: 0.82 }),
+        mel('pizz', 'Ab2:2 r:10 Eb2:2 Ab2:2', { vel: 0.75 }),
+        mel('glock', 'Eb6+Ab6:4 r:12', { vel: 0.7 }),
+        // the accordion answers the trumpets' triplet, then a V7–I button (D♭-G → C-A♭)
+        mel('acc', 'r:8 Bb5:4/3 Eb5 Bb5 Db5+G5:2 C5+Ab5!:2', { vel: 0.82 }),
+        hits('cast', [
+          [5, 60, 0.35],
+          [6, 60, 0.45],
+          [7, 60, 0.55],
+          [8, 60, 0.75],
+          [8 + 4 / 3, 60, 0.6],
+          [8 + 8 / 3, 60, 0.65],
+          [12, 60, 0.7],
+          [14, 60, 0.95],
+        ]),
+        hits('timp', [[0, 'Ab2', 0.82], [14, 'Ab2', 0.55]]),
+        hits('bd', [[0, 60, 0.92, 8], [14, 60, 0.42, 2]], 0),
+        hits('crash', [[0, 60, 0.9, 8]]),
+      ],
+    },
+    // loop: the band at rest under the results screen — accordion right hand on the guide tones,
+    // left-hand oom-pah (upright bass + accordion chord buttons), strings and a horn underneath
+    tail: {
+      bars: 3,
+      chords: 'Ab:16 | Db:8 Eb7:8 | Ab:8 Eb7:8',
+      parts: [
+        // guide tones: 3 | 1 5 | 3 7 → 3 across the seam (a sigh on each change)
+        mel('accR', 'C5:12 Eb5:4 | Db5:8 Bb4:8 | C5:8 Db5:8 |', { vel: 0.62 }),
+        mel('hrnT', 'Ab3:16 | F3:8 G3:8 | Ab3:8 G3:8 |', { vel: 0.5 }),
+        mel('ubass', 'Ab1:4 r:4 Eb2:4 r:4 | Db2:4 r:4 Eb2:4 r:4 | Ab1:4 r:4 Eb2:4 r:4 |', { vel: 0.78 }),
+        comp('accC', 'r:4 c:2 r:6 c:2 r:2', { lo: 'Ab3', hi: 'Ab4', n: 3, vel: 0.6 }),
+        pad('strT', { lo: 'Ab3', hi: 'Eb5', vel: 0.5, n: 3 }),
+        hits('cast', [
+          [6, 60, 0.44],
+          [14, 60, 0.44],
+          [16 + 6, 60, 0.44],
+          [16 + 14, 60, 0.44],
+          [32 + 6, 60, 0.44],
+          [32 + 13, 60, 0.36],
+          [32 + 14, 60, 0.46],
+          [32 + 15, 60, 0.52],
+        ]),
       ],
     },
   },
-  form: ['main'],
-  loopFrom: null,
+  form: ['march', 'fin', 'tail'],
+  loopFrom: 2,
 };

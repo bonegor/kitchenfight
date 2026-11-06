@@ -1,177 +1,405 @@
 /**
- * FOODCOURT (stage 4, the crimes' lair) — "Muzak Maledetta".
- * Starts as cheesy elevator muzak (B♭ major: FM e-piano, vibes, bossa bass) playing the main
- * theme's hook… then the loop corrupts it: B♭ minor, tape-warbled detuned lead, bit-crushed
- * robot arps, a tritone (E major) chord, glitch stutters and tape-stop runs. 4/4, 128 bpm.
- * Form: intro(4, muzak — not looped) A(8) B(8) C(8, half-time dread) A2(8) D(8, muzak relapse
- *       → collapse) B2(8) → loop to A.
+ * FOODCOURT (stage 4, La Food Court) — "Torna a Surriento" (Ernesto De Curtis, 1902), turned
+ * into soulless shopping-mall MUZAK that keeps getting corrupted.
+ *
+ * A PA chime, then a cheesy D-major lounge jazz waltz (vibes, FM e-piano, synth pad, bossa synth
+ * bass, ride + shaker) plays the song's major strains. When the tune turns to D minor the mall
+ * rots: detuned warble lead, minor/chromatic reharmonisation (DmM7, Gm6, German sixth), staccato
+ * bassoon creeping, orchestra hits, dark pad, ratchet / toy-whistle glitches — and the real
+ * orchestra pushes through the synthetic band with the refrain. A PA chime snaps everything back
+ * to fake-cheerful muzak, and the second round escalates to a full Neapolitan tutti.
+ * D major / D minor, 3/4, ♩ = 162 (54 bars/min), light swing. Reference: av_surriento.abc
+ * (strain A = bars 1-8, B = 9-16, C = 17-24, D = refrain 25-32); see docs/music/foodcourt.md.
+ * Form: intro(4: chime + vamp) | B(8 muzak) C(8 muzak → corrupt) A(8 sinister) A1(8 the cellos
+ *       push in) D(8 refrain, orchestra breaks through) chime(2) B2(8 muzak relapse) C2(8 corrupt)
+ *       A2(8 street-band orchestra) D2(8 tutti) chime2(2, rising) → loop to B.
  */
 import { arp, bass, comp, cresc, drums, hits, mel, pad, type SongDef } from '../sequencer';
 
-const MUZAK_CH = 'Bb:16 | Gm7:16 | Cm7:16 | F7:16';
-const MUZAK_MEL = `
-  Bb4:4 F5:2 Eb5:2 D5:2 C5:2 D5:4 | D5:2 C5:2 Bb4:2 G5:6 r:4 | C5:4 G5:2 F5:2 Eb5:2 D5:2 Eb5:4 | F5:2 Eb5:2 C5:2 A4:4 r:6 |`;
+// ---------------------------------------------------------------------------------------------
+// The tune (av_surriento.abc), one step = an eighth
+// ---------------------------------------------------------------------------------------------
 
-const A_CH = 'Bbm:16 | Gb:16 | Ebm:16 | F7:16 | Bbm:16 | Gb:16 | Ebm:8 E:8 | F7:16';
+/** strain A, D minor (ref bars 1-8): "Vide 'o mare quant'è bello, spira tantu sentimento…" */
 const A_MEL = `
-  Bb4:4 F5:2 Eb5:2 Db5:2 C5:2 Db5:4 | Db5:2 C5:2 Bb4:2 Gb5:6 r:4 | Eb5:4 Bb5:2 Ab5:2 Gb5:2 F5:2 Gb5:4 | A4:2 C5:2 Eb5:2 E5:6 r:4 |
-  Bb4:4 F5:2 Eb5:2 Db5:2 C5:2 Db5:4 | Db5:2 C5:2 Bb4:2 Bb5:6 r:4 | Gb5:2 Eb5:2 Bb4:2 Gb4:2 G#4:4 B4:4 | A4:12 r:4 |`;
-
-const B_CH = 'Ebm:16 | Bbm:16 | Gb:16 | F7:16 | Ebm:16 | Bbm:16 | Cb:16 | F7:16';
+  D4:1 E4 F4 G4 A4 F4 | A4:2 A4:4 | G4:1 A4 Bb4 G4 Bb4 G4 | D5:2 D5:4 |
+  D5:1 E5 F5 E5 D5 E5 | A4:2 A4:4 | G4:1 A4 G4 F4 E4 F4 | D4:4 r:2 |`;
+/** strain B, D major (ref bars 9-16): "Guarda, gua', chistu ciardino…" */
 const B_MEL = `
-  Gb5:4 F5:2 Eb5:2 Bb4:8 | Db5:4 C5:2 Bb4:2 F4:8 | Gb4:2 Bb4:2 Db5:2 F5:2 Gb5:4 F5:4 | Eb5:4 C5:4 A4:8 |
-  Gb5:4 F5:2 Eb5:2 Bb5:8 | Ab5:4 F5:2 Db5:2 F5:8 | Gb5:4 Eb5:4 Cb5:8 | C5:4 Eb5:4 A4:4 F4:4 |`;
+  D5:1 C#5 A4 B4 C#5 A4 | B4:2 B4:4 | C#5:1 B4 A4 B4 C#5 A4 | B4:2 B4:4 |
+  F#4:1 G4 A4 F#4 E4 D4 | G4:2 G4:4 | A4:1 B4 C#5 B4 A4 C#5 | F#4:4 r:2 |`;
+/** strain C (ref bars 17-24): "E tu dice: 'I' parto, addio!'…" — bars 1-3 still D major… */
+const C_MEL_1 = `D5:1 C#5 A4 B4 C#5 A4 | B4:2 B4:4 | E5:1 D5 C#5 D5 E5 C#5 |`;
+/** …bars 4-8 fall back to D minor (played from step 18) */
+const C_MEL_2 = `D5:2 D5:4 | D5:1 E5 F5 E5 D5 E5 | A4:2 A4:4 | G4:1 A4 G4 F4 E4 F4 | D4:4 r:2 |`;
+/** strain D, the refrain (ref bars 25-32): "Ma nun me lassà, nun darme stu turmiento!… */
+const D_MEL_1 = `D5:1 E5 C#5:3 B4:1 | D5:6 | r:1 C#5 D5 E5 C#5 B4 | A4:2 A4:4 |`;
+/** …Torna a Surriento, famme campà!" (from step 24) */
+const D_MEL_2 = `G4:2 Bb4 D5 | F5:3 E5:1 D5:2 | r:1 E5 C#5:3 D5:1 | D5:4 r:2 |`;
+const D_MEL = D_MEL_1 + D_MEL_2;
 
-const C_CH = 'Bbm:32 | Gb:32 | Ebm:32 | F7:32';
-const C_MEL = `
-  Bb4:8 F5:4 Eb5:4 | Db5:8 C5:8 | Db5:8 Bb4:4 C5:4 | Gb5:16 |
-  Eb5:8 Bb5:4 Ab5:4 | Gb5:8 F5:8 | E5:8 F5:4 A4:4 | Bb5:0.5 A5 Ab5 G5 Gb5 F5 E5 Eb5 D5 Db5 C5 B4 Bb4 A4 Ab4 G4 F4:8 |`;
+/** shopping-mall PA chime (dotted quarters across the 3/4 bar: ding-dong-ding-dong), falling
+ *  before the muzak relapse, rising at the loop seam */
+const CHIME = 'A5:3 F#5 | D5:3 A4 |';
+const CHIME_UP = 'A4:3 D5 | F#5:3 A5 |';
 
-const D_CH = 'Bb:16 | Gm7:16 | Cm7:16 | F7:16 | Bbm:16 | Gb:16 | E:16 | F7:16';
-const D_MEL_1 = MUZAK_MEL;
-const D_MEL_2 = `
-  Bb4:1 Bb4 Bb4 Bb4 F5:2 Eb5:2 Db5:1 Db5 Db5 Db5 C5:4 | Bb4:2 Db5:2 Gb5:2 Bb5:2 Bb5:0.5 A5 Ab5 G5 Gb5 F5 E5 Eb5 Db5:4 |
-  E5:2 G#5:2 B5:2 E6:2 B5:2 G#5:2 E5:4 | A4:2 C5:2 Eb5:2 F5:2 A5:0.5 Ab5 G5 Gb5 F5 E5 Eb5 D5 Db5:2 C5:2 |`;
+// ---------------------------------------------------------------------------------------------
+// Harmony. Muzak: the reference chords with lounge colours (6ths, 7ths, 9ths) — D6 rather than
+// Dmaj7 wherever the tune sits on D. Corrupted: minor / chromatic.
+// ---------------------------------------------------------------------------------------------
 
-const KICK = 'k.......k.......';
-const KICK4 = 'k...k...k...k...';
-const HATS = '..h...h...h...h.';
-const HAT16 = 'hhhhhhhhhhhhhhhh';
-const SHAK = 's.s.s.s.s.s.s.s.';
-const D = { k: { v: 0.9 }, h: { v: 0.45, vr: [0, 1] }, s: { v: 0.42, vr: [0, 1] }, c: { v: 0.75, vr: [0, 1] } };
-const ROBO = '0:1 2 1 3 0 2 1 3 0 2 1 3 0 2 1 3';
-const PULSE = 'r:2 1:2 r:2 1:2 r:2 1:2 r:2 1:2';
+/** strain B (ref: D | Em | A7 | D | D | Em | A7 | D) */
+const B_CH = 'D6:6 | Em7:6 | A9:6 | D6:6 | D6:6 | Em7:6 | A9:6 | Dmaj7:4 A9:2';
+/** strain B, relapse: vi–ii–V in the second phrase */
+const B2_CH = 'D6:6 | Em7:6 | A9:6 | D6:6 | Bm7:6 | Em7:6 | A9:6 | Dmaj7:4 A9:2';
+/** strain C (ref: D | Em | A7 | Bb | Gm | Dm | A7 | Dm); rots from the B♭ chord on */
+const C_CH = 'D6:6 | Em7:6 | A9:6 | Bbmaj7:6 | Gm6:6 | DmM7:6 | A7b9:6 | Dm:4 A7b9:2';
+/** strain A, sinister (ref: Dm | Dm | Gm | Dm | Bb | Dm | A7 | Dm): lament bass D C# B♭ A,
+ *  B♭7 = German sixth → Dm/A → A7 */
+const A_CH = 'Dm:6 | DmM7/C#:6 | Gm6/Bb:6 | Dm/A:6 | Bb7:6 | Dm/A:6 | A7b9:6 | Dm:4 A7:2';
+/** strain A, the orchestra's straight harmony (ref chords; B♭ → Gm as in wf_surriento) */
+const A2_CH = 'Dm:6 | Dm:6 | Gm:6 | Dm:6 | Bb:4 Gm:2 | Dm/A:6 | A7:6 | Dm:4 A7:2';
+/** refrain (ref: D | Em | A7 | D | Gm | Dm | A7 | Dm) */
+const D_CH = 'D:6 | Em7:6 | A7:6 | D:6 | Gm:6 | Dm/A:6 | A7:6 | Dm:6';
+const CHIME_CH = 'D6:6 | D6:2 A9:4';
+
+// ---------------------------------------------------------------------------------------------
+// Bass lines and accompaniment figures
+// ---------------------------------------------------------------------------------------------
+
+/** bossa-waltz synth bass: root and fifth in dotted quarters (two against three), approach notes
+ *  at the phrase ends */
+const SB_B = `D2:3 A2 | E2:3 B2 | A2:3 E2 | D2:3 A2:2 C#2:1 | D2:3 A2 | E2:3 B2 | A2:3 E2 | D2:4 A1:1 C#2 |`;
+const SB_B2 = `D2:3 A2 | E2:3 B2 | A2:3 E2 | D2:3 A2:2 F#2:1 | B1:3 F#2 | E2:3 B2 | A2:3 E2 | D2:4 A1:1 C#2 |`;
+/** strain C: A7♭9 gets root and third (the tune's F is the ♭13: no fifth E under it) */
+const SB_C = `D2:3 A2 | E2:3 B2 | A2:3 E2 | Bb1:3 F2 | G2:3 D2 | D2:3 A2 | A1:3 C#2 | D2:4 A1:2 |`;
+/** refrain bars 1-4 (the muzak band still plays under the violins) */
+const SB_D = `D2:3 A2 | E2:3 B2 | A2:3 E2 | D2:3 A2 |`;
+/** street-band tuba "oom" on 1 (root, fifth on repeated chords, pickups on beat 3) */
+const TUBA_A2 = `D2:2 r:4 | A1:2 r:4 | G1:2 r:4 | D2:2 r:4 | Bb1:2 r:2 G1:2 | A1:2 r:4 | A1:2 r:2 C#2:2 | D2:2 r:2 A1:2 |`;
+const TUBA_D_1 = `D2:2 r:4 | E2:2 r:4 | A1:2 r:4 | D2:2 r:2 A1:2 |`;
+const TUBA_D_2 = `G1:2 r:4 | A1:2 r:4 | A1:2 r:2 C#2:2 | D2:2 r:4 |`;
+
+/** jazz-waltz comping: beats 2 and 3, then "2&" anticipation held over beat 3 */
+const EP_WALTZ = 'r:2 c:2 c:2 | r:2 c:1 c:3';
+/** vibes comping (B2/C2): long chord on 1, then 2-3 */
+const VIB_COMP = 'c:3 r:3 | r:2 c:4';
+/** strings / pizzicato "pa-pa" on 2 and 3 */
+const PAPA = 'r:2 c:2 c:2';
+/** robot arps of the synthetic band */
+const ROBO16 = '0:0.5 1 2 3 2 1 0 1 2 3 2 1';
+const ROBO8 = '0:1 2 1 3 2 1';
+/** comping ranges: rootless 3-note voicings under the tune */
+const COMP = { lo: 'E3', hi: 'G4', n: 3 };
+const PADR = { lo: 'A3', hi: 'A4', n: 3 };
+const DARK = { lo: 'F3', hi: 'D4', n: 3 };
+const PAPAR = { lo: 'E3', hi: 'E4', n: 3 };
+
+/** creeping staccato bassoon, strain A (follows the lament bass of A_CH) */
+const BSN_A = `
+  D3':2 F3' A3' | C#3' F3' A3' | Bb2' D3' G3' | A2' D3' F3' |
+  Bb2' D3' Ab3' | A2' D3' F3' | A2' C#3' G3' | D3' D2' A2' |`;
+/** A1: bassoon "oom" on beat 1 (the lament bass) under pizzicato "pa-pa" */
+const BSN_OOM = `D3':2 r:4 | C#3':2 r:4 | Bb2':2 r:4 | A2':2 r:4 | Bb2':2 r:4 | A2':2 r:4 | A2':2 r:4 | D3':2 r:2 A2':2 |`;
+/** horn counter-line for the orchestral strain A (moves while the tune holds) */
+const HRN_A2 = `
+  A3:6 | F4:2 E4 D4 | D4:6 | F4:2 G4 A4 | Bb3:6 | F4:2 E4 D4 | E4:3 C#4:3 | D4:2 F4 A4 |`;
+/** refrain counter-lines: horns (bars 1-4 / 5-8) and trombone (B♭-A-G-F tetrachord) */
+const HRN_D_1 = 'F#4:6 | G4:2 F#4 E4 | G4:6 | F#4:4 r:2 |';
+const HRN_D_2 = 'D4:6 | D4:6 | C#4:6 | D4:4 r:2 |';
+const TBN_D_2 = 'Bb3:6 | A3:6 | G3:6 | F3:4 r:2 |';
+
+// ---------------------------------------------------------------------------------------------
+// Drums (one char = one eighth)
+// ---------------------------------------------------------------------------------------------
+
+const HAT = { X: { v: 0.62, vr: [0, 1] }, x: { v: 0.48, vr: [0, 1] }, y: { v: 0.32, vr: [0, 1] } };
+const RIDE = 'X.xyx.'; // jazz-waltz ride: 1, 2, 2&, 3
+const TICK = 'x.x.x.'; // the mall clock
+const OPEN = { o: { v: 0.5, vr: [0, 1] } };
+const SHAKE = { S: { v: 0.55, vr: [0, 1] }, s: { v: 0.36, vr: [0, 1] } };
+const SHK = 'Ssssss';
+const KICK = { K: { v: 0.62 }, k: { v: 0.42 } };
+const CLV = { c: { v: 0.5, vr: [0, 1] } };
+/** tamburello of the street band: 0,1 hit; 2,3 shake; 4,5 accent; 6,7 roll */
+const TAMB = { X: { v: 0.9, vr: [4, 5] }, x: { v: 0.6, vr: [0, 1] }, s: { v: 0.5, vr: [2, 3] }, R: { v: 0.7, vr: [6, 7] } };
+const TAMB_WALTZ = 'X.xsx.|X.xsx.|X.xsx.|X.xsR.';
+/** a snare roll crescendo over beat 3 of the last bar (sixteenths) */
+const ROLL = (vel: number): Array<[number, string, number]> => Array.from({ length: 8 }, (_, i): [number, string, number] => [44 + i * 0.5, 'C4', vel + i * 0.05]);
 
 export const foodcourt: SongDef = {
   id: 'foodcourt',
-  bpm: 128,
-  stepsPerBeat: 4,
-  barSteps: 16,
-  scale: 'Bb harmonic minor',
-  gainDb: 1.4,
-  humanize: 0.002,
-  reverb: { rt60: 1.9, size: 1.3, damp: 0.6, predelay: 0.03, er: 0.45, hp: 320, lp: 7500, wet: 1.5 },
+  bpm: 162,
+  stepsPerBeat: 2,
+  barSteps: 6,
+  swing: 0.08,
+  scale: 'D major',
+  gainDb: -1.1,
+  humanize: 0.004,
+  reverb: { rt60: 1.9, size: 1.25, damp: 0.55, predelay: 0.026, er: 0.4, hp: 300, lp: 7200, wet: 1.4 },
   channels: {
-    ep: { inst: 'epiano', gain: -8, pan: -0.1, send: 0.25, hum: 0.3 },
-    vibes: { inst: 'vibes', gain: -7, pan: 0.2, send: 0.3 },
-    warble: { inst: 'warble', gain: -4, pan: 0.05, send: 0.25 },
-    lead: { inst: 'synthLead', gain: -12, pan: -0.25, send: 0.25 },
-    robo: { inst: 'roboArp', gain: -10, pan: 0.35, send: 0.2, hum: 0 },
-    pad: { inst: 'darkPad', gain: -18, pan: 0, send: 0.35, hum: 0 },
-    choir: { inst: 'choirO', gain: -17, pan: 0, send: 0.4, hum: 0 },
-    sbass: { inst: 'synthBass', gain: -11, pan: 0, send: 0.0, hum: 0 },
-    ubass: { inst: 'ubass', gain: -6, pan: 0, send: 0.05 },
-    kick: { inst: 'kick', gain: -13, pan: 0, send: 0.0, hum: 0 },
-    hat: { inst: 'hatC', gain: -13, pan: -0.3, send: 0.05, hum: 0 },
-    shak: { inst: 'shaker', gain: -16, pan: 0.35, send: 0.08, hum: 0.5 },
-    clap: { inst: 'clap', gain: -14, pan: 0.1, send: 0.3, hum: 0 },
-    glock: { inst: 'glock', gain: -18, pan: 0.4, send: 0.3 },
-    riser: { inst: 'riser', gain: -14, pan: 0, send: 0.25, hum: 0 },
+    // the muzak band
+    vib: { inst: 'vibes', gain: -1.5, pan: 0.05, send: 0.3, hum: 0.2 },
+    vibC: { inst: 'vibes', gain: -3, pan: 0.3, send: 0.32, hum: 0.3 },
+    chm: { inst: 'vibes', gain: -3, pan: -0.1, send: 0.4, hum: 0 },
+    cel: { inst: 'celesta', gain: -10, pan: 0.32, send: 0.35, hum: 0 },
+    sgtr: { inst: 'steelGuitar', gain: -3, pan: -0.12, send: 0.25, hum: 0.4 },
+    ep: { inst: 'epiano', gain: -9, pan: -0.22, send: 0.25, hum: 0.3 },
+    epL: { inst: 'epiano', gain: -4, pan: -0.05, send: 0.28, hum: 0.2 },
+    spad: { inst: 'synthPad', gain: -17, pan: 0, send: 0.4, hum: 0 },
+    sb: { inst: 'synthBass', gain: -5, pan: 0, send: 0.03, hum: 0 },
+    robo: { inst: 'roboArp', gain: -15, pan: 0.38, send: 0.15, hum: 0 },
+    hat: { inst: 'hatC', gain: -5, pan: 0.25, send: 0.05, hum: 0.3 },
+    hatO: { inst: 'hatO', gain: -10, pan: 0.3, send: 0.1, hum: 0 },
+    shk: { inst: 'shaker', gain: -8, pan: -0.3, send: 0.08, hum: 0.5 },
+    clv: { inst: 'claves', gain: -10, pan: -0.35, send: 0.15, hum: 0.3 },
+    kick: { inst: 'kick', gain: -10, pan: 0, send: 0.05, hum: 0 },
+    // the corruption
+    warb: { inst: 'warble', gain: -3, pan: 0.02, send: 0.3, hum: 0.2 },
+    dpad: { inst: 'darkPad', gain: -15, pan: 0, send: 0.35, hum: 0 },
+    bsn: { inst: 'bassoon', gain: -5, pan: -0.18, send: 0.15 },
+    hit: { inst: 'orchHit', gain: -11, pan: 0, send: 0.3, hum: 0 },
+    ratch: { inst: 'ratchet', gain: -15, pan: 0.42, send: 0.2, hum: 0 },
+    whis: { inst: 'toyWhistle', gain: -13, pan: -0.42, send: 0.25, hum: 0 },
+    // the real orchestra
+    vln: { inst: 'violin', gain: -1, pan: 0.15, send: 0.28 },
+    vc: { inst: 'cello', gain: -3, pan: -0.15, send: 0.26 },
+    tpt: { inst: 'trumpet', gain: -5, pan: -0.08, send: 0.22 },
+    mand: { inst: 'mandolin', gain: -6, pan: -0.32, send: 0.2 },
+    hrn: { inst: 'horn', gain: -9, pan: -0.25, send: 0.3 },
+    tbn: { inst: 'trombone', gain: -9, pan: 0.22, send: 0.2 },
+    tuba: { inst: 'tuba', gain: -5, pan: 0, send: 0.06, hum: 0.5 },
+    pizz: { inst: 'pizz', gain: -9, pan: 0.32, send: 0.15, hum: 0.5 },
+    stab: { inst: 'strStab', gain: -10.5, pan: 0.28, send: 0.18, hum: 0.3 },
+    str: { inst: 'strings', gain: -16, pan: 0, send: 0.3, hum: 0 },
+    timp: { inst: 'timpani', gain: -9, pan: 0, send: 0.2, hum: 0 },
+    cym: { inst: 'cymbal', gain: -16, pan: 0.3, send: 0.25, hum: 0 },
+    snare: { inst: 'snare', gain: -17, pan: -0.1, send: 0.12, hum: 0.3 },
+    tamb: { inst: 'tamb', gain: -2, pan: 0.36, send: 0.12, hum: 0.6 },
   },
   sections: {
+    // PA chime, then the muzak vamp starts (not looped)
     intro: {
       bars: 4,
-      chords: MUZAK_CH,
+      chords: 'D6:6 | D6:6 | D6:6 | Em7:3 A9:3',
       parts: [
-        mel('vibes', MUZAK_MEL, { vel: 0.75 }),
-        comp('ep', 'c:3 r:3 c:2 r:3 c:3 r:2', { lo: 'F4', hi: 'D5', vel: 0.55, n: 4 }),
-        bass('ubass', '1:3 r:3 5:2 1:3 r:3 5:2', { lo: 'Bb1', hi: 'Bb2', vel: 0.7 }),
-        drums('shak', SHAK, D),
+        mel('chm', `${CHIME} r:6 | r:6 |`, { vel: 0.72 }),
+        mel('cel', `${CHIME} r:6 | r:6 |`, { vel: 0.5, oct: 1 }),
+        mel('vib', 'r:6 | r:6 | r:6 | r:3 A5:1 B5 C#6 |', { vel: 0.72 }),
+        pad('spad', { ...PADR, vel: 0.42, from: 2 }),
+        comp('ep', EP_WALTZ, { ...COMP, vel: 0.5, from: 2 }),
+        mel('sb', 'r:6 | r:6 | D2:3 A2 | E2:3 A1:2 C#2:1 |', { vel: 0.75 }),
+        drums('hat', RIDE, HAT, { from: 2 }),
+        drums('shk', SHK, SHAKE, { from: 2 }),
+        drums('kick', 'k.....', KICK, { from: 2 }),
       ],
     },
-    A: {
-      bars: 8,
-      chords: A_CH,
-      parts: [
-        mel('warble', A_MEL, { vel: 0.85 }),
-        arp('robo', ROBO, { lo: 'Bb4', hi: 'Bb5', vel: 0.65, n: 4 }),
-        pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.55, n: 3 }),
-        bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.8 }),
-        drums('kick', KICK4, D),
-        drums('hat', HATS, D),
-        drums('shak', SHAK, D),
-        drums('clap', '....c.......c...', D),
-      ],
-    },
+    // MUZAK #1: vibes play strain B (D major)
     B: {
       bars: 8,
       chords: B_CH,
       parts: [
-        mel('vibes', B_MEL, { vel: 0.8 }),
-        mel('lead', B_MEL, { vel: 0.45 }),
-        comp('ep', 'c:2 r:1 c:1 r:2 c:2 c:1 c:1 r:2 c:1 r:1 c:1 r:1', { lo: 'Gb4', hi: 'Eb5', vel: 0.55, n: 3 }),
-        pad('choir', { lo: 'Gb4', hi: 'Eb5', vel: 0.5, n: 3 }),
-        bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.8 }),
-        drums('kick', KICK4, D),
-        drums('hat', HAT16, D, { vel: 0.8 }),
-        drums('clap', '....c.......c...', D),
+        mel('vib', B_MEL, { vel: 0.82, oct: 1 }),
+        comp('ep', EP_WALTZ, { ...COMP, vel: 0.5 }),
+        pad('spad', { ...PADR, vel: 0.42 }),
+        mel('sb', SB_B, { vel: 0.78 }),
+        drums('hat', RIDE, HAT),
+        drums('shk', SHK, SHAKE),
+        drums('kick', 'K.....|k.....', KICK),
+        drums('clv', '......|....c.', CLV),
       ],
     },
+    // MUZAK → CORRUPTION: strain C; at the B♭ chord the tape warps and D minor takes over
     C: {
       bars: 8,
       chords: C_CH,
       parts: [
-        mel('warble', C_MEL, { vel: 0.85 }),
-        mel('lead', C_MEL, { vel: 0.45, minDur: 8 }),
-        pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.6, n: 3 }),
-        pad('choir', { lo: 'F4', hi: 'Db5', vel: 0.45, n: 3 }),
-        bass('sbass', '1:4 r:12', { lo: 'Bb1', hi: 'Bb2', vel: 0.85 }),
-        drums('kick', KICK, D),
-        drums('hat', '....h.......h.hh', D),
-        cresc(arp('robo', ROBO, { lo: 'Bb4', hi: 'Bb5', vel: 0.6, n: 4, from: 4 }), 0.3, 1.0),
-        hits('riser', [[96, 60, 0.85]]),
+        mel('vib', C_MEL_1, { vel: 0.82, oct: 1 }),
+        mel('warb', C_MEL_2, { vel: 0.85, at: 18 }),
+        comp('ep', EP_WALTZ, { ...COMP, vel: 0.5, to: 4 }),
+        pad('spad', { ...PADR, vel: 0.42, to: 3 }),
+        cresc(pad('dpad', { ...DARK, vel: 0.55, from: 3 }), 0.5, 1),
+        mel('sb', SB_C, { vel: 0.78 }),
+        arp('robo', ROBO8, { lo: 'D4', hi: 'D5', vel: 0.45, n: 3, from: 4 }),
+        drums('hat', RIDE, HAT, { to: 3 }),
+        drums('hat', TICK, HAT, { from: 3 }),
+        drums('shk', SHK, SHAKE, { to: 3 }),
+        drums('kick', 'K.....|k.....', KICK),
+        hits('ratch', [[18, 60, 0.75]], 2),
+        hits('whis', [[46, 60, 0.7]], 3),
       ],
     },
-    A2: {
+    // SINISTER: strain A in D minor — warble lead, creeping bassoon, orchestra hits
+    A: {
       bars: 8,
       chords: A_CH,
       parts: [
-        mel('warble', A_MEL, { vel: 0.9 }),
-        mel('lead', A_MEL, { vel: 0.55, oct: 1, minDur: 4 }),
-        arp('robo', ROBO, { lo: 'Bb4', hi: 'Bb5', vel: 0.7, n: 4 }),
-        comp('ep', 'r:2 c:1 r:1 r:2 c:1 r:1 r:2 c:1 r:1 r:2 c:1 c:1', { lo: 'F4', hi: 'Db5', vel: 0.5, n: 3 }),
-        pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.55, n: 3 }),
-        bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.85 }),
-        drums('kick', KICK4, D),
-        drums('hat', HAT16, D, { vel: 0.85 }),
-        drums('clap', '....c.......c...', D),
-        mel('glock', A_MEL, { vel: 0.4, oct: 1, minDur: 6 }),
+        mel('warb', A_MEL, { vel: 0.92 }),
+        mel('bsn', BSN_A, { vel: 0.8 }),
+        pad('dpad', { ...DARK, vel: 0.5 }),
+        cresc(pad('str', { lo: 'D3', hi: 'D4', n: 2, vel: 0.5, from: 4 }), 0.3, 1),
+        hits('hit', [[0, 'D4', 0.75], [12, 'G3', 0.7], [24, 'Bb3', 0.75], [36, 'A3', 0.8]]),
+        hits('timp', [[0, 'D2', 0.6], [24, 'Bb1', 0.55], [36, 'A1', 0.55], [42, 'D2', 0.6]]),
+        drums('kick', 'K.....|k.....', KICK),
+        drums('hat', TICK, HAT),
+        hits('whis', [[22, 60, 0.55]], 0),
+        hits('ratch', [[46, 60, 0.6]], 1),
       ],
     },
+    // THE ORCHESTRA PUSHES IN: the cellos take strain A, pizzicato + bassoon waltz, robots fight back
+    A1: {
+      bars: 8,
+      chords: A_CH,
+      parts: [
+        mel('vc', A_MEL, { vel: 0.9 }),
+        mel('bsn', BSN_OOM, { vel: 0.8 }),
+        comp('pizz', PAPA, { ...PAPAR, vel: 0.62 }),
+        pad('dpad', { lo: 'D3', hi: 'D4', n: 2, vel: 0.45 }),
+        arp('robo', ROBO16, { lo: 'D5', hi: 'D6', vel: 0.34, n: 3, from: 1, to: 2 }),
+        arp('robo', ROBO16, { lo: 'D5', hi: 'D6', vel: 0.34, n: 3, from: 3, to: 4 }),
+        arp('robo', ROBO16, { lo: 'D5', hi: 'D6', vel: 0.38, n: 3, from: 5, to: 6 }),
+        cresc(pad('str', { ...PADR, vel: 0.6, from: 6 }), 0.4, 1),
+        hits('hit', [[0, 'D4', 0.8], [24, 'Bb3', 0.8]]),
+        hits('timp', [[0, 'D2', 0.65], [24, 'Bb1', 0.6], ...Array.from({ length: 6 }, (_, i): [number, string, number] => [42 + i, 'A1', 0.4 + i * 0.08])]),
+        hits('snare', ROLL(0.3)),
+        drums('kick', 'K.....|k.....', KICK),
+        drums('hat', TICK, HAT),
+        hits('whis', [[34, 60, 0.6]], 1),
+      ],
+    },
+    // REFRAIN: the violins break through the muzak band, then the orchestra takes over (Gm → Dm)
     D: {
       bars: 8,
       chords: D_CH,
       parts: [
-        mel('vibes', D_MEL_1, { vel: 0.78 }),
-        mel('warble', D_MEL_1, { vel: 0.4 }),
-        mel('warble', D_MEL_2, { vel: 0.88, at: 64 }),
-        comp('ep', 'c:3 r:3 c:2 r:3 c:3 r:2', { lo: 'F4', hi: 'D5', vel: 0.5, n: 4, to: 4 }),
-        bass('ubass', '1:3 r:3 5:2 1:3 r:3 5:2', { lo: 'Bb1', hi: 'Bb2', vel: 0.7, to: 4 }),
-        drums('shak', SHAK, D, { to: 4 }),
-        arp('robo', ROBO, { lo: 'Bb4', hi: 'Bb5', vel: 0.7, n: 4, from: 4 }),
-        pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.6, n: 3, from: 4 }),
-        bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.85, from: 4 }),
-        drums('kick', KICK4, D, { from: 4 }),
-        drums('hat', HAT16, D, { from: 4, vel: 0.85 }),
-        hits('riser', [[96, 60, 0.8]]),
+        mel('vln', D_MEL, { vel: 0.92 }),
+        comp('ep', EP_WALTZ, { ...COMP, vel: 0.45, to: 4 }),
+        mel('sb', SB_D, { vel: 0.75 }),
+        drums('hat', RIDE, HAT, { to: 4 }),
+        pad('str', { lo: 'E3', hi: 'E4', n: 3, vel: 0.45, to: 4 }),
+        mel('tpt', D_MEL_2, { vel: 0.72, at: 24 }),
+        mel('hrn', HRN_D_2, { vel: 0.62, at: 24 }),
+        mel('tbn', TBN_D_2, { vel: 0.7, at: 24 }),
+        mel('tuba', TUBA_D_2, { vel: 0.8, at: 24 }),
+        comp('stab', PAPA, { ...PAPAR, vel: 0.7, from: 4 }),
+        drums('tamb', TAMB_WALTZ, TAMB, { from: 4, vel: 0.85 }),
+        arp('robo', ROBO16, { lo: 'D4', hi: 'D5', vel: 0.4, n: 3, from: 4, to: 6 }),
+        hits('hit', [[24, 'G3', 0.85], [36, 'A3', 0.85]]),
+        hits('timp', [[24, 'G2', 0.75], [30, 'A1', 0.6], [36, 'A1', 0.7], [42, 'D2', 0.8]]),
+        hits('cym', [[24, 60, 0.8, 12]], 0),
+        drums('kick', 'K.....', KICK),
+        hits('ratch', [[46, 60, 0.7]], 1),
       ],
     },
+    // PA chime (falling): snap back to the muzak
+    chime: {
+      bars: 2,
+      chords: CHIME_CH,
+      parts: [
+        mel('chm', CHIME, { vel: 0.72 }),
+        mel('cel', CHIME, { vel: 0.5, oct: 1 }),
+        pad('spad', { ...PADR, vel: 0.38, from: 1 }),
+        mel('sb', 'r:6 | r:2 A1:2 A1:1 C#2:1 |', { vel: 0.7 }),
+        drums('hat', TICK, HAT, { vel: 0.7 }),
+      ],
+    },
+    // the rising PA chime closes the loop
+    chime2: {
+      bars: 2,
+      chords: CHIME_CH,
+      parts: [
+        mel('chm', CHIME_UP, { vel: 0.72 }),
+        mel('cel', CHIME_UP, { vel: 0.5, oct: 1 }),
+        pad('spad', { ...PADR, vel: 0.38, from: 1 }),
+        mel('sb', 'r:6 | r:2 A1:2 A1:1 C#2:1 |', { vel: 0.7 }),
+        drums('hat', TICK, HAT, { vel: 0.7 }),
+      ],
+    },
+    // MUZAK RELAPSE: steel guitar lead, celesta sparkle, vibes comping
     B2: {
       bars: 8,
-      chords: B_CH,
+      chords: B2_CH,
       parts: [
-        mel('warble', B_MEL, { vel: 0.85 }),
-        mel('vibes', B_MEL, { vel: 0.6, oct: 1, minDur: 8 }),
-        arp('robo', ROBO, { lo: 'Bb4', hi: 'Bb5', vel: 0.65, n: 4 }),
-        pad('choir', { lo: 'Gb4', hi: 'Eb5', vel: 0.5, n: 3 }),
-        pad('pad', { lo: 'F4', hi: 'Db5', vel: 0.5, n: 3 }),
-        bass('sbass', PULSE, { lo: 'Bb1', hi: 'Bb2', vel: 0.85 }),
-        drums('kick', KICK4, D),
-        drums('hat', HAT16, D, { vel: 0.85 }),
-        drums('clap', '....c.......c...', D),
+        mel('sgtr', B_MEL, { vel: 0.88, oct: 1 }),
+        mel('cel', B_MEL, { vel: 0.5, oct: 2, minDur: 4 }),
+        comp('vibC', VIB_COMP, { ...COMP, vel: 0.46 }),
+        pad('spad', { ...PADR, vel: 0.42 }),
+        mel('sb', SB_B2, { vel: 0.78 }),
+        drums('hat', RIDE, HAT),
+        drums('hatO', '......|.....o', OPEN),
+        drums('shk', SHK, SHAKE),
+        drums('kick', 'K.....|k.....', KICK),
+        drums('clv', '..c...|c...c.', CLV),
+        hits('whis', [[46, 60, 0.6]], 2),
+      ],
+    },
+    // CORRUPTION #2: e-piano lead rots into warble + staccato bassoon; orchestra hit on the B♭
+    C2: {
+      bars: 8,
+      chords: C_CH,
+      parts: [
+        mel('epL', C_MEL_1, { vel: 0.85, oct: 1 }),
+        mel('warb', C_MEL_2, { vel: 0.85, at: 18 }),
+        mel('bsn', C_MEL_2, { vel: 0.6, at: 18, oct: -1, gate: 0.45 }),
+        comp('vibC', VIB_COMP, { ...COMP, vel: 0.42, to: 4 }),
+        pad('spad', { ...PADR, vel: 0.42, to: 3 }),
+        pad('dpad', { ...DARK, vel: 0.55, from: 3 }),
+        mel('sb', SB_C, { vel: 0.8 }),
+        arp('robo', ROBO16, { lo: 'D4', hi: 'D5', vel: 0.38, n: 3, from: 4 }),
+        hits('hit', [[18, 'Bb3', 0.8]]),
+        drums('hat', RIDE, HAT, { to: 3 }),
+        drums('hat', TICK, HAT, { from: 3 }),
+        drums('shk', SHK, SHAKE, { to: 3 }),
+        drums('kick', 'K.....|k.....', KICK),
+        hits('ratch', [[30, 60, 0.7]], 0),
+        hits('timp', Array.from({ length: 6 }, (_, i): [number, string, number] => [42 + i, 'A1', 0.4 + i * 0.07])),
+        hits('snare', ROLL(0.3)),
+      ],
+    },
+    // THE ORCHESTRA WINS: strain A as a Neapolitan street-band waltz, the synth band glitching
+    A2: {
+      bars: 8,
+      chords: A2_CH,
+      parts: [
+        mel('vln', A_MEL, { vel: 0.95, oct: 1 }),
+        mel('tpt', A_MEL, { vel: 0.72 }),
+        mel('hrn', HRN_A2, { vel: 0.62 }),
+        mel('tuba', TUBA_A2, { vel: 0.82 }),
+        comp('stab', PAPA, { ...PAPAR, vel: 0.7 }),
+        drums('tamb', TAMB_WALTZ, TAMB),
+        arp('robo', ROBO16, { lo: 'D4', hi: 'D5', vel: 0.36, n: 3, from: 2, to: 4 }),
+        arp('robo', ROBO16, { lo: 'D4', hi: 'D5', vel: 0.36, n: 3, from: 6, to: 7 }),
+        hits('timp', [[0, 'D2', 0.75], [18, 'D2', 0.6], [30, 'A1', 0.65], [36, 'A1', 0.7], [42, 'D2', 0.75]]),
+        hits('cym', [[0, 60, 0.75, 12]], 0),
+        hits('snare', ROLL(0.35)),
+        drums('kick', 'K.....', KICK),
+      ],
+    },
+    // TUTTI: the refrain with everyone — violins, mandolin, trumpet, horns, and the muzak band
+    D2: {
+      bars: 8,
+      chords: D_CH,
+      parts: [
+        mel('vln', D_MEL, { vel: 0.92, oct: 1 }),
+        mel('mand', D_MEL, { vel: 0.74, oct: 1, tremMin: 2 }),
+        mel('tpt', D_MEL, { vel: 0.68 }),
+        mel('hrn', HRN_D_1 + HRN_D_2, { vel: 0.6 }),
+        mel('tbn', TBN_D_2, { vel: 0.72, at: 24 }),
+        mel('tuba', TUBA_D_1 + TUBA_D_2, { vel: 0.7 }),
+        comp('stab', PAPA, { ...PAPAR, vel: 0.62 }),
+        drums('tamb', TAMB_WALTZ, TAMB),
+        bass('sb', '1:2 r:4', { lo: 'D2', hi: 'D3', vel: 0.55 }),
+        drums('hat', RIDE, HAT),
+        drums('hatO', '......|.....o', OPEN),
+        hits('hit', [[24, 'G3', 0.82], [36, 'A3', 0.82], [42, 'D4', 0.85]]),
+        hits('timp', [[0, 'D2', 0.75], [24, 'G2', 0.8], [30, 'A1', 0.65], [36, 'A1', 0.75], [42, 'D2', 0.85]]),
+        hits('cym', [[0, 60, 0.75, 12], [24, 60, 0.85, 12]], 0),
+        drums('kick', 'K.....', KICK),
+        hits('ratch', [[44, 60, 0.75]], 0),
+        hits('whis', [[45, 60, 0.75]], 3),
       ],
     },
   },
-  form: ['intro', 'A', 'B', 'C', 'A2', 'D', 'B2'],
+  form: ['intro', 'B', 'C', 'A', 'A1', 'D', 'chime', 'B2', 'C2', 'A2', 'D2', 'chime2'],
   loopFrom: 1,
 };
