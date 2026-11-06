@@ -181,7 +181,7 @@ export const foodcourt: SongDef = {
     ratch: { inst: 'ratchet', gain: -15, pan: 0.42, send: 0.2, hum: 0 },
     whis: { inst: 'toyWhistle', gain: -13, pan: -0.42, send: 0.25, hum: 0 },
     // the real orchestra
-    vln: { inst: 'violin', gain: -4, pan: 0.15, send: 0.28 },
+    vln: { inst: 'violin', gain: -4.4, pan: 0.15, send: 0.28 },
     vc: { inst: 'cello', gain: -3, pan: -0.15, send: 0.26 },
     tpt: { inst: 'trumpet', gain: -5, pan: -0.08, send: 0.22 },
     mand: { inst: 'mandolin', gain: -8.2, pan: -0.32, send: 0.2 },
@@ -190,7 +190,7 @@ export const foodcourt: SongDef = {
     tuba: { inst: 'tuba', gain: -7.1, pan: 0, send: 0.06, hum: 0.5 },
     pizz: { inst: 'pizz', gain: -9.9, pan: 0.32, send: 0.15, hum: 0.5 },
     stab: { inst: 'strStab', gain: -12.5, pan: 0.28, send: 0.18, hum: 0.3 },
-    str: { inst: 'strings', gain: -15.3, pan: 0, send: 0.3, hum: 0 },
+    str: { inst: 'strings', gain: -15.6, pan: 0, send: 0.3, hum: 0 },
     timp: { inst: 'timpani', gain: -8, pan: 0, send: 0.2, hum: 0 },
     cym: { inst: 'cymbal', gain: -11.4, pan: 0.3, send: 0.25, hum: 0 },
     snare: { inst: 'snare', gain: -5, pan: -0.1, send: 0.12, hum: 0.3 },

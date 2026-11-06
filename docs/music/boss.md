@@ -197,59 +197,37 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
   default to 0.92), the reeds slightly detached (0.85); the staccato strings are spiccato, the tuba
   0.7. The trumpet rests through A2–B2 (the clarinet and strings take over), so no line plays longer
   than eight bars without a breath.
-- **Speaking-delay compensation (`SPEAK`, `tight()`).** The sampler puts each sample's physical onset
-  on the beat, but the recorded attacks take different times to speak, and for the tuba, the
-  accordion, the horn, the clarinet and the brass section that time depends on the recorded zone.
-  Measured on isolated notes rendered through the game renderer with the recorded bank, at this
-  song's durations, gates and velocities (envelope = trailing RMS over max(10 ms, one period of the
-  note), so low notes do not ripple; times to −12 dB / −9 dB of the note's peak): snare 3/4 ms,
-  timpani 2/3, xylophone 2/3; trumpet 8–12/10–14; tuba E2 11/18 but B1 31/35 and F♯1 40/46;
-  accordion B5 18/22, G♯4 26/29, B4 40/45, D♯5 51/55, B3 66/74; horn F♯4 4/5 but A3 24/27.
-  Each note now starts earlier by **the mean of its −12 dB and −9 dB times minus the snare's
-  3.5 ms**, looked up per sounding pitch:
+- **Timing of the slow attacks (no song-side compensation).** An earlier version advanced the
+  slow-speaking channels per pitch (`SPEAK` / `tight()`: tuba, accordion, horn, clarinet, brass,
+  trumpet, staccato strings, 8–66 ms earlier than the grid), measured on an older sample bank. The
+  bank now aligns the sustained instruments itself (see `docs/credits/music-samples.md`, "Timing"):
+  every bowed / blown / sung / accordion zone has its beat on the perceptual onset of what it plays
+  (where the RMS over the preceding 5 ms comes within 10 dB of the note's peak), a note shorter than
+  its attack on its own onset, and two takes played together on the onset of their sum. On that bank
+  the old table over-compensated (the parts sounded 14–29 ms ahead of the snare and timpani), so it
+  is gone, and nothing in the song is shifted any more.
 
-  | Channel | Advance (ms) |
-  |---------|--------------|
-  | `tpt` | 8 (all pitches within ±2) |
-  | `tuba` | F♯1 40, G♯1 39, B1 30, C♯2 23, D♯2 12, E2 11, F♯2 21 |
-  | `acc` | B3 66, C♯4 43, D♯4 42, E4 24, F♯4 30, G♯4 24, A4 30, A♯4 28, B4 39, C♯5 36, D♯5 50, E5 26, F♯5 22, G♯5 20, A5 18, B5 16 |
-  | `hn` | B2 14, E3 10, F♯3 12, G♯3 12, A3 22, B3 20, D♯4 10, E4 10, F♯4 1, G♯4 1, A4 4, B4 3 |
-  | `clar` | B3 20, D♯4 28, E4 30, F♯4 28, G♯4 24, A4 23, B4 34 |
-  | `brs` | F♯3 25, G♯3 22, A3 25, A♯3 24, B3 18, B♯3 18, C♯4 17, D♯4 12, E4 11, F♯4 14, G♯4 12, A4 10, B4 9, D♯5 9, E5 8, F♯5 11, G♯5 10, A5 14, B5 14 |
-  | `melS` | 28; A♯5 40, B5 38 (the strain's eighths in that zone speak slower) |
-  | `str` | 30 (the galloping chords, mostly eighths) |
+  **In-song check** (each channel rendered solo, dry, through the game renderer with the recorded
+  bank; a note's onset is the 5 ms RMS reaching −10 dB of its peak after the valley before it,
+  measured on the articulated notes (15 dB or more above what precedes them); the reference is the
+  cleanest percussion attack on the same grid step — timpani, bass drum, crash, tambourine, snare;
+  median offset in ms, negative = ahead of the percussion):
 
-  The accordion values come from sixteenths: the E5 and D♯4 zones speak in two stages (the reed
-  reaches about −7 dB of its final level in 60–80 ms and blooms to full level only after ~130 ms) and
-  C♯4 keeps rising slowly, so for eighths the −12 dB point relative to the later bloom comes later
-  while the attack itself is the same. The previous version advanced each channel by one value (tuba 22, accordion 25, horn 15,
-  clarinet 18, brass 8, strings 25/30, pizzicato 20, guitar 6).
+  | Channel | With `SPEAK`, previous bank | Now |
+  |---------|-----------------------------|-----|
+  | accordion | −16.1 | +0.7 |
+  | staccato strings, tune / chords | −28.5 / −29.3 | −0.4 / +0.7 |
+  | clarinet | −17.8 | +1.4 |
+  | horn | −13.7 | +1.1 |
+  | horn section | +14.6 | −0.1 |
+  | brass section | +1.8 | 0.0 |
+  | tuba | −21.0 | −0.3 |
 
-  **In-song check** (the song rendered without humanize and reverb, one channel at a
-  time in eight passes that each keep the notes of one sixteenth position on every other beat, so
-  every note is measured in its song context but apart from its neighbours; the −12/−9 dB midpoint
-  of each note, in ms after its grid time, mean per pitch, over the loop body):
-
-  | Channel | Before | Now |
-  |---------|--------|-----|
-  | snare / timpani / xylophone (reference, not shifted) | +3 / +2…+4 / — | +3 / +2…+3 / +2…+4 |
-  | trumpet | +2…+4 | +2…+4 |
-  | tuba | −8 (E2), −7 (D♯2) … +11 (B1), +21 (F♯1, G♯1) | +3…+4 (all 7 pitches) |
-  | accordion | −5 (B5) … +18 (B4), +29 (D♯5), +45 (B3) | +3…+5 for 13 of 16 pitches; C♯4 +8.5, E5 +15, D♯4 +25 (eighths with the bloom above; relative to their attack level, the loudest point in their first 90 ms: +4, −2, +3) |
-  | horn | −10 (F♯4, G♯4) … +10.5 (A3) | +3…+5.5 |
-  | clarinet | +6…+22 | +3…+6 |
-  | brass section | +4…+10 | +3…+4 |
-  | staccato strings, tune / chords | +4…+22 / +4…+7 | +0…+11 except C♯6 +19 (bloom; +3…+9 relative to its attack) / +4…+7 |
-  | pizzicato / guitar | −4…+18 / +5…+8 | +16…+38 / +11…+14 (not compensated, see below) |
-
-  So the tuba's oom now speaks at the same point on beat 1 (E2) and beat 2 (B1), with the snare and
-  timpani, where before E2 came about 8 ms early and B1 about 11 ms late (a 19 ms gap between the
-  two beats of every oom-pah bar); the accordion's sixteenth lines no longer drift by pitch (B4
-  +18 → +4, B3 +45 → +4). The pizzicato and the guitar are **no longer compensated**: their late
-  attacks come from a known sample-bank defect (plucked samples start 10–47 ms late) that the
-  sampler is fixing, and a song-side offset would make them early afterwards. The song's very first
-  step is never shifted (`keepDownbeat`), so nothing can start before t = 0 (the roll there has no
-  shifted channel anyway).
+  (The trumpet's notes all join the line legato, with no articulated note on a percussion step.)
+  The tuba's oom now speaks with the snare and timpani on both beats, and the accordion's sixteenth
+  lines no longer drift by pitch. The trumpet channel is 0.3 dB lower (−5.2) than before: on the
+  aligned bank its detached notes sound their whole written length after their onset, which made the
+  channel 0.3 dB louder; the trim keeps the balance below.
 - **Accordion left hand.** The accordion's chord voice (`accChord`) is not used: its low zones take
   ~100 ms to speak, too slow for off-beat stabs at this tempo, so the street band's off-beats went to
   the guitar.

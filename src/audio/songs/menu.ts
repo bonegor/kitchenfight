@@ -184,13 +184,13 @@ export const menu: SongDef = {
   reverb: { rt60: 1.9, size: 1.15, damp: 0.45, predelay: 0.024, er: 0.3, hp: 240, lp: 6500, wet: 1.6 },
   channels: {
     mand: { inst: 'mandolin', gain: -2.4, pan: -0.1, send: 0.22, hum: 0.6 },
-    vln: { inst: 'violin', gain: -4.9, pan: 0.08, send: 0.28 },
+    vln: { inst: 'violin', gain: -5.4, pan: 0.08, send: 0.28 },
     mandH: { inst: 'mandolin', gain: -8.2, pan: -0.3, send: 0.24 },
     gtr: { inst: 'guitar', gain: -8, pan: 0.3, send: 0.18 },
     harp: { inst: 'harp', gain: -8, pan: -0.32, send: 0.3 },
     bass: { inst: 'uprightBass', gain: -4.5, pan: 0.02, send: 0.06 },
     acc: { inst: 'accordionDry', gain: -14.2, pan: -0.22, send: 0.25, hum: 0 },
-    accC: { inst: 'accChord', gain: -11.9, pan: 0.22, send: 0.16, hum: 0.5 },
+    accC: { inst: 'accChord', gain: -12.3, pan: 0.22, send: 0.16, hum: 0.5 },
     str: { inst: 'strings', gain: -14, pan: 0, send: 0.32, hum: 0 },
   },
   sections: {

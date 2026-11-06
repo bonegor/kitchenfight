@@ -15,7 +15,6 @@
  * Loop body 59 bars = 46.6 s (bars 4-62), total 48.9 s.
  */
 import { comp, drums, hits, mel, pad, type HitMap, type Part, type SongDef } from '../sequencer';
-import { noteToMidi } from '../theory';
 
 // ---------------------------------------------------------------------------------------------
 // Melody (one step = a sixteenth; a 2/4 bar = 8 steps). Every pickup (B4 B4 / G#5 G#5) sits in
@@ -111,52 +110,6 @@ const TAMB = 'a.h...h.|..h...h.|..h...h.|..h...h.|a.h...h.|..h...h.|..h...h.|..h
 const TIMP_A = 'E2:4 r:4 | ' + rest(2) + 'B2:2 B2:1 B2 B2:2 r:2 | E2:4 r:4 | r:8 | B2:2 B2:1 B2 B2:2 B2:1 B2 | E2:2 r:2 B2:2 r:2 |';
 const TIMP_B = 'G#2:4 r:4 | r:8 | r:4 G#2:4 | C#3:4 r:4 | G#2:4 r:4 | r:8 | r:4 F#2:4 | B2:2 B2:1 B2 B2:2 r:2 |';
 
-/**
- * Speaking-delay compensation (ms earlier than the grid). The sampler puts each sample's physical
- * onset on the beat, but the recorded attacks take different times to speak. Measured on isolated
- * notes rendered through the game renderer with the recorded bank, at this song's durations and
- * gates (envelope: trailing RMS over max(10 ms, one period)), the snare, timpani and xylophone
- * reach -12 / -9 dB of their peak 2-5 ms after the beat; the slower channels need the times
- * below, and for the tuba, accordion, horn, clarinet and brass section they depend on the
- * recorded zone (tuba E2 11/18 ms but B1 31/35; accordion B5 18/22, B4 40/45, B3 66/74).
- * Each note starts earlier by the mean of its -12 dB and -9 dB times minus the snare's 3.5 ms, so
- * every attack lands with the snare and timpani. Spec per channel: a plain number = the value for
- * every pitch (the zones agree within ±5 ms), `pitch:ms` = a measured pitch (sounding); a pitch
- * not listed takes the plain number, or else its nearest listed neighbour.
- * Pizzicato and guitar are not compensated: their late attacks are a sample-bank defect (plucked
- * samples start late) that the sampler fixes.
- */
-const SPEAK: Record<string, string> = {
-  tpt: '8',
-  melS: '28 A#5:40 B5:38', // the strain's A#5 / B5 eighths speak slower than the other strStab zones
-  str: '30', // the galloping chords: mostly eighths, whose staccato attacks keep growing for ~120 ms
-  brs: 'F#3:25 G#3:22 A3:25 A#3:24 B3:18 B#3:18 C#4:17 D#4:12 E4:11 F#4:14 G#4:12 A4:10 B4:9 D#5:9 E5:8 F#5:11 G#5:10 A5:14 B5:14',
-  hn: 'B2:14 E3:10 F#3:12 G#3:12 A3:22 B3:20 D#4:10 E4:10 F#4:1 G#4:1 A4:4 B4:3',
-  clar: 'B3:20 D#4:28 E4:30 F#4:28 G#4:24 A4:23 B4:34',
-  tuba: 'F#1:40 G#1:39 B1:30 C#2:23 D#2:12 E2:11 F#2:21',
-  acc: 'B3:66 C#4:43 D#4:42 E4:24 F#4:30 G#4:24 A4:30 A#4:28 B4:39 C#5:36 D#5:50 E5:26 F#5:22 G#5:20 A5:18 B5:16',
-};
-const speakMs: Record<string, (m: number) => number> = {};
-for (const [ch, spec] of Object.entries(SPEAK)) {
-  const toks = spec.split(' ');
-  const all = toks.find((t) => !t.includes(':'));
-  const tab = toks.filter((t) => t.includes(':')).map((t): [number, number] => [noteToMidi(t.split(':')[0]), Number(t.split(':')[1])]);
-  speakMs[ch] = (m) => {
-    const hit = tab.find((x) => x[0] === m);
-    if (hit) return hit[1];
-    if (all !== undefined) return Number(all);
-    return tab.reduce((a, b) => (Math.abs(b[0] - m) < Math.abs(a[0] - m) ? b : a))[1];
-  };
-}
-/** Apply SPEAK to a section's parts (`keepDownbeat`: not to step 0, so nothing starts before t = 0). */
-const tight = (parts: Part[], keepDownbeat = false): Part[] =>
-  parts.map((p): Part => (ctx) =>
-    p(ctx).map((e) => {
-      const ms = speakMs[e.ch]?.(e.m) ?? 0;
-      return ms > 0 && !(keepDownbeat && e.s < 1e-9) ? { ...e, offSec: (e.offSec ?? 0) - ms / 1000 } : e;
-    }),
-  );
-
 /** Timpani roll from step `at` over `steps` steps, `per` strokes per step (2 = 32nds, 1.5 = 16th
  *  triplets), velocity v0 → v1 (the timpani's two recorded variants alternate like the sticks). */
 const roll = (at: number, steps: number, note: string, v0: number, v1: number, per = 2): Array<[number, string, number, number]> => {
@@ -174,7 +127,7 @@ export const boss: SongDef = {
   humanize: 0.003,
   reverb: { rt60: 1.5, size: 1.15, damp: 0.5, predelay: 0.02, er: 0.35, hp: 300, lp: 7000, wet: 1.25 },
   channels: {
-    tpt: { inst: 'trumpet', gain: -4.9, pan: 0.08, send: 0.18 },
+    tpt: { inst: 'trumpet', gain: -5.2, pan: 0.08, send: 0.18 },
     acc: { inst: 'accordion', gain: -5.2, pan: -0.12, send: 0.15 },
     gtr: { inst: 'guitar', gain: -11, pan: -0.3, send: 0.15, hum: 0.5 },
     melS: { inst: 'strStab', gain: -3.7, pan: -0.15, send: 0.2, hum: 0.4 },
@@ -206,26 +159,23 @@ export const boss: SongDef = {
     intro: {
       bars: 3,
       chords: 'B7:8 | E:8 | E:6 B7:2',
-      parts: tight(
-        [
-          hits('timp', roll(0, 8, 'B2', 0.25, 0.8, 1.5)), // 16th triplets against the snare's 32nds
-          hits('cym', [[0, 60, 0.45, 8]], 1),
-          mel('brs', rest(1) + 'E4:2 B3:1 B3 E4:2 B3:1 B3 | G#4:2 E4:1 E4 B4:2 r:2 |', { vel: 0.85, gate: DET }),
-          mel('hn', rest(1) + 'E3:2 B2:1 B2 E3:2 B2:1 B2 | G#3:2 E3:1 E3 B3:2 r:2 |', { vel: 0.8, gate: DET }),
-          mel('tpt', rest(2) + 'r:6 B4:1 B4 |', { vel: 0.85, gate: DET }),
-          mel('timp', rest(1) + 'E2!:2 B2:1 B2 E2:2 B2:1 B2 | E2:2 E2:1 E2 B2:2 r:2 |', { vel: 0.6 }),
-          mel('tuba', 'r:8 | ' + oom('E2 B1', 'E2 B1'), { vel: 0.75, gate: 0.7 }),
-          drums('sn', '1122334455667788|X...o.o.x...o.o.|3344556677889999', SN, { stepDiv: 2 }),
-          hits('crash', [[8, 60, 0.7]]),
-          hits('bd', [[8, 60, 0.8]]),
-        ],
-        true,
-      ),
+      parts: [
+        hits('timp', roll(0, 8, 'B2', 0.25, 0.8, 1.5)), // 16th triplets against the snare's 32nds
+        hits('cym', [[0, 60, 0.45, 8]], 1),
+        mel('brs', rest(1) + 'E4:2 B3:1 B3 E4:2 B3:1 B3 | G#4:2 E4:1 E4 B4:2 r:2 |', { vel: 0.85, gate: DET }),
+        mel('hn', rest(1) + 'E3:2 B2:1 B2 E3:2 B2:1 B2 | G#3:2 E3:1 E3 B3:2 r:2 |', { vel: 0.8, gate: DET }),
+        mel('tpt', rest(2) + 'r:6 B4:1 B4 |', { vel: 0.85, gate: DET }),
+        mel('timp', rest(1) + 'E2!:2 B2:1 B2 E2:2 B2:1 B2 | E2:2 E2:1 E2 B2:2 r:2 |', { vel: 0.6 }),
+        mel('tuba', 'r:8 | ' + oom('E2 B1', 'E2 B1'), { vel: 0.75, gate: 0.7 }),
+        drums('sn', '1122334455667788|X...o.o.x...o.o.|3344556677889999', SN, { stepDiv: 2 }),
+        hits('crash', [[8, 60, 0.7]]),
+        hits('bd', [[8, 60, 0.8]]),
+      ],
     },
     A: {
       bars: 8,
       chords: A_CH,
-      parts: tight([
+      parts: [
         mel('tpt', THEME, { vel: 0.9, gate: DET }),
         mel('acc', 'r:6 B4:1 B4 |', { at: 56, vel: 0.85, gate: REED }), // the accordion enters with the pickup to A2
         comp('str', GALLOP, { lo: 'F#3', hi: 'F#4', n: 3, vel: 0.5 }),
@@ -234,12 +184,12 @@ export const boss: SongDef = {
         drums('sn', 'X.oox.oo|' + SN_GAL.repeat(3) + 'X.oox.oo|' + SN_GAL.repeat(2) + 'x.oox.xx', SN),
         hits('crash', [[0, 60, 0.75]]),
         hits('bd', [[0, 60, 0.8], [32, 60, 0.6]]),
-      ]),
+      ],
     },
     A2: {
       bars: 8,
       chords: A_CH,
-      parts: tight([
+      parts: [
         mel('acc', THEME, { vel: 0.95, gate: REED }),
         mel('clar', THEME, { vel: 0.7, oct: -1, gate: REED }),
         mel('melS', 'r:6 G#5:1 G#5 |', { at: 56, vel: 0.85 }), // the strings' pickup to the second strain
@@ -250,12 +200,12 @@ export const boss: SongDef = {
         drums('sn', 'X.oox.oo|' + SN_GAL.repeat(3) + 'X.oox.oo|' + SN_GAL.repeat(2) + 'x.oox.xx', SN),
         hits('crash', [[0, 60, 0.7]]),
         hits('bd', [[0, 60, 0.8], [32, 60, 0.6]]),
-      ]),
+      ],
     },
     B: {
       bars: 8,
       chords: B_CH,
-      parts: tight([
+      parts: [
         mel('melS', STRAIN_REP, { vel: 0.85 }),
         ...hornsB(0.5),
         comp('pizz', PAH_B, { lo: 'G#3', hi: 'G#4', n: 3, vel: 0.55 }),
@@ -263,12 +213,12 @@ export const boss: SongDef = {
         mel('timp', TIMP_B, { vel: 0.6 }),
         drums('sn', 'x...x.oo|'.repeat(7) + 'x.oox.xx', SN),
         hits('tri', [[0, 60, 0.5], [16, 60, 0.4], [32, 60, 0.5], [48, 60, 0.4]]),
-      ]),
+      ],
     },
     B2: {
       bars: 8,
       chords: B_CH,
-      parts: tight([
+      parts: [
         mel('melS', STRAIN_END, { vel: 0.95 }),
         mel('xylo', STRAIN_END, { vel: 0.7 }),
         mel('acc', STRAIN_END, { vel: 0.6, oct: -1, gate: REED }),
@@ -280,14 +230,14 @@ export const boss: SongDef = {
         drums('sn', 'X.oox.oo|' + SN_GAL.repeat(3) + 'X.oox.oo|' + SN_GAL.repeat(2) + 'x.oox.xx', SN),
         hits('crash', [[0, 60, 0.7]]),
         hits('bd', [[0, 60, 0.75], [32, 60, 0.55]]),
-      ]),
+      ],
     },
     // Rossini crescendo on the dominant: call (horns) / answer (xylophone + pizzicato) / call
     // (trumpets) / tutti hits, the snare and timpani rolling into the trumpet's pickup.
     brk: {
       bars: 8,
       chords: BRK_CH,
-      parts: tight([
+      parts: [
         mel('hn', 'B3:2 B3:1 B3 D#4:2 D#4:1 D#4 | F#4:2 F#4:1 F#4 A4:2 r:2 | ' + rest(2) + 'B3:2 B3:1 B3 D#4:2 D#4:1 D#4 | F#4:2 F#4:1 F#4 A4:2 r:2 | ' + rest(2), { vel: 0.95, gate: DET }),
         pad('hns', { lo: 'F#3', hi: 'F#4', n: 3, vel: 0.4, to: 6 }), // soft B7 under the calls
         mel('xylo', rest(2) + 'A5:1 G#5 A5 G#5 A5 G#5 A5 G#5 | A5 G#5 A5 F#5 D#5 B4 A4 F#4 | ' + rest(4), { vel: 0.7 }),
@@ -310,12 +260,12 @@ export const boss: SongDef = {
         // the cavalry approaching: woodblock hooves under the calls, whip cracks on the stabs
         drums('wood', 'x.oox.oo|'.repeat(6), { x: { v: 0.5, vr: [0, 1] }, o: { v: 0.36, vr: [0, 1] } }, { to: 6 }),
         hits('whip', [[0, 60, 0.85], [56, 60, 0.9]]),
-      ]),
+      ],
     },
     C: {
       bars: 15,
       chords: C_CH,
-      parts: tight([
+      parts: [
         mel('acc', THIRD, { vel: 0.85, gate: REED }),
         mel('tpt', THEME_1_6 + THEME_7_RUN + rest(8), { vel: 0.85, gate: DET }),
         mel('hn', THEME_1_6 + THEME_7_RUN + rest(8), { vel: 0.5, oct: -1, gate: DET }),
@@ -332,12 +282,12 @@ export const boss: SongDef = {
         hits('hit', [[0, 'E4', 0.7]]),
         hits('bd', [[0, 60, 0.85], [32, 60, 0.6], ...Array.from({ length: 8 }, (_, i): [number, number, number] => [56 + i * 8, 60, i % 4 === 0 ? 0.8 : 0.6])]),
         hits('cym', [[104, 60, 0.6, 16]], 1),
-      ]),
+      ],
     },
     coda: {
       bars: 4,
       chords: CODA_CH,
-      parts: tight([
+      parts: [
         mel('acc', CODA, { vel: 0.85, gate: REED }),
         mel('brs', CODA, { vel: 0.65, gate: DET }),
         mel('melS', CODA, { vel: 0.65 }),
@@ -350,7 +300,7 @@ export const boss: SongDef = {
         hits('hit', [[0, 'E4', 0.8]]),
         hits('bd', [[0, 60, 0.9], [16, 60, 0.7]]),
         hits('cym', [[16, 60, 0.55, 16]], 1),
-      ]),
+      ],
     },
   },
   form: ['intro', 'A', 'A2', 'B', 'B2', 'brk', 'C', 'coda'],
