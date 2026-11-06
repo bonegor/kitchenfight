@@ -36,6 +36,10 @@ export interface Sample {
   r: Float32Array | null;
   /** samples before the musical onset (recorded samples): the mixer starts the note this early */
   pre?: number;
+  /** slow-rising (spread) attacks: the onset position of a note gated after `gate` output samples
+   *  (replaces `pre` for that note). A note cut while its attack is still rising peaks lower, so its
+   *  perceptual onset sits earlier in the sample than the whole note's. */
+  preAt?: (gate: number) => number;
 }
 
 export interface InstDef {
@@ -43,6 +47,10 @@ export interface InstDef {
   kind: 'pluck' | 'sustain' | 'perc';
   /** number of alternating variants (round-robin) */
   variants: number;
+  /** the variants a note without an explicit variant cycles through (default: all of them).
+   *  Articulation variants (rolls, shakes, the soft timpani stroke) are left out: only a note that
+   *  asks for one plays it */
+  rrCycle?: number[];
   /** release time constant (s) applied at note-off; ignored when ring */
   release: number;
   /** let the sample ring past note-off */
@@ -56,7 +64,15 @@ export interface InstDef {
   /** re-striking the same pitch on the same channel stops the previous note (plucked strings:
    *  the plectrum/finger damps the string — tremolo re-plucks stay distinct) */
   choke?: boolean;
-  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number): Sample;
+  /** sampled instruments: how a note is played — octaves it is folded by to reach the recorded
+   *  range, semitones it is shifted from its recording (render warnings for the arrangers) */
+  noteInfo?(midi: number, layer: number): { fold: number; shift: number } | null;
+  /** sampled sustained instruments with a slow natural attack (bowed strings, chorus, flute): notes
+   *  whose gate is at most this many seconds play the short articulation — make(..., art = 1) enters
+   *  the recording in its sustain with a fast fade-in, so a short note speaks at once (long notes
+   *  keep the recorded attack) */
+  shortArt?: number;
+  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number): Sample;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1088,7 +1104,8 @@ const tubularBell: InstDef = {
 const timpani: InstDef = {
   id: 'timp',
   kind: 'pluck',
-  variants: 2,
+  variants: 2, // 0 stroke, 1 soft stroke
+  rrCycle: [0],
   release: 0.6,
   ring: true,
   make(sr, midi, v) {
@@ -1149,6 +1166,7 @@ const tamb: InstDef = {
   id: 'tamb',
   kind: 'perc',
   variants: 8, // 0,1 hit; 2,3 shake; 4,5 accent; 6,7 roll
+  rrCycle: [0, 1],
   release: 0.03,
   ring: true,
   make(sr, _midi, v) {
@@ -1584,7 +1602,8 @@ function clickPerc(id: string, o: { f: number; q: number; decay: number; len: nu
 const flexatone: InstDef = {
   id: 'flexatone',
   kind: 'perc',
-  variants: 4,
+  variants: 4, // 0, 1 shakes; 2 fast; 3 long
+  rrCycle: [0, 1],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1606,7 +1625,8 @@ const flexatone: InstDef = {
 const ratchet: InstDef = {
   id: 'ratchet',
   kind: 'perc',
-  variants: 3,
+  variants: 3, // 0 fast, 1 slow, 2 crank
+  rrCycle: [0],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1627,7 +1647,8 @@ const ratchet: InstDef = {
 const toyWhistle: InstDef = {
   id: 'toyWhistle',
   kind: 'perc',
-  variants: 4,
+  variants: 4, // 0 low, 1 high, 2 double, 3 falling
+  rrCycle: [0],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1679,6 +1700,7 @@ const cymbal: InstDef = {
   id: 'cymbal',
   kind: 'perc',
   variants: 2,
+  rrCycle: [0],
   release: 0.6,
   make(sr, _m, v, lenSec) {
     const roll = v === 1;
@@ -1710,6 +1732,7 @@ const bassDrum: InstDef = {
   id: 'bassDrum',
   kind: 'perc',
   variants: 2,
+  rrCycle: [0],
   release: 0.4,
   make(sr, _m, v, lenSec) {
     const roll = v === 1;
@@ -1762,6 +1785,34 @@ const NEW_SYNTH: InstDef[] = [
   bassDrum,
 ];
 
+/**
+ * Level trims (dB) of the new ids' synthesized fallbacks. For these ids the recorded instrument is
+ * the reference the songs are mixed against, so each fallback is matched to it (per song channel,
+ * BS.1770 integrated loudness: scripts/audio/calibrate_instruments.mjs --write keeps this table).
+ */
+export const FALLBACK_TRIM_DB: Record<string, number> = { anvil: -10.4, bassDrum: -6.3, bassoon: -2.7, castanets: -0.3, celesta: 1.4, cello: 0.4, clarinet: -2.2, claves: -5.3, contrabass: 0.8, cymbal: 7.5, flexatone: 0.3, horn: -0.4, orchHit: 5.6, piccolo: -3, ratchet: 9.4, slapstick: 0.9, steelGuitar: 3.2, tamtam: 0.4, toyWhistle: -4.7, trombone: -2.1, trumpet: -0.8, woodblock: 0.9, xylophone: 3.9 };
+
+/** ids the Audio 2.0 brief added (recorded instrument first, synthesized fallback) */
+export const NEW_IDS: string[] = NEW_SYNTH.map((d) => d.id);
+
+function trimmed(d: InstDef): InstDef {
+  return {
+    ...d,
+    make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number): Sample {
+      const s = d.make(sr, midi, variant, lenSec, layer, art);
+      const db = FALLBACK_TRIM_DB[d.id] ?? 0;
+      if (!db) return s;
+      const g = Math.pow(10, db / 20);
+      const sc = (c: Float32Array): Float32Array => {
+        const o = new Float32Array(c.length);
+        for (let i = 0; i < c.length; i++) o[i] = c[i] * g;
+        return o;
+      };
+      return { ...s, l: sc(s.l), r: s.r ? sc(s.r) : null };
+    },
+  };
+}
+
 export const INSTRUMENTS: Record<string, InstDef> = {};
 for (const d of [
   accordion('accordion', 1, [-13, 0, 14], 0.7, 0.03),
@@ -1807,7 +1858,7 @@ for (const d of [
   riser,
   panClang,
   wah,
-  ...NEW_SYNTH,
+  ...NEW_SYNTH.map(trimmed),
 ]) {
   INSTRUMENTS[d.id] = d;
 }

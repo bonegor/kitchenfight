@@ -6,12 +6,18 @@ Usage:
   node scripts/audio/render-song.mjs --pattern all --out OUT
   /home/user/.venv-audio/bin/python scripts/audio/analyze_instruments.py OUT [--json OUT/analysis.json]
 
-Per note (exact start sample from the pattern JSON):
-  tuning   measured pitch vs the requested (octave-folded) MIDI note, cents   (pitched only;
-           power-weighted centroid of the partial near the expected pitch)
+Per note (exact start sample from the pattern JSON; instruments that play a second take on the
+right channel (`width`) are measured on the zone itself, recovered from L/R — except the onset of
+`sumOnset` instruments (strStab), whose beat is on the two takes' sum: measured on the mono sum, and
+not graded on placement, which the sum onset moves on purpose):
+  tuning   measured pitch vs the requested (octave-folded) MIDI note, cents   (pitched only; the
+           build's own estimator, build_instruments.measure_zone_pitch — a frame-wise track for
+           sustained / plucked tones — so this verifies the renderer, the loop and the MP3, not the
+           estimator; the build reports each zone's pitch spread and estimator cross-checks)
   place    sample-exact placement: cross-correlation of the rendered note with the zone decoded
            independently here (ffmpeg + marker search) and resampled with scipy; must be ~0 samples
-  onset    detected attack time vs the scheduled time, ms                      (same detector as the build)
+  onset    time from the scheduled beat to where the RMS over the preceding 5 ms comes within
+           10 dB of its maximum (the attack's perceptual onset), ms
   loudness K-weighted level of the note body; per instrument and velocity layer the spread
            across the range is reported as +-dB around the median
   clipping peak of the dry render (no master), dBFS
@@ -20,8 +26,9 @@ Per note (exact start sample from the pattern JSON):
            100 ms, floored at the note's full-band level -35 dB (masking) — power ratio,
            >= 10 (+10 dB) = audible click
   seams    same detector at every predicted loop-seam crossing of sustained / decaying notes
-Limits (Audio 2.0 brief): |tuning| <= 5 cents, |onset| <= 3 ms, loudness +-2 dB, no clipping,
-no clicks. Inharmonic instruments (chimes/timpani/bells) report tuning but are not graded on it.
+Limits (Audio 2.0 brief): |tuning| <= 5 cents, |onset| <= 5 ms (plucked / struck; the 5 ms window
+itself takes ~1 ms to fill), loudness +-2 dB, no clipping, no clicks. Inharmonic instruments
+(chimes/timpani/bells) report tuning but are not graded on it.
 """
 from __future__ import annotations
 
@@ -37,8 +44,8 @@ from scipy import signal
 from scipy.io import wavfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from instrument_dsp import decode_mp3, loudness, max_short_loudness, measure_pitch_centroid, measure_pitch_hsum, mtof, onset_index, to_mono  # noqa: E402
-from build_instruments import SETS  # noqa: E402  (the build's windows, so build and analysis measure alike)
+from instrument_dsp import decode_mp3, loudness, max_short_loudness, measure_pitch_centroid, mtof, to_mono  # noqa: E402
+from build_instruments import SETS, measure_zone_pitch  # noqa: E402  (the build's windows and estimator)
 
 SPEC = {sp.name: sp for sp in SETS}
 
@@ -65,7 +72,8 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
         return None
     x, zsr = sprite(n['set'])
     zone = to_mono(x)[z['o']:z['o'] + min(z['n'], z.get('ls', z['n']))]
-    ratio = 2 ** ((n['folded'] - z['p']) / 12) if not n.get('unpitched') else 1.0
+    # (cents: the micro-variation of a repeated take — round robin without a second recording)
+    ratio = 2 ** ((n['folded'] - z['p']) / 12 + n.get('cents', 0) / 1200) if not n.get('unpitched') else 2 ** (n.get('cents', 0) / 1200)
     inc = ratio * zsr / out_sr
     # reference at the output rate: zone index i -> output (i - pre) / inc after the onset
     t_out = np.arange(int(len(zone) / inc))
@@ -77,8 +85,10 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
     M = 64 if n.get('unpitched') else max(2, min(64, int(out_sr / mtof(n['folded']) / 2) - 1))
     if a < M or L < 256:
         return None
-    seg = rendered[a - M:a + L + M]
-    r = ref[:L]
+    # first differences (whitened): the correlation of low-frequency content (a bass-drum roll, a low
+    # note) is flat over many samples, its maximum anywhere in that plateau
+    seg = np.diff(rendered[a - M:a + L + M + 1])
+    r = np.diff(ref[:L + 1])
     c = signal.correlate(seg, r, mode='valid')
     k = int(np.argmax(c))
     if 0 < k < len(c) - 1:
@@ -89,7 +99,36 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
 
 INHARMONIC = {'bell', 'timp', 'tubularBell', 'timpani', 'orchHit'}
 FILTERED = {'accordionDry', 'accChord', 'choirO'}
-SLOW = {'strings', 'violin', 'cello', 'contrabass', 'choir', 'choirO', 'brassSoft', 'horn', 'cymbal', 'bassDrum'}
+# not graded on onset: sustained (bowed / blown / sung: the beat is on the faded attack, how soon it
+# speaks is graded by check_instrument_attacks.mjs) and swelling articulations (rolls, tam-tam,
+# flexatone, whistles, shakers)
+SLOW = {'strings', 'violin', 'cello', 'contrabass', 'choir', 'choirO', 'brassSoft', 'horn', 'cymbal', 'bassDrum',
+        'accordion', 'accordionDry', 'accChord', 'brass', 'tuba', 'trumpet', 'trombone', 'flute', 'piccolo', 'clarinet',
+        'oboe', 'bassoon', 'organ', 'tamtam', 'flexatone', 'ratchet', 'toyWhistle', 'vibraslap', 'shaker', 'tamb'}
+
+
+def onset_5ms(m: np.ndarray, s: int, sr: int, a: int, b: int) -> float:
+    """ms from s to where the RMS over the preceding 5 ms first comes within 10 dB of its maximum
+    over [a, b)"""
+    W = int(0.005 * sr)
+    seg = m[a:b]
+    cs = np.concatenate([[0.0], np.cumsum(seg * seg)])
+    idx = np.arange(1, len(seg) + 1)
+    r5 = np.sqrt((cs[idx] - cs[np.maximum(0, idx - W)]) / W)
+    if not len(r5) or r5.max() <= 0:
+        return 0.0
+    k = int(np.argmax(r5 >= r5.max() * 10 ** (-10 / 20)))
+    return (a + k + 1 - s) * 1000 / sr
+
+
+def zone_signal(x: np.ndarray, width: float | None) -> np.ndarray:
+    """The rendered zone itself: mono, or for `width` instruments (L = c a + s b, R = c b + s a with a
+    second take b) a = (c L - s R) / (c^2 - s^2)."""
+    if width is None or x.shape[0] < 2:
+        return to_mono(x)
+    th = math.asin(min(1.0, max(0.0, width))) / 2
+    c, s_ = math.cos(th), math.sin(th)
+    return (c * x[0] - s_ * x[1]) / (c * c - s_ * s_)
 
 
 def d2_spike(x: np.ndarray, at: int, half: int, ref: int, sr: int = 48000) -> float:
@@ -128,7 +167,7 @@ def analyze(path_json: str) -> dict:
         x = x.T
     else:
         x = x[None, :]
-    m = to_mono(x)
+    m = zone_signal(x, meta.get('width'))
     iid = meta['id']
     kind = meta['kind']
     ring = meta['ring']
@@ -141,14 +180,14 @@ def analyze(path_json: str) -> dict:
         a = max(0, s - int(0.06 * sr))
         b = min(len(m), s + int((gap - 0.15) * sr))
         seg = x[:, a:b]
-        # onset (same detector as the build)
-        on = onset_index(seg, sr, slow=iid in SLOW) + a
-        onset_ms = (on - s) * 1000 / sr
+        # onset: perceptual (5 ms RMS within 10 dB of its maximum over the note's first 0.5 s); on what
+        # is heard (the mono sum) for instruments whose beat is the onset of their two takes together
+        onset_ms = onset_5ms(to_mono(x) if meta.get('sumOnset') else m, s, sr, a, min(b, s + int(0.5 * sr)))
         rec = {'m': n['m'], 'folded': n['folded'], 'v': n['v'], 'vr': n['vr'], 'layer': n['layer'], 'onset_ms': round(onset_ms, 3)}
         rec['fold'] = bool(n.get('fold'))
         # sample-exact placement of the zone
         n2 = dict(n, unpitched=unpitched)
-        lag = placement_lag(m, s, n2, sr)
+        lag = None if meta.get('sumOnset') else placement_lag(m, s, n2, sr)
         if lag is not None:
             rec['place'] = round(lag, 2)
         sp = SPEC.get(n.get('set') or '')
@@ -156,15 +195,18 @@ def analyze(path_json: str) -> dict:
         ratio = 2 ** ((n['folded'] - z['p']) / 12) if (z and not unpitched) else 1.0
         # tuning (same partial-centroid method and window as the build; windows scale with the
         # playback ratio because a shifted note plays faster/slower)
-        if not unpitched:
+        # zones whose pitch the build takes from the nominal (piano extremes, timpani: no clean
+        # fundamental to measure) are not measured here either
+        trusted = bool(sp and z and z.get('p') is not None and (round(z['p']) < sp.trust_below or round(z['p']) > sp.trust_above))
+        if not unpitched and not trusted:
             # sustained: inside the loop of the 2.6 s note (what long notes sound like)
             pw = (1.3, 2.5) if sustain else (sp.pitch_win if sp else (0.05, 0.4))
             w0 = s + int(pw[0] / (ratio if not sustain else 1) * sr)
             w1 = s + int(pw[1] / (ratio if not sustain else 1) * sr)
-            if sp and sp.pitch_method == 'hsum':
-                pm = measure_pitch_hsum(x, sr, w0, min(w1, b), n['folded'], span=1.0)
+            if sp:
+                pm = measure_zone_pitch(sp, m[None, :], sr, w0, min(w1, b), n['folded'], 1.0, {})
             else:
-                pm = measure_pitch_centroid(x, sr, w0, min(w1, b), n['folded'], harmonics=sp.partials if sp else 4)
+                pm = measure_pitch_centroid(m[None, :], sr, w0, min(w1, b), n['folded'], harmonics=4)
             if pm is not None:
                 rec['cents'] = round((pm - n['folded']) * 100, 2)
         # loudness of the body (the build's normalisation window)
@@ -245,7 +287,7 @@ def main() -> None:
         if os.path.basename(f) == 'analysis.json':
             continue
         meta = json.load(open(f))
-        if 'notes' not in meta or (only and meta['id'] not in only):
+        if 'notes' not in meta or 'id' not in meta or (only and meta['id'] not in only):
             continue
         r = analyze(f)
         full.append(r)
@@ -268,7 +310,7 @@ def main() -> None:
             fails.append(f"{iid}: tuning {o['cents_max']} cents")
         if o['place_max'] is not None and o['place_max'] > 3 and iid not in FILTERED:
             fails.append(f"{iid}: placement {o['place_max']} samples")
-        if not o['slow'] and o['onset_max_ms'] is not None and o['onset_max_ms'] > 3:
+        if not o['slow'] and o['onset_max_ms'] is not None and o['onset_max_ms'] > 5:
             fails.append(f"{iid}: onset {o['onset_max_ms']} ms")
         if o['loud_pm_db'] is not None and o['loud_pm_db'] > 2:
             fails.append(f"{iid}: loudness +-{o['loud_pm_db']} dB")

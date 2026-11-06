@@ -2,10 +2,11 @@
  * Song renderer: compiles a SongDef into timed events, synthesizes each unique instrument
  * sample once, mixes, adds the FDN reverb and masters — all in cooperative time slices.
  *
- * Seamless looping: the buffer holds [intro][loop body][first P seconds of the body again].
- * Playback loops over [loopStart + P, loopEnd + P): at both window edges all release/reverb
- * tails of *different* material have decayed, and the material itself is sample-identical, so
- * the seam is exact (no click, no reverb gap).
+ * Seamless looping: the buffer holds [intro][loop body][the body repeated for P more seconds]
+ * (as many copies as that takes: a loop may be shorter than P). Playback loops over
+ * [loopStart + P, loopEnd + P): at both window edges all release/reverb tails of *different*
+ * material have decayed, and the material itself is sample-identical, so the seam is exact (no
+ * click, no reverb gap).
  */
 import { Biquad, clamp, dbToGain, Slicer } from './dsp';
 import { INSTRUMENTS, type InstDef, type Sample } from './instruments';
@@ -51,14 +52,21 @@ export interface RenderOpts {
   onProgress?: (p: number) => void;
 }
 
-/** seconds of material repeated after the loop end */
-export const LOOP_PAD = 4;
+/** seconds of material repeated after the loop end: every ring / release tail must have ended
+ *  this long after its note for the seam to be exact (the longest instrument, the sampled tam-tam,
+ *  rings 6 s); a longer tail is faded out before the seam (and reported) */
+export const LOOP_PAD = 6;
+/** recorded samples start up to this long before their onset (pre-roll of slow attacks) */
+const MAX_PRE_SEC = 0.1;
+/** a tail cut at the loop seam fades out over this long */
+const CAP_FADE_SEC = 0.5;
 /** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
 const TAIL_TAU = 3.6;
 /** a choked note fades out over this many seconds, ending at the next note's onset (the
  *  plectrum touching the string damps it just before re-exciting it) */
 const CHOKE_SEC = 0.004;
 let CHOKE_FADE = 192;
+let CAP_FADE = 24000;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -108,6 +116,11 @@ interface MixEv {
   voice: string;
   /** output sample where a later note on the same string stops this one (choke), or Infinity */
   chokeAt: number;
+  /** output sample by which this note must have ended (loop seam), or Infinity */
+  capAt: number;
+  /** song time (warnings) */
+  t: number;
+  ch: string;
   /** constant-power gains for mono samples */
   gl: number;
   gr: number;
@@ -145,18 +158,23 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const P = Math.round(LOOP_PAD * sr);
   const length = loop ? loopEndS + P : Math.round((comp.end + (song.tail ?? 2.5)) * sr);
 
-  // round-robin variants per channel
+  // round-robin variants per channel (a note without a variant cycles through the instrument's
+  // rrCycle: takes, never articulations such as rolls or the soft timpani stroke)
   const rr = new Map<string, number>();
   for (const e of comp.events) {
     if (e.vr >= 0) continue;
-    const n = chInst(e.ch)?.variants ?? 1;
+    const inst = chInst(e.ch);
+    const n = inst?.variants ?? 1;
+    const cyc = inst?.rrCycle && inst.rrCycle.length ? inst.rrCycle : null;
     const c = rr.get(e.ch) ?? 0;
-    e.vr = c % n;
+    e.vr = cyc ? cyc[c % cyc.length] : c % n;
     rr.set(e.ch, c + 1);
   }
 
   // build mix events (+ seam copies)
   const mixEvs: MixEv[] = [];
+  const maxPre = Math.round(MAX_PRE_SEC * sr);
+  const lf = loop ? (song.loopFrom as number) : 0;
   const pushEv = (e: TimedEv, shift: number) => {
     if (opts.solo && !opts.solo.includes(e.ch)) return;
     const chDef = song.channels[e.ch];
@@ -166,11 +184,14 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
       return;
     }
     const st = Math.round(e.t * sr) + shift;
-    if (st >= length) return;
+    // a note just past the end still starts its pre-roll inside the buffer (seam copies)
+    if (st >= length + maxPre) return;
     const amp = velAmp(e.v) * dbToGain(chDef.gain);
     const pan = clamp((chDef.pan ?? 0) + e.pan, -1, 1);
     const a = ((pan + 1) * Math.PI) / 4;
     const vr = Math.max(0, e.vr) % Math.max(1, inst.variants);
+    // short notes of slow-attack sampled instruments play their short articulation
+    const art = inst.shortArt !== undefined && e.d <= inst.shortArt ? 1 : 0;
     let layer = 0;
     try {
       layer = inst.layerOf ? inst.layerOf(e.v) | 0 : 0;
@@ -181,9 +202,14 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
       st,
       gate: Math.max(1, Math.round(e.d * sr)),
       inst,
-      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}`,
+      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}|${art}`,
       voice: `${e.ch}|${e.m}`,
       chokeAt: Infinity,
+      // loop songs: intro notes must be silent by loopStart + P, loop-body notes by the buffer end
+      // (= the wrap point); seam copies end with the buffer like the originals they copy
+      capAt: !loop || shift !== 0 ? Infinity : e.fi < lf ? loopStartS + P : length,
+      t: e.t,
+      ch: e.ch,
       gl: amp * Math.cos(a) * Math.SQRT2,
       gr: amp * Math.sin(a) * Math.SQRT2,
       bl: amp * (pan > 0 ? 1 - pan : 1),
@@ -194,23 +220,54 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     });
   };
   for (const e of comp.events) pushEv(e, 0);
-  if (loop) {
-    const lf = song.loopFrom as number;
-    const lim = comp.loopStart + LOOP_PAD + 0.001;
-    for (const e of comp.events) if (e.fi >= lf && e.t < lim) pushEv(e, loopLenS);
-    // sanity: nothing from before the loop may still sound at loopStart + P
-    for (const e of comp.events) {
-      if (e.fi >= lf) continue;
-      const inst = chInst(e.ch);
-      if (!inst) continue;
-      const endT = inst.ring ? e.t + 3.5 : e.t + e.d + inst.release * TAIL_TAU;
-      if (endT > comp.loopStart + LOOP_PAD) warnings.push(`event before the loop rings past the seam (ch ${e.ch} t=${e.t.toFixed(2)})`);
-    }
+  if (loop && loopLenS > 0) {
+    // the loop body repeated after its end up to the buffer end (plus the notes whose pre-roll
+    // starts before it): the window [loopStart + P, loopEnd + P) then holds exactly one period of
+    // the endlessly repeated loop. A loop shorter than P + MAX_PRE_SEC needs several copies
+    // (pushEv drops the notes that start beyond the buffer)
+    const reps = Math.ceil((P + maxPre + 1) / loopLenS);
+    for (let k = 1; k <= reps; k++) for (const e of comp.events) if (e.fi >= lf) pushEv(e, k * loopLenS);
   }
   mixEvs.sort((a, b) => a.st - b.st);
+  // arranger notes: notes folded by octaves into a sampled instrument's recorded range, or played
+  // further than a fourth (+ half a semitone of recording tuning) from their nearest recording
+  {
+    interface RangeRec { inst: string; up: Set<number>; down: Set<number>; shift: Set<number>; maxShift: number }
+    const byCh = new Map<string, RangeRec>();
+    const seen = new Set<string>();
+    for (const ev of mixEvs) {
+      if (!ev.inst.noteInfo) continue;
+      const [, mS, , lS] = ev.key.split('|');
+      const k = ev.ch + '|' + mS + '|' + lS;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      let info: { fold: number; shift: number } | null = null;
+      try {
+        info = ev.inst.noteInfo(+mS, +lS);
+      } catch {
+        info = null;
+      }
+      if (!info) continue;
+      let rec = byCh.get(ev.ch);
+      if (!rec) byCh.set(ev.ch, (rec = { inst: ev.inst.id, up: new Set(), down: new Set(), shift: new Set(), maxShift: 0 }));
+      if (info.fold > 0) rec.up.add(+mS);
+      else if (info.fold < 0) rec.down.add(+mS);
+      else if (Math.abs(info.shift) > 5.5) {
+        rec.shift.add(+mS);
+        if (Math.abs(info.shift) > Math.abs(rec.maxShift)) rec.maxShift = info.shift;
+      }
+    }
+    const list = (xs: Set<number>) => [...xs].sort((a, b) => a - b).join(',');
+    for (const [ch, r] of byCh) {
+      if (r.down.size) warnings.push(`range: ch ${ch} (${r.inst}): notes ${list(r.down)} are above the recorded range and play an octave lower`);
+      if (r.up.size) warnings.push(`range: ch ${ch} (${r.inst}): notes ${list(r.up)} are below the recorded range and play an octave higher`);
+      if (r.shift.size) warnings.push(`range: ch ${ch} (${r.inst}): notes ${list(r.shift)} are pitch-shifted by up to ${r.maxShift > 0 ? '+' : ''}${r.maxShift.toFixed(1)} semitones from the nearest recording`);
+    }
+  }
   // choke: a plucked string re-struck on the same channel/pitch stops the previous note (its
   // fade ends at the new onset)
   CHOKE_FADE = Math.max(16, Math.round(CHOKE_SEC * sr));
+  CAP_FADE = Math.round(CAP_FADE_SEC * sr);
   const lastOn = new Map<string, MixEv>();
   for (const ev of mixEvs) {
     if (!ev.inst.choke) continue;
@@ -239,7 +296,10 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const [L, R] = opts.alloc ? opts.alloc(length) : [new Float32Array(length), new Float32Array(length)];
   const send = new Float32Array((length >> 1) + 2);
 
-  // synthesize unique samples (yield between samples), then mix
+  // synthesize unique samples (yield between samples), then mix. Every sample this render needs is
+  // held in `local` until the mix is done: the global cache is only for reuse across renders, and its
+  // LRU limit may evict a sample made earlier in this same render (a long render of many stereo
+  // samples) before the mix reaches it.
   slicer.phase = 'synth';
   const prog = opts.onProgress ?? (() => {});
   prog(0.02);
@@ -250,12 +310,12 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const prof: RenderStats['prof'] = {};
   let made = 0;
   for (const [key, n] of need) {
-    const [id, midiS, vrS, layerS] = key.split('|');
+    const [id, midiS, vrS, layerS, , artS] = key.split('|');
     const inst = keyInst.get(key) ?? INSTRUMENTS[id];
     const lenSec = n === 0 ? 0 : Math.max(0.5, Math.ceil(n * 4) / 4);
     const tt = performance.now();
     if (inst.kind === 'sustain') {
-      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings));
+      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings, +artS));
       track(prof, id, performance.now() - tt);
       made++;
     } else {
@@ -264,10 +324,12 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
       if (have && ok) {
         globalCache.delete(key);
         globalCache.set(key, have);
+        local.set(key, have);
       } else {
-        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings);
+        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings, +artS);
         const pre = smp.pre ?? 0;
         cachePut(key, smp, n === 0 || (smp.l.length - pre) / sr < lenSec - 0.01);
+        local.set(key, smp);
         track(prof, id, performance.now() - tt);
         made++;
       }
@@ -282,14 +344,14 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const tMix = performance.now();
   for (let k = 0; k < mixEvs.length; k++) {
     const ev = mixEvs[k];
-    const s = ev.inst.kind === 'sustain' ? local.get(ev.key) : globalCache.get(ev.key);
+    const s = local.get(ev.key);
     if (!s) {
       warnings.push(`missing sample ${ev.key}`);
       continue;
     }
     const pr = (prof[ev.inst.id] = prof[ev.inst.id] ?? { synth: 0, n: 0, mixed: 0 });
     pr.mixed += ev.inst.ring ? s.l.length : Math.min(s.l.length, ev.gate + ev.relN);
-    mixInto(L, R, send, s, ev);
+    if (mixInto(L, R, send, s, ev)) warnings.push(`ring/release tail faded at the loop seam (ch ${ev.ch} t=${ev.t.toFixed(2)}, ${ev.inst.id})`);
     if ((k & 255) === 0) prog(0.45 + 0.3 * (k / mixEvs.length));
     if ((k & 7) === 0 && slicer.due()) await slicer.yield();
   }
@@ -374,9 +436,9 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
 }
 
 /** Instrument sample, never throwing (a broken instrument renders silence + a warning). */
-function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[]): Sample {
+function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[], art = 0): Sample {
   try {
-    const s = inst.make(sr, midi, vr, lenSec, layer);
+    const s = art ? inst.make(sr, midi, vr, lenSec, layer, art) : inst.make(sr, midi, vr, lenSec, layer);
     if (s && s.l && s.l.length) return s;
     warnings.push(`empty sample ${inst.id} ${midi}`);
   } catch (e) {
@@ -391,34 +453,65 @@ function track(prof: RenderStats['prof'], id: string, ms: number): void {
   p.n++;
 }
 
-function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, ev: MixEv): void {
+/** Onset position of a note gated after `gate` samples (Sample.preAt; the whole note's `pre` when
+ *  that fails). */
+function preOfGate(s: Sample, gate: number): number {
+  const pre = s.pre ?? 0;
+  try {
+    const p = s.preAt ? s.preAt(gate) : pre;
+    return Number.isFinite(p) && p >= 0 ? Math.round(p) : pre;
+  } catch {
+    return pre;
+  }
+}
+
+/** Mix one note; returns true when its tail had to be faded at ev.capAt (loop seam). */
+function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, ev: MixEv): boolean {
   const len = L.length;
   const sl = s.l;
   const sr2 = s.r;
   const slen = sl.length;
   const ring = !!ev.inst.ring;
   // recorded samples start `pre` samples before their onset: start early so the onset is on time
-  const pre = s.pre ?? 0;
+  // (short notes of spread attacks: the onset of the note as gated, see Sample.preAt)
+  const pre = s.preAt && !ring ? preOfGate(s, ev.gate) : s.pre ?? 0;
   const st = ev.st - pre;
-  // choked by the next note on the same string: fade out over CHOKE_FADE samples from there
+  // indices relative to the sample start: release starts at the gate end; the end fade is 64
+  // samples after a release, CHOKE_FADE when the next note on the string cuts it short, and
+  // CAP_FADE when the note would ring past the loop seam
+  const relStart = ring ? slen : Math.min(slen, pre + ev.gate);
+  let total = ring ? slen : Math.min(slen, pre + ev.gate + ev.relN);
+  let fadeN = 64;
+  let capped = false;
   const choke = ev.chokeAt === Infinity ? Infinity : ev.chokeAt - st + CHOKE_FADE;
-  const gateEnd = Math.min(ring ? slen : Math.min(slen, pre + ev.gate), choke - CHOKE_FADE);
-  const total = Math.min(ring ? slen : Math.min(slen, pre + ev.gate + ev.relN), choke);
+  if (choke < total) {
+    total = choke;
+    fadeN = CHOKE_FADE;
+  }
+  const cap = ev.capAt === Infinity ? Infinity : ev.capAt - st;
+  if (cap < total) {
+    total = Math.max(0, cap);
+    fadeN = Math.max(64, Math.min(CAP_FADE, total >> 1));
+    capped = true;
+  }
+  fadeN = Math.max(1, Math.min(fadeN, total));
   const i0 = st < 0 ? -st : 0;
   const iEnd = Math.min(total, len - st);
-  if (iEnd <= i0) return;
-  const a = Math.max(i0, Math.min(gateEnd, iEnd));
+  if (iEnd <= i0) return capped;
+  // plain copy up to the release / end fade, then release decay × end fade
+  const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
-  // final linear fade: 64 samples after a release, CHOKE_FADE when the next note cuts it short
-  const fadeN = total === choke ? CHOKE_FADE : 64;
+  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in over 2 ms
+  const nIn = i0 > 0 ? Math.min(96, a - i0) : 0;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
     const gs2 = gs * 0.5;
     for (let i = i0; i < a; i++) {
-      const vl = sl[i];
-      const vr = sr2[i];
+      const f = i - i0 < nIn ? (i - i0) / nIn : 1;
+      const vl = sl[i] * f;
+      const vr = sr2[i] * f;
       const j = st + i;
       L[j] += vl * gL;
       R[j] += vr * gR;
@@ -426,7 +519,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
     }
     let env = 1;
     for (let i = a; i < iEnd; i++) {
-      env *= k;
+      if (i >= relStart) env *= k;
       const e = total - i < fadeN ? (env * (total - i)) / fadeN : env;
       const j = st + i;
       const vl = sl[i] * e;
@@ -435,19 +528,28 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
       R[j] += vr * gR;
       S[j >> 1] += (vl + vr) * gs2;
     }
-    return;
+    return capped;
   }
   const gl = ev.gl;
   const gr = ev.gr;
+  if (nIn > 0) {
+    for (let i = i0; i < i0 + nIn; i++) {
+      const v = (sl[i] * (i - i0)) / nIn;
+      const j = st + i;
+      L[j] += v * gl;
+      R[j] += v * gr;
+      S[j >> 1] += v * gs;
+    }
+  }
   if (gs === 0) {
-    for (let i = i0; i < a; i++) {
+    for (let i = i0 + nIn; i < a; i++) {
       const v = sl[i];
       const j = st + i;
       L[j] += v * gl;
       R[j] += v * gr;
     }
   } else {
-    for (let i = i0; i < a; i++) {
+    for (let i = i0 + nIn; i < a; i++) {
       const v = sl[i];
       const j = st + i;
       L[j] += v * gl;
@@ -457,11 +559,12 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   }
   let env = 1;
   for (let i = a; i < iEnd; i++) {
-    env *= k;
+    if (i >= relStart) env *= k;
     const v = sl[i] * (total - i < fadeN ? (env * (total - i)) / fadeN : env);
     const j = st + i;
     L[j] += v * gl;
     R[j] += v * gr;
     S[j >> 1] += v * gs;
   }
+  return capped;
 }

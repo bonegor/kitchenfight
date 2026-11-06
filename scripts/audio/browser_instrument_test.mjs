@@ -13,12 +13,17 @@
  *    music must be playing. Console errors are collected.
  * 3. the game again with every .mp3 request blocked: the bank must fail cleanly and the title
  *    music must still render (synthesized fallback) and play — also the synth-only baseline latency.
- * 4. --single FILE: the same game check on the single-file build opened from file://.
+ * 4. --single FILE: the same game check on the single-file build opened from file://, and served over
+ *    HTTP with a CSP whose connect-src is only 'self' (no data:): the inlined sample sets must still
+ *    load (they are decoded in place, never fetched) with no console errors.
+ * 5. the game with a music worker that never answers anything: the bank must give up on it within
+ *    the watchdog time and the title music must play (main-thread synth render) soon after a click.
  * A dev server is started on the port if none answers (vite, scripts/vite.agent.config.ts).
  */
 import { createRequire } from 'module';
 import { spawn } from 'child_process';
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -114,7 +119,72 @@ try {
   };
   results.game = await gameCheck(base + '/');
   results.gameNoSamples = await gameCheck(base + '/', true);
-  if (SINGLE) results.single = await gameCheck(pathToFileURL(path.resolve(ROOT, SINGLE)).href);
+  if (SINGLE) {
+    results.single = await gameCheck(pathToFileURL(path.resolve(ROOT, SINGLE)).href);
+    // ------------------------------------------------------------- 4b. single file under a strict CSP
+    const html = fs.readFileSync(path.resolve(ROOT, SINGLE));
+    const csp = [
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:",
+      "worker-src 'self' data: blob:",
+      "media-src 'self' data: blob:",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      "connect-src 'self'",
+    ].join('; ');
+    const srv = http.createServer((req, res) => {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': csp });
+      res.end(html);
+    });
+    await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+    try {
+      const r = await gameCheck(`http://127.0.0.1:${srv.address().port}/`);
+      r.csp = csp;
+      results.singleCsp = r;
+    } finally {
+      srv.close();
+    }
+  }
+  // ---------------------------------------------------------------- 5. a music worker that never answers
+  const silentCheck = async (url) => {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await page.addInitScript(() => {
+      // every Worker accepts messages and never answers (a hung / broken worker that raises no error)
+      window.Worker = class {
+        constructor() {
+          this.onmessage = null;
+          this.onerror = null;
+        }
+        postMessage() {}
+        terminate() {}
+        addEventListener() {}
+        removeEventListener() {}
+      };
+    });
+    const t0 = Date.now();
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    const tClick = Date.now();
+    let st = null;
+    let playMs = null;
+    for (let i = 0; i < 300; i++) {
+      await page.mouse.click(5, 5);
+      st = await page.evaluate(() => (window.__kfSampler ? window.__kfSampler.status() : null));
+      if (st && st.playing) {
+        playMs = Date.now() - tClick;
+        break;
+      }
+      await page.waitForTimeout(100);
+    }
+    await page.close();
+    return { url: url.slice(0, 80), clickAfterMs: tClick - t0, playingAfterClickMs: playMs, playingAfterNavMs: playMs === null ? null : playMs + tClick - t0, state: st?.state ?? null, error: st?.error ?? null, errors: [...new Set(errors)] };
+  };
+  results.silentWorker = await silentCheck(base + '/');
+  if (SINGLE) results.silentWorkerSingle = await silentCheck(pathToFileURL(path.resolve(ROOT, SINGLE)).href);
 } finally {
   await browser.close();
   if (server) {

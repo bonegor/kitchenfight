@@ -7,12 +7,13 @@ import type { MusicId, SfxId, VoiceMood } from './audio';
 import { Slicer } from './dsp';
 import { INSTRUMENTS } from './instruments';
 import { clearSampleCache, renderSong } from './render';
-import { addSampleSet, finishSampleBank, installSampleBank, registerArrivedSets, type BankData, type SampleSetDef, type SetPcm } from './sampled';
+import { addSampleSet, bankSetNames, finishSampleBank, installSampleBank, registerArrivedSets, type BankData, type SampleSetDef, type SetPcm } from './sampled';
 import { renderSfx } from './sfx';
 import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
 
 export type WorkerReq =
+  | { type: 'ping'; seq: number }
   | { type: 'bank'; seq: number; bank: BankData }
   | { type: 'bankSet'; seq: number; set: SampleSetDef; pcm: SetPcm }
   | { type: 'bankDone'; seq: number }
@@ -30,7 +31,10 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
     const register = (defs: Parameters<Parameters<typeof finishSampleBank>[0]>[0]) => {
       for (const d of defs) INSTRUMENTS[d.id] = d;
     };
-    if (req.type === 'bankSet') {
+    if (req.type === 'ping') {
+      // liveness check (the engine gives up on a worker that never answers)
+      post({ seq, ok: true });
+    } else if (req.type === 'bankSet') {
       // one decoded sample set (sent as soon as it is decoded); its instruments switch from the
       // synthesized to the sampled version right away (renders already queued keep their order)
       const t0 = performance.now();
@@ -47,6 +51,9 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
     } else if (req.type === 'music') {
       const song = SONGS[req.id];
       if (!song) throw new Error('unknown track ' + req.id);
+      // the sample sets this render plays with (the render runs to completion before any further
+      // bankSet message is handled, so this is exactly what it used)
+      const sets = bankSetNames();
       let lastP = -1;
       const r = await renderSong(song, req.sr, {
         slicer: new Slicer(1e9),
@@ -58,7 +65,7 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
         },
       });
       post(
-        { seq, ok: true, left: r.left, right: r.right, loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, length: r.length, sr: r.sr, ms: r.stats.ms },
+        { seq, ok: true, left: r.left, right: r.right, loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, length: r.length, sr: r.sr, ms: r.stats.ms, sets },
         [r.left.buffer, r.right.buffer],
       );
     } else if (req.type === 'sfx') {
