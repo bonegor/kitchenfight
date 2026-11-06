@@ -288,7 +288,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
           e.state = 1;
           e.timer = P.fuse ?? 0.8;
           e.telegraph = e.timer;
-          run.sfx('elite_spawn', { volume: 0.25, pitch: 2 }, e.x);
+          run.sfx('enemy_fuse', { volume: 0.8 }, e.x);
         }
       } else {
         steer(e, 0, 0, dt, 10);

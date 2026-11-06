@@ -762,7 +762,6 @@ export const SFX: Record<SfxId, SfxDef> = {
     priority: true,
     len: 1.3,
     gain: -6,
-    // 2: the kamikaze fuse plays this too (pitch 2) and must not cut off a real elite's entrance
     maxVoices: 2,
     minGap: 0.6,
     stereo: true,
@@ -771,6 +770,24 @@ export const SFX: Record<SfxId, SfxDef> = {
       g.filter(() => Biquad.lp(g.sr, 900, 1.2));
       g.noise(0, 0.42, (t) => 0.3 * (t / 0.42) ** 3, 'hp', () => 4000, 0.7, 0);
       g.tone(0.4, 0.6, glide(70, 34, 0.1), ad(0.003, 0.2, 0.9), 'sine');
+    },
+  },
+  // kamikaze enemy lighting its fuse: a quick match strike, then a rising sizzle with crackles
+  enemy_fuse: {
+    len: 0.75,
+    gain: -11,
+    maxVoices: 2,
+    minGap: 0.2,
+    pitchVar: 0.05,
+    gen(g) {
+      g.noise(0, 0.05, ad(0.001, 0.02, 0.5), 'bp', glide(1800, 3800, 0.04), 1.6);
+      g.noise(0.03, 0.7, (t) => 0.45 * Math.min(1, t / 0.08) * (0.6 + 0.4 * (t / 0.7)), 'bp', lin([0, 2600], [0.7, 6200]), 2.2);
+      for (let k = 0; k < 14; k++) {
+        const t = 0.06 + g.rng.next() * 0.6;
+        const f = 2500 + g.rng.next() * 4000;
+        g.noise(t, 0.008, ad(0.0003, 0.002 + g.rng.next() * 0.003, 0.5 + g.rng.next() * 0.5), 'bp', () => f, 3);
+      }
+      g.tone(0.05, 0.65, expSweep(420, 1300, 0.62), (t) => 0.06 * Math.min(1, t / 0.1), 'sine');
     },
   },
   prop_break: {

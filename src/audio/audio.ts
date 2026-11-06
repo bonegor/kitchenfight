@@ -31,7 +31,7 @@ export type SfxId =
   | 'player_hurt' | 'player_death' | 'player_revive' | 'low_hp'
   // enemies
   | 'hit' | 'hit_crit' | 'enemy_death' | 'enemy_death_big' | 'enemy_shoot' | 'enemy_dash' | 'enemy_split'
-  | 'elite_spawn' | 'prop_break'
+  | 'elite_spawn' | 'enemy_fuse' | 'prop_break'
   // bosses
   | 'boss_warning' | 'boss_roar' | 'boss_slam' | 'boss_shoot' | 'boss_death'
   // weapons

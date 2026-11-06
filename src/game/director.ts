@@ -144,9 +144,13 @@ export class Director {
     if (final) this.finalSpawned = true;
     run.fx.shake(0.5);
     run.sfx('boss_roar');
-    run.fx.bubble(e, def.boss?.taunt ?? '!!!', -e.r * 2.3, '#ffe1d6', 2.6, true);
-    if (run.fx.bubblesEnabled && !run.muted) audio.voice(def.boss?.taunt ?? '!!!', 'boss');
-    run.schedule(2.8, () => run.say(['MAMMA MIA!', 'Non si fa!', 'Vergogna!', 'Che orrore!'], true, '#ffd0c8'));
+    const taunt = def.boss?.taunt ?? '!!!';
+    run.fx.bubble(e, taunt, -e.r * 2.3, '#ffe1d6', 2.6, true);
+    // the taunt is spoken once the roar (1.0-1.4 s) has had its moment: boss speech cuts the roar
+    run.schedule(1.2, () => {
+      if (e.alive && run.fx.bubblesEnabled && !run.muted) audio.voice(taunt, 'boss');
+    });
+    run.schedule(3.4, () => run.say(['MAMMA MIA!', 'Non si fa!', 'Vergogna!', 'Che orrore!'], true, '#ffd0c8'));
     run.hooks.onBoss(e, final);
   }
 
