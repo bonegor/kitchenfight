@@ -11,7 +11,7 @@ Gameplay music for the first stage, a busy restaurant kitchen in daylight. File:
 | Status | Public domain (the composer died in 1901) |
 | Key, meter, tempo | C major, the opera's key (the "Vedi" tune in the dominant, G major); 4/4; ♩ = 128 (Allegro; the song book marks ♩ = 110, the brief asks for 120–132) |
 | Length | 49 bars = 91.9 s of music: intro 7.5 s, then a 45-bar loop body of 84.4 s |
-| The gag | Verdi's anvils are the kitchen's pots and pans. The anvil and the frying pan (`panClang`) hammer where the smiths hammer; the woodblock and the slapstick answer in the rests |
+| The gag | Verdi's anvils are the kitchen's pots and pans. The anvil and the frying pan (`panClang`) hammer where the smiths hammer; the woodblock and the slapstick answer in the rests, and the band stops at the tutti's cadences to leave them the beat |
 
 ## References
 
@@ -58,13 +58,18 @@ le fosche", come in with the hammer call and strike in strict beats through the 
 score of the *incudini* part is among the local references, so the strokes are placed by that
 direction and by the layout of the scene, not measured against a score:
 
-- "Vedi" (V bars 1–9): no anvils;
-- the hammer call (V bar 10 = the song book's rest bar 11): flammed anvil strokes on every beat
-  (Kątski's grace-note hammering), the pan on the off-beats, a timpani roll on G;
+- "Vedi" (V bars 1–8): no anvils;
+- the hammer call (V bars 9–10; bar 10 = the song book's rest bar 11): in bar 9, after the half
+  cadence, the timpani's D and two anvil strokes on beats 3 and 4 ("All'opra! all'opra!"); in bar 10
+  ("Dàgli, martella!") flammed anvil strokes on every beat (Kątski's grace-note hammering) and the
+  pan on the off-beats, both getting louder, over a timpani roll on G, with a G7 brass stab on beat 4;
 - the theme and the close (T1, C1): the anvil on beats 1 and 3;
 - the tutti (T2, C2): the anvil on 1 and 3 and the frying pan on 2 and 4, two smiths alternating;
 - the break: the theme's own rhythm (bars 12–15) hammered on the pots and pans, high notes on the
   anvil, low notes on the pan.
+
+The smiths of the intro and of the hammer call play on their own channels (`anvS`, `pansS`): the
+same anvil and pan samples, 2 dB nearer than the band's `anv` and `pans`.
 
 ## Melody proofs (compare.py, default thresholds)
 
@@ -88,45 +93,64 @@ No `--allow-bars`, no `--resync`, no tolerated liberties. Restatements, the same
 | Theme against Kerr | `$PY scripts/music/compare.py --abc $REFS/jc_anvil_201241357.abc --ref-bars 1-8 --song kitchen --channel acc --section T1` | PASS 100.0 % / 100.0 % |
 | Close against Kerr | `$PY scripts/music/compare.py --abc $REFS/jc_anvil_201241357.abc --ref-bars 9-15 --song kitchen --channel mand --section C1` | FAIL 91.3 % / 100.0 %: only Kerr's instrumental ending differs (bars 14–15: 5–7–1, G B C; the song book and this track sing 5–4–3, G F E), as REFERENCES.md notes |
 
-The second voices are not on top anywhere: the T2 horns play the theme an octave below the trumpet,
-and in bars 2 and 6 they sound the resolution D at once, so the trumpet's appoggiatura E (over Dm, as
-in Kątski) does not rub against the brass stab's F a semitone away. The xylophone in C2 doubles only
-the three rising pickups of the close, an octave up.
+**Nothing accompanies above the tune.** A scan of every overlap between a melody note and a note
+of the accompaniment (`gtr`, `pizz`, `accC`, `brs`, the turnaround horns) finds no accompaniment note
+above the sounding tune note anywhere, and no chord that doubles the tune's top note together with a
+note a second below it. The voicings that make this so:
+
+- under "Vedi" the guitar and pizzicato "pah" stop at D4, the tune's lowest note in those bars, and at
+  B3 in bars 1 and 5, where the pickup G D B falls to B3 (D3 G3 B3 there, the guitar's open-string
+  shape);
+- in bar 3 of the close (C1 and C2), where the tune drops to E4 over E7, the pizzicato (C1) and the
+  brass (C2) stab on beat 2 is the rootless G♯3 B3 D4 under the E4 (the root is in the tuba and the
+  tune); beat 4, the melody's passing A, is left alone;
+- in T1 bars 3 and 7 (G7 over the tonic pedal, the tune on G4) the accordion chords are B3 D4 F4,
+  under the G4 instead of doubling it with the F a tone below;
+- the T2 horns play the theme an octave below the trumpet, and in bars 2 and 6 they sound the
+  resolution D at once, so the trumpet's appoggiatura E (over Dm, as in Kątski) does not rub against
+  the brass stab's F a semitone away;
+- the xylophone in C2 doubles only the three rising pickups of the close, an octave up (on purpose).
+
+The only contacts left are unisons of a chord's top note with a low melody note, with no second
+below it: the pickup's B3 and the D4s of V bars 2 and 6 (guitar/pizzicato) and B4 in C1 bar 2
+(pizzicato, B° under the tune's B). The semitone scan (simultaneous pitched notes overlapping by a
+dotted sixteenth or more) finds none.
 
 ## Form
 
 | Bars | Section | Time (s) | Reference | Content |
 |---|---|---|---|---|
-| 1–4 | `intro` | 0.00–7.50 | — | The smiths alone: anvil on 1 and 3, the pan joins on 2 and 4, woodblock, an 8th-note anvil/pan build and a slapstick whack |
-| 5–14 | `V` (loop start) | 7.50–26.25 | bars 2–11 (G) | "Vedi! le fosche": phrase 1 clarinet, phrase 2 accordion; upright-bass oom (rising line F♯ G A B), guitar strums on 2 and 4, light tambourine. Bar 14 = the hammer bar ("Dàgli, martella!"): flammed anvil, pans, timpani roll on G |
+| 1–4 | `intro` | 0.00–7.50 | — | The smiths alone (`anvS`, `pansS`): anvil on 1 and 3, the pan joins on 2 and 4, woodblock off-beats, an 8th-note anvil/pan build and a slapstick whack |
+| 5–14 | `V` (loop start) | 7.50–26.25 | bars 2–11 (G) | "Vedi! le fosche": phrase 1 clarinet, phrase 2 accordion; upright-bass oom (rising line F♯ G A B), guitar and pizzicato "pah" on 2 and 4, a soft bass drum on 1, tambourine (accents on 2 and 4 in phrase 2). Bars 13–14 = the hammer call: bar 13 (the half cadence) timpani D and two anvil strokes, bar 14 ("Dàgli, martella!") flammed anvil and pans getting louder, bass G, timpani roll on G, bass drum, G7 brass stab on beat 4 |
 | 15–22 | `T1` | 26.25–41.25 | bars 12–19 (C) | The anvil theme: accordion lead + clarinet; tuba C–G over Kątski's tonic pedal, accordion chords on 2 and 4; anvil on 1 and 3; slapstick in the rest at each cadence |
 | 23–29 | `C1` | 41.25–54.38 | bars 20–26 | The close: mandolin (tremolo on the long notes) + clarinet, tuba walking down the circle of fifths, pizzicato chords, the woodblock answering in the rests |
-| 30–33 | `brk` | 54.38–61.88 | rhythm of bars 12–15 | Break: the theme's rhythm on the pots and pans alone (anvil high, pan low), a second soft anvil keeping 8ths, woodblock, tambourine, bass drum, castanets, the timpani as the big kettles, a cymbal roll into the tutti |
-| 34–41 | `T2` | 61.88–76.88 | bars 12–19 | Tutti: trumpet lead, accordion, horns an octave below; Kątski's chromatic bass C C♯ D F♯ G; brass stabs; anvil 1+3 and pan 2+4; crash, bass drum, timpani |
-| 42–49 | `C2` | 76.88–91.88 | bars 20–26 + 1 | Tutti close with mandolin tremolo and xylophone pickups, I6/4–V7 timpani roll and crash on the final C; bar 49 = turnaround C – G/B – Am – D7 (horns, tuba C B A D) back to "Vedi" in G |
+| 30–33 | `brk` | 54.38–61.88 | rhythm of bars 12–15 | Break: the tune stops; the theme's rhythm on the pots and pans (anvil high, pan low) over the tuba's oom and the guitar's pah (bars 30–32), a second soft anvil keeping 8ths, woodblock, tambourine, bass drum, castanets, the timpani as the big kettles, a cymbal roll into the tutti |
+| 34–41 | `T2` | 61.88–76.88 | bars 12–19 | Tutti: trumpet lead, accordion, horns an octave below; Kątski's chromatic bass C C♯ D F♯ G; brass stabs; anvil 1+3 and pan 2+4; crash, bass drum, timpani. At the cadences (bars 37 and 41) the band stops on beat 4 and the slapstick has the beat to itself |
+| 42–49 | `C2` | 76.88–91.88 | bars 20–26 + 1 | Tutti close with mandolin tremolo and xylophone pickups, I6/4–V7 timpani roll and crash on the final C; bar 49 = turnaround C – G/B – Am (horns, brass, accordion chords), the tuba walking C B A D back to "Vedi" in G, beat 4 left to the tuba's D and the slapstick |
 
-Loop: `loopFrom: 1`, bars 5–49 (84.375 s). The loop restarts on the quiet verse, so each pass
-runs quiet → theme → close → break → tutti. Nothing rings across the seam (render-song's seam check
-reads −156.5 dB; the renderer reports no event from the intro ringing into the loop).
+Loop: `loopFrom: 1`, bars 5–49 (84.375 s). Each pass runs verse → theme → close → break → tutti.
+The renderer's buffer loops 11.5 → 95.875 s (its 4 s pad repeats the start of `V`); render-song's
+seam check reads −150.5 dB, so nothing rings or clicks across the seam.
 
 **Harmony** (concert pitch): "Vedi" G | D G | D7 G | Am D7/F♯ G | D G | … | D D7 | G7 (hammer bar);
 T1 C | C | G7/C | C (×2); C1/C2 Am Dm | G C F B° | E7 | Am | C | C/G G7 | C; T2 C C♯°7 | Dm D7/F♯ |
-G7 | C (×2). Two accompaniment chords are left out on purpose: beat 4 of the close's bar 3 (the
-melody's passing A over E7, which the song book harmonises with a passing F♯ below, not with
-G♯), and beat 2 of T2 bars 2 and 6, where the stab waits for the "and" (the resolution D). A scan
-of all simultaneous pitched notes finds no semitone rubs.
+G7 | C (×2); turnaround C G/B Am D7. Accompaniment chords left out on purpose: beat 4 of the
+close's bar 3 (the melody's passing A over E7, which the song book harmonises with a passing F♯
+below, not with G♯); beat 2 of T2 bars 2 and 6, where the stab waits for the "and" (the
+resolution D); beat 4 of T2 bars 4 and 8 and of the turnaround (the slapstick's beat; the D7 of the
+turnaround is the tuba's D alone). A scan of all simultaneous pitched notes finds no semitone rubs.
 
 ## Instrumentation
 
 | Role | Channels (instrument) | Range used |
 |---|---|---|
 | Tune | `clar` (clarinet) V, T1, C1 · `acc` (accordion) V phrase 2, T1 lead, T2/C2 under the trumpet · `mand` (mandolin) C1 lead, C2 · `tpt` (trumpet) T2, C2 | clarinet B3–G5, accordion B3–G5, mandolin E4–G5, trumpet E4–G5 |
-| Brass | `hn` (horn) melody an octave below in T2/C2, turnaround chords · `brs` (brass, marcato) stabs on 2 and 4 | horn E3–G4, brass G3–G4 |
+| Brass | `hn` (horn) melody an octave below in T2/C2, turnaround chords · `brs` (brass, marcato) stabs on 2 and 4, the hammer bar's G7, turnaround chords | horn E3–G4, brass G3–F♯4 |
 | Colour | `xylo` (xylophone) pickups in C2 | G♯5–F6 |
-| Bass | `tuba` T1–C2 · `ubass` (uprightBass) V | tuba F1–G2, upright bass A1–B2 |
-| Chords | `gtr` (guitar) strums in V · `accC` (accChord) T1 · `pizz` C1 | guitar D3–E4, accordion B3–G4, pizz C4–C5 |
-| Pots and pans | `anv`, `anv2` (anvil) · `pans` (panClang) · `wood` (woodblock) · `slap` (slapstick) · `cast` (castanets) | — |
-| Band percussion | `tamb` (tambourine: accents, hits, shakes, a roll) · `bd` (bassDrum, hit variant) · `timp` (timpani C2 E2 G2 A2) · `crash` · `cym` (suspended cymbal roll) | timpani within the recorded B1–C3 |
+| Bass | `tuba` T1–C2 and the break · `ubass` (uprightBass) V | tuba F1–G2, upright bass G1–B2 |
+| Chords | `gtr` (guitar) "pah" in V and the break · `pizz` "pah" in V, chords in C1 · `accC` (accChord) T1 and the turnaround | guitar D3–C4, pizz D3–C5, accordion B3–A4 |
+| Pots and pans | `anv`, `anv2` (anvil) · `pans` (panClang) · `anvS`, `pansS` (the same, intro and hammer call) · `wood` (woodblock) · `slap` (slapstick) · `cast` (castanets) | — |
+| Band percussion | `tamb` (tambourine: accents, hits, shakes, a roll) · `bd` (bassDrum, hit variant) · `timp` (timpani C2 D2 E2 G2 A2) · `crash` · `cym` (suspended cymbal roll) | timpani within the recorded B1–C3 |
 
 The strings carry no tune: the recorded `violin` and `strings` samples take about 350 ms to reach half
 their level (measured), too slow for this melody's dotted eighths, so the brief's alternative
@@ -140,31 +164,58 @@ the notes of a dotted quarter or longer and single picks otherwise.
 
 | | |
 |---|---|
-| Duration | 95.88 s rendered buffer (91.875 s of music + the renderer's 4 s loop pad), 1525 events, rendered in about 1 s |
-| Loop | plays 0 → 95.875 s, then repeats 11.5 → 95.875 s (body 84.375 s = bars 5–49 from `V`); seam mismatch −156.5 dBFS |
-| Loudness | loop body **−16.4 LUFS** (target −16.4 ± 0.5), whole file −16.7 LUFS, short-term max −12.6 LUFS |
-| Peak / clipping | sample peak **−3.40 dBFS**; soft clipper 11 samples (0.000 %); RMS −20.2 dBFS; DC 0 |
-| Spectral balance | < 250 Hz −11.1 dB, 250 Hz–4 kHz −0.5 dB, > 4 kHz −15.6 dB |
-| Warnings | none (`gainDb` −0.5) |
+| Duration | 95.88 s rendered buffer (91.875 s of music + the renderer's 4 s loop pad), 1647 events, rendered in about 1.2 s |
+| Loop | plays 0 → 95.875 s, then repeats 11.5 → 95.875 s (body 84.375 s = bars 5–49 from `V`); seam mismatch −150.5 dBFS |
+| Loudness | loop body **−16.4 LUFS** (target −16.4 ± 0.5), whole file −16.7 LUFS, short-term max −13.3 LUFS |
+| Loudness range | loop body **5.2 LU** (ffmpeg `ebur128`; the stage peers: trattoria 4.9, streets 3.4, foodcourt 2.5) |
+| Peak / clipping | sample peak **−3.24 dBFS**; soft clipper 7 samples (0.000 %); RMS −19.8 dBFS; DC 0 |
+| Spectral balance | < 250 Hz −9.7 dB, 250 Hz–4 kHz −0.6 dB, > 4 kHz −16.0 dB |
+| Warnings | none (`gainDb` −0.6) |
 
-Per-section balance (each channel's solo loudness against the section's mix, LU; measured on the same
-renderer with solo renders; the lead is in bold):
+Per-section loudness and balance (each channel's solo loudness against the section's mix, LU; solo
+renders through the same renderer; integrated loudness per section, checked with ffmpeg `ebur128`;
+the lead is in bold):
 
 | Section | Mix LUFS | Peak dBFS | Lead | Others |
 |---|---|---|---|---|
-| intro | −28.3 | −9.2 | anvil −0.2 | pan −3.4, slapstick −6.7, woodblock −13.4 |
-| V | −21.5 | −9.0 | **clarinet −1.1**, **accordion +0.3** (phrase 2) | upright bass −6.8, guitar −10.8, hammer-bar anvil −6.9, timpani roll −6.7 |
-| T1 | −17.3 | −5.7 | **accordion −1.6** | clarinet −6.8, tuba −9.3, accordion chords −12.4, anvil −15.0, slapstick −18.5 |
-| C1 | −18.3 | −6.7 | **mandolin −2.0** | clarinet −6.7, tuba −7.2, pizz −15.2, anvil −18.8, woodblock −19.7 |
-| brk | −25.4 | −4.2 | pan −0.5, anvil −1.4 | slapstick −8.1, timpani −9.4, bass drum −9.6, tambourine −11.7, second anvil −12.8, woodblock −13.4, castanets −16.2 |
-| T2 | −14.0 | −3.4 | **trumpet −2.1** | accordion −8.0, tuba −11.1, brass −11.4, horns −12.1, anvil −14.0, pan −14.4 |
-| C2 | −14.2 | −3.4 | **trumpet −1.8** | accordion −8.2, tuba −9.4, mandolin −10.2, timpani −11.5, anvil −14.5, pan −14.6 |
+| intro | −22.7 | −3.5 | anvil −0.7 | pan −2.1, slapstick −7.7, woodblock −11.2 |
+| V | −17.9 | −3.2 | **accordion −0.3** (phrase 2), **clarinet −1.3** | hammer-bar timpani −4.6 and brass stab −5.3, upright bass −7.2, hammer-call anvil −7.8, guitar −9.8, pans −10.1, pizz −16.2, tambourine −21.7, bass drum −22.4 |
+| T1 | −16.7 | −5.6 | **accordion −1.8** | clarinet −6.6, tuba −9.2, accordion chords −11.9, anvil −15.7, timpani −15.8, slapstick −19.3, tambourine −23.6 |
+| C1 | −17.7 | −6.2 | **mandolin −2.2** | clarinet −6.2, tuba −7.1, timpani −10.1, pizz −14.7, slapstick −16.7, anvil −19.5, woodblock −20.4 |
+| brk | −22.0 | −3.8 | pan −3.9, anvil −4.7 | tuba −2.8, guitar −5.9, slapstick −11.6, timpani −12.6, bass drum −13.1, tambourine −15.3, cymbal −15.3, second anvil −16.3, woodblock −16.8, castanets −19.7 |
+| T2 | −14.6 | −4.7 | **trumpet −1.9** | accordion −8.5, tuba −11.6, brass −12.0, horns −12.5, anvil −14.4, pan −14.9, timpani −17.6, slapstick −20.1 |
+| C2 | −14.7 | −4.1 | **trumpet −1.8** | accordion −8.8, turnaround accordion chords −9.4, tuba −9.9, mandolin −10.3, brass −11.2, horns −11.9, timpani −12.3, anvil −14.9, pan −15.3, xylophone −19.2, slapstick −19.6 |
 
-The break measures low in LUFS because it is sparse, but its hits peak at −4.2 dBFS, as high as the
-tutti's.
+The loop's dynamics follow the peers: the verse sits 3.3 LU under the tutti (trattoria 3.5,
+streets 3.2), the theme and the close between them, the break and the intro lower (the break is
+the pots' feature: its hits peak at −3.8 dBFS, as high as the tutti's).
+
+### Review fixes: levels across the loop
+
+An independent review found the verse 7.5 LU under the tutti, so the loop collapsed at every seam;
+the intro barely audible; the T2 slapstick masked; and the accompaniment at or above the tune where
+the close drops to E4 (fixed above, with the V pickups and the T1 G7 chords). Before → after, same
+renderer and sample bank:
+
+| | Before | After |
+|---|---|---|
+| Sections (LUFS): intro / V / T1 / C1 / brk / T2 / C2 | −28.3 / −21.5 / −17.3 / −18.3 / −25.4 / −14.0 / −14.2 | −22.7 / −17.9 / −16.7 / −17.7 / −22.0 / −14.6 / −14.7 |
+| Loudness range of the loop body | 9.0 LU | 5.2 LU |
+| Hammer bar (V bar 10), momentary median / max | −25.3 / −21.0 LUFS (quieter than the bar before) | −18.8 / −15.4 LUFS (a build into T1, −16.5) |
+| Short-term (3 s) after the seam, C2 → "Vedi" | −12.6 → −22.0, then −20.1 … −22.4 through the verse and −24.9 at the hammer bar | −13.3 → −18.8, then −16.9 … −19.0 through the verse and −19.6 at the half cadence |
+| Slapstick at the cadences: largest third-octave rise (mix with against mix without it, 43 ms from the onset), T1 ×2 / C1 / T2 ×2 / C2 | +9.3, +16.3 / +13.3 / **+1.5, +1.2** / +20.1 dB | +7.7, +15.2 / +12.4 / **+15.7, +19.3** / +23.3 dB |
+
+What changed: the verse's tune up about 3 dB (clarinet and accordion velocity 0.72 → 0.92 / 0.9),
+its groove filled out (upright bass up 3.3 dB, guitar +3 dB channel gain, a pizzicato "pah" doubling
+the guitar, a soft bass drum on 1, the tambourine 2 dB up everywhere and about 7 dB in the verse);
+the hammer call built as a crescendo (bars 9–10, above); the tutti's band 1 dB down (`dyn(0.93, …)`, the trumpet 0.3 dB); the break given the tuba's
+oom and the guitar's pah under the pots; the intro's smiths 5–6 dB up (own channels 2 dB nearer,
+fuller strokes, the pan in bar 2 at full stroke); the turnaround filled with brass and accordion
+chords; `gainDb` −0.5 → −0.6. The T2 slapstick now gets beat 4 of bars 37 and 41 to itself (the pan,
+the stab and the tambourine stop there), and the turnaround's beat 4 likewise.
 
 **Browser check.** `window.__at.samplerTrack('kitchen')` on `audiotest.html` in headless Chromium
-(Playwright, private dev server) decodes the MP3 sprites with the browser's decoder (0.64 s), installs
-all 53 sets without warnings and renders the track in the music worker in 0.98 s, with no page errors.
-That render matches the Node render: loop body −16.44 LUFS and peak −3.40 dBFS in both, difference
-signal −91 dB below the music, zero lag.
+(Playwright, private dev server) decodes the MP3 sprites with the browser's decoder (0.93 s), installs
+all 53 sets without warnings and renders the track in the music worker in 1.22 s, with no page errors.
+That render matches the Node render: loop body −16.4 LUFS, loudness range 5.2 LU and peak −3.24 dBFS
+in both, difference signal −91 dB below the music, zero lag.

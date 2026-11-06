@@ -3,17 +3,19 @@
  * A♭ major (Verdi's key for the first trumpet statement; the reference lead sheet is in G),
  * 4/4, ♩ = 154 (an alla-breve march: the oom-pah moves in half notes).
  *
- * Form (16 bars, 24.9 s): march (12) = timpani + cymbal roll and the trumpet pickup, then the
- * whole 12-bar trumpet theme once (a b a b') — trumpets in unison over the band (tuba/pizz oom,
- * string after-beats, snare), horns join at b, violins double the tune an octave up and the bass
- * drum / piatti join at a'; castanets wink in the trumpets' rests → fin (1) = tutti A♭ with crash,
- * then the cheeky band tag: the accordion echoes the trumpets' triplet, castanets rattle, V7–I
- * button → tail (3, loop) = the band at rest under the results screen: accordion right hand on
- * the guide tones, oom-pah from upright bass + accordion chord buttons, strings, horn, castanets.
- * Levels: loop body (tail) -16.4 LUFS, march -14.8 LUFS (the fanfare sits 1.6 LU above the bed).
+ * Form (16 bars, 24.9 s): march (12) = timpani roll + suspended-cymbal swell and the trumpet
+ * pickup, then the whole 12-bar trumpet theme once (a b a b') — trumpets in unison over the band
+ * (tuba/pizz oom, string after-beats, snare), horns join at b, violins double the tune an octave up
+ * and the bass drum / piatti join at a' (the brass section steps back there); castanets wink in
+ * the trumpets' rests → fin (1) = tutti A♭ with crash, then the cheeky band tag: accordion and
+ * glockenspiel echo the trumpets' triplet, castanets rattle, V7–I button → tail (3, loop) = the
+ * band at rest under the results screen: the accordion hums the theme's a phrase (Verdi's own
+ * 3-bar phrase, pickup included, so the loop period is the tune's) over upright bass + chord-button
+ * oom-pah, a low horn line, a soft high string halo and castanets.
+ * Levels: loop body (tail) -16.4 LUFS, march + tag -15.1 LUFS (the fanfare sits 1.3 LU above the bed).
  * Melody verified against wf_aida_march.abc bars 1–12 (see docs/music/victory.md).
  */
-import { comp, hits, mel, pad, type SongDef } from '../sequencer';
+import { hits, mel, type SongDef } from '../sequencer';
 
 /** chord track of the reference lead sheet (bars 1–12), transposed G → A♭ */
 const CH_MARCH =
@@ -33,15 +35,15 @@ const THEME_B2 = `
 const THEME = 'r:12 Eb4!:4 |' + THEME_A + THEME_B + THEME_A + THEME_B2;
 /** phrase dynamics, velocity per bar of THEME: a forte, b a shade lighter, a' b' forte again */
 const DYN = [0.9, 0.9, 0.9, 0.9, 0.85, 0.84, 0.84, 0.9, 0.9, 0.9, 0.9, 0.92];
-/** THEME with the bar's velocity (× k) written into every note */
-const shaped = (k: number): string =>
+/** THEME with the bar's velocity × k (bars 1–7) and × k2 (bars 8–12, a' b') in every note */
+const shaped = (k: number, k2 = k): string =>
   THEME.split('|')
     .filter((b) => b.trim())
     .map((b, i) =>
       b
         .trim()
         .split(/\s+/)
-        .map((t) => (t.startsWith('r') ? t : `${t}@${(DYN[i] * k).toFixed(3)}`))
+        .map((t) => (t.startsWith('r') ? t : `${t}@${(DYN[i] * (i >= 7 ? k2 : k)).toFixed(3)}`))
         .join(' '),
     )
     .join(' | ') + ' |';
@@ -60,8 +62,9 @@ const AB = {
 };
 const AFTER = ['r:16 |', AB.b2, AB.b3, AB.b4, AB.b5, AB.b6, AB.b7, AB.b2, AB.b3, AB.b4, AB.b5, AB.b12].join(' ');
 
-/** horn section, bars 5–12: three voices with tied common tones (bar 7: B♭7 → E♭7sus4 → E♭) */
-const HRN_LO = 'Eb3:16 | _:12 F3:4 | _:8 Eb3:8 | _:16 | _:16 | _:16 | _:16 | _:16 |';
+/** horn section, bars 5–12: three voices with tied common tones (bar 7: B♭7 → E♭7sus4 → E♭).
+ *  The low E♭3 pedal is re-tongued where the players breathe: bar 7 beat 3, bars 8, 10, 11, 12 */
+const HRN_LO = 'Eb3:16 | _:12 F3:4 | _:8 Eb3:8 | Eb3:16 | _:16 | Eb3:16 | Eb3:16 | Eb3:16 |';
 const HRN_MID = 'G3:8 Ab3:4 G3:4 | Ab3:4 G3:8 Ab3:4 | _:12 G3:4 | Ab3:12 G3:4 | Ab3:16 | G3:8 Ab3:8 | G3:8 Ab3:4 G3:4 | Ab3:4 G3:12 |';
 const HRN_TOP = 'Bb3:8 C4:4 Bb3:4 | C4:4 Bb3:4 C4:8 | D4:8 Db4:4 Bb3:4 | C4:12 Db4:4 | C4:16 | Bb3:8 C4:8 | Bb3:8 C4:4 Bb3:4 | C4:4 Bb3:4 C4:4 Db4:4 |';
 
@@ -86,15 +89,15 @@ const roll = (at: number, steps: number, note: string, v0: number, v1: number): 
   const n = Math.round(steps * 1.5);
   return Array.from({ length: n }, (_, i): [number, string, number] => [at + (i * 2) / 3, note, v0 + ((v1 - v0) * i) / Math.max(1, n - 1)]);
 };
-/** suspended-cymbal roll swell: overlapping roll segments of rising velocity (variant 1 = roll) */
-const swell = (at: number, steps: number, v0: number, v1: number, seg = 2): Array<[number, number, number, number]> => {
-  const n = Math.max(1, Math.round(steps / seg));
-  return Array.from({ length: n }, (_, i): [number, number, number, number] => [at + i * seg, 60, v0 + ((v1 - v0) * i) / Math.max(1, n - 1), seg]);
-};
+/** snare velocities: the set's layers switch at 0.45 / 0.65 / 0.85, and only the upper two have
+ *  the snares' crack (the soft layers are almost all drum body), so after-beats and triplets play
+ *  at ≥ 0.65 */
+const SN = 0.7;
+/** triplet doubling the trumpets' triplet pickups (all three strokes in the same layer) */
 const TRIP = (at: number, v: number): Array<[number, number, number]> => [
   [at, 60, v],
-  [at + 4 / 3, 60, v * 0.8],
-  [at + 8 / 3, 60, v * 0.9],
+  [at + 4 / 3, 60, v * 0.93],
+  [at + 8 / 3, 60, v * 1.05],
 ];
 const bar = (n: number): number => (n - 1) * 16; // step of bar n (1-based) in the march section
 
@@ -104,7 +107,7 @@ export const victory: SongDef = {
   stepsPerBeat: 4,
   barSteps: 16,
   scale: 'Ab major',
-  gainDb: -0.6,
+  gainDb: -1.2,
   humanize: 0.003,
   reverb: { rt60: 1.9, size: 1.25, damp: 0.5, predelay: 0.022, er: 0.35, hp: 240, lp: 7500, wet: 1.45 },
   channels: {
@@ -120,16 +123,17 @@ export const victory: SongDef = {
     snare: { inst: 'snare', gain: -7, pan: 0.16, send: 0.14, hum: 0.4 },
     bd: { inst: 'bassDrum', gain: -8, pan: 0, send: 0.2, hum: 0 },
     crash: { inst: 'crash', gain: -13, pan: -0.2, send: 0.25, hum: 0 },
-    cym: { inst: 'cymbal', gain: -6.5, pan: 0.25, send: 0.25, hum: 0 },
-    glock: { inst: 'glock', gain: -16, pan: 0.4, send: 0.3, hum: 0 },
+    // the recorded roll is dark (its energy sits at 250 Hz–1 kHz), so it needs this much gain
+    cym: { inst: 'cymbal', gain: 3, pan: 0.25, send: 0.25, hum: 0 },
+    glock: { inst: 'glock', gain: -9, pan: 0.4, send: 0.3, hum: 0 },
     acc: { inst: 'accordion', gain: -6, pan: -0.1, send: 0.18 },
     cast: { inst: 'castanets', gain: -9, pan: 0.36, send: 0.12, hum: 0.5 },
     // tail (loop) only
-    accR: { inst: 'accordion', gain: -1.9, pan: -0.08, send: 0.2, hum: 0.6 },
-    accC: { inst: 'accChord', gain: -6.2, pan: -0.16, send: 0.12, hum: 0.5 },
-    ubass: { inst: 'uprightBass', gain: -2.2, pan: 0.1, send: 0.08, hum: 0.5 },
-    strT: { inst: 'strings', gain: -4.7, pan: 0.18, send: 0.3, hum: 0.5 },
-    hrnT: { inst: 'brassSoft', gain: -4.7, pan: -0.3, send: 0.3, hum: 0.5 },
+    accR: { inst: 'accordion', gain: 0.9, pan: -0.08, send: 0.2, hum: 0.6 },
+    accC: { inst: 'accChord', gain: -3.5, pan: -0.16, send: 0.12, hum: 0.5 },
+    ubass: { inst: 'uprightBass', gain: -0.7, pan: 0.1, send: 0.08, hum: 0.5 },
+    strT: { inst: 'strings', gain: -8.5, pan: 0.18, send: 0.3, hum: 0.5 },
+    hrnT: { inst: 'brassSoft', gain: -3.2, pan: -0.3, send: 0.3, hum: 0.5 },
   },
   sections: {
     // pickup bar (roll) + the whole 12-bar trumpet theme: reference bars 1–12
@@ -138,15 +142,16 @@ export const victory: SongDef = {
       chords: CH_MARCH,
       parts: [
         mel('tpt', shaped(1), {}),
-        mel('tptS', shaped(0.8), {}),
+        // the brass section in unison; it steps back in a' b', where the violins double the tune
+        mel('tptS', shaped(0.8, 0.62), {}),
         // horns: three legato voices from b on (E♭ inner pedal; the 7th only where it resolves)
         mel('hrn', HRN_LO, { vel: 0.5, at: bar(5) }),
         mel('hrn', HRN_MID, { vel: 0.5, at: bar(5) }),
         mel('hrn', HRN_TOP, { vel: 0.5, at: bar(5) }),
         // violins double the tune an octave up for a' b' (sustain + marcato layer: the sustain
         // samples swell in slowly, the marcato layer articulates the triplets and dotted figures)
-        mel('str', THEME_A + THEME_B2, { vel: 0.62, oct: 1, at: bar(8) }),
-        mel('vlnM', THEME_A + THEME_B2, { vel: 0.6, oct: 1, at: bar(8) }),
+        mel('str', THEME_A + THEME_B2, { vel: 0.86, oct: 1, at: bar(8) }),
+        mel('vlnM', THEME_A + THEME_B2, { vel: 0.84, oct: 1, at: bar(8) }),
         mel('stab', AFTER, { vel: 0.62 }),
         mel('tuba', OOM, { vel: 0.82 }),
         mel('pizz', OOM, { vel: 0.7, oct: 1 }),
@@ -175,8 +180,11 @@ export const victory: SongDef = {
           [bar(b) + 13, 60, 0.4],
           [bar(b) + 14, 60, 0.62],
         ])),
-        // (roll velocities stay below 0.7: above it the sampler picks the cymbal's hit layer)
-        hits('cym', [...swell(2, 14, 0.22, 0.6), ...swell(bar(7) + 8, 8, 0.25, 0.55), ...swell(bar(12) + 8, 8, 0.3, 0.64)], 1),
+        // suspended-cymbal swells into the crashes: ONE roll note each (variant 1 = the recorded
+        // roll, which builds up by itself over about a second; velocity < 0.7 keeps the roll
+        // layer, above it the sampler plays the cymbal's hit). The cadence swell starts on beat 2
+        // so the roll has time to grow.
+        hits('cym', [[2, 60, 0.42, 14], [bar(7) + 8, 60, 0.66, 8], [bar(12) + 4, 60, 0.6, 12]], 1),
         hits('crash', [
           [bar(2), 60, 0.82, 8],
           [bar(8), 60, 0.95, 8],
@@ -196,22 +204,20 @@ export const victory: SongDef = {
         ], 0),
         hits('snare', [
           // after-beats, with the trumpets' triplet pickups doubled
-          [bar(2), 60, 0.7],
-          ...[2, 3, 4, 5, 6, 8, 9, 10, 11, 12].map((b): [number, number, number] => [bar(b) + 4, 60, 0.42]),
-          ...[5, 6, 11].map((b): [number, number, number] => [bar(b) + 12, 60, 0.42]),
-          ...TRIP(bar(2) + 12, 0.5),
-          ...TRIP(bar(3) + 12, 0.5),
-          ...TRIP(bar(7) + 4, 0.5),
-          [bar(7) + 8, 60, 0.45],
-          [bar(8), 60, 0.78],
-          ...TRIP(bar(8) + 12, 0.55),
-          ...TRIP(bar(9) + 12, 0.55),
-          // 16th build into the final chord
-          ...Array.from({ length: 8 }, (_, i): [number, number, number] => [bar(12) + 8 + i, 60, 0.3 + i * 0.06]),
+          ...[2, 3, 4, 5, 6, 8, 9, 10, 11, 12].map((b): [number, number, number] => [bar(b) + 4, 60, SN]),
+          ...[5, 6, 11].map((b): [number, number, number] => [bar(b) + 12, 60, SN]),
+          ...TRIP(bar(2) + 12, SN),
+          ...TRIP(bar(3) + 12, SN),
+          ...TRIP(bar(7) + 4, SN),
+          [bar(7) + 8, 60, SN],
+          ...TRIP(bar(8) + 12, SN * 1.05),
+          ...TRIP(bar(9) + 12, SN * 1.05),
+          // 16th build into the final chord (0.6 → 0.88: the crack opens up on the way)
+          ...Array.from({ length: 8 }, (_, i): [number, number, number] => [bar(12) + 8 + i, 60, 0.6 + i * 0.04]),
         ]),
       ],
     },
-    // the theme's final A♭ (tutti, crash), then the cheeky band tag: accordion + castanets
+    // the theme's final A♭ (tutti, crash), then the cheeky band tag: accordion, glock, castanets
     fin: {
       bars: 1,
       chords: 'Ab:12 Eb7:2 Ab:2',
@@ -223,9 +229,11 @@ export const victory: SongDef = {
         mel('stab', 'Ab3+C4+Eb4:2@0.5 r:10 G3+Db4+Eb4:2@0.62 Ab3+C4+Eb4:2@0.72', {}),
         mel('tuba', 'Ab1:6 r:10', { vel: 0.82 }),
         mel('pizz', 'Ab2:2 r:10 Eb2:2 Ab2:2', { vel: 0.75 }),
-        mel('glock', 'Eb6+Ab6:4 r:12', { vel: 0.7 }),
-        // the accordion answers the trumpets' triplet, then a V7–I button (D♭-G → C-A♭)
+        // the accordion answers the trumpets' triplet (with the castanets), then a V7–I button
+        // (D♭-G → C-A♭); the glockenspiel rings the button's top line an octave up ("ti-ting"),
+        // after the tutti has cleared and clear of the castanets' triplet
         mel('acc', 'r:8 Bb5:4/3 Eb5 Bb5 Db5+G5:2 C5+Ab5!:2', { vel: 0.82 }),
+        mel('glock', 'r:12 G6:2 Ab6:2', { vel: 0.7 }),
         hits('cast', [
           [5, 60, 0.35],
           [6, 60, 0.45],
@@ -241,27 +249,30 @@ export const victory: SongDef = {
         hits('crash', [[0, 60, 0.9, 8]]),
       ],
     },
-    // loop: the band at rest under the results screen — accordion right hand on the guide tones,
-    // left-hand oom-pah (upright bass + accordion chord buttons), strings and a horn underneath
+    // loop: the band at rest under the results screen. The accordion hums the theme's a phrase
+    // softly (reference bars 1–4: the pickup E♭ is the last beat of the loop, so the loop is
+    // Verdi's own 3-bar phrase); left-hand oom-pah = upright bass + chord buttons; a low horn line
+    // (5th–7th–3rd); the strings hold a soft 2-voice halo above the tune, clear of the chords.
     tail: {
       bars: 3,
-      chords: 'Ab:16 | Db:8 Eb7:8 | Ab:8 Eb7:8',
+      chords: 'Ab:12 Eb7:4 | Ab:16 | Eb7:8 Ab:8',
       parts: [
-        // guide tones: 3 | 1 5 | 3 7 → 3 across the seam (a sigh on each change)
-        mel('accR', 'C5:12 Eb5:4 | Db5:8 Bb4:8 | C5:8 Db5:8 |', { vel: 0.62 }),
-        mel('hrnT', 'Ab3:16 | F3:8 G3:8 | Ab3:8 G3:8 |', { vel: 0.5 }),
-        mel('ubass', 'Ab1:4 r:4 Eb2:4 r:4 | Db2:4 r:4 Eb2:4 r:4 | Ab1:4 r:4 Eb2:4 r:4 |', { vel: 0.78 }),
-        comp('accC', 'r:4 c:2 r:6 c:2 r:2', { lo: 'Ab3', hi: 'Ab4', n: 3, vel: 0.6 }),
-        pad('strT', { lo: 'Ab3', hi: 'Eb5', vel: 0.5, n: 3 }),
+        mel('accR', 'Ab4:12 Bb4:4/3 Eb4 Bb4 | C5:4 C5 C5 C5:4/3 Db5 Ab4 | C5:6 Bb4:2 Ab4:4 Eb4:4 |', { vel: 0.62 }),
+        // chord buttons on 2 and 4: the march's after-beat voicings of the same bars (a phrase)
+        mel('accC', [AB.b2, AB.b3, AB.b4].join(' '), { vel: 0.6 }),
+        mel('ubass', 'Ab1:4 r:4 Eb2:4 r:4 | Ab1:4 r:4 C2:4 r:4 | Eb2:4 r:4 Ab1:4 r:4 |', { vel: 0.78 }),
+        mel('hrnT', 'Eb3:12 Db3:4 | C3:16 | Eb3:8 C3:8 |', { vel: 0.5 }),
+        mel('strT', 'Eb5:16 | _:16 | _:16 |', { vel: 0.5 }),
+        mel('strT', 'Ab5:12 G5:4 | Ab5:16 | G5:8 Ab5:8 |', { vel: 0.5 }),
         hits('cast', [
-          [6, 60, 0.44],
-          [14, 60, 0.44],
-          [16 + 6, 60, 0.44],
-          [16 + 14, 60, 0.44],
-          [32 + 6, 60, 0.44],
-          [32 + 13, 60, 0.36],
-          [32 + 14, 60, 0.46],
-          [32 + 15, 60, 0.52],
+          [6, 60, 0.56],
+          [14, 60, 0.56],
+          [16 + 6, 60, 0.56],
+          [16 + 14, 60, 0.56],
+          [32 + 6, 60, 0.56],
+          [32 + 13, 60, 0.46],
+          [32 + 14, 60, 0.58],
+          [32 + 15, 60, 0.66],
         ]),
       ],
     },
