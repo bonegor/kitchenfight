@@ -20,7 +20,8 @@
  *                     ignore the LAME header; the marker alignment must still place every zone)
  *   --json            print one JSON line per rendered file (stats) instead of text
  *   --solo a,b        render only these song channels
- * Exit code 1 when a song renders with warnings or non-finite samples.
+ * Exit code 1 when a song renders with warnings (other than 'range:' notes for the arrangers) or
+ * non-finite samples.
  */
 import { createRequire } from 'module';
 import { execFileSync } from 'child_process';
@@ -58,13 +59,17 @@ const target = args[0] ?? (PATTERN ? '' : 'all');
 fs.mkdirSync(OUT, { recursive: true });
 
 // ------------------------------------------------------------------------------- bundle src/audio
-export async function loadAudio() {
+export async function loadAudio(songsIndex = '') {
   const esbuild = require('esbuild');
   const src = (p) => JSON.stringify(path.join(ROOT, 'src', 'audio', p));
+  // KF_SONGS=/path/to/songs/index.ts (or the argument) renders another song set through this engine
+  // (e.g. a scratch copy of the arrangement branch's songs placed next to symlinks of src/audio/*.ts)
+  const alt = songsIndex || process.env.KF_SONGS;
+  const songs = alt ? JSON.stringify(path.resolve(alt)) : src('songs/index.ts');
   const entry = [
-    `export { SONGS } from ${src('songs/index.ts')};`,
+    `export { SONGS } from ${songs};`,
     `export { renderSong, clearSampleCache } from ${src('render.ts')};`,
-    `export { INSTRUMENTS } from ${src('instruments.ts')};`,
+    `export { INSTRUMENTS, NEW_IDS, FALLBACK_TRIM_DB } from ${src('instruments.ts')};`,
     `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice } from ${src('sampled.ts')};`,
     `export { SAMPLE_SETS } from ${src('assets/inst/manifest.ts')};`,
     `export { Slicer } from ${src('dsp.ts')};`,
@@ -148,6 +153,56 @@ export function writeWav(file, chans, sr) {
   fs.writeFileSync(file, b);
 }
 
+// ------------------------------------------------------------------------------- loudness
+function biquad(b, a) {
+  return (inp) => {
+    const out = new Float64Array(inp.length);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < inp.length; i++) {
+      const x0 = inp[i];
+      const y0 = b[0] * x0 + b[1] * x1 + b[2] * x2 - a[1] * y1 - a[2] * y2;
+      out[i] = y0;
+      x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+    }
+    return out;
+  };
+}
+/** BS.1770 K-weighting (high shelf + RLB high-pass) at sr */
+function kWeight(x, sr) {
+  const fc = 1681.97, G = 4.0, Q = 0.7071752;
+  const A = Math.pow(10, G / 40), w0 = (2 * Math.PI * fc) / sr, al = Math.sin(w0) / (2 * Q), cw = Math.cos(w0);
+  const b = [A * ((A + 1) + (A - 1) * cw + 2 * Math.sqrt(A) * al), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - 2 * Math.sqrt(A) * al)];
+  const a = [(A + 1) - (A - 1) * cw + 2 * Math.sqrt(A) * al, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - 2 * Math.sqrt(A) * al];
+  const shelf = biquad(b.map((v) => v / a[0]), a.map((v) => v / a[0]));
+  const f2 = 38.135, Q2 = 0.500327, w2 = (2 * Math.PI * f2) / sr, al2 = Math.sin(w2) / (2 * Q2), c2 = Math.cos(w2);
+  const b2 = [(1 + c2) / 2, -(1 + c2), (1 + c2) / 2];
+  const a2 = [1 + al2, -2 * c2, 1 - al2];
+  const hp = biquad(b2.map((v) => v / a2[0]), a2.map((v) => v / a2[0]));
+  return hp(shelf(x));
+}
+/** BS.1770-4 integrated loudness (LUFS) of a stereo signal: 400 ms blocks, 75 % overlap, gates -70 / -10 */
+export function integratedLoudness(L, R, sr) {
+  const kl = kWeight(L, sr);
+  const kr = kWeight(R, sr);
+  const blk = Math.round(0.4 * sr);
+  const hop = Math.round(0.1 * sr);
+  const cl = new Float64Array(kl.length + 1);
+  const cr = new Float64Array(kr.length + 1);
+  for (let i = 0; i < kl.length; i++) {
+    cl[i + 1] = cl[i] + kl[i] * kl[i];
+    cr[i + 1] = cr[i] + kr[i] * kr[i];
+  }
+  const z = [];
+  for (let s = 0; s + blk <= kl.length; s += hop) z.push((cl[s + blk] - cl[s] + cr[s + blk] - cr[s]) / blk);
+  const lk = (p) => -0.691 + 10 * Math.log10(p + 1e-20);
+  const abs = z.filter((p) => lk(p) > -70);
+  if (!abs.length) return -Infinity;
+  const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
+  const rel = lk(mean(abs)) - 10;
+  const g = abs.filter((p) => lk(p) > rel);
+  return g.length ? lk(mean(g)) : -Infinity;
+}
+
 function levels(L, R) {
   let peak = 0;
   let acc = 0;
@@ -215,7 +270,9 @@ async function renderPattern(A, id) {
   const sustain = inst.kind === 'sustain';
   // sustained notes are long enough to reach the loop (tuning is measured there)
   const noteSec = sustain ? 2.6 : 1.0;
-  const gap = Math.max(inst.ring ? 2.5 : sustain ? 3.4 : 1.8, (spec?.maxLen ?? 0) + 0.5);
+  // notes never overlap: the next one starts after this one's release tail (mixed for 3.6 time
+  // constants) and any ring
+  const gap = Math.max(inst.ring ? 2.5 : sustain ? 3.4 : 1.8, (spec?.maxLen ?? 0) + 0.5, noteSec + 3.6 * inst.release + 0.3);
   const steps = notes.length * gap + 3;
   const part = () =>
     notes.map((n, i) => ({ s: i * gap + 0.5, d: noteSec, m: n.m, v: n.v, ch: 'x', vr: n.vr, gate: 1 }));
@@ -243,7 +300,10 @@ async function renderPattern(A, id) {
   });
   const base = path.join(OUT, id);
   writeWav(base + '.wav', [r.left, r.right], SR);
-  fs.writeFileSync(base + '.json', JSON.stringify({ id, sr: SR, kind: inst.kind, ring: !!inst.ring, release: inst.release, unpitched: !!spec?.unpitched, sampled: !SYNTH, gap, notes: meta, warnings: r.stats.warnings }, null, 1));
+  const setDef = spec ? A.SAMPLE_SETS.find((x) => x.name === spec.set) : null;
+  // width: mono sets that play a second take on the right channel (analysis recovers the zone itself)
+  const width = spec && spec.width !== undefined && setDef && setDef.ch === 1 ? spec.width : null;
+  fs.writeFileSync(base + '.json', JSON.stringify({ id, sr: SR, kind: inst.kind, ring: !!inst.ring, release: inst.release, unpitched: !!spec?.unpitched, sampled: !SYNTH, gap, width, shortArt: inst.shortArt ?? null, notes: meta, warnings: r.stats.warnings }, null, 1));
   return { id, notes: notes.length, seconds: r.length / SR, ms: r.stats.ms, ...levels(r.left, r.right), warnings: r.stats.warnings };
 }
 
@@ -267,7 +327,8 @@ async function main() {
       const s = await renderPattern(A, id);
       if (JSON_OUT) console.log(JSON.stringify(s));
       else console.log(`${id.padEnd(13)} ${String(s.notes).padStart(3)} notes ${s.seconds.toFixed(1)} s  peak ${s.peakDb.toFixed(1)} dB  rms ${s.rmsDb.toFixed(1)} dB  ${s.ms.toFixed(0)} ms${s.warnings.length ? '  WARN ' + s.warnings.join('; ') : ''}`);
-      if (s.nan || s.warnings.length) bad++;
+      // the patterns play beyond the recorded range on purpose ('range:' notes are expected)
+      if (s.nan || s.warnings.some((w) => !w.startsWith('range:'))) bad++;
     }
   } else {
     const ids = target === 'all' ? Object.keys(A.SONGS) : target.split(',');
@@ -277,10 +338,12 @@ async function main() {
       const r = await A.renderSong(song, SR, { slicer: new A.Slicer(1e9), solo: SOLO ? SOLO.split(',') : undefined });
       const lv = levels(r.left, r.right);
       writeWav(path.join(OUT, `${id}${SYNTH ? '-synth' : ''}.wav`), [r.left, r.right], SR);
-      const st = { id, seconds: +(r.length / SR).toFixed(2), loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, ms: Math.round(r.stats.ms), synthMs: Math.round(r.stats.synthMs), mixMs: Math.round(r.stats.mixMs), peakDb: +lv.peakDb.toFixed(2), rmsDb: +lv.rmsDb.toFixed(2), clipped: r.stats.clipped, nan: lv.nan, warnings: r.stats.warnings, samples: r.stats.samplesSynth };
+      const lufs = integratedLoudness(r.left, r.right, SR);
+      const st = { id, seconds: +(r.length / SR).toFixed(2), loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, ms: Math.round(r.stats.ms), synthMs: Math.round(r.stats.synthMs), mixMs: Math.round(r.stats.mixMs), peakDb: +lv.peakDb.toFixed(2), rmsDb: +lv.rmsDb.toFixed(2), lufs: +lufs.toFixed(2), clipped: r.stats.clipped, nan: lv.nan, warnings: r.stats.warnings, samples: r.stats.samplesSynth };
       if (JSON_OUT) console.log(JSON.stringify(st));
-      else console.log(`${id.padEnd(10)} ${st.seconds.toFixed(1).padStart(6)} s  render ${String(st.ms).padStart(5)} ms (samples ${st.synthMs} ms, mix ${st.mixMs} ms)  peak ${st.peakDb.toFixed(1)} dBFS  rms ${st.rmsDb.toFixed(1)} dBFS  soft-clipped ${st.clipped}${st.warnings.length ? '  WARN ' + st.warnings.slice(0, 3).join('; ') : ''}${lv.nan ? '  NaN ' + lv.nan : ''}`);
-      if (st.nan || st.warnings.length) bad++;
+      else console.log(`${id.padEnd(10)} ${st.seconds.toFixed(1).padStart(6)} s  render ${String(st.ms).padStart(5)} ms (samples ${st.synthMs} ms, mix ${st.mixMs} ms)  peak ${st.peakDb.toFixed(1)} dBFS  rms ${st.rmsDb.toFixed(1)} dBFS  ${st.lufs.toFixed(1)} LUFS  soft-clipped ${st.clipped}${st.warnings.length ? '  WARN ' + st.warnings.slice(0, 4).join('; ') : ''}${lv.nan ? '  NaN ' + lv.nan : ''}`);
+      // 'range:' warnings are notes for the arrangers (folded / far-shifted notes), not render faults
+      if (st.nan || st.warnings.some((w) => !w.startsWith('range:'))) bad++;
     }
   }
   process.exitCode = bad ? 1 : 0;

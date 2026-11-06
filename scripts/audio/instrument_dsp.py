@@ -10,6 +10,8 @@ import os
 import subprocess
 import tempfile
 
+from typing import Callable
+
 import numpy as np
 from scipy import signal
 
@@ -179,6 +181,138 @@ def envelope(x: np.ndarray, sr: int, win: float = 0.005) -> np.ndarray:
     return np.sqrt(np.convolve(m * m, k, mode='same'))
 
 
+def dc_block(x: np.ndarray, sr: int, fc: float = 12.0) -> np.ndarray:
+    """Remove DC / sub-audio offset: causal 2nd-order Butterworth high-pass at fc (no pre-echo;
+    -0.1 dB at 32 Hz). Applied to every source before anything else."""
+    sos = signal.butter(2, fc, 'highpass', fs=sr, output='sos')
+    return signal.sosfilt(sos, x, axis=-1)
+
+
+def first_at_or_above(env: np.ndarray, thr: float, start: int = 0) -> int:
+    """First index >= start where env >= thr (len(env) if never)."""
+    hit = np.nonzero(env[start:] >= thr)[0]
+    return int(start + hit[0]) if len(hit) else len(env)
+
+
+def walk_back(es: np.ndarray, k: int, lim: int, silent: float, tol: float = 0.02) -> int:
+    """From index k, walk back while the (smoothed) envelope keeps falling (within tol) and is not yet
+    silent: the start of the rise that leads to k. Stops at a dip / the floor of whatever precedes it
+    (pick / hammer / handling noise, a mechanism thump, bow noise), at silence, or at lim."""
+    j = k
+    lim = max(0, lim)
+    while j > lim and es[j - 1] <= es[j] * (1 + tol) and es[j - 1] > silent:
+        j -= 1
+    return j
+
+
+def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, look: float = 0.6,
+                  rel_db: float = -12.0, max_walk: float = 0.025, perc_db: float = -10.0, max_pre: float = 0.06,
+                  max_attack: float | None = None, fade_in: float = 0.0, min_fade: float = 0.003,
+                  sus_db: float = -12.0, sus_win: tuple[float, float] = (0.3, 1.0),
+                  period: float | None = None) -> tuple[int, int, int, dict]:
+    """Where a zone starts (`st`, everything before is dropped), where its beat is (`on`, the
+    sample the mixer puts on the grid) and how many samples to fade in from `st` (`fin`).
+    The beat is the PERCEPTUAL onset (where the attack has become loud enough to be heard as the
+    note's start), not the first sample above a low threshold: recordings carry pick / hammer /
+    handling noise, plectrum scrapes and key thumps at -15..-40 dB up to tens of ms before the real
+    attack, and slow (bowed, section) attacks build up over 20-80 ms — a low threshold puts the beat
+    on that and every note sounds late.
+
+    mode 'transient' (plucked / struck / percussive): the beat is the first point where the RMS over
+      the preceding 5 ms (pitched notes: in the band 0.7..6 x f0) comes within rel_db (-12 dB) of its
+      peak. The zone keeps the rise that leads
+      there — walked back on an envelope smoothed over max(2 ms, one period) (`period`, samples) while
+      it keeps falling, at most max_walk — plus pre_ms before it (faded in), and drops whatever
+      precedes the rise (pre-noise, a thump or scrape separated from the attack by a dip).
+    mode 'perceptual' (section articulations, orchestra hits: spread attacks): the beat is the RMS
+      over the preceding 5 ms reaching perc_db (-10 dB) of its peak — the main jump of the attack, not the bow-noise
+      plateau before it; the zone keeps the build-up before the beat (from where the sound leaves
+      -40 dB of the peak, at most max_pre) so the attack sounds natural and lands on the beat.
+    mode 'sustain' (bowed / blown / sung, reference = the early-sustain level): the zone starts where
+      the sound leaves the noise floor; when the attack is slower than max_attack (time to -6 dB of
+      the sustain) its quiet beginning is cut (with a fade-in) so short notes speak; fade_in forces
+      a minimum fade (e.g. a chorus sample that starts mid-sound). The beat is the sus_db (-12 dB)
+      point of the (faded) attack, at most max_pre after the start.
+    Every zone that does not start from silence gets at least min_fade of fade-in (no click)."""
+    m = to_mono(x) if x.ndim > 1 else x
+    n = len(m)
+    info: dict = {'attack': mode}
+    if n < 16:
+        return 0, 0, 0, info
+    e2 = envelope(m, sr, 0.002)
+    L = int(min(n, look * sr))
+    pk = float(np.max(e2[:L])) if L else 0.0
+    if pk <= 0:
+        return 0, 0, 0, info
+    pre_n = int(round(pre_ms * sr / 1000))
+    mf = int(round(min_fade * sr))
+    # RMS over the preceding 5 ms: the ear integrates over a few ms; a causal window, so a spread
+    # attack's beat is not pulled early by a centred window's look-ahead. Pitched plucked / struck
+    # notes are measured in the band of their fundamental and first harmonics (zero-phase band-pass
+    # 0.7 f0 .. 6 f0): a plectrum scrape or a key thump outside it does not count as the attack (a
+    # section's bow noise does: 'perceptual' stays full-band).
+    W5 = max(1, int(0.005 * sr))
+    mb = m
+    if period and mode == 'transient':
+        f0 = sr / period
+        lo, hi = 0.7 * f0, min(6.0 * f0, 0.45 * sr)
+        if hi > lo * 1.5:
+            mb = signal.sosfiltfilt(signal.butter(2, [lo, hi], 'bandpass', fs=sr, output='sos'), m)
+    cs = np.concatenate([[0.0], np.cumsum(mb * mb)])
+    idx = np.arange(1, n + 1)
+    r5 = np.sqrt((cs[idx] - cs[np.maximum(0, idx - W5)]) / W5)
+    pk5 = float(np.max(r5[:L]))
+    if mode == 'transient':
+        on = first_at_or_above(r5[:L], pk5 * 10 ** (rel_db / 20))
+        ws = min(0.012, max(0.002, (period or 0) / sr))
+        es = envelope(m, sr, ws)
+        rise = walk_back(es, on, on - int(max_walk * sr), pk * 10 ** (-50 / 20))
+        st = max(0, rise - pre_n)
+        fin = rise - st
+        info['rise_ms'] = round((on - rise) * 1000 / sr, 1)
+        info['skipped_ms'] = round(st * 1000 / sr, 1)
+    elif mode == 'perceptual':
+        on = first_at_or_above(r5[:L], pk5 * 10 ** (perc_db / 20))
+        # the build-up starts where the 2 ms envelope first leaves the floor (-40 dB of the peak)
+        s0 = first_at_or_above(e2[:max(1, on)], pk * 10 ** (-40 / 20))
+        st = max(0, s0 - pre_n, on - int(max_pre * sr))
+        fin = max(0, min(on - st, s0 - st if s0 > st else 0))
+        info['skipped_ms'] = round(st * 1000 / sr, 1)
+    else:  # sustain
+        e10 = envelope(m, sr, 0.01)
+        s_on = first_at_or_above(e2, float(np.max(e2[:int(min(n, 1.5 * sr))])) * 10 ** (-35 / 20))
+        a = min(n - 1, s_on + int(sus_win[0] * sr))
+        b = min(n, s_on + int(sus_win[1] * sr))
+        ref = float(np.median(e10[a:b])) if b > a + 8 else float(np.max(e10))
+        ref = max(ref, 1e-9)
+        st = max(0, s_on - pre_n)
+        t6 = first_at_or_above(e10, ref * 10 ** (-6 / 20), s_on)
+        info['attack_ms'] = round((t6 - s_on) * 1000 / sr, 1)
+        if max_attack is not None and t6 < n and t6 - st > int(max_attack * sr):
+            st = t6 - int(max_attack * sr)
+            info['attack_cut_ms'] = round((st - s_on) * 1000 / sr, 1)
+        fin = max(int(round(fade_in * sr)), 0)
+        if st > s_on:  # cut into the attack: fade in over a fifth of the remaining rise
+            fin = max(fin, int(0.2 * max_attack * sr) if max_attack else mf)
+        # beat: sus_db (-12 dB) of the sustain level on the faded attack
+        y = m[st:].copy()
+        if fin > 0:
+            y[:fin] *= 0.5 - 0.5 * np.cos(np.linspace(0, math.pi, fin))
+        ey = envelope(y, sr, 0.01)
+        on = st + min(first_at_or_above(ey, ref * 10 ** (sus_db / 20)), int(max_pre * sr))
+        info['ref_db'] = round(db(ref), 1)
+    # never start with a step: a zone that starts loud (> -30 dB of its peak, e.g. a sample trimmed
+    # into the sound) gets at least min_fade of fade-in, any other non-silent start at least 1 ms
+    head = float(np.max(np.abs(m[st:st + max(1, mf // 4)]))) if st < n else 0.0
+    if fin < mf and head > pk * 10 ** (-30 / 20):
+        fin = mf
+        info['anti_click'] = True
+    elif fin < int(0.001 * sr) and head > pk * 10 ** (-60 / 20):
+        fin = int(0.001 * sr)
+    on = max(on, st)
+    return int(st), int(on), int(fin), info
+
+
 def onset_index(x: np.ndarray, sr: int, rel_db: float = -30.0, slow: bool = False) -> int:
     """Index where the note starts: first point where the 2 ms envelope crosses rel_db below the
     early peak, refined back to where the signal leaves the noise floor."""
@@ -267,7 +401,7 @@ def measure_pitch(x: np.ndarray, sr: int, start: int, end: int, nominal_midi: fl
     """Mean pitch (fractional MIDI) of a steady segment. Uses YIN for the octave, then refines with
     the fundamental (and 2nd harmonic) spectral peaks. If nominal_midi is given, the search is
     restricted to ±7 semitones around it at any octave, picking the octave YIN supports."""
-    seg = to_mono(x)[start:end]
+    seg = to_mono(np.atleast_2d(x)[:, start:end])
     if len(seg) < int(0.03 * sr):
         return None
     if nominal_midi is not None:
@@ -309,7 +443,7 @@ def measure_pitch_centroid(x: np.ndarray, sr: int, start: int, end: int, expecte
     band median, within 25 dB of the strongest) are combined, weighted by h (a higher partial
     resolves the pitch better); partials that disagree with the lowest one by > 35 cents
     (inharmonic modes) are dropped. Returns fractional MIDI or None."""
-    seg = to_mono(x)[start:end]
+    seg = to_mono(np.atleast_2d(x)[:, start:end])
     n = len(seg)
     if n < int(0.04 * sr):
         return None
@@ -349,25 +483,135 @@ def measure_pitch_hsum(x: np.ndarray, sr: int, start: int, end: int, expected_mi
     """Harmonic-sum pitch: the f0 within +-span semitones of the expected pitch that maximises
     the summed log magnitude at its first `harmonics` partials (0.5 cent grid). Robust for voice
     ensembles, whose fundamental is weak and whose partials are broadened by vibrato and spread."""
-    seg = to_mono(x)[start:end]
+    seg = to_mono(np.atleast_2d(x)[:, start:end])
     if len(seg) < int(0.1 * sr):
         return None
     w = signal.windows.blackmanharris(len(seg))
     N = 1 << int(math.ceil(math.log2(len(seg) * 8)))
     L = np.log(np.abs(np.fft.rfft((seg - np.mean(seg)) * w, N)) + 1e-9)
     f = np.fft.rfftfreq(N, 1 / sr)
-    hs = np.arange(1, harmonics + 1)
+    cents = np.arange(-span * 100, span * 100 + 0.25, 0.5)
+    f0 = mtof(expected_midi) * 2 ** (cents / 1200)
+    # every candidate sums the same harmonics: those below 0.45 sr for the highest candidate
+    hmax = min(harmonics, int(0.45 * sr / f0[-1]))
+    if hmax < 1:
+        return None
+    hs = np.arange(1, hmax + 1)
+    idx = np.searchsorted(f, f0[:, None] * hs[None, :])  # (candidates, harmonics)
+    sc = L[np.minimum(idx, len(L) - 1)].sum(axis=1)
+    return expected_midi + float(cents[int(np.argmax(sc))]) / 100
+
+
+def measure_pitch_hfit(x: np.ndarray, sr: int, start: int, end: int, expected_midi: float, span: float = 1.4,
+                       hmin: int = 1, hmax: int = 6, min_prom: float = 12.0,
+                       equal_weights: bool = False) -> tuple[float | None, dict]:
+    """Pitch from a weighted least-squares fit of the harmonic series h = hmin..hmax.
+    Coarse: harmonic-sum search (log magnitude at h*f0, 1-cent grid) over +-span semitones of the
+    expected pitch; fine: every harmonic's peak within +-35 cents of h*f0_coarse refined by
+    parabolic interpolation on the log spectrum (Blackman-Harris, 8x zero padding);
+    f0 = sum(w h f_h) / sum(w h^2), w = peak magnitude. Peaks less than min_prom dB above the
+    median of their search band or more than 30 dB under the strongest are ignored.
+    Low strings (double bass, tuba) radiate a fundamental 20-40 dB under the 2nd harmonic: fit
+    them with hmin = 2, and compare with hmin = 1 as a check. Returns (midi or None, info)."""
+    seg = to_mono(np.atleast_2d(x)[:, start:end])
+    n = len(seg)
+    info: dict = {}
+    if n < int(0.05 * sr):
+        return None, info
+    w = signal.windows.blackmanharris(n)
+    N = 1 << int(math.ceil(math.log2(n * 8)))
+    S = np.abs(np.fft.rfft((seg - np.mean(seg)) * w, N))
+    L = np.log(S + 1e-20)
+    f = np.fft.rfftfreq(N, 1 / sr)
+    hs = np.arange(hmin, hmax + 1)
     best = None
-    for c in np.arange(-span * 100, span * 100 + 0.25, 0.5):
+    for c in np.arange(-span * 100, span * 100 + 0.5, 1.0):
         f0 = mtof(expected_midi) * 2 ** (c / 1200)
         idx = np.searchsorted(f, f0 * hs)
-        idx = idx[idx < len(L)]
+        idx = idx[idx < len(L) - 1]
         if not len(idx):
             continue
-        sc = float(np.sum(L[idx]))
+        sc = float(np.sum(np.maximum(L[idx], L[idx - 1])))
         if best is None or sc > best[0]:
-            best = (sc, c)
-    return expected_midi + best[1] / 100 if best else None
+            best = (sc, f0)
+    if best is None:
+        return None, info
+    f0c = best[1]
+    peaks = []
+    binw = sr / n  # analysis resolution (Hz)
+    for h in hs:
+        fh = h * f0c
+        if fh > 0.45 * sr:
+            break
+        half = max(fh * (2 ** (35 / 1200) - 1), 2 * binw)
+        lo = np.searchsorted(f, fh - half)
+        hi = np.searchsorted(f, fh + half)
+        # prominence against the spectrum between the neighbouring harmonics
+        blo = np.searchsorted(f, fh - 0.5 * f0c)
+        bhi = np.searchsorted(f, fh + 0.5 * f0c)
+        if hi <= lo + 2 or hi >= len(S) - 2:
+            continue
+        k = lo + int(np.argmax(S[lo:hi]))
+        prom = 20 * math.log10((S[k] + 1e-20) / (np.median(S[blo:bhi]) + 1e-20))
+        a, b, c = L[k - 1], L[k], L[k + 1]
+        den = a - 2 * b + c
+        dk = 0.5 * (a - c) / den if abs(den) > 1e-12 else 0.0
+        peaks.append((int(h), (k + dk) * sr / N, float(S[k]), prom))
+    if not peaks:
+        return None, info
+    top = max(p[2] for p in peaks)
+    good = [p for p in peaks if p[3] >= min_prom and p[2] >= top * 10 ** (-30 / 20)]
+    info['levels'] = {p[0]: round(20 * math.log10(p[2] / top + 1e-12), 1) for p in peaks}
+    if not good:
+        return None, info
+    wgt = (lambda p: 1.0) if equal_weights else (lambda p: p[2])
+    num = sum(wgt(p) * p[0] * p[1] for p in good)
+    den = sum(wgt(p) * p[0] * p[0] for p in good)
+    info['used'] = [p[0] for p in good]
+    return ftom(num / den), info
+
+
+def measure_pitch_track(x: np.ndarray, sr: int, start: int, end: int, expected_midi: float,
+                        method: Callable[[np.ndarray, int, int, int, float], float | None],
+                        frame: float = 0.08, hop: float = 0.02, periods: float = 6.0) -> tuple[float | None, dict]:
+    """Mean pitch of [start, end) from a frame-wise pitch track: frames of max(`frame`, `periods`
+    periods of the expected pitch) every `hop` s, each measured with `method(x, sr, a, b, expected)`;
+    the result is the energy-weighted mean (in cents) of the frames within 60 cents of the track's
+    median. Vibrato and intonation drift inside a loop are averaged as the ear averages them (one
+    long analysis window instead weights the spectrum's peak shape, and a loop whose two halves sit
+    30 cents apart can then read 25 cents off). Returns (midi or None, {'spread': p90 - p10 cents,
+    'frames': n})."""
+    x = np.atleast_2d(x)
+    end = min(end, x.shape[1])
+    m = to_mono(x[:, start:end])
+    F = int(max(frame, periods / mtof(expected_midi)) * sr)
+    H = max(1, int(hop * sr))
+    info: dict = {}
+    if end - start < F:
+        p = method(x, sr, start, end, expected_midi)
+        info['frames'] = 1 if p is not None else 0
+        return p, info
+    ps, ws = [], []
+    for a in range(start, end - F + 1, H):
+        p = method(x, sr, a, a + F, expected_midi)
+        if p is None:
+            continue
+        ps.append(p)
+        ws.append(float(np.mean(m[a - start:a - start + F] ** 2)))
+    if len(ps) < 2:
+        # (almost) no frame could be measured: the whole window at once
+        p = method(x, sr, start, end, expected_midi)
+        return p, {'frames': 1 if p is not None else 0}
+    ps_a = np.array(ps)
+    w_a = np.array(ws) + 1e-20
+    med = float(np.median(ps_a))
+    keep = np.abs(ps_a - med) <= 0.6
+    if not np.any(keep):
+        keep = np.ones(len(ps_a), bool)
+    mean = float(np.sum(ps_a[keep] * w_a[keep]) / np.sum(w_a[keep]))
+    info['frames'] = int(np.sum(keep))
+    info['spread'] = round(float(np.percentile(ps_a[keep], 90) - np.percentile(ps_a[keep], 10)) * 100, 1)
+    return mean, info
 
 
 def measure_pitch_narrow(x: np.ndarray, sr: int, start: int, end: int, nominal_midi: float,
@@ -375,7 +619,7 @@ def measure_pitch_narrow(x: np.ndarray, sr: int, start: int, end: int, nominal_m
     """Fallback pitch measurement when the octave is already known: strongest spectral peak of
     harmonic h (h = 1..harmonics) within +-span semitones of h * f(nominal), f0 = f_h / h.
     Accepts only prominent peaks (>= 12 dB above the median level of the search band)."""
-    seg = to_mono(x)[start:end]
+    seg = to_mono(np.atleast_2d(x)[:, start:end])
     if len(seg) < int(0.05 * sr):
         return None
     n = len(seg)
@@ -423,10 +667,15 @@ def loop_corr(x: np.ndarray, sr: int, ls: int, le: int, w: float = 0.015) -> flo
 
 
 def find_loop(x: np.ndarray, sr: int, start_min: int, start_max: int, len_min: int, len_max: int,
-              w: float = 0.02, n_starts: int = 16) -> tuple[int, int, float]:
+              w: float = 0.02, n_starts: int = 16, env_ctx: float = 0.0, env_k: float = 0.05,
+              top: int = 6) -> tuple[int, int, float]:
     """Pick (loop_start, loop_end) with len_min <= le - ls <= len_max maximising the normalised
     correlation between the windows around ls and le (FFT cross-correlation per candidate start),
-    with a penalty for level mismatch so the envelope is continuous across the seam."""
+    with a penalty for level mismatch so the envelope is continuous across the seam.
+    env_ctx > 0 (sustained loops): the best `top` candidates per start are re-ranked by how well the
+    10 ms envelope (dB) within +-env_ctx of le matches the one around ls (shape AND level: a loop
+    whose end sits on a vibrato / bow swell crest and whose start sits in a trough plays a level
+    bump at every seam even when the waveforms correlate), penalty env_k per dB of mean mismatch."""
     m = to_mono(x)
     W = int(w * sr)
     n = len(m)
@@ -434,6 +683,7 @@ def find_loop(x: np.ndarray, sr: int, start_min: int, start_max: int, len_min: i
     start_max = max(start_min, start_max)
     starts = np.unique(np.linspace(start_min, start_max, num=n_starts).astype(int))
     cs = np.concatenate([[0.0], np.cumsum(m * m)])
+    cands: list[tuple[float, int, int]] = []
     for s in starts:
         if s - W < 0:
             continue
@@ -450,10 +700,68 @@ def find_loop(x: np.ndarray, sr: int, start_min: int, start_max: int, len_min: i
         c = corr / np.sqrt(ea * e_seg)
         level = np.abs(10 * np.log10(e_seg / ea))  # dB mismatch
         score = c - 0.02 * level
-        j = int(np.argmax(score))
-        if score[j] > best[2]:
-            best = (int(s), int(lo + j + W), float(score[j]))
+        if env_ctx <= 0:
+            j = int(np.argmax(score))
+            if score[j] > best[2]:
+                best = (int(s), int(lo + j + W), float(score[j]))
+            continue
+        # local maxima of the score, best first (distinct candidates, >= 2 ms apart)
+        order = np.argsort(score)[::-1]
+        picked: list[int] = []
+        for j in order[:max(top * 40, 200)]:
+            if all(abs(int(j) - p) > int(0.002 * sr) for p in picked):
+                picked.append(int(j))
+            if len(picked) >= top:
+                break
+        for j in picked:
+            cands.append((float(score[j]), int(s), int(lo + j + W)))
+    if env_ctx <= 0 or not cands:
+        return best
+    ev = 20 * np.log10(envelope(m, sr, 0.01) + 1e-9)
+    C = int(env_ctx * sr)
+    offs = np.arange(-C, C + 1, max(1, int(0.005 * sr)))
+    best = (cands[0][1], cands[0][2], -1e9)
+    for sc, s, e in cands:
+        ia = np.clip(s + offs, 0, n - 1)
+        ib = np.clip(e + offs, 0, n - 1)
+        mism = float(np.mean(np.abs(ev[ia] - ev[ib])))
+        tot = sc - env_k * mism
+        if tot > best[2]:
+            best = (s, e, tot)
     return best
+
+
+def flatten_loop_envelope(x: np.ndarray, sr: int, a: int, ls: int, le: int, period: float | None,
+                          limit_db: float = 6.0) -> tuple[np.ndarray, float, float]:
+    """Decaying loops, on the natural (not yet decay-compensated) signal: remove the slow amplitude
+    modulation (beating string courses / partials) around the exponential decay inside [a, le), so
+    a repeated loop does not flutter at the loop rate. The envelope (RMS over max(20 ms, 2 periods))
+    is pulled onto its straight dB decay line (fitted over [a, le)), the gain limited to +-limit_db
+    and eased in over [a, ls) so the material before the loop keeps its natural shape. Returns the
+    new signal, the fitted decay (dB/s) and the modulation inside the loop before the correction
+    (98th - 2nd percentile of the detrended envelope, dB)."""
+    y = np.array(x, copy=True)
+    m = to_mono(y)
+    win = max(0.02, 2.0 * period / sr if period else 0.02)
+    pad = int(win * sr)
+    b0 = max(0, a - pad)
+    env = envelope(m[b0:min(len(m), le + pad)], sr, win)
+    env = env[a - b0:a - b0 + (le - a)]
+    if len(env) < 16 or ls <= a:
+        return y, 0.0, 0.0
+    ldb = 20 * np.log10(env + 1e-12)
+    t = np.arange(len(ldb))
+    coef = np.polyfit(t, ldb, 1)
+    trend = np.polyval(coef, t)
+    dev = ldb - trend
+    loop_dev = dev[ls - a:]
+    resid = float(np.percentile(loop_dev, 98) - np.percentile(loop_dev, 2)) if len(loop_dev) > 8 else 0.0
+    g_db = np.clip(-dev, -limit_db, limit_db)
+    ease = np.ones(len(ldb))
+    r = ls - a
+    ease[:r] = 0.5 - 0.5 * np.cos(np.linspace(0, math.pi, r))
+    y[..., a:le] *= 10 ** (g_db * ease / 20)
+    return y, float(coef[0] * sr), resid
 
 
 def crossfade_loop(x: np.ndarray, ls: int, le: int, xf: int) -> np.ndarray:

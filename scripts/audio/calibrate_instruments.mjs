@@ -1,135 +1,97 @@
 #!/usr/bin/env node
 /**
- * Loudness calibration of the sampled instruments against the synthesized ones they replace,
- * so the songs (mixed against the synth levels) keep their balance.
+ * Loudness calibration of the sampled instruments against the synthesized ones they replace, per
+ * song channel — so a song mixed against one keeps its balance with the other (the synth is also the
+ * fallback whenever the samples are missing).
  *
- * For every id in SAMPLED_SPECS: render reference notes (v = 0.8) across the pitch range the
- * songs use (or the instrument's range for new ids) with the synth InstDef and with the sampled
- * InstDef, measure K-weighted loudness of the note body, and print the gain (dB) that makes the
- * sampled one as loud as the synth one. New ids (no song usage) are matched to the median synth
- * loudness of the existing family; for those the gain is capped so that no zone peaks above
- * 0 dBFS for a single note at velocity 1.0 and unity channel gain (short clicks have a large
- * crest factor). Paste the result into SAMPLED_SPECS[].gainDb in sampled.ts
- * (or run with --write to update the file in place).
+ * Every channel of every song that plays a sampled instrument is rendered solo (no master gain / clip;
+ * the song's reverb send as written) once with the synthesized instruments and once with the samples,
+ * with the song's own notes: pitches, lengths (short-note articulation included), velocities and
+ * variants. BS.1770 integrated loudness (K-weighted, gated) of each → the difference, and per instrument
+ * id the median over its channels. Ids the synth had before the samples (songs mixed against the
+ * synth): the sampled instrument's gainDb moves to the synth level. Ids the Audio 2.0 brief added
+ * (NEW_IDS, songs mixed against the recordings): the synthesized fallback's trim moves instead
+ * (FALLBACK_TRIM_DB in src/audio/instruments.ts). Ids no song uses keep their gains.
+ * Song sets: the current songs, plus --songs2 INDEX (e.g. a scratch copy of the arrangement branch's
+ * songs next to symlinks of src/audio/*.ts) — the instruments must suit both.
  *
- * Usage: node scripts/audio/calibrate_instruments.mjs [--write]
+ *   node scripts/audio/calibrate_instruments.mjs [--songs2 path/to/songs/index.ts] [--write] [--json FILE]
+ * --write updates SAMPLED_SPECS[].gainDb in src/audio/sampled.ts and FALLBACK_TRIM_DB in
+ * src/audio/instruments.ts (corrections under 0.3 dB are left).
  */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { installBank, loadAudio } from './render-song.mjs';
+import { installBank, integratedLoudness, loadAudio } from './render-song.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const WRITE = process.argv.includes('--write');
+const args = process.argv.slice(2);
+const opt = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
+const WRITE = args.includes('--write');
+const SONGS2 = opt('--songs2', '');
+const JSON_OUT = opt('--json', '');
 const SR = 48000;
 
-// pitch range the current songs use per instrument (scripts measured with the sequencer)
-const USED = {
-  accChord: [64, 86], accordion: [58, 88], accordionDry: [59, 86], bell: [53, 60], brass: [59, 89], brassSoft: [58, 69],
-  choir: [66, 93], choirO: [65, 87], flute: [69, 86], glock: [69, 98], guitar: [49, 76], harpsi: [62, 72],
-  mandolin: [57, 100], organ: [55, 80], pizz: [45, 79], strStab: [52, 92], strings: [64, 89], timp: [34, 51],
-  tuba: [24, 41], ubass: [33, 52], vibes: [65, 94], violin: [59, 84],
-  // unpitched percussion the songs use (pitch ignored)
-  tamb: [60, 60], snare: [60, 60], crash: [60, 60], kick: [60, 60], triangle: [60, 60], shaker: [60, 60], pan: [60, 60],
-};
-
-function kWeight(x, sr) {
-  // BS.1770 K-weighting (high shelf + RLB high-pass), as in instrument_dsp.py
-  const shelf = (() => {
-    const fc = 1681.97, G = 4.0, Q = 0.7071752;
-    const A = Math.pow(10, G / 40), w0 = (2 * Math.PI * fc) / sr, al = Math.sin(w0) / (2 * Q), cw = Math.cos(w0);
-    const b = [A * ((A + 1) + (A - 1) * cw + 2 * Math.sqrt(A) * al), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - 2 * Math.sqrt(A) * al)];
-    const a = [(A + 1) - (A - 1) * cw + 2 * Math.sqrt(A) * al, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - 2 * Math.sqrt(A) * al];
-    return [b.map((v) => v / a[0]), a.map((v) => v / a[0])];
-  })();
-  const hp = (() => {
-    const fc = 38.135, Q = 0.500327, w0 = (2 * Math.PI * fc) / sr, al = Math.sin(w0) / (2 * Q), cw = Math.cos(w0);
-    const b = [(1 + cw) / 2, -(1 + cw), (1 + cw) / 2];
-    const a = [1 + al, -2 * cw, 1 - al];
-    return [b.map((v) => v / a[0]), a.map((v) => v / a[0])];
-  })();
-  const run = (inp, [b, a]) => {
-    const out = new Float64Array(inp.length);
-    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-    for (let i = 0; i < inp.length; i++) {
-      const x0 = inp[i];
-      const y0 = b[0] * x0 + b[1] * x1 + b[2] * x2 - a[1] * y1 - a[2] * y2;
-      out[i] = y0;
-      x2 = x1; x1 = x0; y2 = y1; y1 = y0;
-    }
-    return out;
+async function measureSet(label, songsIndex) {
+  const A = await loadAudio(songsIndex);
+  const synth = { ...A.INSTRUMENTS };
+  installBank(A);
+  const sampled = { ...A.INSTRUMENTS };
+  const real = (id) => A.INSTRUMENT_ALIASES[id] ?? id;
+  const specOf = (id) => A.SAMPLED_SPECS.find((s) => s.id === real(id));
+  const rows = [];
+  const use = (defs) => {
+    Object.assign(A.INSTRUMENTS, defs);
+    A.clearSampleCache();
   };
-  return run(run(x, shelf), hp);
-}
-
-function noteLoudness(inst, m, sustain) {
-  const s = inst.make(SR, m, 0, 1.2, inst.layerOf ? inst.layerOf(0.8) : 0);
-  const pre = s.pre ?? 0;
-  const perc = inst.kind === 'perc';
-  const a = pre + Math.round((sustain ? 0.25 : 0) * SR);
-  const b = Math.min(s.l.length, pre + Math.round((sustain ? 1.0 : perc ? 0.15 : 0.35) * SR));
-  if (b - a < 100) return -120;
-  let p = 0;
-  for (const ch of s.r ? [s.l, s.r] : [s.l]) {
-    const k = kWeight(ch, SR);
-    let acc = 0;
-    for (let i = a; i < b; i++) acc += k[i] * k[i];
-    p += acc / (b - a);
-  }
-  if (!s.r) p *= 2; // mono plays on both channels (constant-power pan at centre ≈ equal power)
-  return 10 * Math.log10(p / 2 + 1e-14);
-}
-
-const A = await loadAudio();
-const synth = { ...A.INSTRUMENTS };
-installBank(A);
-const rows = [];
-for (const spec of A.SAMPLED_SPECS) {
-  const s = synth[spec.id];
-  const smp = A.INSTRUMENTS[spec.id];
-  if (!smp || smp === s) continue;
-  const set = A.SAMPLE_SETS.find((x) => x.name === spec.set);
-  const roots = set.zones.map((z) => z.p);
-  let lo = USED[spec.id]?.[0] ?? Math.round(Math.min(...roots));
-  let hi = USED[spec.id]?.[1] ?? Math.round(Math.max(...roots));
-  const pitches = spec.unpitched ? [60] : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(lo + (hi - lo) * f));
-  const sustain = smp.kind === 'sustain';
-  const mean = (xs) => 10 * Math.log10(xs.reduce((a, v) => a + Math.pow(10, v / 10), 0) / xs.length);
-  // the sampled instrument without its current trim
-  const trim = spec.gainDb ?? 0;
-  const lSmp = mean(pitches.map((m) => noteLoudness(smp, m, sustain))) - trim;
-  const lSyn = s ? mean(pitches.map((m) => noteLoudness(s, m, s.kind === 'sustain'))) : null;
-  // loudest sample peak over every zone at v = 1.0 (without the current trim)
-  let peak = 0;
-  for (const z of set.zones) {
-    const vr = spec.rr === 'set' || spec.rr === 'art' ? z.r : 0;
-    let sm;
-    try {
-      sm = smp.make(SR, spec.unpitched ? 60 : Math.round(z.p), vr, 1.0, z.l);
-    } catch {
-      continue;
+  for (const [sid, song] of Object.entries(A.SONGS)) {
+    for (const [ch, def] of Object.entries(song.channels)) {
+      const spec = specOf(def.inst);
+      if (!spec || sampled[def.inst] === synth[def.inst]) continue;
+      const lu = {};
+      for (const [kind, defs] of [['synth', synth], ['sampled', sampled]]) {
+        use(defs);
+        const r = await A.renderSong(song, SR, { slicer: new A.Slicer(1e9), solo: [ch], raw: true });
+        lu[kind] = integratedLoudness(r.left, r.right, SR);
+      }
+      if (!Number.isFinite(lu.synth) || !Number.isFinite(lu.sampled)) continue;
+      rows.push({ set: label, song: sid, ch, inst: def.inst, id: spec.id, synth: lu.synth, sampled: lu.sampled, diff: lu.sampled - lu.synth });
     }
-    for (const ch of sm.r ? [sm.l, sm.r] : [sm.l]) for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]));
   }
-  const peakRawDb = 20 * Math.log10(peak + 1e-12) - trim;
-  rows.push({ id: spec.id, used: !!USED[spec.id], lSyn, lSmp, kind: smp.kind, peakRawDb });
+  use(sampled);
+  return { A, rows };
 }
-const med = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-const mPitched = med(rows.filter((r) => r.used && r.lSyn !== null && r.kind !== 'perc').map((r) => r.lSyn));
-const mPerc = med(rows.filter((r) => r.used && r.lSyn !== null && r.kind === 'perc').map((r) => r.lSyn));
-console.log(`median synth loudness the songs use: pitched ${mPitched.toFixed(1)} LU, percussion ${mPerc.toFixed(1)} LU (K-weighted dB)`);
-console.log('id            synth LU  sampled LU   gainDb  peak@v1');
+
+const sets = [await measureSet('songs', '')];
+if (SONGS2) sets.push(await measureSet('songs2', SONGS2));
+const A = sets[0].A;
+const rows = sets.flatMap((s) => s.rows);
+const byId = new Map();
+for (const r of rows) (byId.get(r.id) ?? byId.set(r.id, []).get(r.id)).push(r);
+const med = (xs) => {
+  const v = [...xs].sort((a, b) => a - b);
+  return v.length % 2 ? v[v.length >> 1] : 0.5 * (v[v.length / 2 - 1] + v[v.length / 2]);
+};
+console.log('per channel (sampled - synth, integrated LUFS of the solo channel):');
+for (const r of rows) console.log(`  ${r.set.padEnd(6)} ${(r.song + '.' + r.ch).padEnd(22)} ${r.inst.padEnd(13)} synth ${r.synth.toFixed(1).padStart(6)}  sampled ${r.sampled.toFixed(1).padStart(6)}  diff ${(r.diff >= 0 ? '+' : '') + r.diff.toFixed(1)}`);
+// ids the synth had before the samples (the songs were mixed against the synth): the sampled
+// instrument moves to the synth's level. Ids the Audio 2.0 brief added (NEW_IDS: the recorded
+// instrument is the reference the songs are mixed against): the synthesized fallback moves instead.
+console.log('\nid            channels  median diff   min    max   adjusted          now -> new');
 const gains = {};
-for (const r of rows) {
-  const ref = r.used && r.lSyn !== null ? r.lSyn : r.kind === 'perc' ? mPerc : mPitched;
-  let g = Math.max(-24, Math.min(24, ref - r.lSmp));
-  // new ids: sane default level (peak cap); ids the songs use: loudness parity with the synth they
-  // were mixed against (transient peaks are handled by the songs' channel gains + master soft clip)
-  const capped = !r.used && r.peakRawDb + g > 0;
-  if (capped) g = -r.peakRawDb;
-  gains[r.id] = Math.round(g * 10) / 10;
-  console.log(`${r.id.padEnd(13)} ${r.lSyn === null ? '    -   ' : r.lSyn.toFixed(1).padStart(8)}  ${r.lSmp.toFixed(1).padStart(9)}  ${gains[r.id].toFixed(1).padStart(7)}  ${(r.peakRawDb + gains[r.id]).toFixed(1).padStart(6)} dBFS${r.used ? '' : '  (new id: median)'}${capped ? '  (peak-capped)' : ''}`);
+const trims = {};
+for (const spec of A.SAMPLED_SPECS) {
+  const rs = byId.get(spec.id);
+  if (!rs) continue;
+  const d = rs.map((r) => r.diff);
+  const m = med(d);
+  const isNew = A.NEW_IDS.includes(spec.id);
+  const now = isNew ? A.FALLBACK_TRIM_DB[spec.id] ?? 0 : spec.gainDb ?? 0;
+  const next = Math.abs(m) < 0.3 ? now : Math.round((isNew ? now + m : now - m) * 10) / 10;
+  (isNew ? trims : gains)[spec.id] = next;
+  console.log(`${spec.id.padEnd(13)} ${String(rs.length).padStart(8)}  ${(m >= 0 ? '+' : '') + m.toFixed(2).padStart(5)}    ${Math.min(...d).toFixed(1).padStart(5)}  ${Math.max(...d).toFixed(1).padStart(5)}   ${isNew ? 'synth fallback' : 'sampled gainDb'}  ${now.toFixed(1).padStart(5)} -> ${next.toFixed(1)}`);
 }
+if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ rows, gains, trims }, null, 1));
 if (WRITE) {
   const file = path.join(ROOT, 'src', 'audio', 'sampled.ts');
   let src = fs.readFileSync(file, 'utf8');
@@ -138,5 +100,14 @@ if (WRITE) {
     src = src.replace(re, (_m, a) => `${a}${g}`);
   }
   fs.writeFileSync(file, src);
-  console.log('updated', file);
+  const ifile = path.join(ROOT, 'src', 'audio', 'instruments.ts');
+  let isrc = fs.readFileSync(ifile, 'utf8');
+  const table = Object.entries({ ...A.FALLBACK_TRIM_DB, ...trims })
+    .filter(([, v]) => v)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(', ');
+  isrc = isrc.replace(/export const FALLBACK_TRIM_DB: Record<string, number> = \{[^}]*\};/, `export const FALLBACK_TRIM_DB: Record<string, number> = { ${table} };`);
+  fs.writeFileSync(ifile, isrc);
+  console.log('updated', file, 'and', ifile);
 }

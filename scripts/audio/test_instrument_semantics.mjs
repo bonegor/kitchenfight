@@ -131,6 +131,90 @@ const rms = (x, a, b) => {
   const ch1 = A.debugChoice('mandolin', 69, 1, 1);
   check(ch0 && ch1 && ch0.zone.o !== ch1.zone.o, `mandolin up/down strokes use different recordings (zones ${ch0?.zone.p.toFixed(2)} / ${ch1?.zone.p.toFixed(2)})`);
 }
+// tremolo strokes must speak at once at every pitch (recordings with pick noise before the pluck put
+// the real attack 20-40 ms late and left a dip of tens of ms in every stroke): per stroke, the 5 ms RMS
+// reaches -10 dB of the stroke's maximum within 6 ms, and never dips more than 24 dB below it
+for (const m of [61, 69, 72, 76]) {
+  const part = () => [{ s: 0, d: 8, m, v: 0.8, ch: 'x', trem: true }];
+  const sg = song('mandolin', [part]);
+  const r = await render(sg);
+  const inst = A.INSTRUMENTS.mandolin;
+  const comp = A.compileSong(sg, { gate: () => inst.gate ?? 1, plucked: () => true });
+  const evs = comp.events.filter((e) => e.ch === 'x');
+  const x = r.left;
+  const W = Math.round(0.005 * SR);
+  const cs = new Float64Array(x.length + 1);
+  for (let i = 0; i < x.length; i++) cs[i + 1] = cs[i] + x[i] * x[i];
+  const r5 = (t) => Math.sqrt((cs[t] - cs[Math.max(0, t - W)]) / W);
+  let worstAtt = 0;
+  let worstDip = 0;
+  for (let k = 1; k < evs.length - 1; k++) {
+    const a = Math.round(evs[k].t * SR);
+    const b = Math.round(evs[k + 1].t * SR);
+    let pk = 0;
+    for (let t = a; t < b; t++) pk = Math.max(pk, r5(t));
+    let t10 = a;
+    while (t10 < b && r5(t10) < pk * Math.pow(10, -10 / 20)) t10++;
+    worstAtt = Math.max(worstAtt, ((t10 - a) / SR) * 1000);
+    let mn = Infinity;
+    for (let t = a + W; t < b; t++) mn = Math.min(mn, r5(t));
+    worstDip = Math.min(worstDip, 20 * Math.log10(mn / pk + 1e-12));
+  }
+  check(worstAtt <= 6 && worstDip >= -24, `mandolin tremolo m=${m}: every stroke within -10 dB of its peak after <= ${worstAtt.toFixed(1)} ms (limit 6), deepest dip ${worstDip.toFixed(1)} dB (limit -24)`);
+}
+// ---------------------------------------------------------------- short articulation
+// short notes of slow-attack instruments (bowed strings, chorus, flute) play the short articulation:
+// they speak at once and sit at the level of a long note's sustain, without a click
+for (const [id, m] of [['violin', 76], ['strings', 67], ['cello', 50], ['choir', 64], ['flute', 79]]) {
+  const inst = A.INSTRUMENTS[id];
+  if (!inst.shortArt) {
+    check(false, `${id}: has a short articulation`);
+    continue;
+  }
+  const part = () => [
+    { s: 1, d: 0.12, m, v: 0.8, ch: 'x', vr: 0 },
+    { s: 3, d: 2.4, m, v: 0.8, ch: 'x', vr: 0 },
+  ];
+  const r = await render(song(id, [part], { steps: 8, spb: 1, bpm: 60 }));
+  const x = r.left;
+  const W = Math.round(0.005 * SR);
+  const cs = new Float64Array(x.length + 1);
+  for (let i = 0; i < x.length; i++) cs[i + 1] = cs[i] + x[i] * x[i];
+  const r5 = (t) => Math.sqrt((cs[t] - cs[Math.max(0, t - W)]) / W);
+  const a = Math.round(1 * SR);
+  let pk = 0;
+  for (let t = a; t < a + Math.round(0.12 * SR); t++) pk = Math.max(pk, r5(t));
+  let t10 = a - Math.round(0.03 * SR);
+  while (r5(t10) < pk * Math.pow(10, -10 / 20)) t10++;
+  const att = ((t10 - a) / SR) * 1000;
+  const lvShort = 20 * Math.log10(rms(x, a + Math.round(0.02 * SR), a + Math.round(0.11 * SR)) + 1e-12);
+  const b = Math.round(3 * SR);
+  const lvLong = 20 * Math.log10(rms(x, b + Math.round(0.8 * SR), b + Math.round(2.0 * SR)) + 1e-12);
+  // no step: the 1 ms before the note's first sample vs. its first ms
+  check(Math.abs(att) <= 15 && Math.abs(lvShort - lvLong) <= 3, `${id}: a 0.12 s note speaks ${att.toFixed(1)} ms from the beat (limit 15) at ${(lvShort - lvLong).toFixed(1)} dB re a long note's sustain (limit +-3)`);
+}
+// ---------------------------------------------------------------- stereo image of ensembles
+// mono recordings of ensembles / cymbals play a second take on the right channel: a centred note is
+// wide (L/R correlation well under 1) but not hollow
+for (const [id, m, lo, hi] of [['strings', 67, 0.3, 0.85], ['choir', 64, 0.3, 0.85], ['accordion', 69, 0.3, 0.85], ['crash', 60, -0.1, 0.6], ['tamtam', 60, -0.1, 0.7], ['strStab', 67, 0.3, 0.85]]) {
+  const inst = A.INSTRUMENTS[id];
+  const sm = inst.make(SR, m, 0, 1.5, inst.layerOf ? inst.layerOf(0.8) : 0);
+  if (!sm.r) {
+    check(false, `${id}: stereo note`);
+    continue;
+  }
+  const a = (sm.pre ?? 0) + Math.round(0.05 * SR);
+  const b = Math.min(sm.l.length, a + Math.round(1.0 * SR));
+  let ll = 0, rr = 0, lr = 0;
+  for (let i = a; i < b; i++) {
+    ll += sm.l[i] * sm.l[i];
+    rr += sm.r[i] * sm.r[i];
+    lr += sm.l[i] * sm.r[i];
+  }
+  const rho = lr / Math.sqrt(ll * rr + 1e-30);
+  const bal = 10 * Math.log10(ll / (rr + 1e-30));
+  check(rho >= lo && rho <= hi && Math.abs(bal) < 3, `${id}: L/R correlation ${rho.toFixed(2)} (range ${lo}..${hi}), L/R balance ${bal.toFixed(1)} dB`);
+}
 // ---------------------------------------------------------------- tambourine articulations
 {
   const inst = A.INSTRUMENTS.tamb;
@@ -164,22 +248,112 @@ const rms = (x, a, b) => {
 }
 // ---------------------------------------------------------------- round robin alternation
 for (const [id, m] of [['timp', 41], ['pizz', 62], ['strStab', 67]]) {
-  // hits 4 s apart so no tail of a ringing hit overlaps the next one
-  const part = () => [0, 4, 8, 12].map((s) => ({ s, d: 1, m, v: 0.8, ch: 'x' }));
-  const r = await render(song(id, [part], { steps: 16, spb: 1, bpm: 60 }));
-  const seg = (k) => r.left.subarray(Math.round((4 * k) * SR), Math.round((4 * k + 0.05) * SR));
+  // hits 4 s apart so no tail of a ringing hit overlaps the next one (from 1 s: a note at 0 s has
+  // its pre-roll clipped at the buffer start)
+  const part = () => [1, 5, 9, 13].map((s) => ({ s, d: 1, m, v: 0.8, ch: 'x' }));
+  const r = await render(song(id, [part], { steps: 17, spb: 1, bpm: 60 }));
+  const seg = (k) => r.left.subarray(Math.round((1 + 4 * k - 0.1) * SR), Math.round((1 + 4 * k + 0.05) * SR));
   const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
   check(!same(seg(0), seg(1)) && same(seg(0), seg(2)), `${id}: repeated notes alternate round robins (1st != 2nd, 1st == 3rd)`);
+}
+// ---------------------------------------------------------------- ringing notes capped by maxLen
+// a recording that rings longer than its instrument's maxLen fades out over its last 0.3 s instead of
+// being cut (a 6 ms cut of a bell still at -20 dB is a click)
+for (const [id, m] of [['bell', 72], ['glock', 84], ['triangle', 60], ['crash', 60], ['pan', 60], ['anvil', 60], ['timp', 41]]) {
+  const inst = A.INSTRUMENTS[id];
+  const sm = inst.make(SR, m, 0, 0, inst.layerOf ? inst.layerOf(0.9) : 0);
+  const x = sm.l;
+  const n = x.length;
+  const pre = sm.pre ?? 0;
+  const db = (a, b) => 20 * Math.log10(rms(x, a, b) + 1e-12);
+  let pk = -200;
+  for (let a = pre; a + 2400 < Math.min(n, pre + 24000); a += 1200) pk = Math.max(pk, db(a, a + 2400));
+  const endLv = db(n - Math.round(0.003 * SR), n) - pk;
+  const before = db(n - Math.round(0.33 * SR), n - Math.round(0.3 * SR)) - pk;
+  // either it has died away by itself, or the last 0.3 s fade it out smoothly
+  const ok = endLv < -45 || (before - endLv > 15 && endLv < -30);
+  check(ok, `${id}: ends ${endLv.toFixed(1)} dB re its loudest 50 ms (0.3 s before the end: ${before.toFixed(1)} dB), length ${(n / SR).toFixed(2)} s`);
+}
+// ---------------------------------------------------------------- round robins never identical
+// variant 1 of a repeated note borrows the neighbouring recording (<= 3.5 semitones) or, where there
+// is none, replays the take with a micro-variation: never sample-identical to variant 0
+for (const id of ['guitar', 'harp', 'harpsi', 'steelGuitar', 'timp', 'mandolin', 'ubass', 'pizz', 'strStab']) {
+  const inst = A.INSTRUMENTS[id];
+  const spec = A.SAMPLED_SPECS.find((x) => x.id === id);
+  const set = A.SAMPLE_SETS.find((x) => x.name === spec.set);
+  const lo = Math.min(...set.zones.map((z) => z.lo));
+  const hi = Math.max(...set.zones.map((z) => z.hi));
+  let same = 0;
+  let n = 0;
+  for (let m = lo; m <= hi; m++) {
+    for (const v of [0.4, 0.9]) {
+      const layer = inst.layerOf ? inst.layerOf(v) : 0;
+      const a = inst.make(SR, m, 0, 0.4, layer);
+      const b = inst.make(SR, m, 1, 0.4, layer);
+      const pa = a.pre ?? 0;
+      const pb = b.pre ?? 0;
+      const N = Math.round(0.2 * SR);
+      let ab = 0, aa = 0, bb = 0;
+      for (let i = 0; i < N; i++) {
+        const x = a.l[pa + i] ?? 0;
+        const y = b.l[pb + i] ?? 0;
+        ab += x * y;
+        aa += x * x;
+        bb += y * y;
+      }
+      const c = ab / Math.sqrt(aa * bb + 1e-30);
+      const identical = c > 0.9999 && Math.abs(10 * Math.log10((aa + 1e-30) / (bb + 1e-30))) < 0.05;
+      if (identical) same++;
+      n++;
+    }
+  }
+  check(same === 0, `${id}: variant 0 / 1 differ on every note (${same} of ${n} note/velocity pairs sample-identical)`);
 }
 // ---------------------------------------------------------------- velocity layers + gain
 for (const id of ['mandolin', 'guitar', 'snare', 'timp', 'piano']) {
   const inst = A.INSTRUMENTS[id];
   const vs = [0.3, 0.5, 0.7, 0.9, 1.1];
   const layers = vs.map((v) => inst.layerOf(v));
-  const part = () => vs.map((v, i) => ({ s: i * 2, d: 1, m: id === 'snare' ? 60 : id === 'timp' ? 41 : 67, v, ch: 'x' }));
-  const r = await render(song(id, [part], { steps: 10, spb: 1, bpm: 60 }));
-  const lv = vs.map((_, i) => 20 * Math.log10(rms(r.left, Math.round(2 * i * SR), Math.round((2 * i + 0.25) * SR)) + 1e-9));
+  // one variant throughout (timpani variant 1 is the soft stroke by design)
+  const part = () => vs.map((v, i) => ({ s: 1 + i * 2, d: 1, m: id === 'snare' ? 60 : id === 'timp' ? 41 : 67, v, ch: 'x', vr: 0 }));
+  const r = await render(song(id, [part], { steps: 12, spb: 1, bpm: 60 }));
+  const lv = vs.map((_, i) => 20 * Math.log10(rms(r.left, Math.round((1 + 2 * i) * SR), Math.round((1 + 2 * i + 0.25) * SR)) + 1e-9));
   const mono = lv.every((l, i) => i === 0 || l > lv[i - 1]);
   check(mono, `${id}: layers ${layers.join(',')} for v ${vs.join('/')}; level ${lv.map((l) => l.toFixed(1)).join(' < ')} dB`);
+}
+// ---------------------------------------------------------------- articulations at every velocity
+// cymbal / bass drum variant 1 = roll (recorded at one dynamic): a roll must stay a roll at any
+// velocity (the articulation is chosen before the velocity layer)
+for (const id of ['cymbal', 'bassDrum']) {
+  const inst = A.INSTRUMENTS[id];
+  const res = [0.4, 0.8, 1.1].map((v) => {
+    const s = inst.make(SR, 60, 1, 3, inst.layerOf(v));
+    const pre = s.pre ?? 0;
+    const a = 20 * Math.log10(rms(s.l, pre, pre + Math.round(0.3 * SR)) + 1e-12);
+    const b = 20 * Math.log10(rms(s.l, pre + Math.round(2 * SR), pre + Math.round(2.5 * SR)) + 1e-12);
+    const c = A.debugChoice(id, 60, 1, inst.layerOf(v));
+    return { v, r: c?.zone.r, a, b };
+  });
+  // (a roll sustains: less than 8 dB down after 2 s; a single hit is 15-20 dB down)
+  const ok = res.every((x) => x.r === 1 && x.b > x.a - 8);
+  check(ok, `${id}: variant 1 is the roll at v 0.4/0.8/1.1 (zones r=${res.map((x) => x.r).join('/')}; 0-0.3 s vs 2-2.5 s: ${res.map((x) => `${x.a.toFixed(1)}→${x.b.toFixed(1)}`).join(', ')} dB)`);
+}
+// variant loudness semantics kept from the synth: timpani variant 1 = soft stroke (about -4.5 dB),
+// tambourine accents (v4/5) about +2 dB over hits, shakes (v2/3) about -3 dB under hits
+{
+  const lu = (id, m, vr) => {
+    const inst = A.INSTRUMENTS[id];
+    const s = inst.make(SR, m, vr, 0, 0);
+    const pre = s.pre ?? 0;
+    return 20 * Math.log10(rms(s.l, pre, Math.min(s.l.length, pre + Math.round(0.3 * SR))) + 1e-12);
+  };
+  const t0 = lu('timp', 41, 0);
+  const t1 = lu('timp', 41, 1);
+  check(t1 < t0 - 3 && t1 > t0 - 7, `timp: variant 1 (soft stroke) ${(t1 - t0).toFixed(1)} dB re variant 0 (synth -4.5)`);
+  const tb = [0, 1, 2, 3, 4, 5].map((v) => lu('tamb', 60, v));
+  const hit = (tb[0] + tb[1]) / 2;
+  const shake = (tb[2] + tb[3]) / 2;
+  const acc = (tb[4] + tb[5]) / 2;
+  check(acc > hit + 0.8 && shake < hit - 1.5, `tamb: accents ${(acc - hit).toFixed(1)} dB, shakes ${(shake - hit).toFixed(1)} dB re plain hits (synth +2.2 / -3.2)`);
 }
 process.exitCode = bad ? 1 : 0;

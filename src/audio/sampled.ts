@@ -109,10 +109,20 @@ export interface SampledSpec {
   attack?: number;
   /** a new note on the same channel + pitch stops the previous one (plucked strings) */
   choke?: boolean;
-  /** natural length cap (s) for ringing samples */
+  /** natural length cap (s) for ringing samples (a longer recording gets a long fade-out, not a cut) */
   maxLen?: number;
   /** variant → articulation (round robin index in the set) for 'art' sets, e.g. tambourine */
   art?: number[][];
+  /** per-variant gain (dB, indexed by variant): keeps the synth's variant semantics where the
+   *  recordings are loudness-normalised (tambourine accents / shakes, the soft timpani stroke) */
+  vg?: number[];
+  /** stereo width for mono sets: target L/R correlation of a centred note (ensembles: the right
+   *  channel plays another take / neighbouring recording, so sections sound like sections) */
+  width?: number;
+  /** sustained instruments with a slow recorded attack: notes whose gate is at most this many
+   *  seconds play the short articulation (the recording entered in its sustain, at the loop start,
+   *  with a fast fade-in — the way SSO builds its solo staccatos from the sustains) */
+  short?: number;
 }
 
 const S = (id: string, set: string, kind: SampledSpec['kind'], release: number, o: Partial<SampledSpec> = {}): SampledSpec => ({ id, set, kind, release, ...o });
@@ -123,9 +133,9 @@ const S = (id: string, set: string, kind: SampledSpec['kind'], release: number, 
  */
 export const SAMPLED_SPECS: SampledSpec[] = [
   // accordion family (one recorded instrument, three voicings)
-  S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, gainDb: 6.2 }),
-  S('accordionDry', 'accordion', 'sustain', 0.05, { gate: 0.92, lp: 4200, gainDb: 6.2 }),
-  S('accChord', 'accordion', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, gainDb: 6.1 }),
+  S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, width: 0.65, gainDb: 6.2 }),
+  S('accordionDry', 'accordion', 'sustain', 0.05, { gate: 0.92, lp: 4200, width: 0.8, gainDb: 6.2 }),
+  S('accChord', 'accordion', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, width: 0.85, gainDb: 6.1 }),
   // plucked
   S('mandolin', 'mandolin', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.5], gainDb: 0.7 }),
   S('guitar', 'guitar', 'pluck', 0.12, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.7], gainDb: 3.4 }),
@@ -134,44 +144,44 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('harpsi', 'harpsichord', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.1 }),
   S('harp', 'harp', 'pluck', 0.3, { gate: 1, choke: true, variants: 2, rr: 'neighbor', gainDb: 2.7 }),
   // strings
-  S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, gainDb: 6.3 }),
-  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, gainDb: 6.4 }),
-  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', gainDb: 1.3 }),
+  S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, short: 0.3, gainDb: 6.3 }),
+  S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, width: 0.65, short: 0.3, gainDb: 6.4 }),
+  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', width: 0.65, gainDb: 1.3 }),
   S('pizz', 'pizz', 'pluck', 0.08, { gate: 1, choke: true, variants: 2, rr: 'set', gainDb: 0.1 }),
   S('ubass', 'ubass', 'pluck', 0.08, { gate: 0.9, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.2 }),
-  S('cello', 'cello', 'sustain', 0.16, { gate: 0.96, gainDb: 4.8 }),
-  S('contrabass', 'contrabass', 'sustain', 0.18, { gate: 0.95, gainDb: 4.9 }),
+  S('cello', 'cello', 'sustain', 0.16, { gate: 0.96, short: 0.3, gainDb: 4.8 }),
+  S('contrabass', 'contrabass', 'sustain', 0.18, { gate: 0.95, short: 0.3, gainDb: 4.9 }),
   // brass
-  S('brass', 'brass', 'sustain', 0.09, { gate: 0.92, gainDb: 5.6 }),
-  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, gainDb: 6.3 }),
+  S('brass', 'brass', 'sustain', 0.09, { gate: 0.92, width: 0.88, gainDb: 5.6 }),
+  S('brassSoft', 'horns', 'sustain', 0.14, { gate: 0.92, width: 0.88, gainDb: 6.3 }),
   S('tuba', 'tuba', 'sustain', 0.07, { gate: 0.85, gainDb: 3.7 }),
   S('trumpet', 'trumpet', 'sustain', 0.09, { gate: 0.92, gainDb: 4.8 }),
   S('trombone', 'trombone', 'sustain', 0.1, { gate: 0.92, gainDb: 4.4 }),
   S('horn', 'horn', 'sustain', 0.12, { gate: 0.92, gainDb: 4.8 }),
   // woodwinds
-  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, gainDb: 6 }),
+  S('flute', 'flute', 'sustain', 0.08, { gate: 0.9, short: 0.2, gainDb: 6 }),
   S('piccolo', 'piccolo', 'sustain', 0.07, { gate: 0.9, gainDb: 4.8 }),
   S('clarinet', 'clarinet', 'sustain', 0.08, { gate: 0.9, gainDb: 4.6 }),
   S('oboe', 'oboe', 'sustain', 0.08, { gate: 0.9, gainDb: 4.4 }),
   S('bassoon', 'bassoon', 'sustain', 0.08, { gate: 0.9, gainDb: 4.4 }),
   // voices / organ
-  S('choir', 'choir', 'sustain', 0.4, { gate: 0.98, gainDb: 6.1 }),
-  S('choirO', 'choir', 'sustain', 0.4, { gate: 0.98, lp: 1400, gainDb: 7.1 }),
-  S('organ', 'organ', 'sustain', 0.08, { gate: 0.95, gainDb: 4.8 }),
+  S('choir', 'choir', 'sustain', 0.4, { gate: 0.98, width: 0.65, short: 0.3, gainDb: 6.1 }),
+  S('choirO', 'choir', 'sustain', 0.4, { gate: 0.98, lp: 1400, width: 0.65, short: 0.3, gainDb: 7.1 }),
+  S('organ', 'organ', 'sustain', 0.08, { gate: 0.95, width: 0.85, gainDb: 4.8 }),
   // mallets / bells
   S('glock', 'glock', 'pluck', 0.4, { ring: true, maxLen: 2.2, gainDb: 3.5 }),
   S('xylophone', 'xylophone', 'pluck', 0.1, { ring: true, gainDb: 6.2 }),
   S('vibes', 'vibes', 'pluck', 0.3, { gate: 1, gainDb: 4.4 }),
   S('celesta', 'celesta', 'pluck', 0.3, { gate: 1, layers: [0.7], gainDb: 5 }),
   S('bell', 'chimes', 'pluck', 1, { ring: true, maxLen: 4, gainDb: -0.3 }),
-  S('timp', 'timpani', 'pluck', 0.6, { ring: true, maxLen: 3.2, variants: 2, rr: 'set', layers: [0.55], gainDb: 3.8 }),
+  S('timp', 'timpani', 'pluck', 0.6, { ring: true, maxLen: 3.2, variants: 2, rr: 'set', layers: [0.55], vg: [0, -4.5], gainDb: 3.8 }),
   // percussion (unpitched; variants keep the synth semantics)
-  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', gainDb: -9.1 }),
+  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', vg: [0, 0, -3.5, -3.5, 2, 2, -2, -2], gainDb: -9.1 }),
   S('snare', 'snare', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.45, 0.65, 0.85], gainDb: 4.4 }),
-  S('crash', 'crash', 'perc', 0.5, { ring: true, unpitched: true, maxLen: 3, variants: 2, rr: 'set', layers: [0.75], gainDb: 4.4 }),
+  S('crash', 'crash', 'perc', 0.5, { ring: true, unpitched: true, maxLen: 3, variants: 2, rr: 'set', layers: [0.75], width: 0.3, gainDb: 4.4 }),
   S('kick', 'kick', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.5, 0.85], gainDb: 9.6 }),
   S('triangle', 'triangle', 'perc', 0.3, { ring: true, unpitched: true, maxLen: 2.5, variants: 2, rr: 'set', layers: [0.7], gainDb: -1 }),
-  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'art', art: [[0, 2], [1, 3]], gainDb: 1.5 }),
+  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'art', art: [[0], [1], [2], [3]], gainDb: 1.5 }),
   S('pan', 'panclang', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 1.6, variants: 2, rr: 'set', layers: [0.8], gainDb: -0.3 }),
   S('anvil', 'anvil', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 2, variants: 2, rr: 'set', layers: [0.45, 0.8], gainDb: 0.1 }),
   S('castanets', 'castanets', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'set', gainDb: 0.2 }),
@@ -181,7 +191,7 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('flexatone', 'flexatone', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 4.5 }),
   S('cymbal', 'cymbal', 'perc', 0.6, { unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 5.1 }),
   S('bassDrum', 'bassdrum', 'perc', 0.4, { unpitched: true, variants: 2, rr: 'art', layers: [0.5, 0.85], gainDb: 0.4 }),
-  S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', gainDb: 4.4 }),
+  S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', width: 0.4, gainDb: 4.4 }),
   S('claves', 'claves', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.7], gainDb: 3.9 }),
   S('ratchet', 'ratchet', 'perc', 0.1, { ring: true, unpitched: true, variants: 3, rr: 'art', gainDb: 2.6 }),
   S('toyWhistle', 'toywhistle', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 2.1 }),
@@ -285,7 +295,8 @@ export function addSampleSet(def: SampleSetDef, pcm: SetPcm): boolean {
       chs.push(out);
     }
     // smooth MP3 coding error at loop seams: crossfade the material before le into the
-    // material before ls (sample-identical in the source, so this only removes codec noise)
+    // material before ls (equal in the source after the build's loop crossfade, so this only
+    // removes codec noise)
     for (const z of scaled.zones) if (z.ls !== undefined && z.le !== undefined) for (const c of chs) seamFix(c, z.o + z.ls, z.o + z.le);
     bank.set(def.name, { def: scaled, sr: scaled.sr, ch: chs, k });
     return true;
@@ -362,7 +373,9 @@ export function installSampleBank(data: BankData, register: (defs: InstDef[]) =>
 
 function seamFix(c: Int16Array, ls: number, le: number): void {
   const L = le - ls;
-  const n = Math.min(64, Math.floor(L / 4), ls);
+  // up to 512 samples: MP3 coding noise differs on the two sides of the seam (pre-echo spreads up
+  // to a granule), the build made the material before le equal to the material before ls
+  const n = Math.min(512, Math.floor(L / 4), ls);
   if (n < 4 || le > c.length) return;
   for (let i = 0; i < n; i++) {
     const w = (i + 1) / (n + 1);
@@ -472,32 +485,60 @@ interface Choice {
   zone: ZoneDef;
   /** target pitch after octave folding */
   midi: number;
-  /** extra detune (cents) and gain for alternate takes */
+  /** extra detune (cents) and gain for alternate takes / variant semantics */
   cents: number;
   gain: number;
+  /** octaves the requested pitch was folded by (0 = played at pitch) */
+  fold: number;
 }
+
+/** zones of the velocity layer nearest to `layer` */
+function nearestLayer(pool: ZoneDef[], layer: number): ZoneDef[] {
+  let lay = pool[0].l;
+  for (const z of pool) if (Math.abs(z.l - layer) < Math.abs(lay - layer) || (Math.abs(z.l - layer) === Math.abs(lay - layer) && z.l < lay)) lay = z.l;
+  return pool.filter((z) => z.l === lay);
+}
+
+/** furthest a borrowed neighbouring recording may be from the target pitch (semitones) */
+const NEIGHBOR_MAX = 3.5;
+/** micro-variation of a repeated take when no other recording exists (cents, linear gain) */
+const MICRO_CENTS = 3;
+const MICRO_GAIN = Math.pow(10, -0.4 / 20);
 
 function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: number, layer: number): Choice | null {
   const zones = set.def.zones;
   if (!zones.length) return null;
-  // available layers / articulations
-  let art = 0;
+  let pool: ZoneDef[];
+  let micro = false;
   if (spec.rr === 'art') {
-    const a = spec.art ? spec.art[variant % spec.art.length] : [variant];
-    art = a[0];
-  } else if (spec.rr === 'set') art = variant;
-  const layers = [...new Set(zones.map((z) => z.l))].sort((a, b) => a - b);
-  const lay = layers.reduce((best, l) => (Math.abs(l - layer) < Math.abs(best - layer) ? l : best), layers[0]);
-  let pool = zones.filter((z) => z.l === lay && z.r === art);
-  if (!pool.length) pool = zones.filter((z) => z.l === lay && z.r === 0);
-  if (!pool.length) pool = zones.filter((z) => z.l === lay);
-  if (!pool.length) pool = zones;
+    // articulations (roll vs hit, shake vs accent): the articulation decides first, the velocity
+    // layer only within it (a roll recorded at one dynamic stays a roll at every velocity)
+    const alts = spec.art ? spec.art[variant % spec.art.length] : [variant];
+    pool = zones.filter((z) => alts.includes(z.r));
+    if (!pool.length) pool = zones.filter((z) => z.r === 0);
+    if (!pool.length) pool = zones;
+    pool = nearestLayer(pool, layer);
+  } else {
+    // round robins: the velocity layer decides first, the take within it; a layer without the
+    // requested take repeats its first take with a micro-variation (never sample-identical)
+    pool = nearestLayer(zones, layer);
+    const want = spec.rr === 'set' ? variant : 0;
+    const rr = pool.filter((z) => z.r === want);
+    if (rr.length) pool = rr;
+    else {
+      const r0 = pool.filter((z) => z.r === 0);
+      if (r0.length) pool = r0;
+      micro = variant % 2 === 1;
+    }
+  }
+  const vgDb = spec.vg ? spec.vg[variant % spec.vg.length] ?? 0 : 0;
+  const vg = vgDb ? Math.pow(10, vgDb / 20) : 1;
   if (spec.unpitched) {
-    const z = spec.art && spec.rr === 'art' ? pool[(variant >> 0) % pool.length] : pool[0];
-    return { zone: z, midi: z.p, cents: 0, gain: 1 };
+    const z = pool[0];
+    return { zone: z, midi: z.p, cents: micro ? MICRO_CENTS : 0, gain: vg * (micro ? MICRO_GAIN : 1), fold: 0 };
   }
   // fold into the playable range by octaves (the build extends the outermost zones' key ranges
-  // by a fourth, or more where the instrument tolerates it — see ext_up in the build script)
+  // by a fourth — a fifth for the chorus, down a fifth for the chimes)
   let lo = Infinity;
   let hi = -Infinity;
   for (const z of pool) {
@@ -520,42 +561,73 @@ function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: 
     }
   }
   let cents = 0;
-  let gain = 1;
+  let gain = vg;
   if (spec.rr === 'neighbor' && variant % 2 === 1) {
-    // borrow the adjacent zone (≤ 2 semitones away) for a natural-sounding alternate take
-    let alt: ZoneDef | null = null;
-    let altD = Infinity;
-    for (const z of pool) {
-      if (z === zone) continue;
-      const d = Math.abs(m - z.p);
-      if (d <= 2.05 && d < altD) {
-        altD = d;
-        alt = z;
-      }
-    }
+    // alternate take: borrow the nearest other recording (<= NEIGHBOR_MAX semitones away)
+    const alt = neighborZone(pool, zone, m, NEIGHBOR_MAX);
     if (alt) zone = alt;
+    else micro = true;
   }
-  return { zone, midi: m, cents, gain };
+  if (micro) {
+    cents += MICRO_CENTS;
+    gain *= MICRO_GAIN;
+  }
+  return { zone, midi: m, cents, gain, fold: Math.round((m - midiIn) / 12) };
+}
+
+/** nearest zone to pitch m other than `not` within maxD semitones (same pool), or null */
+function neighborZone(pool: ZoneDef[], not: ZoneDef, m: number, maxD: number): ZoneDef | null {
+  let alt: ZoneDef | null = null;
+  let altD = Infinity;
+  for (const z of pool) {
+    if (z === not || z.o === not.o) continue;
+    const d = Math.abs(m - z.p);
+    if (d <= maxD && d < altD) {
+      altD = d;
+      alt = z;
+    }
+  }
+  return alt;
+}
+
+/**
+ * The recording the right channel plays for `width` instruments: another take of the same
+ * velocity layer (two-take sets), else the nearest other recording within 4 semitones, else null
+ * (the same zone, detuned a few cents).
+ */
+function partnerZone(spec: SampledSpec, set: StoredSet, c: Choice, layer: number): ZoneDef | null {
+  const zones = set.def.zones;
+  const sameLayer = zones.filter((z) => z.l === c.zone.l);
+  if (spec.rr === 'set') {
+    const other = sameLayer.filter((z) => z.r !== c.zone.r);
+    const alt = neighborZone(other, c.zone, c.midi, 1.5);
+    if (alt) return alt;
+  }
+  const pool = sameLayer.filter((z) => z.r === c.zone.r && c.midi >= z.lo - 4 && c.midi <= z.hi + 4);
+  void layer;
+  return neighborZone(pool, c.zone, c.midi, 4);
 }
 
 // ---------------------------------------------------------------------------------------------
 // Rendering one sample
 // ---------------------------------------------------------------------------------------------
 
-/** Unroll [0, n) of a zone at the set rate: copies, wraps the loop, applies the loop decay. */
-function unroll(set: StoredSet, z: ZoneDef, c: number, n: number): Float32Array {
+/** Unroll n samples of a zone at the set rate from zone position `from` (0 = its start): copies,
+ *  wraps the loop, applies the loop decay. */
+function unroll(set: StoredSet, z: ZoneDef, c: number, n: number, from = 0): Float32Array {
   const src = set.ch[Math.min(c, set.ch.length - 1)];
   const out = new Float32Array(n);
   const k = set.k;
-  const o = z.o;
+  const o = z.o + from;
   const looped = z.ls !== undefined && z.le !== undefined && z.le - z.ls > 16;
   if (!looped) {
-    const m = Math.min(n, z.n, src.length - o);
+    const m = Math.min(n, z.n - from, src.length - o);
     for (let i = 0; i < m; i++) out[i] = src[o + i] * k;
     return out;
   }
-  const ls = z.ls as number;
-  const le = z.le as number;
+  // positions below relative to the read start (from <= ls)
+  const ls = (z.ls as number) - from;
+  const le = (z.le as number) - from;
   const L = le - ls;
   const head = Math.min(n, le);
   for (let i = 0; i < head; i++) out[i] = src[o + i] * k;
@@ -640,14 +712,20 @@ function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
     ring: spec.ring,
     gate: spec.gate,
     choke: spec.choke,
+    shortArt: spec.kind === 'sustain' && spec.short ? spec.short : undefined,
     layerOf(v: number): number {
       let l = 0;
       for (const t of thresholds) if (v >= t) l++;
       return l;
     },
-    make(sr: number, midi: number, variant: number, lenSec: number, layer = 0): Sample {
+    noteInfo(midi: number, layer: number): { fold: number; shift: number } | null {
+      if (spec.unpitched) return null;
+      const c = chooseZone(spec, set, midi, 0, layer);
+      return c ? { fold: c.fold, shift: c.midi - c.zone.p } : null;
+    },
+    make(sr: number, midi: number, variant: number, lenSec: number, layer = 0, art = 0): Sample {
       try {
-        return renderZone(spec, set, sr, midi, variant, lenSec, layer, gain);
+        return renderZone(spec, set, sr, midi, variant, lenSec, layer, gain, art === 1 && !!spec.short);
       } catch {
         return { l: new Float32Array(Math.max(1, Math.round(0.05 * sr))), r: null };
       }
@@ -656,25 +734,36 @@ function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
   return def;
 }
 
-function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number): Sample {
-  const ch = chooseZone(spec, set, midi, variant, layer);
-  if (!ch) return { l: new Float32Array(1), r: null };
-  const z = ch.zone;
-  const shift = spec.unpitched ? 0 : ch.midi - z.p + ch.cents / 100;
+interface Rendered {
+  chans: Float32Array[];
+  /** output samples before the onset */
+  pre: number;
+  /** the ringing recording was longer than maxLen (gets a long fade instead of a cut) */
+  truncated: boolean;
+}
+
+/** Resample one zone to the output rate/pitch: unroll (loop/decay), band-limit, sinc-resample.
+ *  short: the short articulation (sustained zones): enter at the loop start with a fast fade-in. */
+function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, cents: number, sr: number, lenSec: number, g: number, short = false): Rendered {
+  const shift = (spec.unpitched ? 0 : midi - z.p) + cents / 100;
   const pitchRatio = Math.pow(2, shift / 12);
   const inc = (pitchRatio * set.sr) / sr; // source samples per output sample
+  const looped = z.ls !== undefined && z.le !== undefined && z.le - z.ls > 16;
+  if (short && looped) return renderShort(set, z, midi, pitchRatio, inc, sr, lenSec, g);
   const preOut = Math.round(z.pre / inc);
   // output length: requested (plus the pre-roll), or the natural ring capped by maxLen
   const natural = naturalSec(z, set.sr) / pitchRatio;
   let sec = lenSec > 0 ? lenSec : natural;
-  if (spec.maxLen) sec = Math.min(sec, spec.maxLen);
+  let truncated = false;
+  if (spec.maxLen && sec > spec.maxLen) {
+    sec = spec.maxLen;
+    truncated = natural > spec.maxLen;
+  }
   if (lenSec <= 0 && z.ls === undefined) sec = Math.min(sec, natural);
   const nOut = Math.max(16, preOut + Math.round(sec * sr));
   const nSrc = Math.ceil(nOut * inc) + TAPS + 2;
-  const chans = set.ch.length;
-  const outs: Float32Array[] = [];
-  const g = z.g * gain * ch.gain;
-  for (let c = 0; c < chans; c++) {
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < set.ch.length; c++) {
     const tmp = unroll(set, z, c, nSrc);
     // shifting up so far that source content would land above the output Nyquist: band-limit first
     if (inc > 0.98) firLowpassInPlace(tmp, 0.46 / inc);
@@ -683,29 +772,125 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
     padded.set(tmp, HALF - 1);
     const out = new Float32Array(nOut);
     resampleInto(padded, out, inc, g);
-    outs.push(out);
+    chans.push(out);
   }
+  return { chans, pre: preOut, truncated };
+}
+
+/** The short articulation of a sustained zone: the recording entered at its loop start — the steady
+ *  sustain the zone was normalised on, so a short note sits at the level of a long note's sustain —
+ *  with a raised-cosine fade-in of max(10 ms, one period) <= 25 ms; the beat sits 30 % into the fade
+ *  (where it reaches about -10 dB). */
+function renderShort(set: StoredSet, z: ZoneDef, midi: number, pitchRatio: number, inc: number, sr: number, lenSec: number, g: number): Rendered {
+  const from = z.ls as number;
+  const fadeSec = Math.min(0.025, Math.max(0.01, 1 / (440 * Math.pow(2, (midi - 69) / 12))));
+  const nFade = Math.max(8, Math.round(fadeSec * set.sr * pitchRatio)); // source samples
+  const preOut = Math.round((0.3 * nFade) / inc);
+  const nOut = Math.max(16, preOut + Math.round(Math.max(lenSec, 0.1) * sr));
+  const nSrc = Math.ceil(nOut * inc) + TAPS + 2;
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < set.ch.length; c++) {
+    const tmp = unroll(set, z, c, nSrc, from);
+    for (let i = 0; i < nFade && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / nFade);
+    if (inc > 0.98) firLowpassInPlace(tmp, 0.46 / inc);
+    const padded = new Float32Array(tmp.length + TAPS);
+    padded.set(tmp, HALF - 1);
+    const out = new Float32Array(nOut);
+    resampleInto(padded, out, inc, g);
+    chans.push(out);
+  }
+  return { chans, pre: preOut, truncated: false };
+}
+
+/**
+ * Mono sets with `width`: the left channel plays the chosen recording, the right one another take
+ * or the neighbouring recording at the same pitch; rotated to the target correlation and
+ * normalised to the power of one channel (a centred note keeps its loudness).
+ */
+function widen(a: Rendered, b: Rendered, width: number): Rendered {
+  const P = Math.max(a.pre, b.pre);
+  const n = Math.max(a.chans[0].length + P - a.pre, b.chans[0].length + P - b.pre);
+  const xl = new Float32Array(n);
+  const xr = new Float32Array(n);
+  xl.set(a.chans[0], P - a.pre);
+  xr.set(b.chans[0], P - b.pre);
+  const th = Math.asin(clamp(width, 0, 1)) / 2;
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  // keep the power of the primary take: correlated takes (the detuned fallback) sum louder
+  let pl = 0;
+  let pr = 0;
+  let plr = 0;
+  for (let i = 0; i < n; i += 4) {
+    pl += xl[i] * xl[i];
+    pr += xr[i] * xr[i];
+    plr += xl[i] * xr[i];
+  }
+  const kr = pr > 0 ? Math.sqrt(pl / pr) : 0; // right take scaled to the left one's power
+  const rho = pl > 0 && pr > 0 ? plr / Math.sqrt(pl * pr) : 0;
+  const norm = 1 / Math.sqrt(Math.max(1e-6, c * c + s * s + 2 * c * s * rho));
+  const L = new Float32Array(n);
+  const R = new Float32Array(n);
+  const cl = c * norm;
+  const sl = s * norm;
+  for (let i = 0; i < n; i++) {
+    const l = xl[i];
+    const r = xr[i] * kr;
+    L[i] = cl * l + sl * r;
+    R[i] = cl * r + sl * l;
+  }
+  return { chans: [L, R], pre: P, truncated: a.truncated || b.truncated };
+}
+
+function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false): Sample {
+  const ch = chooseZone(spec, set, midi, variant, layer);
+  if (!ch) return { l: new Float32Array(1), r: null };
+  const z = ch.zone;
+  let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short);
+  if (spec.width !== undefined && set.ch.length === 1) {
+    const pz = partnerZone(spec, set, ch, layer);
+    const b = pz
+      ? renderOne(spec, set, pz, ch.midi, ch.cents, sr, lenSec, pz.g * gain * ch.gain, short)
+      : renderOne(spec, set, z, ch.midi, ch.cents + 6, sr, lenSec, z.g * gain * ch.gain, short);
+    r = widen(r, b, spec.width);
+  }
+  const outs = r.chans;
+  const preOut = r.pre;
+  // the pre-roll before the attack starts from silence: fade in its first <= 1.5 ms (only ever the
+  // pre-roll, never the attack), so MP3 pre-echo of an attack right after the zone start cannot step in
+  const nPre = Math.min(preOut, Math.round(0.0015 * sr));
+  for (const o of outs) for (let i = 0; i < nPre && i < o.length; i++) o[i] *= (i + 0.5) / nPre;
   // tone shaping
   if (spec.lp) for (const o of outs) Biquad.lp(sr, spec.lp, 0.7071).run(o);
   if (spec.hp) for (const o of outs) Biquad.hp(sr, spec.hp, 0.7071).run(o);
-  // optional extra attack ramp (after the onset) and a click-free end
+  // optional extra attack ramp (after the onset) and a click-free end; a ringing recording cut at
+  // maxLen fades out over its last 0.3 s (a 6 ms cut of a bell still at -20 dB is a click)
   const nA = spec.attack ? Math.round(spec.attack * sr) : 0;
   for (const o of outs) {
     for (let i = 0; i < nA && preOut + i < o.length; i++) o[preOut + i] *= i / nA;
-    const nf = Math.min(o.length >> 2, Math.round(0.006 * sr));
-    for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= i / nf;
+    const nf = r.truncated ? Math.min(o.length >> 2, Math.round(0.3 * sr)) : Math.min(o.length >> 2, Math.round(0.006 * sr));
+    if (r.truncated) for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / nf);
+    else for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= i / nf;
   }
   return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut };
 }
 
 /** test hook: the zone a note would use (measurement scripts) */
-export function debugChoice(id: string, midi: number, variant: number, layer: number): { set: string; zone: ZoneDef; midi: number } | null {
-  const spec = SAMPLED_SPECS.find((s) => s.id === id);
+export function debugChoice(
+  id: string,
+  midi: number,
+  variant: number,
+  layer: number,
+): { set: string; zone: ZoneDef; midi: number; cents: number; gain: number; fold: number; partner: ZoneDef | null } | null {
+  const real = INSTRUMENT_ALIASES[id] ?? id;
+  const spec = SAMPLED_SPECS.find((s) => s.id === real);
   if (!spec) return null;
   const set = bank.get(spec.set);
   if (!set) return null;
   const c = chooseZone(spec, set, midi, variant, layer);
-  return c ? { set: spec.set, zone: c.zone, midi: c.midi } : null;
+  if (!c) return null;
+  const partner = spec.width !== undefined && set.ch.length === 1 ? partnerZone(spec, set, c, layer) : null;
+  return { set: spec.set, zone: c.zone, midi: c.midi, cents: c.cents, gain: c.gain, fold: c.fold, partner };
 }
 
 export const SAMPLED_IDS = (): string[] => SAMPLED_SPECS.map((s) => s.id);

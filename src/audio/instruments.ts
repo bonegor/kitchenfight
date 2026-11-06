@@ -56,7 +56,15 @@ export interface InstDef {
   /** re-striking the same pitch on the same channel stops the previous note (plucked strings:
    *  the plectrum/finger damps the string — tremolo re-plucks stay distinct) */
   choke?: boolean;
-  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number): Sample;
+  /** sampled instruments: how a note is played — octaves it is folded by to reach the recorded
+   *  range, semitones it is shifted from its recording (render warnings for the arrangers) */
+  noteInfo?(midi: number, layer: number): { fold: number; shift: number } | null;
+  /** sampled sustained instruments with a slow natural attack (bowed strings, chorus, flute): notes
+   *  whose gate is at most this many seconds play the short articulation — make(..., art = 1) enters
+   *  the recording in its sustain with a fast fade-in, so a short note speaks at once (long notes
+   *  keep the recorded attack) */
+  shortArt?: number;
+  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number): Sample;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1762,6 +1770,34 @@ const NEW_SYNTH: InstDef[] = [
   bassDrum,
 ];
 
+/**
+ * Level trims (dB) of the new ids' synthesized fallbacks. For these ids the recorded instrument is
+ * the reference the songs are mixed against, so each fallback is matched to it (per song channel,
+ * BS.1770 integrated loudness: scripts/audio/calibrate_instruments.mjs --write keeps this table).
+ */
+export const FALLBACK_TRIM_DB: Record<string, number> = {};
+
+/** ids the Audio 2.0 brief added (recorded instrument first, synthesized fallback) */
+export const NEW_IDS: string[] = NEW_SYNTH.map((d) => d.id);
+
+function trimmed(d: InstDef): InstDef {
+  return {
+    ...d,
+    make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number): Sample {
+      const s = d.make(sr, midi, variant, lenSec, layer, art);
+      const db = FALLBACK_TRIM_DB[d.id] ?? 0;
+      if (!db) return s;
+      const g = Math.pow(10, db / 20);
+      const sc = (c: Float32Array): Float32Array => {
+        const o = new Float32Array(c.length);
+        for (let i = 0; i < c.length; i++) o[i] = c[i] * g;
+        return o;
+      };
+      return { ...s, l: sc(s.l), r: s.r ? sc(s.r) : null };
+    },
+  };
+}
+
 export const INSTRUMENTS: Record<string, InstDef> = {};
 for (const d of [
   accordion('accordion', 1, [-13, 0, 14], 0.7, 0.03),
@@ -1807,7 +1843,7 @@ for (const d of [
   riser,
   panClang,
   wah,
-  ...NEW_SYNTH,
+  ...NEW_SYNTH.map(trimmed),
 ]) {
   INSTRUMENTS[d.id] = d;
 }
