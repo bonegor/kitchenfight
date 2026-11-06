@@ -127,7 +127,7 @@ export const boss: SongDef = {
   humanize: 0.003,
   reverb: { rt60: 1.5, size: 1.15, damp: 0.5, predelay: 0.02, er: 0.35, hp: 300, lp: 7000, wet: 1.25 },
   channels: {
-    tpt: { inst: 'trumpet', gain: -5.2, pan: 0.08, send: 0.18 },
+    tpt: { inst: 'trumpet', gain: -4.9, pan: 0.08, send: 0.18 },
     acc: { inst: 'accordion', gain: -5.2, pan: -0.12, send: 0.15 },
     gtr: { inst: 'guitar', gain: -11, pan: -0.3, send: 0.15, hum: 0.5 },
     melS: { inst: 'strStab', gain: -3.7, pan: -0.15, send: 0.2, hum: 0.4 },

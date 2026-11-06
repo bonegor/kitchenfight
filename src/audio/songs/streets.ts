@@ -145,7 +145,7 @@ export const streets: SongDef = {
     clar: { inst: 'clarinet', gain: -7.7, pan: 0.26, send: 0.2 },
     clarN: { inst: 'clarinet', gain: -1.6, pan: 0.04, send: 0.22 },
     cello: { inst: 'cello', gain: -9.6, pan: -0.18, send: 0.2 },
-    accC: { inst: 'accChord', gain: -13.4, pan: -0.12, send: 0.1, hum: 0.5 },
+    accC: { inst: 'accChord', gain: -12.7, pan: -0.12, send: 0.1, hum: 0.5 },
     gtr: { inst: 'guitar', gain: -9, pan: 0.38, send: 0.12, hum: 0.6 },
     bass: { inst: 'uprightBass', gain: -5, pan: 0, send: 0.05, hum: 0.4 },
     tuba: { inst: 'tuba', gain: -12.1, pan: 0, send: 0.04, hum: 0.4 },

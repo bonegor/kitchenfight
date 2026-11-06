@@ -184,9 +184,9 @@ export const finalboss: SongDef = {
     // strings
     vln: { inst: 'strStab', gain: 0.8, pan: -0.28, send: 0.22, hum: 0.25 },
     vla: { inst: 'strStab', gain: -4.7, pan: 0.12, send: 0.22, hum: 0.25 },
-    strS: { inst: 'strings', gain: -8, pan: -0.1, send: 0.3, hum: 0 },
+    strS: { inst: 'strings', gain: -7.7, pan: -0.1, send: 0.3, hum: 0 },
     vc: { inst: 'cello', gain: -5.7, pan: 0.25, send: 0.2, hum: 0.25 },
-    cb: { inst: 'contrabass', gain: -3.3, pan: 0.32, send: 0.15, hum: 0.2 },
+    cb: { inst: 'contrabass', gain: -2.8, pan: 0.32, send: 0.15, hum: 0.2 },
     pizz: { inst: 'pizz', gain: 0.7, pan: -0.32, send: 0.15, hum: 0.3 },
     // brass
     brass: { inst: 'brass', gain: -6.4, pan: 0.14, send: 0.25, hum: 0.2 },
@@ -194,13 +194,13 @@ export const finalboss: SongDef = {
     trpC: { inst: 'trumpet', gain: 2.6, pan: 0.06, send: 0.2, hum: 0.15 },
     tbn: { inst: 'trombone', gain: 4, pan: 0.3, send: 0.22, hum: 0.2 },
     horn: { inst: 'brassSoft', gain: -0.6, pan: -0.3, send: 0.3, hum: 0 },
-    tuba: { inst: 'tuba', gain: -3.4, pan: 0.1, send: 0.1, hum: 0.2 },
+    tuba: { inst: 'tuba', gain: -3.1, pan: 0.1, send: 0.1, hum: 0.2 },
     // voices and organ
     choir: { inst: 'choir', gain: -1.6, pan: 0, send: 0.35, hum: 0 },
     choirO: { inst: 'choirO', gain: -3.6, pan: 0, send: 0.4, hum: 0 },
-    organ: { inst: 'organ', gain: -0.8, pan: 0, send: 0.35, hum: 0 },
+    organ: { inst: 'organ', gain: -1.2, pan: 0, send: 0.35, hum: 0 },
     // the cartoon section
-    bsn: { inst: 'bassoon', gain: 1.8, pan: -0.18, send: 0.2, hum: 0.2 },
+    bsn: { inst: 'bassoon', gain: 1.5, pan: -0.18, send: 0.2, hum: 0.2 },
     picc: { inst: 'piccolo', gain: 1, pan: -0.2, send: 0.25, hum: 0.2 },
     xylo: { inst: 'xylophone', gain: -1, pan: 0.3, send: 0.2, hum: 0.2 },
     clar: { inst: 'clarinet', gain: 0, pan: -0.1, send: 0.25, hum: 0.15 },

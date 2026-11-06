@@ -234,10 +234,10 @@ export const trattoria: SongDef = {
   reverb: { rt60: 1.4, size: 0.95, damp: 0.5, predelay: 0.016, er: 0.34, hp: 260, lp: 7600, wet: 1.4 },
   channels: {
     acc: { inst: 'accordion', gain: -4.2, pan: -0.12, send: 0.18 },
-    vln: { inst: 'violin', gain: -2.9, pan: 0.18, send: 0.24 },
-    accH: { inst: 'accordion', gain: -9.4, pan: -0.24, send: 0.2 },
+    vln: { inst: 'violin', gain: -2.6, pan: 0.18, send: 0.24 },
+    accH: { inst: 'accordion', gain: -9, pan: -0.24, send: 0.2 },
     clar: { inst: 'clarinet', gain: -7.7, pan: -0.32, send: 0.22 },
-    accC: { inst: 'accChord', gain: -13.3, pan: -0.2, send: 0.12, hum: 0.5 },
+    accC: { inst: 'accChord', gain: -12.9, pan: -0.2, send: 0.12, hum: 0.5 },
     gtr: { inst: 'guitar', gain: -9, pan: 0.36, send: 0.14, hum: 0.6 },
     pizz: { inst: 'pizz', gain: -11.6, pan: -0.38, send: 0.16, hum: 0.6 },
     bass: { inst: 'uprightBass', gain: -3, pan: 0, send: 0.06, hum: 0.5 },

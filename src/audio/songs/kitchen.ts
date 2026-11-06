@@ -147,11 +147,11 @@ export const kitchen: SongDef = {
   reverb: { rt60: 1.2, size: 0.85, damp: 0.5, predelay: 0.015, er: 0.35, hp: 280, lp: 7000, wet: 1.3 },
   channels: {
     clar: { inst: 'clarinet', gain: -3.6, pan: -0.15, send: 0.18 },
-    acc: { inst: 'accordion', gain: -4.7, pan: 0.1, send: 0.15 },
+    acc: { inst: 'accordion', gain: -4.4, pan: 0.1, send: 0.15 },
     mand: { inst: 'mandolin', gain: -3.4, pan: -0.3, send: 0.18 },
     tpt: { inst: 'trumpet', gain: -1.3, pan: 0.05, send: 0.18 },
     hn: { inst: 'horn', gain: -9, pan: -0.25, send: 0.25 },
-    brs: { inst: 'brass', gain: -8.5, pan: 0.2, send: 0.2, hum: 0.5 },
+    brs: { inst: 'brass', gain: -8.9, pan: 0.2, send: 0.2, hum: 0.5 },
     xylo: { inst: 'xylophone', gain: -14, pan: 0.35, send: 0.2, hum: 0.5 },
     tuba: { inst: 'tuba', gain: -7.9, pan: 0, send: 0.05, hum: 0.4 },
     ubass: { inst: 'uprightBass', gain: -4, pan: 0.05, send: 0.08, hum: 0.5 },

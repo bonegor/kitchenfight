@@ -199,38 +199,43 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
   than eight bars without a breath.
 - **Timing of the slow attacks (no song-side compensation).** An earlier version advanced the
   slow-speaking channels per pitch (`SPEAK` / `tight()`: tuba, accordion, horn, clarinet, brass,
-  trumpet, staccato strings, 8–66 ms earlier than the grid), measured on an older sample bank. The
-  bank now aligns the sustained instruments itself (see `docs/credits/music-samples.md`, "Timing"):
-  every bowed / blown / sung / accordion zone has its beat on the perceptual onset of what it plays
-  (where the RMS over the preceding 5 ms comes within 10 dB of the note's peak), a note shorter than
-  its attack on its own onset, and two takes played together on the onset of their sum. On that bank
-  the old table over-compensated (the parts sounded 14–29 ms ahead of the snare and timpani), so it
-  is gone, and nothing in the song is shifted any more.
+  trumpet, staccato strings, 8–66 ms earlier than the grid), measured on an older sample bank. On
+  the bank that followed it already over-compensated (the accordion, clarinet, horn, tuba and
+  staccato strings sounded 14–29 ms ahead of the snare and timpani, the horn section 15 ms behind:
+  first column below). The bank now aligns sustained attacks itself (see
+  `docs/credits/music-samples.md`, "Timing"): every bowed / blown / sung / accordion zone has its beat
+  on the perceptual onset of what it plays — the 5 ms RMS reaching −10 dB of the note's peak, or for
+  a note that dwells on a plateau below that, its attack — notes keep their sounding length, a note
+  shorter than its attack goes on its own onset, and two takes played together on the onset of their
+  sum. So the table is gone, and nothing in the song is shifted any more.
 
   **In-song check** (each channel rendered solo, dry, through the game renderer with the recorded
   bank; a note's onset is the 5 ms RMS reaching −10 dB of its peak after the valley before it,
   measured on the articulated notes (15 dB or more above what precedes them); the reference is the
   cleanest percussion attack on the same grid step — timpani, bass drum, crash, tambourine, snare;
-  median offset in ms, negative = ahead of the percussion):
+  median offset in ms, negative = ahead of the percussion; notes measured in brackets):
 
   | Channel | With `SPEAK`, previous bank | Now |
   |---------|-----------------------------|-----|
-  | accordion | −16.1 | +0.7 |
-  | staccato strings, tune / chords | −28.5 / −29.3 | −0.4 / +0.7 |
-  | clarinet | −17.8 | +1.4 |
-  | horn | −13.7 | +1.1 |
-  | horn section | +14.6 | −0.1 |
-  | brass section | +1.8 | 0.0 |
-  | tuba | −21.0 | −0.3 |
+  | accordion | −16.1 (7) | +1.5 (5) |
+  | staccato strings, tune / chords | −28.5 / −29.3 (19 / 5) | −0.4 / +0.7 (21 / 5) |
+  | clarinet | −17.8 (1) | +1.4 (1) |
+  | horn | −13.7 (5) | +1.2 (5) |
+  | horn section | +14.6 (2) | +10.0 (2) |
+  | brass section | +1.8 (8) | +1.1 (22) |
+  | tuba | −21.0 (65) | +5.1 (65) |
 
   (The trumpet's notes all join the line legato, with no articulated note on a percussion step.)
-  The tuba's oom now speaks with the snare and timpani on both beats, and the accordion's sixteenth
-  lines no longer drift by pitch. The trumpet channel is 0.3 dB lower (−5.2) than before: on the
-  aligned bank its detached notes sound their whole written length after their onset, which made the
-  channel 0.3 dB louder; the trim keeps the balance below.
-- **Accordion left hand.** The accordion's chord voice (`accChord`) is not used: its low zones take
-  ~100 ms to speak, too slow for off-beat stabs at this tempo, so the street band's off-beats went to
-  the guitar.
+  80–100 % of each channel's articulated notes are now within 10 ms of the percussion (the horn
+  section: one of its two), against 0–75 % before. The tuba's oom speaks with the snare and timpani on
+  both beats (p10–p90 +2.2…+8.7 ms, before −34…−4), and the accordion's sixteenth lines no longer
+  drift by pitch. The channel gains are those the song was balanced with: on the aligned bank a note
+  keeps its sounding length and loudness, only its placement moved.
+- **Accordion left hand.** The accordion's chord voice (`accChord`) is not used: on the bank the song
+  was arranged with, its low zones' beats sat early in a ~100 ms build-up, too slow for off-beat stabs
+  at this tempo, so the street band's off-beats went to the guitar. (On the aligned bank the build-up
+  sounds before the beat and the chord voice reaches −6 dB of its sustain within 8 ms of it; the
+  off-beats stay with the guitar's plucked attack.)
 
 ## Levels (recorded samples)
 

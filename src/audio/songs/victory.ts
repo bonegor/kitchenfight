@@ -204,7 +204,7 @@ export const victory: SongDef = {
   reverb: { rt60: 1.9, size: 1.25, damp: 0.5, predelay: 0.022, er: 0.35, hp: 240, lp: 7500, wet: 1.45 },
   channels: {
     tpt: { inst: 'trumpet', gain: -0.9, pan: 0.08, send: 0.2 },
-    tptS: { inst: 'brass', gain: -6.3, pan: -0.12, send: 0.22 },
+    tptS: { inst: 'brass', gain: -5.9, pan: -0.12, send: 0.22 },
     hrn: { inst: 'brassSoft', gain: -8.5, pan: -0.32, send: 0.3, hum: 0.6 },
     str: { inst: 'strings', gain: -9.2, pan: -0.22, send: 0.28, hum: 0.5 },
     stab: { inst: 'strStab', gain: -9.2, pan: 0.26, send: 0.16, hum: 0.5 },
@@ -221,7 +221,7 @@ export const victory: SongDef = {
     acc: { inst: 'accordion', gain: -6.9, pan: -0.1, send: 0.18 },
     cast: { inst: 'castanets', gain: -9.3, pan: 0.36, send: 0.12, hum: 0.5 },
     // the victory lap only (vamp + tail)
-    accR: { inst: 'accordion', gain: 0.5, pan: -0.12, send: 0.2, hum: 0.6 },
+    accR: { inst: 'accordion', gain: 1, pan: -0.12, send: 0.2, hum: 0.6 },
     mand: { inst: 'mandolin', gain: 1.5, pan: 0.14, send: 0.2, hum: 0.6 },
     clar: { inst: 'clarinet', gain: -4.4, pan: -0.3, send: 0.24, hum: 0.5 },
     accC: { inst: 'accChord', gain: -5.2, pan: -0.2, send: 0.16, hum: 0.5 },

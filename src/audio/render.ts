@@ -65,9 +65,10 @@ const TAIL_TAU = 3.6;
 const CHOKE_SEC = 0.004;
 let CHOKE_FADE = 192;
 let CAP_FADE = 24000;
-/** a note whose pre-roll starts before t = 0 (a first-bar note) enters with a raised-cosine fade over
- *  as much of its build-up as was clipped, within these bounds (s): the build-up it lost becomes a
- *  short swell instead of a cut into its attack */
+/** a note whose pre-roll starts before t = 0 (a first-bar note) fades in from the buffer start: over
+ *  CLIP_FADE_MIN_SEC (linear) — and a sustained note, whose clipped pre-roll is a build-up, over as much
+ *  of it as was clipped (raised cosine, at most CLIP_FADE_MAX_SEC), but never past its onset: a fade
+ *  that reached into the attack would make the note late */
 const CLIP_FADE_MIN_SEC = 0.002;
 const CLIP_FADE_MAX_SEC = 0.01;
 let CLIP_FADE_MIN = 96;
@@ -483,11 +484,14 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   // (short notes of spread attacks: the onset of the note as gated, see Sample.preAt)
   const pre = s.preAt && !ring ? preOfGate(s, ev.gate) : s.pre ?? 0;
   const st = ev.st - pre;
-  // indices relative to the sample start: release starts at the gate end; the end fade is 64
-  // samples after a release, CHOKE_FADE when the next note on the string cuts it short, and
-  // CAP_FADE when the note would ring past the loop seam
-  const relStart = ring ? slen : Math.min(slen, pre + ev.gate);
-  let total = ring ? slen : Math.min(slen, pre + ev.gate + ev.relN);
+  // indices relative to the sample start: release starts at the gate end — `gate` samples after the
+  // onset, or for a sustained recording after its gate anchor (Sample.ga: the note keeps the sounding
+  // length the songs were written against, placed so its perceptual onset is on the beat); the end
+  // fade is 64 samples after a release, CHOKE_FADE when the next note on the string cuts it short,
+  // and CAP_FADE when the note would ring past the loop seam
+  const anchor = s.ga !== undefined && Number.isFinite(s.ga) ? Math.max(0, s.ga) : pre;
+  const relStart = ring ? slen : Math.min(slen, anchor + ev.gate);
+  let total = ring ? slen : Math.min(slen, anchor + ev.gate + ev.relN);
   let fadeN = 64;
   let capped = false;
   const choke = ev.chokeAt === Infinity ? Infinity : ev.chokeAt - st + CHOKE_FADE;
@@ -509,10 +513,12 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
-  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in over what was clipped
-  // (CLIP_FADE_MIN..CLIP_FADE_MAX, raised cosine)
-  const nIn = i0 > 0 ? Math.min(a - i0, Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX))) : 0;
-  const fin = (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn);
+  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in: plucked / struck notes
+  // over CLIP_FADE_MIN (their transient is right at the onset); sustained notes over the build-up they
+  // lost, up to CLIP_FADE_MAX but ending by their onset (ev.st), raised cosine
+  const sus = ev.inst.kind === 'sustain';
+  const nIn = i0 <= 0 ? 0 : Math.min(a - i0, sus ? Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX, ev.st)) : CLIP_FADE_MIN);
+  const fin = sus ? (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn) : (i: number): number => (i - i0) / nIn;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;

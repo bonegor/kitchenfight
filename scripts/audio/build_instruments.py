@@ -37,7 +37,7 @@ from scipy import signal
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from instrument_dsp import (attack_points, crossfade_loop, db, dc_block, decode_mp3, encode_mp3, envelope,  # noqa: E402
                             decay_slope, env_range_db, fade, find_loop, flatten_loop_envelope, flatten_sustain_loop, ftom,
-                            heard_onset, load_audio, loop_corr, loudness,
+                            load_audio, loop_corr, loudness, onset_power, perceptual_onset,
                             max_short_loudness, measure_pitch, measure_pitch_centroid, measure_pitch_decay,
                             measure_pitch_hfit, measure_pitch_hsum, measure_pitch_track, mtof, note_name, onset_index,
                             onset10_index, resample, rms, seam_click, single_reed, to_mono, yin_f0)
@@ -64,11 +64,17 @@ TARGET_LU = -20.0  # loudness every zone is normalised to (K-weighted dB), appli
 # sustained sets (bowed / blown / sung, the accordion): the attack model's beat (-12 dB of the early
 # sustain on the faded attack) anchors the zone's loop, pitch and loudness windows; the beat the
 # manifest stores is then moved onto the perceptual onset of what plays (sustain_beat: the decoded
-# zone, loop repeated, at the suite's att10 = 0). The build-up before it stays as pre-roll, at most
-# SUS_MAX_PRE (at the recording's own pitch; instruments.ts MAX_PRE_SEC covers it shifted down a
-# fourth); a slower swell is entered later, faded in (raised cosine, ending SUS_FADE_GAP before the beat).
+# zone, loop repeated; instrument_dsp.perceptual_onset: the suite's att10 = 0, or the attack of a note
+# that dwells on a plateau below -10 dB). The build-up before it stays as pre-roll, at most SUS_MAX_PRE
+# (at the recording's own pitch; instruments.ts MAX_PRE_SEC covers it shifted down a fourth). A slower
+# swell is entered later, with a SUS_FADE raised-cosine fade-in (ending at least SUS_FADE_GAP before the
+# beat) — only where it is still quiet (at most SUS_CUT_DB re the note's maximum): the rest of the
+# build-up keeps its recorded shape, and a louder build-up keeps the recording's start, its beat moving
+# to SUS_MAX_PRE instead (never cut into an attack).
 SUS_MAX_PRE = 0.08
+SUS_FADE = 0.02
 SUS_FADE_GAP = 0.005
+SUS_CUT_DB = -20.0
 
 
 # ---------------------------------------------------------------------------------------------
@@ -117,10 +123,6 @@ class SetSpec:
     max_pre: float = 0.06  # 'perceptual' / 'sustain': longest build-up kept before the beat (s)
     max_attack: float | None = None  # 'sustain': cut slower attacks to reach -6 dB in this time (s)
     fade_in: float = 0.0  # 'sustain': minimum fade-in (s), e.g. chorus samples that start mid-sound
-    # sustained sets: the stored beat — 'heard' = moved onto the perceptual onset (sustain_beat);
-    # 'attack' = the attack model's (the attack start), for a set only ever played as two takes
-    # summed whose attacks open on a soft plateau (the runtime puts the beat on the sum's heard onset)
-    sus_beat: str = 'heard'
     # decay / oneshot
     t_store: float = 1.0  # seconds kept after the onset (decay: before the decay loop ends)
     loop_len: float = 0.25  # loop length target (s)
@@ -445,12 +447,8 @@ SETS: list[SetSpec] = [
         sso_cands('Trombones', r'trombones-sus-([a-g]#?\d)\.wav', hi=51, mix=marcato('Trombones', 'trombones', -2.0))),
             'sustain', quality=5, pre_ms=3, loop_min=0.35, loop_max=0.8, loop_len=0.4, xfade=0.08,
             note='SSO trumpets/trombones: sustain + staccato premix (marcato)'),
-    # (the soft tongued attacks of the horn section hover around -10 dB of their peak for up to 30 ms:
-    # two takes aligned on their -10 dB points sum smeared, partly cancelled, and their body comes
-    # 130-180 ms late; aligned on their attack starts they sum cleanly — brassSoft always plays two
-    # takes, and the runtime puts the beat on the heard onset of their sum)
     SetSpec('horns', 'sso', sso_cands('Horns', r'horns-sus-mp-([a-g]#?\d)-PB-loop\.wav'), 'sustain', quality=5.5,
-            pre_ms=6, slow_onset=True, loop_min=0.45, loop_max=0.9, loop_len=0.45, xfade=0.1, sus_beat='attack'),
+            pre_ms=6, slow_onset=True, loop_min=0.45, loop_max=0.9, loop_len=0.45, xfade=0.1),
     SetSpec('tuba', 'sso', sso_cands('Tuba', r'tuba-sus-([a-g]#?\d)\.wav', mix=marcato('Tuba', 'tuba', -1.0)),
             'sustain', sr=24000, quality=5.5, pre_ms=3, loop_min=0.3, loop_max=0.7, loop_len=0.35, xfade=0.08,
             pitch_harmonics=1, note='SSO tuba sustain + staccato premix'),
@@ -985,15 +983,16 @@ def fade_in_curve(n: int) -> np.ndarray:
     return 0.5 - 0.5 * np.cos(np.pi * (np.arange(n) + 0.5) / n)
 
 
-def sustain_beat(dz: np.ndarray, sr: int, zd: dict) -> dict:
+def sustain_beat(dz: np.ndarray, sr: int, zd: dict) -> tuple[dict, dict]:
     """The beat of a sustained zone on the perceptual onset of what it plays (see SUS_MAX_PRE).
     `dz`: the zone decoded from the sprite (mono, from its built start `o`, `n` samples), `zd`: its
-    built manifest entry. The onset is heard_onset on the held note (the loop repeated): the first
-    point where the RMS over the preceding 5 ms comes within 10 dB of its maximum over the following
-    0.5 s — what the instrument suite's att10 measures, so the zone sounds on the beat like a plucked
-    one. Returns the fields to update: `pre`; for a build-up longer than SUS_MAX_PRE also the later
-    zone start (`o`, `n`, `ls`, `le` shifted by the cut, the audio itself untouched) and the fade-in
-    `fi` the runtime applies over the kept pre-roll."""
+    built manifest entry. The onset is instrument_dsp.perceptual_onset on the held note (the loop
+    repeated, measured over max(5 ms, one period of the zone's pitch)): where the RMS comes within 10 dB
+    of its maximum over the next 0.5 s — what the instrument suite's att10 measures, so the zone sounds
+    on the beat like a plucked one — or, for a note that dwells on a plateau below that, its attack.
+    Returns the fields to update — `pre`; for a quiet build-up longer than SUS_MAX_PRE also the later
+    zone start (`o`, `n`, `ls`, `le` shifted by the cut, the audio itself untouched) and the fade-in `fi`
+    the runtime applies over the kept pre-roll — and the onset details (report)."""
     pre = int(zd['pre'])
     ls, le = zd.get('ls'), zd.get('le')
     need = pre + int(2.0 * sr)
@@ -1001,49 +1000,75 @@ def sustain_beat(dz: np.ndarray, sr: int, zd: dict) -> dict:
         m = to_mono(played_note(dz, ls, le, need))
     else:
         m = np.pad(np.asarray(dz, dtype=np.float64), (0, max(0, need - len(dz))))
+    period = sr / mtof(zd['p'])
     cap = int(round(SUS_MAX_PRE * sr))
     gap = int(round(SUS_FADE_GAP * sr))
-    p = heard_onset(m, sr, pre)
-    # a slow swell: entered SUS_MAX_PRE before the beat, faded in up to SUS_FADE_GAP before it; the
-    # onset is measured again on the faded note (the 5 ms window that reaches the threshold at the
-    # beat is untouched and nothing before it can reach it, unless the entry moved the maximum: then
-    # again from the new beat)
+    p, info = perceptual_onset(m, sr, pre, period)
+    if p <= cap:
+        return {'pre': p}, info
+    # a build-up longer than SUS_MAX_PRE: entered SUS_MAX_PRE before the beat with a short fade-in, where
+    # it is still quiet (the onset measured again on the faded note: the fade can only lower what precedes
+    # the beat); a louder build-up keeps the recording's start and its beat moves to SUS_MAX_PRE (the end
+    # of the build-up sounds a little early instead of an attack being cut)
+    e = onset_power(m, sr, period)
+    top = float(e[:min(len(e), info['p10'] + int(round(0.5 * sr)))].max())
+    w5 = int(round(0.005 * sr))
     s0, fi = 0, 0
-    for _ in range(4):
-        s0 = max(p - cap, 0)
-        if s0 == 0:
-            break
-        fi = max(int(round(0.002 * sr)), p - s0 - gap)
+    for _ in range(6):
+        s0 = p - cap
+        lvl = 10 * math.log10(float(e[min(len(e), s0 + w5) - 1]) / top + 1e-20)
+        if lvl > SUS_CUT_DB:
+            info['capped_db'] = round(lvl, 1)
+            return {'pre': cap}, info
+        fi = max(int(round(0.002 * sr)), min(int(round(SUS_FADE * sr)), p - s0 - gap))
         y = m[s0:].copy()
         y[:fi] *= fade_in_curve(fi)
-        q = s0 + heard_onset(y, sr, p - s0)
-        if q == p:
+        # (fading what precedes the beat leaves the -10 dB point as it is and can only shorten a dwell:
+        # the onset of what plays is the same or later — iterate until the entry point holds)
+        q, qi = perceptual_onset(y, sr, p - s0, period)
+        info = {**qi, 'p10': qi['p10'] + s0, 'cut_db': round(lvl, 1)}
+        if 'attack' in qi:
+            info['attack'] = qi['attack'] + s0
+        q += s0
+        if q <= p:
+            fi = min(fi, max(int(round(0.002 * sr)), q - s0 - gap))
+            p = q
             break
         p = q
-    if s0 == 0:
-        return {'pre': p}
     out = {'o': zd['o'] + s0, 'n': zd['n'] - s0, 'pre': p - s0, 'fi': fi}
     if ls is not None and le is not None:
         out['ls'] = ls - s0
         out['le'] = le - s0
-    return out
+    return out, info
 
 
-def rebeat_zones(spec: SetSpec, s: dict, dec: np.ndarray, shift: int) -> None:
+def rebeat_zones(s: dict, dec: np.ndarray, shift: int) -> None:
     """sustain_beat for every zone of a built set (manifest entries `s['zones']`, updated in place)
     from its decoded sprite `dec` (marker offset `shift`). Each zone keeps its geometry as built
-    (`_built`, not written to the manifest), so beats can be placed again from the same state."""
+    (`_built`, not written to the manifest), so beats can be placed again from the same state; the
+    onset details go to `_onset` (build state only, for the report)."""
     mono = to_mono(dec)
     for zd in s['zones']:
         built = zd.get('_built') or {k: zd[k] for k in ('o', 'n', 'pre', 'ls', 'le') if k in zd}
-        base = {k: v for k, v in zd.items() if k not in ('_built', 'fi')}
+        base = {k: v for k, v in zd.items() if not k.startswith('_') and k not in ('fi', 'ga', 'dw')}
         base.update(built)
         o = base['o'] + shift
-        upd = sustain_beat(mono[o:o + base['n']], s['sr'], base) if spec.sus_beat == 'heard' else {}
+        upd, info = sustain_beat(mono[o:o + base['n']], s['sr'], base)
         zd.clear()
         zd.update(base)
         zd.update(upd)
+        # the gate anchor: the attack model's beat (where the zone's notes were gated from when the
+        # songs' note lengths and the loudness calibration were made), kept in the zone's audio while
+        # the note is placed by its perceptual onset `pre` (sampled.ts ZoneDef.ga)
+        ga = max(0, built['o'] + built['pre'] - zd['o'])
+        if ga != zd['pre']:
+            zd['ga'] = ga
+        # how far the beat moved from the -10 dB point onto the attack of a dwell (perceptual_onset `w`):
+        # the runtime keeps such takes' beats when it sums two of them (sampled.ts renderZone)
+        if info.get('w'):
+            zd['dw'] = round(float(info['w']), 2)
         zd['_built'] = built
+        zd['_onset'] = info
 
 
 def key_ranges(zones: list[Zone], ext_down: int = 5, ext_up: int = 5) -> dict[int, tuple[int, int]]:
@@ -1157,12 +1182,14 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
     # sustained sets: the stored beat on the perceptual onset of what plays (sustain_beat), once
     # everything measured from the built beat (loop, pitch, loudness, the checks above) is done
     if spec.mode == 'sustain':
-        rebeat_zones(spec, {'sr': sr, 'zones': zdefs}, dec, shift)
+        rebeat_zones({'sr': sr, 'zones': zdefs}, dec, shift)
         for zd, z in zip(zdefs, zones):
             b = zd['_built']
             z.info['sus_beat_ms'] = round((zd['o'] + zd['pre'] - b['o'] - b['pre']) * 1000 / sr, 1)
             if 'fi' in zd:
                 z.info['sus_cut_ms'] = round((zd['o'] - b['o']) * 1000 / sr, 1)
+            if zd['_onset'].get('w'):
+                z.info['sus_dwell'] = zd['_onset']['w']
     secs = sum(z.audio.shape[1] for z in zones) / sr
     report.append(f'## {spec.name}  ({len(zones)} zones, {secs:.1f} s audio, {size / 1024:.0f} KB, '
                   f'octave corr {octave:+.0f}, marker shift {shift}, SNR min {min(snrs):.1f} dB, '
@@ -1190,6 +1217,7 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
                       + (f" beat{inf['beat_moved_ms']:+}ms" if 'beat_moved_ms' in inf else '')
                       + (f" heard{inf['sus_beat_ms']:+}ms" if 'sus_beat_ms' in inf else '')
                       + (f" entered+{inf['sus_cut_ms']}ms(faded)" if 'sus_cut_ms' in inf else '')
+                      + (f" dwell{inf['sus_dwell']:.2f}" if 'sus_dwell' in inf else '')
                       + (f" decpre={inf['decay_pre']}" if inf.get('decay_pre') is not None else '')
                       + (f" reed: {inf['reed']}" if inf.get('reed') else '')
                       + (f" loopAMmoved={inf['loop_moved_am']}" if 'loop_moved_am' in inf else '')
@@ -1221,6 +1249,8 @@ def write_manifest(sets: list[dict]) -> None:
         ' *   pre onset position inside the zone              g      gain to the common loudness',
         ' *   ls/le loop start/end inside the zone            dec    decay after ls (dB/s, decaying loops)',
         ' *   fi  fade-in from the zone start (a slow swell entered late: sustained pre-roll cap)',
+        ' *   ga  gate anchor (sustained): a note\'s gate counts from here, its onset `pre` goes on the beat',
+        ' *   dw  dwell weight (sustained): the beat moved from the -10 dB point onto the attack by this much',
         ' */',
         "import type { SampleSetDef } from '../../sampled';",
         '',
@@ -1344,12 +1374,19 @@ def write_credits(sets: list[dict]) -> None:
           '  (<= 0.2 s) play a short articulation — the recording entered in its sustain (at the loop start) with a',
           '  10-25 ms fade-in — so they speak at once; longer notes keep the recorded (slower) attack.',
           '- Timing: every recording is aligned on its perceptual onset — where the RMS over the preceding 5 ms comes',
-          '  within 10 dB of the note\'s peak — so the attack is on the beat; pick / bow noise and slow build-ups sound just',
-          '  before it (at most 80 ms of a sustained build-up: a slower swell is entered later, faded in). Sustained',
-          '  instruments place every note as it is played: a note shorter than its attack on its own onset, two takes',
-          '  played together (`width`) on the onset of their sum (a note shifted from its recording keeps the onset of the',
-          '  recording, played faster or slower); `brassSoft` keeps its two takes on their attack starts (soft tongued',
-          '  attacks) and its notes on the onset of their sum.',
+          '  within 10 dB of the note\'s peak (att10) — so the attack is on the beat; pick / bow noise and slow build-ups',
+          '  sound just before it. Sustained recordings (bowed / blown / sung, the accordion: `instrument_dsp.perceptual_onset`)',
+          '  measure that over max(5 ms, one period) of the held note; one that dwells below the -10 dB point (a bow, breath',
+          '  or tongue attack onto a plateau, then a slow crescendo, where att10 would land on the crescendo) has its beat on',
+          '  the attack instead (zone field `dw`: how far, blended in by how slow the climb is). At most 80 ms of a',
+          '  build-up stays before the beat (about 110 ms on a note played a fourth below its recording); a slower swell is',
+          '  entered later with a 20 ms fade-in, only where it is still 20 dB or more below the note\'s peak (an attack is',
+          '  never cut). A note keeps its sounding length: its gate counts from the attack model\'s beat (`ga`, what the',
+          '  songs\' note lengths and loudness calibration were made with) and the note is moved so that its onset lands on',
+          '  the beat, so short notes of slow attacks are not lengthened. A note shifted from its recording keeps its',
+          '  zone\'s beat (the same point of the attack, played faster or slower); a note shorter than its attack goes on',
+          '  its own onset; two takes played together (`width`) are aligned on their gate anchors (moved to within 15 ms',
+          '  of each other\'s onset) and placed on the onset of their sum, within 25 ms (less for takes that dwell).',
           '- `accordion` plays the recorded musette (two reeds about +5 and +28 cents, beating about 7 Hz at C5);',
           '  `accordionDry` / `accChord` play its lower reed alone (set `accdry`: the recorded attack, then the higher',
           '  reed removed from the loop spectrum), mono, with their own tone (low-pass, high-pass) — no musette beating.',
@@ -1425,11 +1462,14 @@ def main() -> None:
             if os.path.getsize(os.path.join(OUT_DIR, s['file'])) != s['bytes']:
                 raise SystemExit(f"--rebeat: {s['file']} is not the MP3 of this build state")
             shift = int(np.argmax(np.abs(to_mono(dec)[:MARKER_WINDOW]))) - MARKER
-            rebeat_zones(sus[s['name']], s, dec, shift)
+            rebeat_zones(s, dec, shift)
             moved = [(z['o'] + z['pre'] - z['_built']['o'] - z['_built']['pre']) * 1000 / s['sr'] for z in s['zones']]
+            zs = s['zones']
             print(f"{s['name']:11s} beats moved {min(moved):+.1f}..{max(moved):+.1f} ms (median "
-                  f"{float(np.median(moved)):+.1f}), {sum(1 for z in s['zones'] if 'fi' in z)} of {len(s['zones'])} "
-                  f'swells entered late (pre-roll cap {SUS_MAX_PRE * 1000:.0f} ms)', flush=True)
+                  f"{float(np.median(moved)):+.1f}); {sum(1 for z in zs if z['_onset'].get('w'))} of {len(zs)} on the "
+                  f"attack of a dwell (fully {sum(1 for z in zs if z['_onset'].get('w') == 1)}), "
+                  f"{sum(1 for z in zs if 'fi' in z)} swells entered late, {sum(1 for z in zs if 'capped_db' in z['_onset'])} "
+                  f'beats capped (pre-roll cap {SUS_MAX_PRE * 1000:.0f} ms)', flush=True)
         missing = want - {s['name'] for s in out}
         if missing:
             raise SystemExit(f"--rebeat: no build state for {', '.join(sorted(missing))}")
