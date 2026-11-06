@@ -9,7 +9,7 @@
  * click, no reverb gap).
  */
 import { Biquad, clamp, dbToGain, Slicer } from './dsp';
-import { INSTRUMENTS, type InstDef, type Sample } from './instruments';
+import { INSTRUMENTS, MAX_PRE_SEC, type InstDef, type Sample } from './instruments';
 import { applyReverb } from './reverb';
 import { compileSong, type SongDef, type TimedEv } from './sequencer';
 
@@ -56,8 +56,6 @@ export interface RenderOpts {
  *  this long after its note for the seam to be exact (the longest instrument, the sampled tam-tam,
  *  rings 6 s); a longer tail is faded out before the seam (and reported) */
 export const LOOP_PAD = 6;
-/** recorded samples start up to this long before their onset (pre-roll of slow attacks) */
-const MAX_PRE_SEC = 0.1;
 /** a tail cut at the loop seam fades out over this long */
 const CAP_FADE_SEC = 0.5;
 /** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
@@ -67,6 +65,13 @@ const TAIL_TAU = 3.6;
 const CHOKE_SEC = 0.004;
 let CHOKE_FADE = 192;
 let CAP_FADE = 24000;
+/** a note whose pre-roll starts before t = 0 (a first-bar note) enters with a raised-cosine fade over
+ *  as much of its build-up as was clipped, within these bounds (s): the build-up it lost becomes a
+ *  short swell instead of a cut into its attack */
+const CLIP_FADE_MIN_SEC = 0.002;
+const CLIP_FADE_MAX_SEC = 0.01;
+let CLIP_FADE_MIN = 96;
+let CLIP_FADE_MAX = 480;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -268,6 +273,8 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   // fade ends at the new onset)
   CHOKE_FADE = Math.max(16, Math.round(CHOKE_SEC * sr));
   CAP_FADE = Math.round(CAP_FADE_SEC * sr);
+  CLIP_FADE_MIN = Math.max(1, Math.round(CLIP_FADE_MIN_SEC * sr));
+  CLIP_FADE_MAX = Math.max(CLIP_FADE_MIN, Math.round(CLIP_FADE_MAX_SEC * sr));
   const lastOn = new Map<string, MixEv>();
   for (const ev of mixEvs) {
     if (!ev.inst.choke) continue;
@@ -502,14 +509,16 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
-  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in over 2 ms
-  const nIn = i0 > 0 ? Math.min(96, a - i0) : 0;
+  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in over what was clipped
+  // (CLIP_FADE_MIN..CLIP_FADE_MAX, raised cosine)
+  const nIn = i0 > 0 ? Math.min(a - i0, Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX))) : 0;
+  const fin = (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn);
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
     const gs2 = gs * 0.5;
     for (let i = i0; i < a; i++) {
-      const f = i - i0 < nIn ? (i - i0) / nIn : 1;
+      const f = i - i0 < nIn ? fin(i) : 1;
       const vl = sl[i] * f;
       const vr = sr2[i] * f;
       const j = st + i;
@@ -534,7 +543,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const gr = ev.gr;
   if (nIn > 0) {
     for (let i = i0; i < i0 + nIn; i++) {
-      const v = (sl[i] * (i - i0)) / nIn;
+      const v = sl[i] * fin(i);
       const j = st + i;
       L[j] += v * gl;
       R[j] += v * gr;

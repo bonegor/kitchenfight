@@ -232,7 +232,9 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
       the sound leaves the noise floor; when the attack is slower than max_attack (time to -6 dB of
       the sustain) its quiet beginning is cut (with a fade-in) so short notes speak; fade_in forces
       a minimum fade (e.g. a chorus sample that starts mid-sound). The beat is the sus_db (-12 dB)
-      point of the (faded) attack, at most max_pre after the start.
+      point of the (faded) attack, at most max_pre after the start: the build's reference for the
+      zone's loop, pitch and loudness windows (the manifest's beat is then moved onto the perceptual
+      onset of the finished zone: build_instruments.sustain_beat).
     Every zone that does not start from silence gets at least min_fade of fade-in (no click)."""
     m = to_mono(x) if x.ndim > 1 else x
     n = len(m)
@@ -327,6 +329,21 @@ def onset10_index(x: np.ndarray, sr: int, pre: int, rel_db: float = -10.0, look:
     if p.max() <= 0:
         return pre
     return int(t[int(np.argmax(p >= p.max() * 10 ** (rel_db / 10)))])
+
+
+def heard_onset(x: np.ndarray, sr: int, pre: int, rel_db: float = -10.0, look: float = 0.5) -> int:
+    """The beat on the perceptual onset itself: the fixed point p = onset10_index(x, sr, p), i.e. the
+    first point where the RMS over the preceding 5 ms comes within rel_db of its maximum over the
+    first `look` seconds after p — the instrument suite's att10 = 0. Iterated from `pre`: a later
+    beat lengthens the window, which can only raise the maximum (and move the point later), an
+    earlier one the reverse, so the sequence is monotone and settles in a few steps."""
+    p = int(pre)
+    for _ in range(16):
+        q = onset10_index(x, sr, p, rel_db, look)
+        if q == p:
+            break
+        p = q
+    return p
 
 
 def onset_index(x: np.ndarray, sr: int, rel_db: float = -30.0, slow: bool = False) -> int:

@@ -294,9 +294,22 @@ async function renderPattern(A, id) {
   const r = await A.renderSong(song, SR, { slicer: new A.Slicer(1e9), raw: true });
   const meta = notes.map((n, i) => {
     const t = i * gap + 0.5;
-    const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, inst.layerOf ? inst.layerOf(n.v) : 0) : null;
+    const layer = inst.layerOf ? inst.layerOf(n.v) : 0;
+    const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, layer) : null;
     const set = choice ? A.SAMPLE_SETS.find((x) => x.name === choice.set) : null;
-    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, cents: choice ? choice.cents : 0, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0 };
+    // sustained notes: the runtime moves the beat onto the heard onset of what the note plays (the
+    // takes' sum for `width` sets): beat_move = that beat minus where the zone's own beat sits in the
+    // sample (the analysis places the zone by it)
+    let beatMove = 0;
+    if (choice && set && sustain && !SYNTH) {
+      const zpre = (z, cents) => Math.round(z.pre / ((Math.pow(2, (choice.midi - z.p) / 12 + cents / 1200) * set.sr) / SR));
+      let P = zpre(choice.zone, choice.cents);
+      if (spec && spec.width !== undefined && set.ch === 1) P = Math.max(P, choice.partner ? zpre(choice.partner, choice.cents) : zpre(choice.zone, choice.cents + 6));
+      // (the length the mixer renders the note at: the two takes' power match, and so their sum, depends on it)
+      const lenSec = Math.max(0.5, Math.ceil(((Math.round(noteSec * SR) + Math.round(inst.release * 3.6 * SR)) / SR + 0.03) * 4) / 4);
+      beatMove = (inst.make(SR, n.m, n.vr, lenSec, layer).pre ?? P) - P;
+    }
+    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, cents: choice ? choice.cents : 0, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0, beat_move: beatMove };
   });
   const base = path.join(OUT, id);
   writeWav(base + '.wav', [r.left, r.right], SR);

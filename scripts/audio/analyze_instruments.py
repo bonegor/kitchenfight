@@ -45,7 +45,7 @@ from scipy.io import wavfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from instrument_dsp import decode_mp3, loudness, max_short_loudness, measure_pitch_centroid, mtof, to_mono  # noqa: E402
-from build_instruments import SETS, measure_zone_pitch  # noqa: E402  (the build's windows and estimator)
+from build_instruments import SETS, fade_in_curve, measure_zone_pitch  # noqa: E402  (the build's windows and estimator)
 
 SPEC = {sp.name: sp for sp in SETS}
 
@@ -71,14 +71,17 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
     if not z or not n.get('set'):
         return None
     x, zsr = sprite(n['set'])
-    zone = to_mono(x)[z['o']:z['o'] + min(z['n'], z.get('ls', z['n']))]
+    zone = to_mono(x)[z['o']:z['o'] + min(z['n'], z.get('ls', z['n']))].copy()
+    if z.get('fi'):  # a slow swell entered late fades in (as the runtime plays it)
+        zone[:z['fi']] *= fade_in_curve(z['fi'])
     # (cents: the micro-variation of a repeated take — round robin without a second recording)
     ratio = 2 ** ((n['folded'] - z['p']) / 12 + n.get('cents', 0) / 1200) if not n.get('unpitched') else 2 ** (n.get('cents', 0) / 1200)
     inc = ratio * zsr / out_sr
     # reference at the output rate: zone index i -> output (i - pre) / inc after the onset
     t_out = np.arange(int(len(zone) / inc))
     ref = np.interp(t_out * inc, np.arange(len(zone)), zone)
-    pre_out = z['pre'] / inc
+    # (sustained notes: the runtime moved the beat by beat_move onto the heard onset of what plays)
+    pre_out = z['pre'] / inc + n.get('beat_move', 0)
     a = int(round(s - pre_out))
     L = min(len(ref), int(0.12 * out_sr) + int(pre_out))
     # search +-half a period at most (periodic tones correlate at every period)
@@ -99,9 +102,10 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
 
 INHARMONIC = {'bell', 'timp', 'tubularBell', 'timpani', 'orchHit'}
 FILTERED = {'accordionDry', 'accChord', 'choirO'}
-# not graded on onset: sustained (bowed / blown / sung: the beat is on the faded attack, how soon it
-# speaks is graded by check_instrument_attacks.mjs) and swelling articulations (rolls, tam-tam,
-# flexatone, whistles, shakers)
+# not graded on onset: sustained (bowed / blown / sung: their beat is on the onset of what a note plays —
+# the two takes' sum for `width` instruments, which this analysis takes apart — graded with how soon
+# they speak by check_instrument_attacks.mjs) and swelling articulations (rolls, tam-tam, flexatone,
+# whistles, shakers)
 SLOW = {'strings', 'violin', 'cello', 'contrabass', 'choir', 'choirO', 'brassSoft', 'horn', 'cymbal', 'bassDrum',
         'accordion', 'accordionDry', 'accChord', 'brass', 'tuba', 'trumpet', 'trombone', 'flute', 'piccolo', 'clarinet',
         'oboe', 'bassoon', 'organ', 'tamtam', 'flexatone', 'ratchet', 'toyWhistle', 'vibraslap', 'shaker', 'tamb'}
@@ -199,16 +203,27 @@ def analyze(path_json: str) -> dict:
         # fundamental to measure) are not measured here either
         trusted = bool(sp and z and z.get('p') is not None and (round(z['p']) < sp.trust_below or round(z['p']) > sp.trust_above))
         if not unpitched and not trusted:
-            # sustained: inside the loop of the 2.6 s note (what long notes sound like)
+            # sustained: inside the loop of the 2.6 s note (what long notes sound like), the median of
+            # 8 windows spread over one loop period: the frame-wise estimator reads a loop of a wide
+            # ensemble (the chorus: 60+ cents of spread between its singers) up to 10 cents
+            # differently depending on where the window cuts it, which the beat placement must not decide
             pw = (1.3, 2.5) if sustain else (sp.pitch_win if sp else (0.05, 0.4))
             w0 = s + int(pw[0] / (ratio if not sustain else 1) * sr)
             w1 = s + int(pw[1] / (ratio if not sustain else 1) * sr)
-            if sp:
-                pm = measure_zone_pitch(sp, m[None, :], sr, w0, min(w1, b), n['folded'], 1.0, {})
-            else:
-                pm = measure_pitch_centroid(m[None, :], sr, w0, min(w1, b), n['folded'], harmonics=4)
-            if pm is not None:
-                rec['cents'] = round((pm - n['folded']) * 100, 2)
+            offs = [0]
+            if sustain and z and 'ls' in z and 'le' in z and z['le'] - z['ls'] > 16:
+                lo_out = (z['le'] - z['ls']) / (ratio * (n.get('set_sr') or 32000) / sr)
+                offs = [int((k - 4) * lo_out / 8) for k in range(8)]
+            pms = []
+            for d in offs:
+                if sp:
+                    pm = measure_zone_pitch(sp, m[None, :], sr, w0 + d, min(w1 + d, b), n['folded'], 1.0, {})
+                else:
+                    pm = measure_pitch_centroid(m[None, :], sr, w0 + d, min(w1 + d, b), n['folded'], harmonics=4)
+                if pm is not None:
+                    pms.append(pm)
+            if pms:
+                rec['cents'] = round((float(np.median(pms)) - n['folded']) * 100, 2)
         # loudness of the body (the build's normalisation window)
         if sp and sp.loud_max:
             lu = max_short_loudness(x, sr, s, b)
@@ -230,7 +245,7 @@ def analyze(path_json: str) -> dict:
             ratio = 2 ** ((n['folded'] - z['p']) / 12) if not unpitched else 1.0
             inc = ratio * set_sr / sr
             t_end = s + int((n['dur'] if not ring else gap - 0.2) * sr)
-            first = s + (z['le'] - z['pre']) / inc
+            first = s - n.get('beat_move', 0) + (z['le'] - z['pre']) / inc
             L = (z['le'] - z['ls']) / inc
             worst = 0.0
             k = 0

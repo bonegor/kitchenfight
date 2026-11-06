@@ -17,13 +17,15 @@
  *   hfOn    energy above 6 kHz in the first 2 ms vs. 50..150 ms later (dB): a note-on HF burst.
  *           Graded only for sustained (bowed / blown / sung) zones, where a burst is a click.
  *
- *   attShort  spread attacks whose short notes start on their own onset (Sample.preAt, strStab):
- *           att10 of 40 / 60 / 100 ms notes as the mixer plays them (gate, then the release).
+ *   attShort  notes that start on their own onset when gated short (Sample.preAt: strStab, whose
+ *           spread attack keeps rising, and the sustained instruments, whose slow attack does): att10
+ *           of 40 / 60 / 100 ms notes as the mixer plays them (gate, then the release).
  *
  * Limits: plucked / struck zones (decay / oneshot sets with a transient attack) |att10| <= 5 ms;
  * section articulations (strStab, pizz, orchHit: spread attack, beat on the perceptual onset)
- * -10..+10 ms, attShort |.| <= 5 ms; sustained zones sus6 <= 160 ms (bowed strings / chorus) or
- * 90 ms (the rest); head <= -30 dB; sustained hfOn <= +6 dB.
+ * -10..+10 ms, attShort |.| <= 5 ms; sustained zones |att10| <= 8 ms (the beat on the perceptual onset
+ * of what the note plays, build_instruments.sustain_beat + sampled.ts heardBeat) and sus6 <= 160 ms
+ * (bowed strings / chorus) or 90 ms (the rest); head <= -30 dB; sustained hfOn <= +6 dB.
  *
  *   node scripts/audio/check_instrument_attacks.mjs [--only set,set] [--json FILE] [--verbose]
  * Exit code 1 when a zone is over a limit.
@@ -38,8 +40,9 @@ const JSON_OUT = opt('--json', '');
 const VERBOSE = args.includes('--verbose');
 const SR = 48000;
 
-// attack model per set (mirrors scripts/audio/build_instruments.py: 'perceptual' sets put the beat on
-// the -12 dB point of a spread attack; sustained sets are graded on how soon they speak)
+// attack model per set (mirrors scripts/audio/build_instruments.py: 'perceptual' sets put the beat on the
+// -10 dB point of a spread attack; sustained sets on the perceptual onset of what plays, also graded on how
+// soon they speak)
 const PERCEPTUAL = new Set(['strstab', 'pizz', 'orchhit']);
 // swelling articulations (rolls, tam-tam bloom, flexatone, whistles, shakers): the beat is the start
 // of the swell (built at -20 dB), their peak comes later by nature — reported, not graded on att10
@@ -164,6 +167,7 @@ for (const set of A.SAMPLE_SETS) {
     const why = [];
     if (sustain) {
       const lim = SLOW_SUSTAIN.has(set.name) ? 160 : 90;
+      if (Math.abs(att10) > 8) why.push(`attack ${att10} ms from the beat (limit 8)`);
       if (sus6 > lim) why.push(`speaks late: -6 dB of the sustain after ${sus6} ms (limit ${lim})`);
       if (hfOn > 6) why.push(`note-on HF burst +${hfOn.toFixed(1)} dB`);
     } else if (PERCEPTUAL.has(set.name)) {

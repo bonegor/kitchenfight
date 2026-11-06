@@ -101,8 +101,13 @@ Notes for arrangers:
 - Short notes: `violin`, `strings`, `cello`, `contrabass`, `choir`, `choirO` (gate <= 0.3 s) and `flute`
   (<= 0.2 s) play a short articulation — the recording entered in its sustain (at the loop start) with a
   10-25 ms fade-in — so they speak at once; longer notes keep the recorded (slower) attack.
-- Timing: every recording is aligned on its perceptual onset (the attack is on the beat; pick / bow noise and
-  slow attack build-ups sound just before it).
+- Timing: every recording is aligned on its perceptual onset — where the RMS over the preceding 5 ms comes
+  within 10 dB of the note's peak — so the attack is on the beat; pick / bow noise and slow build-ups sound just
+  before it (at most 80 ms of a sustained build-up: a slower swell is entered later, faded in). Sustained
+  instruments place every note as it is played: a note shorter than its attack on its own onset, two takes
+  played together (`width`) on the onset of their sum (a note shifted from its recording keeps the onset of the
+  recording, played faster or slower); `brassSoft` keeps its two takes on their attack starts (soft tongued
+  attacks) and its notes on the onset of their sum.
 - `accordion` plays the recorded musette (two reeds about +5 and +28 cents, beating about 7 Hz at C5);
   `accordionDry` / `accChord` play its lower reed alone (set `accdry`: the recorded attack, then the higher
   reed removed from the loop spectrum), mono, with their own tone (low-pass, high-pass) — no musette beating.

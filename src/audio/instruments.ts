@@ -31,10 +31,16 @@ const SINE = (() => {
   return t;
 })();
 
+/** longest pre-roll a Sample may carry (s): the sample bank keeps at most 80 ms of a sustained
+ *  build-up at the recording's own pitch — 110 ms on a note played 5.5 semitones below it — and a
+ *  two-take sum onset stays within this too (the renderer's loop-seam copies rely on it) */
+export const MAX_PRE_SEC = 0.12;
+
 export interface Sample {
   l: Float32Array;
   r: Float32Array | null;
-  /** samples before the musical onset (recorded samples): the mixer starts the note this early */
+  /** samples before the musical onset (recorded samples): the mixer starts the note this early
+   *  (at most MAX_PRE_SEC) */
   pre?: number;
   /** slow-rising (spread) attacks: the onset position of a note gated after `gate` output samples
    *  (replaces `pre` for that note). A note cut while its attack is still rising peaks lower, so its
