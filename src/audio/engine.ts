@@ -30,6 +30,20 @@ const MUSIC_CACHE_SECONDS = 280;
 const DEFAULT_SR = 48000;
 /** music renders wait this long for the recorded instrument samples, then fall back to synth */
 const BANK_WAIT_MS = 12000;
+/** a track someone is waiting to hear waits at most this long for its sample sets: then it renders
+ *  with what has arrived (synthesized instruments for the rest) and is re-rendered and cross-faded
+ *  to the sampled version as soon as its sets are in */
+const GRACE_MS = 1000;
+/** a track only being preloaded waits this long for its sets, then renders provisionally too (the
+ *  worker would idle while the downloads trickle in; the upgrade follows when they are in) */
+const PRELOAD_GRACE_MS = 1500;
+/** cross-fade from a provisional (partly synthesized) render to the sampled one, seconds */
+const UPGRADE_FADE = 1.2;
+/** a music worker that has not answered anything this long after its first sample set is dead */
+const WORKER_SILENT_MS = 6000;
+/** sample sets no track has asked for yet wait for the first user gesture (or this long), so the
+ *  bank does not compete with the game's own boot downloads */
+const REST_HOLD_MS = 6000;
 const MOODS: VoiceMood[] = ['angry', 'happy', 'surprised', 'nonna', 'boss', 'cat'];
 /** finite number or default */
 const num = (x: unknown, def: number): number => (typeof x === 'number' && Number.isFinite(x) ? x : def);
@@ -46,14 +60,21 @@ interface Track {
   loopEnd: number;
   seconds: number;
   used: number;
-  /** rendered with the recorded instrument samples (false = synthesized fallback) */
+  /** rendered with every recorded instrument sample set it uses (false = synthesized fallback for
+   *  some or all instruments) */
   sampled: boolean;
+  /** sample sets the track uses that the worker did not have when it rendered (when they arrive,
+   *  the track is re-rendered; a playing one cross-fades to the new render) */
+  missing: string[];
 }
 
 interface Playing {
   id: MusicId;
   src: AudioBufferSourceNode;
   gain: GainNode;
+  track: Track;
+  /** context time at which buffer offset 0 played (position of a looping source = from here) */
+  t0: number;
 }
 
 interface Voice {
@@ -66,9 +87,11 @@ interface Pending {
   promise: Promise<Track | null>;
   resolve: (t: Track | null) => void;
   progress: number;
+  /** re-render of a cached track whose sample sets arrived later (swapped in when done) */
+  upgrade?: boolean;
 }
 
-type MusicDone = { seq: number; ok: true; left: Float32Array; right: Float32Array; loop: boolean; loopStart: number; loopEnd: number; length: number; sr: number; ms: number };
+type MusicDone = { seq: number; ok: true; left: Float32Array; right: Float32Array; loop: boolean; loopStart: number; loopEnd: number; length: number; sr: number; ms: number; sets?: string[] };
 type WorkerMsg = { seq: number; [k: string]: unknown };
 
 /** One render worker with request/response routing; marks itself broken on any failure. */
@@ -77,8 +100,16 @@ class WorkerPort {
   private broken = false;
   private seq = 0;
   private jobs = new Map<number, (m: WorkerMsg | null) => boolean>();
+  /** any message received yet (a worker blocked by CSP or broken never answers) */
+  heard = false;
+  /** called once when the worker breaks (wakes everything waiting on it) */
+  onFail: (() => void) | null = null;
   get usable(): boolean {
     return !this.broken;
+  }
+  /** create the worker now (true when it exists) */
+  start(): boolean {
+    return !!this.ensure();
   }
   private ensure(): Worker | null {
     if (this.broken) return null;
@@ -86,6 +117,7 @@ class WorkerPort {
     try {
       const w = new RenderWorker();
       w.onmessage = (e: MessageEvent<WorkerMsg>) => {
+        this.heard = true;
         const m = e.data;
         const h = this.jobs.get(m.seq);
         if (!h) return;
@@ -106,6 +138,7 @@ class WorkerPort {
     }
   }
   fail(): void {
+    if (this.broken) return;
     this.broken = true;
     const jobs = [...this.jobs.values()];
     this.jobs.clear();
@@ -122,6 +155,11 @@ class WorkerPort {
       /* ignore */
     }
     this.w = null;
+    try {
+      this.onFail?.();
+    } catch {
+      /* ignore */
+    }
   }
   /** handler gets each reply (null on failure) and returns true when the job is finished */
   request(msg: Record<string, unknown>, handler: (m: WorkerMsg | null) => boolean, transfer?: Transferable[]): boolean {
@@ -172,6 +210,11 @@ export class AudioEngine implements AudioAPI {
   private setWaiters: Array<() => void> = [];
   /** track currently waiting for its sets / rendering (its sets are decoded first) */
   private rendering: MusicId | null = null;
+  /** tracks being re-rendered because their sample sets arrived after their first render */
+  private upgrading = new Set<MusicId>();
+  /** opens the download of the sets no track asked for yet (first gesture or REST_HOLD_MS) */
+  private restOpen: Promise<void> | null = null;
+  private restResolve: (() => void) | null = null;
   private bankInfo: { state: string; load?: BankLoadStats; report?: BankReport; t0?: number; tReady?: number; error?: string } = { state: 'idle' };
 
   // sfx
@@ -215,32 +258,58 @@ export class AudioEngine implements AudioAPI {
 
   private async loadBank(): Promise<boolean> {
     this.bankInfo = { state: 'loading', t0: performance.now() };
-    if (!this.musicWorker.usable) {
+    // the worker is created now: a worker that cannot start (blocked by CSP, no Worker) or never
+    // answers must not make music wait for the whole bank to download and decode
+    if (!this.musicWorker.start()) {
       this.bankInfo.state = 'no-worker';
+      this.bankDone = true;
+      this.wakeSetWaiters();
       return false;
     }
+    this.musicWorker.onFail = () => {
+      this.bankDone = true;
+      this.wakeSetWaiters();
+    };
     // stream every decoded set to the worker as soon as it is ready (no main-thread pile-up);
     // the sets of the tracks waiting to render are decoded first
     let sent = 0;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
     const loaded = await loadSampleBank(
       2,
       (def, pcm) => {
         const ok = this.musicWorker.request(
           { type: 'bankSet', set: def, pcm },
           (m) => {
-            if (m && m.ok === true) this.setsIn.add(def.name);
+            if (m && m.ok === true) {
+              this.setsIn.add(def.name);
+              this.onSetInstalled(def.name);
+            }
             this.wakeSetWaiters();
             return true;
           },
           bankTransfer(pcm),
         );
         if (ok) sent++;
+        // a worker that never answers: dead (do not wait for its renders either)
+        if (ok && sent === 1 && !this.musicWorker.heard)
+          watchdog = setTimeout(() => {
+            if (!this.musicWorker.heard) this.musicWorker.fail();
+          }, WORKER_SILENT_MS);
       },
       () => {
-        const ids = [...(this.rendering ? [this.rendering] : []), ...(this.wanted ? [this.wanted] : []), ...this.queue];
+        const ids = [...(this.rendering ? [this.rendering] : []), ...(this.wanted ? [this.wanted] : []), ...this.queue, ...this.staleIds()];
         return ids.flatMap((id) => this.setsOf(id));
       },
+      () => !this.musicWorker.usable,
+      () => this.restGate(),
     );
+    if (watchdog) clearTimeout(watchdog);
+    if (!this.musicWorker.usable) {
+      this.bankInfo.state = 'no-worker';
+      this.bankDone = true;
+      this.wakeSetWaiters();
+      return false;
+    }
     if (!loaded || !sent) {
       this.bankInfo.state = 'decode-failed';
       this.bankDone = true;
@@ -257,16 +326,119 @@ export class AudioEngine implements AudioAPI {
       });
       if (!req) resolve(false);
     });
-    this.bankInfo.state = ok ? 'ready' : 'install-failed';
+    this.bankInfo.state = ok ? 'ready' : this.musicWorker.usable ? 'install-failed' : 'no-worker';
     this.bankInfo.tReady = performance.now();
     this.bankDone = true;
+    if (ok) this.bankReady = true;
     this.wakeSetWaiters();
-    if (ok) {
-      this.bankReady = true;
-      // tracks rendered with the synth fallback while we waited: re-render them on next use
-      for (const t of [...this.tracks.values()]) if (!t.sampled && t.id !== this.current?.id && t.id !== this.wanted) this.tracks.delete(t.id);
-    }
+    // tracks rendered before their sets arrived (and sets that will never come): settle them now
+    for (const t of [...this.tracks.values()]) if (t.missing.length) this.refreshTrack(t);
     return ok;
+  }
+
+  /** null once the first user gesture happened or REST_HOLD_MS passed; else a promise for that */
+  private restGate(): Promise<void> | null {
+    if (this.ctx) return null;
+    const t0 = this.bankInfo.t0 ?? performance.now();
+    const left = t0 + REST_HOLD_MS - performance.now();
+    if (left <= 0) return null;
+    if (!this.restOpen)
+      this.restOpen = new Promise<void>((resolve) => {
+        this.restResolve = resolve;
+        setTimeout(resolve, left);
+      });
+    return this.restOpen;
+  }
+
+  /** ids of cached tracks still waiting for some of their sets (their sets are fetched first) */
+  private staleIds(): MusicId[] {
+    const out: MusicId[] = [];
+    for (const t of this.tracks.values()) if (t.missing.length && (t.id === this.current?.id || t.id === this.wanted)) out.push(t.id);
+    return out;
+  }
+
+  /** A sample set arrived in the worker: tracks rendered without it are now provisional. */
+  private onSetInstalled(name: string): void {
+    for (const t of [...this.tracks.values()]) if (t.missing.includes(name)) this.refreshTrack(t);
+  }
+
+  /**
+   * A cached track rendered without some of its sets: once all of them are in (or will never come),
+   * it is re-rendered in the background; the new render replaces it in the cache, and cross-fades in
+   * place if it is playing.
+   */
+  private refreshTrack(t: Track): void {
+    if (this.tracks.get(t.id) !== t) return;
+    if (!this.musicWorker.usable) {
+      t.missing = []; // no worker to re-render with: this render is final
+      return;
+    }
+    const pendingSets = t.missing.filter((n) => !this.setsIn.has(n));
+    const gained = t.missing.some((n) => this.setsIn.has(n));
+    if (pendingSets.length && !this.bankDone) return; // wait until its last set is in
+    if (!gained) {
+      t.missing = []; // those sets will never come: this render is final
+      return;
+    }
+    // re-render in the background; the provisional render stays playable meanwhile (a track that
+    // was preloaded is the one the player is about to hear: it starts at once, then cross-fades)
+    this.upgrade(t.id);
+  }
+
+  /** Re-render a cached track (its sample sets arrived) and swap it in when done. */
+  private upgrade(id: MusicId): void {
+    if (this.pending.has(id) || this.upgrading.has(id)) return;
+    this.upgrading.add(id);
+    let resolve!: (t: Track | null) => void;
+    const promise = new Promise<Track | null>((r) => (resolve = r));
+    this.pending.set(id, { promise, resolve, progress: 0, upgrade: true });
+    this.queue.push(id);
+    void this.pump();
+    void promise.then(() => this.upgrading.delete(id));
+  }
+
+  /** Cross-fade the playing source to a new render of the same track at the same position. */
+  private swapPlaying(t: Track): void {
+    const ctx = this.ctx;
+    const cur = this.current;
+    if (!ctx || !this.musicIn || !cur || cur.id !== t.id || cur.track === t) return;
+    const buf = this.bufferOf(t);
+    if (!buf) return;
+    try {
+      const start = ctx.currentTime + 0.05;
+      let pos = start - cur.t0;
+      const old = cur.track;
+      if (old.loop && pos >= old.loopEnd) pos = old.loopStart + ((pos - old.loopStart) % Math.max(1e-3, old.loopEnd - old.loopStart));
+      if (pos < 0 || pos >= buf.duration - 0.1) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      if (t.loop) {
+        src.loop = true;
+        src.loopStart = t.loopStart;
+        src.loopEnd = t.loopEnd;
+      }
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(1, start + UPGRADE_FADE);
+      src.connect(g);
+      g.connect(this.musicIn);
+      src.start(start, pos);
+      this.fadeOut(cur, UPGRADE_FADE);
+      const playing: Playing = { id: t.id, src, gain: g, track: t, t0: start - pos };
+      this.current = playing;
+      t.used = performance.now();
+      src.onended = () => {
+        try {
+          src.disconnect();
+          g.disconnect();
+        } catch {
+          /* ignore */
+        }
+        if (this.current === playing) this.current = null;
+      };
+    } catch {
+      /* keep the old one playing */
+    }
   }
 
   private wakeSetWaiters(): void {
@@ -291,19 +463,33 @@ export class AudioEngine implements AudioAPI {
   }
 
   /**
-   * Wait (bounded by BANK_WAIT_MS from the start of loading) until the music worker has every
-   * sample set this track uses — not the whole bank. True when the track will render sampled.
+   * Wait until the music worker has every sample set this track uses — not the whole bank. Bounded:
+   * by BANK_WAIT_MS from the start of loading, PRELOAD_GRACE_MS from the start of the wait, and
+   * GRACE_MS once the track is wanted (it then renders with what has arrived and is upgraded
+   * later), and never past a broken worker or the end of loading. True when the track will render with all of its sets; 'yield' when a track the player
+   * is waiting for is queued behind this one (which is only being preloaded).
    */
-  private async waitBank(id: MusicId): Promise<boolean> {
+  private async waitBank(id: MusicId): Promise<boolean | 'yield'> {
     void this.ensureBank();
     const need = this.setsOf(id);
     const have = () => need.every((n) => this.setsIn.has(n));
     if (have()) return true;
     const started = this.bankInfo.t0 ?? performance.now();
-    const deadline = started + BANK_WAIT_MS;
-    while (!have() && !this.bankDone && performance.now() < deadline) {
+    const waitFrom = performance.now();
+    let urgentSince: number | null = null;
+    for (;;) {
+      if (have() || this.bankDone || !this.musicWorker.usable) break;
+      // a track that is only being preloaded never blocks one the player is waiting for
+      if (this.wanted !== id && this.wanted !== null && this.queue.includes(this.wanted)) return 'yield';
+      const now = performance.now();
+      // a track that is wanted (the title at boot, a stage being entered) is played as soon as
+      // possible: provisional render after GRACE_MS, cross-faded to the sampled one later
+      if (urgentSince === null && this.wanted === id) urgentSince = now;
+      const deadline = Math.min(started + BANK_WAIT_MS, waitFrom + PRELOAD_GRACE_MS, urgentSince === null ? Infinity : urgentSince + GRACE_MS);
+      if (now >= deadline) break;
+      // re-check at least every 250 ms (the track may become urgent: the player clicked)
       await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, Math.max(1, deadline - performance.now()));
+        const t = setTimeout(resolve, Math.max(1, Math.min(250, deadline - now)));
         this.setWaiters.push(() => {
           clearTimeout(t);
           resolve();
@@ -335,6 +521,8 @@ export class AudioEngine implements AudioAPI {
           /* ignore */
         }
         void this.prerenderSfx();
+        // the first gesture: the rest of the sample bank may download now
+        this.restResolve?.();
         // tracks rendered before unlock become AudioBuffers lazily; start a wanted track now
         if (this.wanted) {
           const id = this.wanted;
@@ -560,7 +748,7 @@ export class AudioEngine implements AudioAPI {
     g.connect(this.musicIn);
     src.start(now + 0.01);
     if (this.current) this.fadeOut(this.current, Math.max(0.01, fade));
-    const playing: Playing = { id: t.id, src, gain: g };
+    const playing: Playing = { id: t.id, src, gain: g, track: t, t0: now + 0.01 };
     this.current = playing;
     if (this.wanted === t.id) this.wanted = null;
     src.onended = () => {
@@ -657,15 +845,31 @@ export class AudioEngine implements AudioAPI {
         const pend = this.pending.get(id);
         let track: Track | null = null;
         try {
-          track = await this.renderTrack(id, (p) => {
+          const r = await this.renderTrack(id, (p) => {
             if (pend) pend.progress = p;
           });
+          if (r === 'yield') {
+            // the wanted track first (it is at the front of the queue), this one after it
+            const w = this.wanted !== null ? this.queue.indexOf(this.wanted) : -1;
+            this.queue.splice(w + 1, 0, id);
+            continue;
+          }
+          track = r;
         } catch {
           track = null;
         }
         if (track) {
+          const prev = this.tracks.get(id);
           this.tracks.set(id, track);
           this.evict();
+          if (pend?.upgrade && prev) this.swapPlaying(track);
+          // sets that arrived while this render ran: it is provisional already
+          if (track.missing.some((n) => this.setsIn.has(n)) || (track.missing.length && this.bankDone)) {
+            this.pending.delete(id);
+            pend?.resolve(track);
+            this.refreshTrack(track);
+            continue;
+          }
         }
         this.pending.delete(id);
         pend?.resolve(track);
@@ -688,7 +892,7 @@ export class AudioEngine implements AudioAPI {
     }
   }
 
-  private async renderTrack(id: MusicId, onProgress: (p: number) => void): Promise<Track | null> {
+  private async renderTrack(id: MusicId, onProgress: (p: number) => void): Promise<Track | null | 'yield'> {
     const song = SONGS[id];
     if (!song) return null;
     // never synthesize music above 48 kHz (192 kHz devices would quadruple memory and render time)
@@ -696,10 +900,14 @@ export class AudioEngine implements AudioAPI {
     // 1) worker (with the recorded instrument samples once they are installed there)
     if (this.musicWorker.usable) {
       this.rendering = id;
-      const sampled = await this.waitBank(id);
+      const ready = await this.waitBank(id);
       this.rendering = null;
+      if (ready === 'yield') return 'yield';
       const msg = this.musicWorker.usable ? await this.workerRender(id, sr, onProgress) : null;
       if (msg) {
+        // what the worker actually rendered with (sets still in flight when it started are missing)
+        const had = new Set(msg.sets ?? []);
+        const missing = this.setsOf(id).filter((n) => !had.has(n));
         const track: Track = {
           id,
           sr: msg.sr,
@@ -710,7 +918,8 @@ export class AudioEngine implements AudioAPI {
           loopEnd: msg.loopEnd / msg.sr,
           seconds: msg.length / msg.sr,
           used: performance.now(),
-          sampled,
+          sampled: missing.length === 0,
+          missing,
         };
         if (this.ctx) await this.toBufferChunked(track);
         return track;
@@ -740,6 +949,7 @@ export class AudioEngine implements AudioAPI {
       seconds: r.length / sr,
       used: performance.now(),
       sampled: false,
+      missing: [], // no worker: the recorded samples can never be used, this render is final
     };
   }
 

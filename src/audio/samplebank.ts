@@ -84,6 +84,11 @@ export async function loadSampleBank(
   onSet?: (def: SampleSetDef, pcm: SetPcm) => void,
   /** called whenever a decoder slot frees up: set names to decode first (e.g. the requested track's) */
   priority?: () => string[],
+  /** true = stop fetching / decoding (e.g. the worker the sets are for is gone) */
+  abort?: () => boolean,
+  /** before fetching a set nobody asked for yet: a promise to wait for (e.g. the first user gesture,
+   *  so the bank does not compete with the game's boot downloads), or null to go on */
+  holdRest?: () => Promise<void> | null,
 ): Promise<{ data: BankData; stats: BankLoadStats } | null> {
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const stats: BankLoadStats = { ms: 0, sets: 0, failed: [], mp3Bytes: 0, pcmBytes: 0, rates: [] };
@@ -92,7 +97,7 @@ export async function loadSampleBank(
     const urls = sampleSetUrls();
     const pcm: SetPcm[] = [];
     const queue = SAMPLE_SETS.slice();
-    const take = (): SampleSetDef | undefined => {
+    const wanted = (): SampleSetDef | undefined => {
       try {
         const want = priority ? priority() : [];
         for (const name of want) {
@@ -102,11 +107,33 @@ export async function loadSampleBank(
       } catch {
         /* ignore */
       }
+      return undefined;
+    };
+    const take = async (): Promise<SampleSetDef | undefined> => {
+      const w = wanted();
+      if (w) return w;
+      // nothing requested right now: wait (if asked to) before fetching the rest, re-checking for
+      // requested sets every 250 ms
+      let hold: Promise<void> | null = null;
+      try {
+        hold = holdRest ? holdRest() : null;
+      } catch {
+        hold = null;
+      }
+      while (hold) {
+        let open = false;
+        await Promise.race([hold.then(() => (open = true)), new Promise((r) => setTimeout(r, 250))]);
+        if (abort && abort()) return undefined;
+        const w2 = wanted();
+        if (w2) return w2;
+        if (open) break;
+      }
       return queue.shift();
     };
     const worker = async () => {
       while (queue.length) {
-        const def = take();
+        if (abort && abort()) break;
+        const def = await take();
         if (!def) break;
         try {
           const url = urls[def.name];
