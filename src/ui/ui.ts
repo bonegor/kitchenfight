@@ -4,6 +4,7 @@
  */
 import { h, img, Nav } from './dom';
 import { SFX_CREDITS } from '../audio/sfxsamples';
+import { INSTRUMENT_CREDITS, MUSIC_PIECES } from '../audio/musiccredits';
 import { spriteURL, hasSprite } from '../gfx/sprites';
 import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
@@ -1121,10 +1122,15 @@ export class UI {
         h('div', { class: 'panel-body', 'data-nav-scroll': '' },
           h('div', { class: 'tricolore', style: { margin: '6px auto 14px', width: '60%' } }),
           h('p', {}, h('b', {}, 'KITCHEN FIGHT'), ' — an original survivors-like about defending Italian culinary tradition.'),
-          h('p', {}, 'Every sprite is painted in code with vector shapes — no image files. Music and voices are synthesized live in your browser.'),
+          h('p', {}, 'Every sprite is painted in code with vector shapes — no image files. Voices are synthesized live in your browser.'),
+          h('h3', {}, 'Music'),
+          h('p', { class: 'credit-line' }, 'Public-domain Italian classics, arranged for a comic street band and orchestra; every melody was checked against published transcriptions.'),
+          ...MUSIC_PIECES.map((p) => h('p', { class: 'credit-line' }, h('b', {}, `${p.where}: `), `${p.piece} — ${p.composer} (${p.year})`)),
+          h('h3', {}, 'Recorded instruments'),
+          ...INSTRUMENT_CREDITS.map(line),
           h('h3', {}, 'Sound effects'),
           ...SFX_CREDITS.map((t, i) => line(i === 0 ? t.replace(/^Sound effects:\s*/i, '').replace(/^./, (c) => c.toUpperCase()) : t)),
-          h('p', { class: 'credit-line' }, 'Every recorded sound has a synthesized fallback, so the game still sounds right if the recordings cannot load.'),
+          h('p', { class: 'credit-line' }, 'Every recorded instrument and sound has a synthesized fallback, so the game still sounds right if the recordings cannot load.'),
           h('h3', {}, 'Research & type'),
           h('p', {}, 'The crimes are real: pet peeves of Italian chefs, institutions and social media, compiled with sources in docs/RESEARCH.md (YouGov 2022, the town of Amatrice, the Trevi Fountain “pasta activists”, and many more).'),
           h('p', {}, 'Fonts: Lobster, Lilita One and Playfair Display (SIL Open Font License).'),

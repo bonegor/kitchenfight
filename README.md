@@ -55,9 +55,13 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
 ## 🎨 How it's made
 
 - **No image files.** Every sprite is painted in code with vector shapes (`src/gfx/art/*`, toolkit in
-  `src/gfx/painter.ts`) and cached to high-resolution bitmaps at load time. Music is synthesized live with the Web
-  Audio API (`src/audio/*`); sound effects are recorded MP3 variants (CC0 / CC BY collections, see Credits) layered
-  with synthesized sounds, which also serve as the fallback.
+  `src/gfx/painter.ts`) and cached to high-resolution bitmaps at load time.
+- **Soundtrack:** ten public-domain Italian classics (Verdi, Rossini, Denza, di Capua, De Curtis, Leoncavallo)
+  arranged in a small music DSL (`src/audio/songs/*`) and rendered in a Web Worker on recorded instrument samples
+  (`src/audio/assets/inst`). Every melody is checked note by note against published transcriptions with
+  `scripts/music/compare.py`; see [docs/MUSIC.md](docs/MUSIC.md) and `docs/music/<track>.md`.
+- **Sound effects** are recorded MP3 variants layered with synthesized sounds; every recorded instrument and
+  sound has a synthesized fallback (`src/audio/*`).
 - TypeScript + Vite, no game framework. Custom engine: spatial hashing, pooled entities, y-sorted renderer with
   dynamic lighting, particles, decals, screen shake and hit-stop (`src/game/*`).
 - DOM/CSS user interface styled like a trattoria menu card (`src/ui/*`, `src/styles/main.css`).
@@ -86,8 +90,33 @@ Dev helpers in `scripts/`: `shot.mjs` (screenshots), `play.mjs` (automated playt
 balance simulation with a bot), `screens.mjs` (screenshots of every menu).
 
 ## Credits
-Design, code, art, music and research by Claude (Anthropic) for this repository.
+Design, code, art, arrangements and research by Claude (Anthropic) for this repository.
 Fonts: Lobster, Lilita One, Playfair Display — SIL Open Font License.
+
+**Music**: public-domain pieces, arranged for this game:
+- Title: Funiculì, Funiculà, Luigi Denza (1880)
+- Menus: 'O sole mio, Eduardo di Capua (1898)
+- La Cucina: Anvil Chorus (Il trovatore), Giuseppe Verdi (1853)
+- La Trattoria: Brindisi “Libiamo ne' lieti calici” (La traviata), Giuseppe Verdi (1853)
+- I Vicoli di Napoli: La Danza, with the traditional Tarantella Napoletana, Gioachino Rossini (1835)
+- La Food Court: Torna a Surriento, Ernesto De Curtis (1902)
+- Bosses: Galop from the William Tell Overture, Gioachino Rossini (1829)
+- Final boss: Dies irae (Messa da Requiem), Giuseppe Verdi (1874)
+- Victory: Triumphal March (Aida), Giuseppe Verdi (1871)
+- Game over: “Vesti la giubba” (Pagliacci), Ruggero Leoncavallo (1892)
+
+**Recorded instruments** (edited: trimmed, pitched, looped, level-matched, re-encoded as MP3; details in
+[docs/credits/music-samples.md](docs/credits/music-samples.md)):
+- Accordion: "Button Accordion HN", FreePats project (Hohner accordion recorded by Jeff Stauffer; bank by michael02022), CC0 1.0.
+- Mandolin: "Terkelsen's Mandolin" by Lars Terkelsen, SFZ conversion by S. Christian Collins (license not stated; credited).
+- Piano, nylon and steel guitar: "Meta Open Sound" by Meta (Creative Audio team), CC0 1.0.
+- Orchestra: "Sonatina Symphonic Orchestra" by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section
+  sustains by Mattias Westlund, CC BY-SA 3.0; pipe organ "St. Stephen's Anglican" by Nicholas Appleton, CC Sampling Plus 1.0;
+  celesta by stamperadam (freesound.org), CC0 1.0.
+- Harpsichord and percussion: "Versilian Community Sample Library" by Versilian Studios, CC0 1.0.
+- Castanets: "World Percussion", FreePats project, CC0 1.0.
+- Orchestra hit: "Musyng Kite" soundfont via midi-js-soundfonts (Benjamin Gleitzman), CC BY-SA 3.0.
+- The edited files under CC BY-SA 3.0 (`src/audio/assets/inst/horns`, `src/audio/assets/inst/orchhit`) are shared under the same license.
 
 **Sound effects** are recordings (and a few synthesized layers) from these collections, edited and mixed for
 this game; details per sound in [docs/credits/sfx.md](docs/credits/sfx.md):

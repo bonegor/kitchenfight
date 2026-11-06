@@ -2,7 +2,9 @@
  * AUDIO — public API used by the game. (Implementation lives in src/audio/*.)
  *
  * Built on the Web Audio API:
- *   - music: composed tracks rendered offline (in a worker) into loopable buffers
+ *   - music: arranged tracks (src/audio/songs) rendered offline in a worker into loopable buffers, played
+ *            on recorded instrument samples (src/audio/assets/inst, see docs/credits/music-samples.md)
+ *            with synthesized instruments as the fallback
  *   - sfx:   recorded MP3 variants (src/audio/assets/sfx, see docs/credits/sfx.md) layered with
  *            synthesized sounds, which are also the fallback; voice-limited and rate-limited
  *   - voice: short synthesized speech for the speech bubbles

@@ -27,8 +27,9 @@ const MUSIC_TRIM = 0.55;
 const SFX_TRIM = 1.0;
 const VOICE_TRIM = 0.55;
 const MAX_SFX_VOICES = 40;
-/** cached music budget (seconds of stereo audio) */
-const MUSIC_CACHE_SECONDS = 280;
+/** cached music budget (seconds of stereo audio): a run keeps its stage track plus the preloaded boss,
+ *  final boss, victory and game-over tracks (up to ~277 s with the current soundtrack) */
+const MUSIC_CACHE_SECONDS = 300;
 const DEFAULT_SR = 48000;
 /** music renders wait this long for the recorded instrument samples, then fall back to synth */
 const BANK_WAIT_MS = 12000;
@@ -907,6 +908,10 @@ export class AudioEngine implements AudioAPI {
         }
         if (track) {
           const prev = this.tracks.get(id);
+          // an upgrade (re-render with the recorded samples) is not a use: keep the old track's
+          // place in the LRU order, or a menu track upgraded mid-run would push out the stage
+          // track the run returns to after its boss
+          if (prev) track.used = prev.used;
           this.tracks.set(id, track);
           this.evict();
           if (pend?.upgrade && prev) this.swapPlaying(track);
