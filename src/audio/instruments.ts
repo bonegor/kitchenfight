@@ -1775,7 +1775,7 @@ const NEW_SYNTH: InstDef[] = [
  * the reference the songs are mixed against, so each fallback is matched to it (per song channel,
  * BS.1770 integrated loudness: scripts/audio/calibrate_instruments.mjs --write keeps this table).
  */
-export const FALLBACK_TRIM_DB: Record<string, number> = {};
+export const FALLBACK_TRIM_DB: Record<string, number> = { anvil: -10.7, bassDrum: -6.3, bassoon: -2.7, castanets: -0.3, celesta: 1.4, cello: 0.4, clarinet: -2.2, claves: -5.3, contrabass: 1.6, cymbal: 7.5, flexatone: 0.3, orchHit: 5.6, piccolo: -3, ratchet: 9.4, slapstick: 0.9, steelGuitar: 4, tamtam: 1.5, toyWhistle: -4.7, trombone: -0.9, trumpet: -0.8, woodblock: 0.9, xylophone: 3.9 };
 
 /** ids the Audio 2.0 brief added (recorded instrument first, synthesized fallback) */
 export const NEW_IDS: string[] = NEW_SYNTH.map((d) => d.id);
