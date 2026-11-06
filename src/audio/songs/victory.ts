@@ -3,19 +3,30 @@
  * A♭ major (Verdi's key for the first trumpet statement; the reference lead sheet is in G),
  * 4/4, ♩ = 154 (an alla-breve march: the oom-pah moves in half notes).
  *
- * Form (16 bars, 24.9 s): march (12) = timpani roll + suspended-cymbal swell and the trumpet
+ * Form (26 bars, 40.5 s): march (12) = timpani roll + suspended-cymbal swell and the trumpet
  * pickup, then the whole 12-bar trumpet theme once (a b a b') — trumpets in unison over the band
  * (tuba/pizz oom, string after-beats, snare), horns join at b, violins double the tune an octave up
  * and the bass drum / piatti join at a' (the brass section steps back there); castanets wink in
  * the trumpets' rests → fin (1) = tutti A♭ with crash, then the cheeky band tag: accordion and
- * glockenspiel echo the trumpets' triplet, castanets rattle, V7–I button → tail (3, loop) = the
- * band at rest under the results screen: the accordion hums the theme's a phrase (Verdi's own
- * 3-bar phrase, pickup included, so the loop period is the tune's) over upright bass + chord-button
- * oom-pah, a low horn line, a soft high string halo and castanets.
- * Levels: loop body (tail) -16.4 LUFS, march + tag -15.1 LUFS (the fanfare sits 1.3 LU above the bed).
- * Melody verified against wf_aida_march.abc bars 1–12 (see docs/music/victory.md).
+ * glockenspiel echo the trumpets' triplet, castanets rattle, V7–I button → vamp (1, played once)
+ * = the band settles into its oom-pah (the accordion's left hand joins the guitar's pah), the
+ * castanets call and the accordion picks up → tail (12, loop) = the band's victory lap under the
+ * results screen: the theme again, softly, traded between the accordion and the mandolin over an
+ * upright-bass / guitar oom-pah and a tambourine brush:
+ *   bars 1–3   a   accordion
+ *   bars 4–6   b   mandolin (the accordion's bellows hold two soft voices under it)
+ *   bars 7–9   a'  mandolin tremolo, the clarinet's counter-melody below, its run hands over to
+ *   bars 10–11 b'  accordion, the mandolin's second voice below (seconda voce)
+ *   bar 12     the landing on A♭, then a turnaround (A♭ F7 B♭m7 E♭7): the clarinet's fill on
+ *              beats 2–3, the castanets' rattle on beat 3, the accordion's pickup with their "tak"
+ *              on beat 4, back to a
+ *   (pizzicato doubles the bass an octave up in the second pass, bars 7–12)
+ * In the loop the tune rests for two beats only (the turnaround's beats 2–3, where the clarinet
+ * fills). Levels: loop body (tail) -16.4 LUFS, march + tag -15.1 LUFS (the fanfare sits above the
+ * bed).
+ * Melody verified against wf_aida_march.abc bars 1–12, every statement (see docs/music/victory.md).
  */
-import { hits, mel, type SongDef } from '../sequencer';
+import { drums, hits, mel, type Ev, type Part, type SongDef } from '../sequencer';
 
 /** chord track of the reference lead sheet (bars 1–12), transposed G → A♭ */
 const CH_MARCH =
@@ -99,7 +110,88 @@ const TRIP = (at: number, v: number): Array<[number, number, number]> => [
   [at + 4 / 3, 60, v * 0.93],
   [at + 8 / 3, 60, v * 1.05],
 ];
-const bar = (n: number): number => (n - 1) * 16; // step of bar n (1-based) in the march section
+const bar = (n: number): number => (n - 1) * 16; // step of bar n (1-based) inside a section
+
+// ---------------------------------------------------------------------------------------------
+// The victory lap: a one-bar vamp after the tag (played once, = reference bar 1: the band vamps,
+// the accordion picks up), then the loop, 12 bars = reference bars 2–12 + the landing /
+// turnaround bar, which carries the next pass's pickup on its beat 4.
+// ---------------------------------------------------------------------------------------------
+
+/** chord track of the loop: the reference's chords of bars 2–12, then the turnaround
+ *  I – V7/ii – ii7 – V7 that walks back into a */
+const CH_TAIL = `${CH_MARCH.slice(CH_MARCH.indexOf('|') + 1)} | Ab:4 F7:4 Bbm7:4 Eb7:4`;
+
+/** the accordion's tune: a (and the pickups into it) a shade stronger than b', which has the
+ *  mandolin's second voice and the pizzicato under it, so the loop's phrases rise by only about
+ *  1 LU from a to b' */
+const ACC_A = 0.65;
+const ACC_B2 = 0.64;
+
+/** mandolin seconda voce for b': a sixth under the tune where the band's chord has that note
+ *  (E♭7: D♭/E♭ under B♭/C; A♭: C under A♭, E♭ under C; Cm: E♭ under C), a fifth (E♭ under B♭)
+ *  where the chord is a plain E♭ triad (bar 10 beat 4, bar 11 beat 2), so it adds no 7th the
+ *  band does not play; the final E♭7's 7th D♭ resolves to C under the landing */
+const B2_SIXTHS = `
+  Db4:2 Eb4 Eb4:3 Db4:1 C4:2 r:2 Eb4:3 Eb4:1 | Eb4:4 Eb4:3 Eb4:1 Eb4:4 Db4:4/3 Eb4 Db4 |`;
+
+/** clarinet counter-melody under the mandolin's a' (chalumeau, below the tune): it moves where
+ *  the tune holds (E♭–F–E♭–D♭ under the long A♭, D♭ → C into bar 8), slows to half notes under
+ *  the repeated C's, and its run E♭–F–G–A♭ in the tune's rest hands over to the accordion's B♭ */
+const CLAR_COUNTER = `
+  Eb4:4 F4:4 Eb4:4 Db4:4 | C4:8 Eb4:8 | G3:8 C4:4 Eb4:1 F4:1 G4:1 Ab4:1 |`;
+/** turnaround fill (bar 12, beats 2–3): F7 – B♭m7 chord tones rising, A3 C4 | D♭4 F4, and the
+ *  accordion's pickup E♭4 on beat 4 continues the line a step down (the A♮ of F7 is the
+ *  turnaround's chromatic touch) */
+const CLAR_FILL = 'r:4 A3:2 C4:2 Db4:2 F4:2 r:4 |';
+
+/** accordion bellows under the mandolin's b: two soft voices with tied common tones */
+const ACC_PAD_HI = 'Eb4:16 | Eb4:12 F4:4 | D4:8 Eb4:8 |';
+const ACC_PAD_LO = 'Bb3:8 C4:4 Bb3:4 | C4:4 Bb3:4 C4:8 | Ab3:12 G3:4 |';
+
+/** the vamp's pah: guitar and the accordion's chord buttons on 2 and 4 */
+const VAMP_PAH = `${P_A} Ab3+C4+Eb4:2 r:2 |`;
+/** guitar pah (beats 2 and 4) on the march's after-beat voicings; bar 12 strums every beat with
+ *  chromatic voice leading A♭ → F7 (A♮) → B♭m7 → E♭7 → back to a's A♭ */
+const GTR = [
+  AB.b2, AB.b3, AB.b4, AB.b5, AB.b6, AB.b7, AB.b2, AB.b3, AB.b4, AB.b5, AB.b12,
+  'Ab3+C4+Eb4:2 r:2 A3+C4+Eb4:2 r:2 Ab3+Db4+F4:2 r:2 G3+Db4+Eb4:2 r:2 |',
+].join(' ');
+
+/** upright bass "oom" (beats 1 and 3), the march's bass line (reference bars 2–12); the landing
+ *  bar walks A♭ – F – B♭ – E♭ back to a's A♭ */
+const UBASS = [...OOM.split('|').slice(1).map((b) => b.trim()), 'Ab1:4 F1 Bb1 Eb2'].join(' | ');
+
+/** tambourine brush: light taps on 2 and 4 (the set's "hit" articulations, variants 0/1, which
+ *  peak 40–60 ms after the onset; its shakes peak 80–160 ms late and drag the after-beat). It
+ *  leaves beat 4 to the castanets where they play (the vamp, bars 3 and 12) */
+const TAMB = { x: { v: 0.5, vr: [0, 1] } };
+const TAMB_2_4 = '....x.......x...';
+const TAMB_2 = '....x...........';
+const TAMB_TAIL = [TAMB_2_4, TAMB_2_4, TAMB_2, ...Array(8).fill(TAMB_2_4), TAMB_2].join('|');
+
+/** the castanets' call into a (the vamp and the turnaround, from step `at` = the bar's start): a
+ *  rattle on beat 3, where the tune rests (in the turnaround under the clarinet's fill, which
+ *  leaves the band's top octave free), and the "tak" with the accordion's pickup on beat 4, the
+ *  way the trumpets accent theirs */
+const CAST_CALL = (at: number): Array<[number, number, number]> => [
+  [at + 8, 60, 0.5],
+  [at + 9, 60, 0.56],
+  [at + 10, 60, 0.62],
+  [at + 11, 60, 0.68],
+  [at + 12, 60, 0.8],
+];
+
+/** strum a chord part: the notes of each chord start `sec` apart, low → high */
+const strum =
+  (p: Part, sec: number): Part =>
+  (ctx) => {
+    const evs = p(ctx);
+    const chords = new Map<number, Ev[]>();
+    for (const e of evs) chords.set(e.s, [...(chords.get(e.s) ?? []), e]);
+    for (const g of chords.values()) g.sort((x, y) => x.m - y.m).forEach((e, i) => (e.offSec = (e.offSec ?? 0) + i * sec));
+    return evs;
+  };
 
 export const victory: SongDef = {
   id: 'victory',
@@ -128,12 +220,15 @@ export const victory: SongDef = {
     glock: { inst: 'glock', gain: -9, pan: 0.4, send: 0.3, hum: 0 },
     acc: { inst: 'accordion', gain: -6, pan: -0.1, send: 0.18 },
     cast: { inst: 'castanets', gain: -9, pan: 0.36, send: 0.12, hum: 0.5 },
-    // tail (loop) only
-    accR: { inst: 'accordion', gain: 0.9, pan: -0.08, send: 0.2, hum: 0.6 },
-    accC: { inst: 'accChord', gain: -3.5, pan: -0.16, send: 0.12, hum: 0.5 },
-    ubass: { inst: 'uprightBass', gain: -0.7, pan: 0.1, send: 0.08, hum: 0.5 },
-    strT: { inst: 'strings', gain: -8.5, pan: 0.18, send: 0.3, hum: 0.5 },
-    hrnT: { inst: 'brassSoft', gain: -3.2, pan: -0.3, send: 0.3, hum: 0.5 },
+    // the victory lap only (vamp + tail)
+    accR: { inst: 'accordion', gain: 1.75, pan: -0.12, send: 0.2, hum: 0.6 },
+    mand: { inst: 'mandolin', gain: 3.85, pan: 0.14, send: 0.2, hum: 0.6 },
+    clar: { inst: 'clarinet', gain: -3.65, pan: -0.3, send: 0.24, hum: 0.5 },
+    accC: { inst: 'accChord', gain: -3.65, pan: -0.2, send: 0.16, hum: 0.5 },
+    gtr: { inst: 'guitar', gain: -5.15, pan: 0.3, send: 0.14, hum: 0.6 },
+    ubass: { inst: 'uprightBass', gain: -2.65, pan: 0.06, send: 0.08, hum: 0.5 },
+    pizzT: { inst: 'pizz', gain: 1.85, pan: -0.3, send: 0.12, hum: 0.5 },
+    tamb: { inst: 'tamb', gain: 5.35, pan: 0.32, send: 0.1, hum: 0.6 },
   },
   sections: {
     // pickup bar (roll) + the whole 12-bar trumpet theme: reference bars 1–12
@@ -249,34 +344,61 @@ export const victory: SongDef = {
         hits('crash', [[0, 60, 0.9, 8]]),
       ],
     },
-    // loop: the band at rest under the results screen. The accordion hums the theme's a phrase
-    // softly (reference bars 1–4: the pickup E♭ is the last beat of the loop, so the loop is
-    // Verdi's own 3-bar phrase); left-hand oom-pah = upright bass + chord buttons; a low horn line
-    // (5th–7th–3rd); the strings hold a soft 2-voice halo above the tune, clear of the chords.
-    tail: {
-      bars: 3,
-      chords: 'Ab:12 Eb7:4 | Ab:16 | Eb7:8 Ab:8',
+    // after the tag, once: the band settles into its oom-pah and the accordion picks up
+    // (reference bar 1: three beats without the tune, the pickup on beat 4)
+    vamp: {
+      bars: 1,
+      chords: 'Ab:16',
       parts: [
-        mel('accR', 'Ab4:12 Bb4:4/3 Eb4 Bb4 | C5:4 C5 C5 C5:4/3 Db5 Ab4 | C5:6 Bb4:2 Ab4:4 Eb4:4 |', { vel: 0.62 }),
-        // chord buttons on 2 and 4: the march's after-beat voicings of the same bars (a phrase)
-        mel('accC', [AB.b2, AB.b3, AB.b4].join(' '), { vel: 0.6 }),
-        mel('ubass', 'Ab1:4 r:4 Eb2:4 r:4 | Ab1:4 r:4 C2:4 r:4 | Eb2:4 r:4 Ab1:4 r:4 |', { vel: 0.78 }),
-        mel('hrnT', 'Eb3:12 Db3:4 | C3:16 | Eb3:8 C3:8 |', { vel: 0.5 }),
-        mel('strT', 'Eb5:16 | _:16 | _:16 |', { vel: 0.5 }),
-        mel('strT', 'Ab5:12 G5:4 | Ab5:16 | G5:8 Ab5:8 |', { vel: 0.5 }),
+        mel('accR', 'r:12 Eb4:4 |', { vel: ACC_A }),
+        // the accordion's left hand joins the guitar's pah
+        mel('accC', VAMP_PAH, { vel: 0.55 }),
+        mel('ubass', 'Ab1:4 r:4 Eb2:4 r:4 |', { vel: 0.78 }),
+        strum(mel('gtr', VAMP_PAH, { vel: 0.55 }), 0.012),
+        drums('tamb', TAMB_2, TAMB),
+        // the castanets' call into a (the tag's button has just had its own "tak")
+        hits('cast', CAST_CALL(0)),
+      ],
+    },
+    // loop: the victory lap under the results screen. The tune again, softly (reference bars
+    // 2–12 + the landing), traded between the accordion and the mandolin over a light oom-pah;
+    // the turnaround bar carries the pickup back into a
+    tail: {
+      bars: 12,
+      chords: CH_TAIL,
+      parts: [
+        // the tune: accordion = a (bars 1–3) and b' + landing (bars 10–12), then the pickup into
+        // the next pass on bar 12's beat 4
+        mel('accR', THEME_A, { vel: ACC_A }),
+        mel('accR', `${THEME_B2} Ab4:4 r:8 Eb4:4@${ACC_A} |`, { vel: ACC_B2, at: bar(10) }),
+        // mandolin = b (bars 4–6) and a' with tremolo on the long notes (bars 7–9), then the
+        // seconda voce under the accordion's b' (velocity < 0.5: the softer of its two layers)
+        mel('mand', THEME_B, { vel: 0.74, at: bar(4) }),
+        mel('mand', THEME_A, { vel: 0.77, at: bar(7), tremMin: 6 }),
+        mel('mand', B2_SIXTHS + ' C4:4 r:12 |', { vel: 0.47, at: bar(10) }),
+        // second pass: the clarinet's counter-melody under a', and the turnaround fill
+        mel('clar', CLAR_COUNTER, { vel: 0.72, at: bar(7) }),
+        mel('clar', CLAR_FILL, { vel: 0.95, at: bar(12) }),
+        // the accordion's bellows hold two soft voices under the mandolin's b
+        mel('accC', ACC_PAD_HI, { vel: 0.45, at: bar(4) }),
+        mel('accC', ACC_PAD_LO, { vel: 0.45, at: bar(4) }),
+        // oom-pah: upright bass + guitar after-beats (strummed), tambourine brush
+        mel('ubass', UBASS, { vel: 0.78 }),
+        // second pass: string pizzicato doubles the oom an octave up (a little lift for a' b')
+        mel('pizzT', UBASS.split('|').slice(6).join('|'), { vel: 0.55, oct: 1, at: bar(7) }),
+        strum(mel('gtr', GTR, { vel: 0.55 }), 0.012),
+        drums('tamb', TAMB_TAIL, TAMB),
+        // castanets: the wink in the tune's rest (bar 3, as in the march), and the call into a in
+        // the turnaround, as in the vamp
         hits('cast', [
-          [6, 60, 0.56],
-          [14, 60, 0.56],
-          [16 + 6, 60, 0.56],
-          [16 + 14, 60, 0.56],
-          [32 + 6, 60, 0.56],
-          [32 + 13, 60, 0.46],
-          [32 + 14, 60, 0.58],
-          [32 + 15, 60, 0.66],
+          [bar(3) + 12, 60, 0.62],
+          [bar(3) + 13, 60, 0.52],
+          [bar(3) + 14, 60, 0.76],
+          ...CAST_CALL(bar(12)),
         ]),
       ],
     },
   },
-  form: ['march', 'fin', 'tail'],
-  loopFrom: 2,
+  form: ['march', 'fin', 'vamp', 'tail'],
+  loopFrom: 3,
 };
