@@ -232,7 +232,9 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
       the sound leaves the noise floor; when the attack is slower than max_attack (time to -6 dB of
       the sustain) its quiet beginning is cut (with a fade-in) so short notes speak; fade_in forces
       a minimum fade (e.g. a chorus sample that starts mid-sound). The beat is the sus_db (-12 dB)
-      point of the (faded) attack, at most max_pre after the start.
+      point of the (faded) attack, at most max_pre after the start: the build's reference for the
+      zone's loop, pitch and loudness windows and the zone's gate anchor (the manifest's beat is then
+      moved onto the perceptual onset of the finished zone: build_instruments.sustain_beat).
     Every zone that does not start from silence gets at least min_fade of fade-in (no click)."""
     m = to_mono(x) if x.ndim > 1 else x
     n = len(m)
@@ -327,6 +329,85 @@ def onset10_index(x: np.ndarray, sr: int, pre: int, rel_db: float = -10.0, look:
     if p.max() <= 0:
         return pre
     return int(t[int(np.argmax(p >= p.max() * 10 ** (rel_db / 10)))])
+
+
+def onset_power(x: np.ndarray, sr: int, period: float | None = None) -> np.ndarray:
+    """Power envelope for the perceptual onset: e[t - 1] = mean square over max(5 ms, one pitch period)
+    centred where the attack suite's trailing 5 ms RMS window [t - 5 ms, t) is centred (silence outside
+    the signal), so both read the same time on a steady rise. A window of at least one period reads the
+    envelope of a low note, not its waveform: a 5 ms window swings by +-5 dB with the period below ~100 Hz."""
+    m = to_mono(x) if np.ndim(x) > 1 else np.asarray(x, dtype=np.float64)
+    n = len(m)
+    w5 = max(1, int(round(0.005 * sr)))
+    w = max(w5, int(round(period))) if period else w5
+    cs = np.concatenate([[0.0], np.cumsum(m * m)])
+    a = np.arange(1, n + 1) - (w5 + w) // 2
+    b = np.clip(a + w, 0, n)
+    a = np.clip(a, 0, n)
+    return (cs[b] - cs[a]) / w
+
+
+# perceptual onset of a sustained note (perceptual_onset; the runtime's sampled.ts perceptualOnset and the
+# attack suite implement the same)
+ONSET_DB = -10.0  # the onset: the envelope within this of its maximum over the next ONSET_LOOK s (att10)
+ONSET_LOOK = 0.5
+DWELL_SLOPE = 0.1  # dB/ms: an envelope climbing its last X dB below the threshold slower than this dwells
+DWELL_X = (1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)  # dB
+DWELL_BLEND = (0.75, 1.5)  # dwell ratios over which the beat moves from the -10 dB point onto the attack
+DWELL_PLATEAU = 0.1  # s: the plateau level is the median over this long from where the dwell starts
+
+
+def perceptual_onset(x: np.ndarray, sr: int, pre: int, period: float | None = None) -> tuple[int, dict]:
+    """The beat on the perceptual onset of a sustained note (`x` from its first sample, `pre` = a first
+    guess of the beat). Returns the sample index t (the end of the trailing 5 ms window that reaches the
+    onset, as the attack suite measures att10) and details.
+
+    1. The -10 dB point (the attack suite's att10 = 0): the first t where the envelope (onset_power: the
+       5 ms RMS, or one period for a low note) comes within 10 dB of its maximum over [0, t + 0.5 s] — the
+       fixed point from `pre` (monotone: a later beat can only raise the maximum).
+    2. A note can dwell below that threshold: a bow, breath or tongue attack onto a plateau at -11..-20 dB
+       followed by a slow crescendo, or a plateau just under -10 dB, where the -10 dB point lands on the
+       crescendo (up to 200 ms after the attack) or wherever a 1 dB fluctuation first touches it. The note
+       is heard where its attack is: when the last X dB below the threshold (X = 1.5..10) take longer than
+       X / DWELL_SLOPE ms (dwell ratio > 1: a climb slower than 0.1 dB/ms), the beat moves onto the attack,
+       the -10 dB point relative to the plateau the attack settles on (the median level over the first
+       0.1 s of the dwell). Between the dwell ratios DWELL_BLEND it moves there in proportion, so nearly
+       equal envelopes get nearly equal beats (no threshold that flips a beat by tens of ms)."""
+    e = onset_power(x, sr, period)
+    n_all = len(e)
+    if n_all < 2 or float(e.max()) <= 0:
+        return int(pre), {'p10': int(pre), 'dwell': 0.0}
+    look = int(round(ONSET_LOOK * sr))
+
+    def first_ge(env: np.ndarray, thr: float) -> int:
+        hit = np.nonzero(env >= thr)[0]
+        return int(hit[0]) + 1 if len(hit) else len(env)
+
+    p = max(1, min(int(pre), n_all))
+    for _ in range(32):
+        n = min(n_all, p + look)
+        q = first_ge(e[:n], float(e[:n].max()) * 10 ** (ONSET_DB / 10))
+        if q == p:
+            break
+        p = q
+    n = min(n_all, p + look)
+    d = 10 * np.log10(e / max(float(e[:n].max()), 1e-30) + 1e-20)
+    ratio, td = 0.0, 0
+    for X in DWELL_X:
+        tx = first_ge(d[:p], ONSET_DB - X)
+        if tx < p:
+            r = (p - tx) / (X / DWELL_SLOPE * sr / 1000)
+            if r > ratio:
+                ratio, td = r, tx
+    info = {'p10': p, 'dwell': round(ratio, 3)}
+    w = min(1.0, max(0.0, (ratio - DWELL_BLEND[0]) / (DWELL_BLEND[1] - DWELL_BLEND[0])))
+    if w <= 0:
+        return p, info
+    hi = min(p, td + int(round(DWELL_PLATEAU * sr)))
+    lp = float(np.median(d[td - 1:hi])) if hi > td else float(d[td - 1])
+    q = min(p, first_ge(d[:p], lp + ONSET_DB))
+    info.update(plateau_db=round(lp, 1), attack=q, w=round(w, 3))
+    return int(round(p - w * (p - q))), info
 
 
 def onset_index(x: np.ndarray, sr: int, rel_db: float = -30.0, slow: bool = False) -> int:

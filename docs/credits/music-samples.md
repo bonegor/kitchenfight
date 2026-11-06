@@ -101,8 +101,20 @@ Notes for arrangers:
 - Short notes: `violin`, `strings`, `cello`, `contrabass`, `choir`, `choirO` (gate <= 0.3 s) and `flute`
   (<= 0.2 s) play a short articulation — the recording entered in its sustain (at the loop start) with a
   10-25 ms fade-in — so they speak at once; longer notes keep the recorded (slower) attack.
-- Timing: every recording is aligned on its perceptual onset (the attack is on the beat; pick / bow noise and
-  slow attack build-ups sound just before it).
+- Timing: every recording is aligned on its perceptual onset — where the RMS over the preceding 5 ms comes
+  within 10 dB of the note's peak (att10) — so the attack is on the beat; pick / bow noise and slow build-ups
+  sound just before it. Sustained recordings (bowed / blown / sung, the accordion: `instrument_dsp.perceptual_onset`)
+  measure that over max(5 ms, one period) of the held note; one that dwells below the -10 dB point (a bow, breath
+  or tongue attack onto a plateau, then a slow crescendo, where att10 would land on the crescendo) has its beat on
+  the attack instead (zone field `dw`: how far, blended in by how slow the climb is). At most 80 ms of a
+  build-up stays before the beat (about 110 ms on a note played a fourth below its recording); a slower swell is
+  entered later with a 20 ms fade-in, only where it is still 20 dB or more below the note's peak (an attack is
+  never cut). A note keeps its sounding length: its gate counts from the attack model's beat (`ga`, what the
+  songs' note lengths and loudness calibration were made with) and the note is moved so that its onset lands on
+  the beat, so short notes of slow attacks are not lengthened. A note shifted from its recording keeps its
+  zone's beat (the same point of the attack, played faster or slower); a note shorter than its attack goes on
+  its own onset; two takes played together (`width`) are aligned on their gate anchors (moved to within 15 ms
+  of each other's onset) and placed on the onset of their sum, within 25 ms (less for takes that dwell).
 - `accordion` plays the recorded musette (two reeds about +5 and +28 cents, beating about 7 Hz at C5);
   `accordionDry` / `accChord` play its lower reed alone (set `accdry`: the recorded attack, then the higher
   reed removed from the loop spectrum), mono, with their own tone (low-pass, high-pass) — no musette beating.

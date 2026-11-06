@@ -31,11 +31,25 @@ const SINE = (() => {
   return t;
 })();
 
+/** longest pre-roll a Sample may carry (s): the sample bank keeps at most 80 ms of a sustained
+ *  build-up at the recording's own pitch — 110 ms on a note played 5.5 semitones below it — and a
+ *  two-take sum onset stays within this too (the renderer's loop-seam copies rely on it) */
+export const MAX_PRE_SEC = 0.12;
+
 export interface Sample {
   l: Float32Array;
   r: Float32Array | null;
-  /** samples before the musical onset (recorded samples): the mixer starts the note this early */
+  /** samples before the musical onset (recorded samples): the mixer starts the note this early
+   *  (at most MAX_PRE_SEC) */
   pre?: number;
+  /** sustained recordings: the sample a note's gate counts from (default `pre`). A sustained zone's
+   *  beat (`pre`) is its perceptual onset, later in a slow attack than the attack model's beat the
+   *  songs' note lengths and loudness were set against: a note keeps that sounding length and is
+   *  moved so its onset lands on the beat, rather than lengthened */
+  ga?: number;
+  /** sampled instruments: where the primary recording's zone starts in this sample (two takes summed
+   *  place it later; measurement scripts) */
+  take0?: number;
   /** slow-rising (spread) attacks: the onset position of a note gated after `gate` output samples
    *  (replaces `pre` for that note). A note cut while its attack is still rising peaks lower, so its
    *  perceptual onset sits earlier in the sample than the whole note's. */

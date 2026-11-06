@@ -9,7 +9,7 @@
  * click, no reverb gap).
  */
 import { Biquad, clamp, dbToGain, Slicer } from './dsp';
-import { INSTRUMENTS, type InstDef, type Sample } from './instruments';
+import { INSTRUMENTS, MAX_PRE_SEC, type InstDef, type Sample } from './instruments';
 import { applyReverb } from './reverb';
 import { compileSong, type SongDef, type TimedEv } from './sequencer';
 
@@ -56,8 +56,6 @@ export interface RenderOpts {
  *  this long after its note for the seam to be exact (the longest instrument, the sampled tam-tam,
  *  rings 6 s); a longer tail is faded out before the seam (and reported) */
 export const LOOP_PAD = 6;
-/** recorded samples start up to this long before their onset (pre-roll of slow attacks) */
-const MAX_PRE_SEC = 0.1;
 /** a tail cut at the loop seam fades out over this long */
 const CAP_FADE_SEC = 0.5;
 /** release tails are mixed for this many time constants (≈ -31 dB, then a short fade) */
@@ -67,6 +65,14 @@ const TAIL_TAU = 3.6;
 const CHOKE_SEC = 0.004;
 let CHOKE_FADE = 192;
 let CAP_FADE = 24000;
+/** a note whose pre-roll starts before t = 0 (a first-bar note) fades in from the buffer start: over
+ *  CLIP_FADE_MIN_SEC (linear) — and a sustained note, whose clipped pre-roll is a build-up, over as much
+ *  of it as was clipped (raised cosine, at most CLIP_FADE_MAX_SEC), but never past its onset: a fade
+ *  that reached into the attack would make the note late */
+const CLIP_FADE_MIN_SEC = 0.002;
+const CLIP_FADE_MAX_SEC = 0.01;
+let CLIP_FADE_MIN = 96;
+let CLIP_FADE_MAX = 480;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -268,6 +274,8 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   // fade ends at the new onset)
   CHOKE_FADE = Math.max(16, Math.round(CHOKE_SEC * sr));
   CAP_FADE = Math.round(CAP_FADE_SEC * sr);
+  CLIP_FADE_MIN = Math.max(1, Math.round(CLIP_FADE_MIN_SEC * sr));
+  CLIP_FADE_MAX = Math.max(CLIP_FADE_MIN, Math.round(CLIP_FADE_MAX_SEC * sr));
   const lastOn = new Map<string, MixEv>();
   for (const ev of mixEvs) {
     if (!ev.inst.choke) continue;
@@ -476,11 +484,14 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   // (short notes of spread attacks: the onset of the note as gated, see Sample.preAt)
   const pre = s.preAt && !ring ? preOfGate(s, ev.gate) : s.pre ?? 0;
   const st = ev.st - pre;
-  // indices relative to the sample start: release starts at the gate end; the end fade is 64
-  // samples after a release, CHOKE_FADE when the next note on the string cuts it short, and
-  // CAP_FADE when the note would ring past the loop seam
-  const relStart = ring ? slen : Math.min(slen, pre + ev.gate);
-  let total = ring ? slen : Math.min(slen, pre + ev.gate + ev.relN);
+  // indices relative to the sample start: release starts at the gate end — `gate` samples after the
+  // onset, or for a sustained recording after its gate anchor (Sample.ga: the note keeps the sounding
+  // length the songs were written against, placed so its perceptual onset is on the beat); the end
+  // fade is 64 samples after a release, CHOKE_FADE when the next note on the string cuts it short,
+  // and CAP_FADE when the note would ring past the loop seam
+  const anchor = s.ga !== undefined && Number.isFinite(s.ga) ? Math.max(0, s.ga) : pre;
+  const relStart = ring ? slen : Math.min(slen, anchor + ev.gate);
+  let total = ring ? slen : Math.min(slen, anchor + ev.gate + ev.relN);
   let fadeN = 64;
   let capped = false;
   const choke = ev.chokeAt === Infinity ? Infinity : ev.chokeAt - st + CHOKE_FADE;
@@ -502,14 +513,18 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
   const gs = ev.gs;
-  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in over 2 ms
-  const nIn = i0 > 0 ? Math.min(96, a - i0) : 0;
+  // a note clipped at the start of the buffer (pre-roll before t = 0) fades in: plucked / struck notes
+  // over CLIP_FADE_MIN (their transient is right at the onset); sustained notes over the build-up they
+  // lost, up to CLIP_FADE_MAX but ending by their onset (ev.st), raised cosine
+  const sus = ev.inst.kind === 'sustain';
+  const nIn = i0 <= 0 ? 0 : Math.min(a - i0, sus ? Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX, ev.st)) : CLIP_FADE_MIN);
+  const fin = sus ? (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn) : (i: number): number => (i - i0) / nIn;
   if (sr2) {
     const gL = ev.bl;
     const gR = ev.br;
     const gs2 = gs * 0.5;
     for (let i = i0; i < a; i++) {
-      const f = i - i0 < nIn ? (i - i0) / nIn : 1;
+      const f = i - i0 < nIn ? fin(i) : 1;
       const vl = sl[i] * f;
       const vr = sr2[i] * f;
       const j = st + i;
@@ -534,7 +549,7 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const gr = ev.gr;
   if (nIn > 0) {
     for (let i = i0; i < i0 + nIn; i++) {
-      const v = (sl[i] * (i - i0)) / nIn;
+      const v = sl[i] * fin(i);
       const j = st + i;
       L[j] += v * gl;
       R[j] += v * gr;

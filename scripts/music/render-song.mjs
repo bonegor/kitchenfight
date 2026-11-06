@@ -317,9 +317,17 @@ export async function analyseSong(mods, song, o = {}) {
         ch: c.ch, inst: c.inst, notes: c.events, gainDb: c.gain, lufs: l2.lufs, shortTermMaxLufs: l2.shortTermMax,
         peakDbfs: db(s2.peak), rmsDbfs: db(s2.rms), rmsWholeDbfs: db(sw.rms), relLu: l2.lufs - ld.lufs, relStLu: l2.shortTermMax - ld.lufs,
       };
+      // a channel silent in the loop body (it plays in the intro only: the loop window holds no more than
+      // the float noise of the other notes' ends) is judged over the whole rendering, against the whole file
+      if (r.loop && !(l2.shortTermMax > -70)) {
+        const lw = loudness(rs.left, rs.right, sr, 0, rs.length);
+        row.introOnly = true;
+        row.shortTermMaxWholeLufs = lw.shortTermMax;
+        row.relStLu = lw.shortTermMax - ldAll.lufs;
+      }
       rep.channels.push(row);
       // sparse accents (crash, glock) have a low integrated level: judge audibility by their loudest 3 s
-      if (Number.isFinite(row.relStLu) && row.relStLu < -30) warnings.push(`channel "${c.ch}" (${c.inst}): even its loudest 3 s are ${fmt(-row.relStLu)} LU below the mix — check it is audible`);
+      if (Number.isFinite(row.relStLu) && row.relStLu < -30) warnings.push(`channel "${c.ch}" (${c.inst}): even its loudest 3 s are ${fmt(-row.relStLu)} LU below the mix${row.introOnly ? ' (it plays outside the loop body only: measured over the whole file)' : ''} — check it is audible`);
     }
   }
   return { rep, r };

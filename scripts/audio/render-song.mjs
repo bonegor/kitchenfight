@@ -70,7 +70,7 @@ export async function loadAudio(songsIndex = '') {
     `export { SONGS } from ${songs};`,
     `export { renderSong, clearSampleCache } from ${src('render.ts')};`,
     `export { INSTRUMENTS, NEW_IDS, FALLBACK_TRIM_DB } from ${src('instruments.ts')};`,
-    `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice } from ${src('sampled.ts')};`,
+    `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice, onsetPower, perceptualOnset } from ${src('sampled.ts')};`,
     `export { SAMPLE_SETS } from ${src('assets/inst/manifest.ts')};`,
     `export { Slicer } from ${src('dsp.ts')};`,
     `export { compileSong } from ${src('sequencer.ts')};`,
@@ -294,9 +294,21 @@ async function renderPattern(A, id) {
   const r = await A.renderSong(song, SR, { slicer: new A.Slicer(1e9), raw: true });
   const meta = notes.map((n, i) => {
     const t = i * gap + 0.5;
-    const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, inst.layerOf ? inst.layerOf(n.v) : 0) : null;
+    const layer = inst.layerOf ? inst.layerOf(n.v) : 0;
+    const choice = A.debugChoice ? A.debugChoice(id, n.m, n.vr, layer) : null;
     const set = choice ? A.SAMPLE_SETS.find((x) => x.name === choice.set) : null;
-    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer: inst.layerOf ? inst.layerOf(n.v) : 0, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, cents: choice ? choice.cents : 0, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0 };
+    // sustained notes: a single take is placed by its zone's beat; two takes summed (`width` sets) by the
+    // onset of their sum, the primary take starting `take0` into the sample. beat_move = the note's beat
+    // minus where the primary zone's own beat sits in the sample (the analysis places the zone by it)
+    let beatMove = 0;
+    if (choice && set && sustain && !SYNTH) {
+      const inc = (Math.pow(2, (choice.midi - choice.zone.p) / 12 + choice.cents / 1200) * set.sr) / SR;
+      // (the length the mixer renders the note at)
+      const lenSec = Math.max(0.5, Math.ceil(((Math.round(noteSec * SR) + Math.round(inst.release * 3.6 * SR)) / SR + 0.03) * 4) / 4);
+      const smp = inst.make(SR, n.m, n.vr, lenSec, layer);
+      beatMove = (smp.pre ?? 0) - (smp.take0 ?? 0) - Math.round(choice.zone.pre / inc);
+    }
+    return { ...n, t, start: Math.round(t * SR), dur: noteSec, layer, zone: choice ? choice.zone : null, folded: choice ? choice.midi : n.m, cents: choice ? choice.cents : 0, set: choice ? choice.set : null, set_sr: set ? set.sr : null, gainDb: spec?.gainDb ?? 0, beat_move: beatMove };
   });
   const base = path.join(OUT, id);
   writeWav(base + '.wav', [r.left, r.right], SR);
