@@ -4,8 +4,8 @@
  * F major, 6/8, ♩. = 124 (3 steps per beat, one step = an eighth). Melody transcribed from
  * bb_funiculi.abc voice 1 (E♭ songbook print "A Merry Life"), transposed up a whole tone; harmony
  * from the chord symbols of wf_funiculi.abc / the session book (F / C7 verse, Am-E7 / C-G7 middle,
- * C7 pedal → F | A7/E | Dm | A7/C# | Dm | B♭ | F/C | C7 | F refrain) and the printed bass line of
- * bb_funiculi.abc V:2 (the chromatic F–E–D–C♯–D under "funiculì, funiculà").
+ * C7 pedal → F | A7/E | Dm | A7/C# | Dm | B♭ | F/C–C7 (cadential 6/4) | F refrain) and the
+ * printed bass line of bb_funiculi.abc V:2 (the chromatic F–E–D–C♯–D under "funiculì, funiculà").
  *
  * Form (bars):  intro 3 | verse 18 (ref 2–18 + fill) | refrain 16 (ref 38–53, full band)
  *               | middle 18 (ref 20–37: A minor → C major, mandolin lead) | refrain2 16 (bigger)
@@ -89,18 +89,23 @@ const INTRO_CH = 'C7:6 | C7:6 | F:3 C7:3';
 const VERSE_CH =
   'F:6 | F:3 C7:3 | F:3 Bb:3 | F:6 | F:3 C7:3 | F:6 | F:3 C7:3 | F:6 | F:3 C7:3 | ' +
   'F:6 | F:3 C7:3 | F:3 Bb:3 | F:6 | F:3 C7:3 | F:6 | F:3 C7:3 | F:6 | F:3 C7:3';
+/** ref bars 38–52; the cadence is the printed cadential 6/4 over the dominant pedal: ref 51 F/C
+ *  with C7 on the last eighth, ref 52 F/C on each quarter and C7 on the eighth after it
+ *  (bb_funiculi.abc `[GB]2 [FA] [EG]2 [DF]` over B♭ in E♭) */
 const REFRAIN_BODY_CH =
-  'C7:6 | C7:6 | Bb/C:2 C7:1 Bb/C:3 | C7:6 | C7:6 | C7:6 | Bb/C:2 C7:1 Bb/C:3 | F:6 | A7/E:6 | Dm:6 | A7/C#:6 | Dm:6 | C7/Bb:2 Bb:4 | F/C:5 C7:1 | C7:3 F/C:2 C7:1';
+  'C7:6 | C7:6 | Bb/C:2 C7:1 Bb/C:3 | C7:6 | C7:6 | C7:6 | Bb/C:2 C7:1 Bb/C:3 | F:6 | A7/E:6 | Dm:6 | A7/C#:6 | Dm:6 | C7/Bb:2 Bb:4 | F/C:5 C7:1 | F/C:2 C7:1 F/C:2 C7:1';
 const MIDDLE_CH =
   'Am:6 | Am:3 E7:3 | Am:3 E7:3 | Am:6 | Am:3 E7:3 | Am:6 | Am:3 E7/G#:3 | Am:6 | Am:3 Am/G:3 | ' +
   'C:6 | C:3 G7:3 | C:3 G7:3 | C:6 | C:3 G7:3 | C:6 | C:3 G7/B:3 | C:6 | C:3 C7:3';
 
-/** bass lines written out, so chord changes, inversions and walks are exact */
+/** bass lines written out, so chord changes, inversions and walks are exact. In the verse's fill
+ *  bar the timpani rolls on C2, so the bass falls down the C7 chord (C3–B♭2–G2: an octave, a
+ *  seventh and a fifth above the roll) into the refrain's C, not through D♭2/D2/E2 */
 const VERSE_BASS = `
   F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 Bb1:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 |
   F2:2 r:1 A2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 E2:1 |
   F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 Bb1:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 |
-  F2:2 r:1 A2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 E2:1 D2:1 Db2:1 |`;
+  F2:2 r:1 A2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C2:2 r:1 | F2:2 r:1 C3:1 Bb2:1 G2:1 |`;
 /** refrain bass = bb_funiculi.abc V:2 (stop-time C pedal, then F–E–D–C♯–D, B♭, C, C7, F) */
 const REFRAIN_BASS = `
   C2:3 C2:1 r:2 | C2:3 C2:1 r:2 | C2:2 C2:1 C2:2 C2:1 | C2:5 r:1 |
@@ -144,7 +149,9 @@ function bandParts(big: boolean): Part[] {
     mel('accLo', REFRAIN_MEL + REFRAIN_END, { vel: 0.7, oct: -1 }),
     mel('mand', REFRAIN_MEL + (big ? REFRAIN_END : MIDDLE_PICKUP), { vel: big ? 0.74 : 0.7, tremMin: 3 }),
     mel('bass', REFRAIN_BASS, { vel: 0.85 }),
-    comp('gtr', REFRAIN_COMP, { lo: 'G3', hi: 'E4', n: 3, vel: 0.55, strum: 0.01 }),
+    // guitar: open-position shapes on the top three strings (F = A3–C4–F4, C7 = B♭3–C4–E4,
+    // Dm = A3–D4–F4, A7 = A3–C♯4–G4), never above the accordion's tune
+    comp('gtr', REFRAIN_COMP, { lo: 'A3', hi: 'F4', n: 3, vel: 0.55, strum: 0.01 }),
     comp('accC', REFRAIN_COMP, { lo: 'E3', hi: 'E4', n: 3, vel: 0.5 }),
     // clarinet: echoes "jam-mo" in the stop-time gaps, an arpeggio under the held "jà", a rising
     // chromatic inner line under "funiculì, funiculà" (against the falling bass)
@@ -222,7 +229,7 @@ export const title: SongDef = {
         comp('tbn', 'r:6 | r:6 | C:2 r:4', { lo: 'C3', hi: 'C4', n: 3, vel: 0.8 }),
         comp('tpt', 'r:6 | r:6 | C:2 r:4', { lo: 'F4', hi: 'C5', n: 2, vel: 0.7 }),
         comp('accC', 'r:6 | r:6 | C:2 r:2 c:1 c:1', { lo: 'E3', hi: 'E4', n: 3, vel: 0.6 }),
-        comp('gtr', "r:6 | r:6 | C:2 r:2 c':1 c':1", { lo: 'G3', hi: 'E4', n: 3, vel: 0.6, strum: 0.012 }),
+        comp('gtr', "r:6 | r:6 | C:2 r:2 c':1 c':1", { lo: 'A3', hi: 'F4', n: 3, vel: 0.6, strum: 0.012 }),
         mel('bass', 'r:6 | r:6 | F2:2 r:1 C2:2 r:1 |', { vel: 0.9 }),
       ],
     },
@@ -233,7 +240,8 @@ export const title: SongDef = {
         mel('acc', VERSE_A + VERSE_B_ORN, { vel: 0.9 }),
         mel('bass', VERSE_BASS, { vel: 0.85 }),
         comp('gtr', VERSE_GTR, { lo: 'A3', hi: 'F4', n: 3, vel: 0.55, strum: 0.01 }),
-        comp('mandC', VERSE_MANDC, { lo: 'C4', hi: 'A4', n: 2, vel: 0.5, to: 9 }),
+        // mandolin double stops (A3+F4, B♭3+E4, B♭3+D4): at or below the tune's lowest note, F4
+        comp('mandC', VERSE_MANDC, { lo: 'A3', hi: 'F4', n: 2, vel: 0.5, to: 9 }),
         // second phrase: accordion chords, clarinet in thirds, mandolin shimmer on the long notes
         comp('accC', VERSE_ACCC, { lo: 'E3', hi: 'E4', n: 3, vel: 0.45, from: 9, to: 17 }),
         harm('clar', rep('r:6 |', 9) + VERSE_B, { vel: 0.5, plain: true }),
