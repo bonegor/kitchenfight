@@ -203,6 +203,10 @@ export class AudioEngine implements AudioAPI {
 
   // music
   private tracks = new Map<MusicId, Track>();
+  /** when each track was last asked for (preload or play): a fresh render takes this as its LRU
+   *  stamp, so a track requested long ago is not treated as recently used just because its render
+   *  finished late (it would push out the stage track a run returns to after its boss) */
+  private asked = new Map<MusicId, number>();
   private pending = new Map<MusicId, Pending>();
   private queue: MusicId[] = [];
   private pumping = false;
@@ -862,8 +866,13 @@ export class AudioEngine implements AudioAPI {
 
   /** Render (or fetch) a track. Priority requests jump the queue. */
   private ensure(id: MusicId, priority: boolean): Promise<Track | null> {
+    const now = performance.now();
+    this.asked.set(id, now);
     const have = this.tracks.get(id);
-    if (have) return Promise.resolve(have);
+    if (have) {
+      have.used = Math.max(have.used, now); // asked for again: it is needed soon
+      return Promise.resolve(have);
+    }
     const p = this.pending.get(id);
     if (p) {
       if (priority) {
@@ -969,7 +978,7 @@ export class AudioEngine implements AudioAPI {
           loopStart: msg.loopStart / msg.sr,
           loopEnd: msg.loopEnd / msg.sr,
           seconds: msg.length / msg.sr,
-          used: performance.now(),
+          used: this.asked.get(id) ?? performance.now(),
           sampled: missing.length === 0,
           missing,
         };
@@ -999,7 +1008,7 @@ export class AudioEngine implements AudioAPI {
       loopStart: r.loopStart / sr,
       loopEnd: r.loopEnd / sr,
       seconds: r.length / sr,
-      used: performance.now(),
+      used: this.asked.get(id) ?? performance.now(),
       sampled: false,
       missing: [], // no worker: the recorded samples can never be used, this render is final
     };
