@@ -54,9 +54,10 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
 
 ## 🎨 How it's made
 
-- **No image or audio files.** Every sprite is painted in code with vector shapes (`src/gfx/art/*`, toolkit in
-  `src/gfx/painter.ts`) and cached to high-resolution bitmaps at load time. Music and sound effects are synthesized
-  live with the Web Audio API (`src/audio/*`).
+- **No image files.** Every sprite is painted in code with vector shapes (`src/gfx/art/*`, toolkit in
+  `src/gfx/painter.ts`) and cached to high-resolution bitmaps at load time. Music is synthesized live with the Web
+  Audio API (`src/audio/*`); sound effects are recorded MP3 variants (CC0 / CC BY collections, see Credits) layered
+  with synthesized sounds, which also serve as the fallback.
 - TypeScript + Vite, no game framework. Custom engine: spatial hashing, pooled entities, y-sorted renderer with
   dynamic lighting, particles, decals, screen shake and hit-stop (`src/game/*`).
 - DOM/CSS user interface styled like a trattoria menu card (`src/ui/*`, `src/styles/main.css`).
@@ -87,4 +88,14 @@ balance simulation with a bot), `screens.mjs` (screenshots of every menu).
 ## Credits
 Design, code, art, music and research by Claude (Anthropic) for this repository.
 Fonts: Lobster, Lilita One, Playfair Display — SIL Open Font License.
+
+**Sound effects** are recordings (and a few synthesized layers) from these collections, edited and mixed for
+this game; details per sound in [docs/credits/sfx.md](docs/credits/sfx.md):
+- "Oculus Audio Pack 01" by Oculus VR, LLC (https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Files renamed to the UCS naming convention; OGG previews transcoded from the original WAVs. Modified: trimmed, re-pitched, filtered, layered and re-encoded as MP3.
+- Sonatina Symphonic Orchestra by Mattias Westlund (https://github.com/peastman/sso), licensed under CC Sampling Plus 1.0 (https://creativecommons.org/licenses/sampling+/1.0/). Modified: trimmed, re-pitched, filtered, layered and re-encoded as MP3.
+- Terkelsen's Mandolin: samples by Lars Terkelsen, SFZ conversion by S. Christian Collins (https://github.com/sfzinstruments/terkelsen.mandolin). Modified: trimmed, re-pitched, filtered, layered and re-encoded as MP3.
+- VCSL (Versilian Community Sample Library) by Versilian Studios (https://github.com/sgossner/VCSL), CC0 1.0.
+- FreePats World Percussion by Xavimart, Gonzalo and Roberto (http://freepats.zenvoid.org/), CC0 1.0.
+- SFX Kit by Wyzowl (https://huggingface.co/datasets/wyzowl/sfx-kit), CC0 1.0.
+
 No pineapples were harmed. Several were deeply offended.

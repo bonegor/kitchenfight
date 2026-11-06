@@ -3,6 +3,7 @@
  * pause, results, pantry shop, collection, settings, credits.
  */
 import { h, img, Nav } from './dom';
+import { SFX_CREDITS } from '../audio/sfxsamples';
 import { spriteURL, hasSprite } from '../gfx/sprites';
 import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
@@ -1112,14 +1113,19 @@ export class UI {
   // ------------------------------------------------------------------ credits
 
   showCredits() {
+    const line = (t: string) => h('p', { class: 'credit-line' }, t);
     const el = h('div', { class: 'screen dim credits' },
-      h('div', { class: 'paper panel', style: { width: 'min(700px,100%)' } },
+      h('div', { class: 'paper panel', style: { width: 'min(760px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-head' }, h('h2', {}, 'Crediti'), h('span', { class: 'sub' }, 'Credits')),
-        h('div', { class: 'panel-body' },
+        h('div', { class: 'panel-body', 'data-nav-scroll': '' },
           h('div', { class: 'tricolore', style: { margin: '6px auto 14px', width: '60%' } }),
           h('p', {}, h('b', {}, 'KITCHEN FIGHT'), ' — an original survivors-like about defending Italian culinary tradition.'),
-          h('p', {}, 'Every sprite is painted in code with vector shapes. Every note of music and every sound effect is synthesized live in your browser — no samples, no image files.'),
+          h('p', {}, 'Every sprite is painted in code with vector shapes — no image files. Music and voices are synthesized live in your browser.'),
+          h('h3', {}, 'Sound effects'),
+          ...SFX_CREDITS.map((t, i) => line(i === 0 ? t.replace(/^Sound effects:\s*/i, '').replace(/^./, (c) => c.toUpperCase()) : t)),
+          h('p', { class: 'credit-line' }, 'Every recorded sound has a synthesized fallback, so the game still sounds right if the recordings cannot load.'),
+          h('h3', {}, 'Research & type'),
           h('p', {}, 'The crimes are real: pet peeves of Italian chefs, institutions and social media, compiled with sources in docs/RESEARCH.md (YouGov 2022, the town of Amatrice, the Trevi Fountain “pasta activists”, and many more).'),
           h('p', {}, 'Fonts: Lobster, Lilita One and Playfair Display (SIL Open Font License).'),
           h('p', { class: 'sub' }, 'No pineapples were harmed. Several were deeply offended.'),

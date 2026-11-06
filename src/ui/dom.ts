@@ -132,6 +132,18 @@ export class Nav {
         best = el;
       }
     }
+    if (!best && dy) {
+      // nothing further in that direction: scroll a long panel (marked data-nav-scroll) first
+      const sc = this.root?.querySelector<HTMLElement>('[data-nav-scroll]');
+      if (sc && sc.scrollHeight > sc.clientHeight + 2) {
+        const max = sc.scrollHeight - sc.clientHeight;
+        if ((dy > 0 && sc.scrollTop < max - 1) || (dy < 0 && sc.scrollTop > 1)) {
+          const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          sc.scrollBy({ top: dy * Math.max(80, sc.clientHeight * 0.6), behavior: reduced ? 'auto' : 'smooth' });
+          return;
+        }
+      }
+    }
     if (!best) {
       // wrap around for vertical/horizontal lists
       const idx = items.indexOf(this.cur);
