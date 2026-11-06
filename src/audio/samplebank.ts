@@ -2,10 +2,12 @@
  * Main-thread loader for the recorded instrument samples.
  *
  * The MP3 sprites (src/audio/assets/inst/<set>/<set>.mp3) are embedded through Vite
- * (`?url`: files in the multi-file build, base64 data: URLs in the single-file build), fetched,
- * and decoded with decodeAudioData on an OfflineAudioContext, which works before any user
- * gesture. The decoded channel data is handed to the music worker (worker.ts → 'bank' message),
- * which aligns every sprite on its marker impulse and stores it as Int16 (see sampled.ts).
+ * (`?url`: files in the multi-file build, base64 data: URLs in the single-file build), read
+ * (data: URLs are decoded in place — a fetch() of one obeys the page's CSP connect-src, which a
+ * host may not open to data: — other URLs are fetched), and decoded with decodeAudioData on an
+ * OfflineAudioContext, which works before any user gesture. The decoded channel data is handed to
+ * the music worker (worker.ts → 'bankSet' messages), which aligns every sprite on its marker
+ * impulse and stores it as Int16 (see sampled.ts).
  * Never throws: any failure resolves to null and the synthesized instruments keep playing.
  */
 import { SAMPLE_SETS } from './assets/inst/manifest';
@@ -24,6 +26,28 @@ export interface BankLoadStats {
   pcmBytes: number;
   /** decode sample rates actually used */
   rates: number[];
+  /** why loading stopped early (e.g. every fetch refused by the page's CSP), if it did */
+  error?: string;
+}
+
+/** The bytes behind a sample-set URL: data: URLs decoded in place, others fetched. */
+async function readUrl(url: string): Promise<ArrayBuffer> {
+  if (url.slice(0, 5).toLowerCase() === 'data:') {
+    const comma = url.indexOf(',');
+    if (comma < 0) throw new Error('malformed data: URL');
+    const meta = url.slice(5, comma);
+    const body = url.slice(comma + 1);
+    let bin: string;
+    if (/;base64$/i.test(meta)) bin = atob(body);
+    else bin = body.replace(/%([0-9a-f]{2})/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 255;
+    return out.buffer;
+  }
+  if (typeof fetch !== 'function') throw new Error('no fetch');
+  const res = await fetch(url);
+  if (!res.ok && res.status !== 0) throw new Error('http ' + res.status);
+  return res.arrayBuffer();
 }
 
 type DecodeCtx = OfflineAudioContext;
@@ -74,10 +98,15 @@ export function sampleSetUrls(): Record<string, string> {
   return out;
 }
 
+/** sets that fail to load before any has loaded: after this many the rest are not tried (a page
+ *  whose CSP refuses the reads would otherwise log two console errors per set) */
+const FAIL_FAST = 2;
+
 /**
- * Fetch + decode every sample set. With `onSet`, each set is handed over as soon as it is decoded
+ * Read + decode every sample set. With `onSet`, each set is handed over as soon as it is decoded
  * (and not kept here, so the decoded float PCM never piles up on the main thread); otherwise
- * everything is returned at the end. Resolves null when nothing could be decoded.
+ * everything is returned at the end. Resolves null when nothing could be decoded. `warn` gets one
+ * message when loading stops early (the first sets all failed: the rest are not tried).
  */
 export async function loadSampleBank(
   concurrency = 2,
@@ -89,12 +118,15 @@ export async function loadSampleBank(
   /** before fetching a set nobody asked for yet: a promise to wait for (e.g. the first user gesture,
    *  so the bank does not compete with the game's boot downloads), or null to go on */
   holdRest?: () => Promise<void> | null,
+  warn?: (msg: string) => void,
 ): Promise<{ data: BankData; stats: BankLoadStats } | null> {
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const stats: BankLoadStats = { ms: 0, sets: 0, failed: [], mp3Bytes: 0, pcmBytes: 0, rates: [] };
   try {
-    if (!offlineCtor() || typeof fetch !== 'function') return null;
+    if (!offlineCtor()) return null;
     const urls = sampleSetUrls();
+    let loadedAny = false;
+    let stop = false;
     const pcm: SetPcm[] = [];
     const queue = SAMPLE_SETS.slice();
     const wanted = (): SampleSetDef | undefined => {
@@ -131,16 +163,30 @@ export async function loadSampleBank(
       return queue.shift();
     };
     const worker = async () => {
-      while (queue.length) {
+      while (queue.length && !stop) {
         if (abort && abort()) break;
         const def = await take();
         if (!def) break;
         try {
           const url = urls[def.name];
           if (!url) throw new Error('no url');
-          const res = await fetch(url);
-          if (!res.ok && res.status !== 0) throw new Error('http ' + res.status);
-          const ab = await res.arrayBuffer();
+          let ab: ArrayBuffer;
+          try {
+            ab = await readUrl(url);
+          } catch (e) {
+            // the first reads all refused (a CSP without the source in connect-src, offline):
+            // stop instead of logging the same refusal for every set
+            if (!loadedAny && stats.failed.length + 1 >= FAIL_FAST && !stop) {
+              stop = true;
+              stats.error = `sample bank: reading the sample sets failed (${String(e)}); playing the synthesized instruments`;
+              try {
+                warn?.(stats.error);
+              } catch {
+                /* ignore */
+              }
+            }
+            throw e;
+          }
           stats.mp3Bytes += ab.byteLength;
           const ctx = ctxFor(def.sr);
           if (!ctx) throw new Error('no OfflineAudioContext');
@@ -150,6 +196,7 @@ export async function loadSampleBank(
           stats.pcmBytes += data.reduce((a, d) => a + d.byteLength, 0);
           if (!stats.rates.includes(buf.sampleRate)) stats.rates.push(buf.sampleRate);
           const one: SetPcm = { name: def.name, sr: buf.sampleRate, data };
+          loadedAny = true;
           if (onSet) {
             onSet(def, one);
             pcm.push({ name: def.name, sr: one.sr, data: [] });

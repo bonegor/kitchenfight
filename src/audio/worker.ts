@@ -13,6 +13,7 @@ import { SONGS } from './songs/index';
 import { renderVoice } from './voice';
 
 export type WorkerReq =
+  | { type: 'ping'; seq: number }
   | { type: 'bank'; seq: number; bank: BankData }
   | { type: 'bankSet'; seq: number; set: SampleSetDef; pcm: SetPcm }
   | { type: 'bankDone'; seq: number }
@@ -30,7 +31,10 @@ self.onmessage = async (e: MessageEvent<WorkerReq>) => {
     const register = (defs: Parameters<Parameters<typeof finishSampleBank>[0]>[0]) => {
       for (const d of defs) INSTRUMENTS[d.id] = d;
     };
-    if (req.type === 'bankSet') {
+    if (req.type === 'ping') {
+      // liveness check (the engine gives up on a worker that never answers)
+      post({ seq, ok: true });
+    } else if (req.type === 'bankSet') {
       // one decoded sample set (sent as soon as it is decoded); its instruments switch from the
       // synthesized to the sampled version right away (renders already queued keep their order)
       const t0 = performance.now();

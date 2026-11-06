@@ -3,7 +3,8 @@
  * Attack timing and note-on checks of every zone of every sample set, through the REAL sampler
  * (src/audio/sampled.ts; MP3s decoded with ffmpeg and installed like the music worker does).
  * Each zone is played at its own root (its own layer / round robin) at 48 kHz, dry, and measured
- * relative to the sample's onset (`pre`, the sample the mixer puts on the beat):
+ * relative to the sample's onset (`pre`, the sample the mixer puts on the beat), on what a centred
+ * note plays: the mono sum of the output channels (mono sets with `width` sum two takes):
  *
  *   att10   time from the beat to where the RMS over the preceding 5 ms (the ear's temporal integration)
  *           first comes within 10 dB of its maximum over the first 0.5 s. This is what "the note
@@ -16,10 +17,13 @@
  *   hfOn    energy above 6 kHz in the first 2 ms vs. 50..150 ms later (dB): a note-on HF burst.
  *           Graded only for sustained (bowed / blown / sung) zones, where a burst is a click.
  *
+ *   attShort  spread attacks whose short notes start on their own onset (Sample.preAt, strStab):
+ *           att10 of 40 / 60 / 100 ms notes as the mixer plays them (gate, then the release).
+ *
  * Limits: plucked / struck zones (decay / oneshot sets with a transient attack) |att10| <= 5 ms;
  * section articulations (strStab, pizz, orchHit: spread attack, beat on the perceptual onset)
- * -10..+10 ms; sustained zones sus6 <= 160 ms (bowed strings / chorus) or 90 ms (the rest);
- * head <= -30 dB; sustained hfOn <= +6 dB.
+ * -10..+10 ms, attShort |.| <= 5 ms; sustained zones sus6 <= 160 ms (bowed strings / chorus) or
+ * 90 ms (the rest); head <= -30 dB; sustained hfOn <= +6 dB.
  *
  *   node scripts/audio/check_instrument_attacks.mjs [--only set,set] [--json FILE] [--verbose]
  * Exit code 1 when a zone is over a limit.
@@ -105,29 +109,36 @@ for (const set of A.SAMPLE_SETS) {
     const ch = A.debugChoice(spec.id, midi, Math.max(0, vr), z.l);
     if (!ch || ch.zone.o !== z.o) continue;
     const s = inst.make(SR, midi, Math.max(0, vr), sustain ? 1.6 : 0.8, z.l);
-    // the zone itself: mono sets with `width` play a second take on the right channel, mixed by a
-    // rotation (L = c a + s b, R = c b + s a) — recover a = (c L - s R) / (c^2 - s^2)
+    // what a centred note plays: the mono sum of the channels (mono sets with `width` play a second
+    // take on the right channel: the beat must be on the onset of the two takes together)
     const x = new Float32Array(s.l.length);
-    if (s.r && spec.width !== undefined && set.ch === 1) {
-      const th = Math.asin(Math.min(1, Math.max(0, spec.width))) / 2;
-      const c = Math.cos(th);
-      const sn = Math.sin(th);
-      for (let i = 0; i < x.length; i++) x[i] = (c * s.l[i] - sn * s.r[i]) / (c * c - sn * sn);
-    } else for (let i = 0; i < x.length; i++) x[i] = s.r ? 0.5 * (s.l[i] + s.r[i]) : s.l[i];
+    for (let i = 0; i < x.length; i++) x[i] = s.r ? 0.5 * (s.l[i] + s.r[i]) : s.l[i];
     const pre = s.pre ?? 0;
     const n1 = Math.round(0.001 * SR);
-    // trailing 5 ms RMS: first point within 10 dB of its maximum (first 0.5 s after the beat)
+    // trailing 5 ms RMS: first point within 10 dB of its maximum (first 0.5 s after the beat);
+    // `cut`: the note as the mixer plays a short note (full level up to cut, then the release)
     const W5 = Math.round(0.005 * SR);
-    const cs = new Float64Array(x.length + 1);
-    for (let i = 0; i < x.length; i++) cs[i + 1] = cs[i] + x[i] * x[i];
-    const r5 = (t) => Math.sqrt((cs[t] - cs[Math.max(0, t - W5)]) / W5);
-    const tEnd = Math.min(x.length, pre + Math.round(0.5 * SR));
-    let pk = 0;
-    for (let t = 1; t <= tEnd; t++) pk = Math.max(pk, r5(t));
-    const thr = pk * Math.pow(10, -10 / 20);
-    let i10 = 1;
-    while (i10 < tEnd && r5(i10) < thr) i10++;
-    const att10 = +(((i10 - pre) / SR) * 1000).toFixed(1);
+    const onset10 = (p, cut = Infinity) => {
+      const k = Math.exp(-1 / (Math.max(0.001, inst.release) * SR));
+      const n = Math.min(x.length, cut === Infinity ? x.length : cut + Math.round(3.6 * inst.release * SR));
+      const cs = new Float64Array(n + 1);
+      let env = 1;
+      for (let i = 0; i < n; i++) {
+        if (i >= cut) env *= k;
+        cs[i + 1] = cs[i] + (x[i] * env) ** 2;
+      }
+      const r5 = (t) => Math.sqrt((cs[t] - cs[Math.max(0, t - W5)]) / W5);
+      const tEnd = Math.min(n, p + Math.round(0.5 * SR));
+      let pk = 0;
+      for (let t = 1; t <= tEnd; t++) pk = Math.max(pk, r5(t));
+      const thr = pk * Math.pow(10, -10 / 20);
+      let i10 = 1;
+      while (i10 < tEnd && r5(i10) < thr) i10++;
+      return +(((i10 - p) / SR) * 1000).toFixed(1);
+    };
+    const att10 = onset10(pre);
+    // spread attacks whose short notes start on their own onset (Sample.preAt): short notes as played
+    const attShort = s.preAt && !inst.ring ? [0.04, 0.06, 0.1].map((g) => { const G = Math.round(g * SR); const p = s.preAt(G); return onset10(p, p + G); }) : null;
     // early-sustain level and time to -6 dB of it
     let sus6 = null;
     if (sustain) {
@@ -146,7 +157,7 @@ for (const set of A.SAMPLE_SETS) {
     const eOn = hpEnergy(x, 0, Math.round(0.002 * SR));
     const eRef = hpEnergy(x, pre + Math.round(0.05 * SR), pre + Math.round(0.15 * SR));
     const hfOn = 10 * Math.log10((eOn + 1e-20) / (eRef + 1e-20));
-    const row = { set: set.name, id: spec.id, zi, p: +z.p.toFixed(2), l: z.l, r: z.r, preMs: +((pre / SR) * 1000).toFixed(1), att10, sus6, head: +head.toFixed(1), hfOn: +hfOn.toFixed(1) };
+    const row = { set: set.name, id: spec.id, zi, p: +z.p.toFixed(2), l: z.l, r: z.r, preMs: +((pre / SR) * 1000).toFixed(1), att10, attShort, sus6, head: +head.toFixed(1), hfOn: +hfOn.toFixed(1) };
     rows.push(row);
     const why = [];
     if (sustain) {
@@ -156,6 +167,7 @@ for (const set of A.SAMPLE_SETS) {
     } else if (PERCEPTUAL.has(set.name)) {
       if (att10 < -10 || att10 > 10) why.push(`attack ${att10} ms from the beat (limit -10..+10)`);
     } else if (!SWELL(set.name, z) && Math.abs(att10) > 5) why.push(`attack ${att10} ms from the beat (limit 5)`);
+    if (attShort && attShort.some((a) => Math.abs(a) > 5)) why.push(`short notes (40/60/100 ms) attack ${attShort.join('/')} ms from the beat (limit 5)`);
     if (head > -30) why.push(`first sample ${head.toFixed(1)} dB re the note (step from silence)`);
     if (why.length) fails.push(`${set.name} zone ${zi} (p=${z.p.toFixed(2)} L${z.l} R${z.r}): ${why.join('; ')}`);
   }

@@ -339,11 +339,16 @@ async function main() {
       const lv = levels(r.left, r.right);
       writeWav(path.join(OUT, `${id}${SYNTH ? '-synth' : ''}.wav`), [r.left, r.right], SR);
       const lufs = integratedLoudness(r.left, r.right, SR);
-      const st = { id, seconds: +(r.length / SR).toFixed(2), loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, ms: Math.round(r.stats.ms), synthMs: Math.round(r.stats.synthMs), mixMs: Math.round(r.stats.mixMs), peakDb: +lv.peakDb.toFixed(2), rmsDb: +lv.rmsDb.toFixed(2), lufs: +lufs.toFixed(2), clipped: r.stats.clipped, nan: lv.nan, warnings: r.stats.warnings, samples: r.stats.samplesSynth };
+      // loop seam: playback wraps from loopEnd to loopStart, so the material before loopEnd must
+      // equal the material before loopStart (max difference over the last 50 ms; exact = float noise)
+      let seam = 0;
+      if (r.loop) for (let k = 1; k <= Math.min(Math.round(0.05 * SR), r.loopEnd - r.loopStart); k++) for (const c of [r.left, r.right]) seam = Math.max(seam, Math.abs(c[r.loopEnd - k] - c[r.loopStart - k]));
+      const st = { id, seconds: +(r.length / SR).toFixed(2), loop: r.loop, loopStart: r.loopStart, loopEnd: r.loopEnd, seam: +seam.toExponential(2), ms: Math.round(r.stats.ms), synthMs: Math.round(r.stats.synthMs), mixMs: Math.round(r.stats.mixMs), peakDb: +lv.peakDb.toFixed(2), rmsDb: +lv.rmsDb.toFixed(2), lufs: +lufs.toFixed(2), clipped: r.stats.clipped, nan: lv.nan, warnings: r.stats.warnings, samples: r.stats.samplesSynth };
       if (JSON_OUT) console.log(JSON.stringify(st));
-      else console.log(`${id.padEnd(10)} ${st.seconds.toFixed(1).padStart(6)} s  render ${String(st.ms).padStart(5)} ms (samples ${st.synthMs} ms, mix ${st.mixMs} ms)  peak ${st.peakDb.toFixed(1)} dBFS  rms ${st.rmsDb.toFixed(1)} dBFS  ${st.lufs.toFixed(1)} LUFS  soft-clipped ${st.clipped}${st.warnings.length ? '  WARN ' + st.warnings.slice(0, 4).join('; ') : ''}${lv.nan ? '  NaN ' + lv.nan : ''}`);
-      // 'range:' warnings are notes for the arrangers (folded / far-shifted notes), not render faults
-      if (st.nan || st.warnings.some((w) => !w.startsWith('range:'))) bad++;
+      else console.log(`${id.padEnd(10)} ${st.seconds.toFixed(1).padStart(6)} s  render ${String(st.ms).padStart(5)} ms (samples ${st.synthMs} ms, mix ${st.mixMs} ms)  peak ${st.peakDb.toFixed(1)} dBFS  rms ${st.rmsDb.toFixed(1)} dBFS  ${st.lufs.toFixed(1)} LUFS  soft-clipped ${st.clipped}${r.loop ? `  seam ${seam.toExponential(1)}` : ''}${st.warnings.length ? '  WARN ' + st.warnings.slice(0, 4).join('; ') : ''}${lv.nan ? '  NaN ' + lv.nan : ''}`);
+      // 'range:' warnings are notes for the arrangers (folded / far-shifted notes), not render faults;
+      // a seam step above -60 dBFS is a click at every loop pass
+      if (st.nan || seam > 1e-3 || st.warnings.some((w) => !w.startsWith('range:'))) bad++;
     }
   }
   process.exitCode = bad ? 1 : 0;

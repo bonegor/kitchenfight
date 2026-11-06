@@ -96,6 +96,12 @@ export interface SampledSpec {
   /** round robins (render.ts cycles variants); 'neighbor' = borrow the next zone when the set has none */
   variants?: number;
   rr?: 'set' | 'neighbor' | 'art';
+  /** the variants a note without an explicit variant cycles through (InstDef.rrCycle; default: all
+   *  variants, but only variant 0 for 'art' sets — rolls / shakes / fast takes are asked for) */
+  rrCycle?: number[];
+  /** 'set' sets: variant → round robin (take) index, when variants carry semantics beyond the
+   *  takes (the timpani: variant 1 = the soft stroke on the second take) */
+  takes?: number[];
   /** velocity thresholds between layers, ascending (layer = number of thresholds <= v) */
   layers?: number[];
   /** ignore the requested pitch (unpitched percussion) */
@@ -119,6 +125,10 @@ export interface SampledSpec {
   /** stereo width for mono sets: target L/R correlation of a centred note (ensembles: the right
    *  channel plays another take / neighbouring recording, so sections sound like sections) */
   width?: number;
+  /** width sets with spread (section) attacks: the beat goes where the SUM of the two takes — what
+   *  is heard — reaches -10 dB of its peak (5 ms RMS), not where each take alone does: two spread
+   *  attacks of different shapes sum to an attack whose -10 dB point can sit 13 ms off either one */
+  sumOnset?: boolean;
   /** sustained instruments with a slow recorded attack: notes whose gate is at most this many
    *  seconds play the short articulation (the recording entered in its sustain, at the loop start,
    *  with a fast fade-in — the way SSO builds its solo staccatos from the sustains) */
@@ -146,7 +156,7 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   // strings
   S('violin', 'violin', 'sustain', 0.14, { gate: 0.96, short: 0.3, gainDb: 6.3 }),
   S('strings', 'strings', 'sustain', 0.3, { gate: 0.97, width: 0.65, short: 0.3, gainDb: 5.6 }),
-  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', width: 0.65, gainDb: 6.1 }),
+  S('strStab', 'strstab', 'pluck', 0.06, { gate: 0.6, variants: 2, rr: 'set', width: 0.65, sumOnset: true, gainDb: 6.1 }),
   S('pizz', 'pizz', 'pluck', 0.08, { gate: 1, choke: true, variants: 2, rr: 'set', gainDb: 1.5 }),
   S('ubass', 'ubass', 'pluck', 0.08, { gate: 0.9, choke: true, variants: 2, rr: 'neighbor', gainDb: 1.2 }),
   S('cello', 'cello', 'sustain', 0.16, { gate: 0.96, short: 0.3, gainDb: 4.8 }),
@@ -174,21 +184,23 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('vibes', 'vibes', 'pluck', 0.3, { gate: 1, gainDb: 2.4 }),
   S('celesta', 'celesta', 'pluck', 0.3, { gate: 1, layers: [0.7], gainDb: 5 }),
   S('bell', 'chimes', 'pluck', 1, { ring: true, maxLen: 4, gainDb: -2.5 }),
-  S('timp', 'timpani', 'pluck', 0.6, { ring: true, maxLen: 3.2, variants: 2, rr: 'set', layers: [0.55], vg: [0, -4.5], gainDb: 2.8 }),
+  // timpani: variant 0 = stroke (take 1), 1 = the synth's soft stroke (take 2, -4.5 dB), 2 = take 2 at
+  // full level — notes without a variant alternate the two takes at the same level
+  S('timp', 'timpani', 'pluck', 0.6, { ring: true, maxLen: 3.2, variants: 3, rr: 'set', takes: [0, 1, 1], rrCycle: [0, 2], layers: [0.55], vg: [0, -4.5, 0], gainDb: 2.8 }),
   // percussion (unpitched; variants keep the synth semantics)
-  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', vg: [0, 0, -3.5, -3.5, 2, 2, -2, -2], gainDb: -8.7 }),
+  S('tamb', 'tamb', 'perc', 0.03, { ring: true, unpitched: true, variants: 8, rr: 'art', rrCycle: [0, 1], vg: [0, 0, -3.5, -3.5, 2, 2, -2, -2], gainDb: -8.7 }),
   S('snare', 'snare', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.45, 0.65, 0.85], gainDb: 4.8 }),
   S('crash', 'crash', 'perc', 0.5, { ring: true, unpitched: true, maxLen: 3, variants: 2, rr: 'set', layers: [0.75], width: 0.3, gainDb: 4 }),
   S('kick', 'kick', 'perc', 0.05, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.5, 0.85], gainDb: 9.6 }),
   S('triangle', 'triangle', 'perc', 0.3, { ring: true, unpitched: true, maxLen: 2.5, variants: 2, rr: 'set', layers: [0.7], gainDb: 0 }),
-  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'art', art: [[0], [1], [2], [3]], gainDb: 0 }),
+  S('shaker', 'shaker', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'art', art: [[0], [1], [2], [3]], rrCycle: [0, 1, 2, 3], gainDb: 0 }),
   S('pan', 'panclang', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 1.6, variants: 2, rr: 'set', layers: [0.8], gainDb: -0.9 }),
   S('anvil', 'anvil', 'perc', 0.1, { ring: true, unpitched: true, maxLen: 2, variants: 2, rr: 'set', layers: [0.45, 0.8], gainDb: 0.1 }),
   S('castanets', 'castanets', 'perc', 0.02, { ring: true, unpitched: true, variants: 4, rr: 'set', gainDb: 0.2 }),
   S('slapstick', 'slapstick', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 0.2 }),
   S('woodblock', 'woodblock', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 5.2 }),
   S('vibraslap', 'vibraslap', 'perc', 0.1, { ring: true, unpitched: true, variants: 2, rr: 'set', gainDb: 1.8 }),
-  S('flexatone', 'flexatone', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', gainDb: 4.5 }),
+  S('flexatone', 'flexatone', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', rrCycle: [0, 1], gainDb: 4.5 }),
   S('cymbal', 'cymbal', 'perc', 0.6, { unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 5.1 }),
   S('bassDrum', 'bassdrum', 'perc', 0.4, { unpitched: true, variants: 2, rr: 'art', layers: [0.5, 0.85], gainDb: 0.4 }),
   S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', width: 0.4, gainDb: 4.4 }),
@@ -255,36 +267,24 @@ export function addSampleSet(def: SampleSetDef, pcm: SetPcm): boolean {
       pendingWarnings.push(`set ${def.name}: no PCM`);
       return false;
     }
-    if (pcm.sr !== def.sr) pendingWarnings.push(`set ${def.name}: decoded at ${pcm.sr} Hz (expected ${def.sr})`);
-    // decoded at another rate (decode-context fallback): positions scale with the rate
-    const rateK = pcm.sr / def.sr;
-    const scaled: SampleSetDef =
-      rateK === 1
-        ? def
-        : {
-            ...def,
-            sr: pcm.sr,
-            marker: Math.round(def.marker * rateK),
-            win: Math.round(def.win * rateK),
-            zones: def.zones.map((z) => ({
-              ...z,
-              o: Math.round(z.o * rateK),
-              n: Math.round(z.n * rateK),
-              pre: Math.round(z.pre * rateK),
-              ls: z.ls === undefined ? undefined : Math.round(z.ls * rateK),
-              le: z.le === undefined ? undefined : Math.round(z.le * rateK),
-            })),
-          };
-    const mk = findMarker(pcm.data[0], scaled);
+    // decoded at another rate (decode-context fallback): back to the set's own rate, so the resident
+    // bank keeps its native size (a 44.1 / 48 kHz copy of the 24 / 32 kHz sets is 40-50 % larger)
+    // and every manifest position stays exact
+    let data = pcm.data;
+    if (pcm.sr !== def.sr) {
+      pendingWarnings.push(`set ${def.name}: decoded at ${pcm.sr} Hz, resampled to its ${def.sr} Hz`);
+      data = pcm.data.map((c) => resampleChannel(c, pcm.sr, def.sr));
+    }
+    const mk = findMarker(data[0], def);
     if (!mk.ok) pendingWarnings.push(`set ${def.name}: alignment marker not found, assuming no decoder delay`);
     pendingShifts[def.name] = mk.shift;
     let peak = 1;
-    for (const c of pcm.data) for (let i = 0; i < c.length; i++) if (Math.abs(c[i]) > peak) peak = Math.abs(c[i]);
+    for (const c of data) for (let i = 0; i < c.length; i++) if (Math.abs(c[i]) > peak) peak = Math.abs(c[i]);
     const k = peak / 32767;
     const inv = 1 / k;
     const chs: Int16Array[] = [];
-    for (let c = 0; c < scaled.ch; c++) {
-      const src = pcm.data[Math.min(c, pcm.data.length - 1)];
+    for (let c = 0; c < def.ch; c++) {
+      const src = data[Math.min(c, data.length - 1)];
       const len = Math.max(0, src.length - mk.shift);
       const out = new Int16Array(len);
       for (let i = 0; i < len; i++) {
@@ -297,8 +297,8 @@ export function addSampleSet(def: SampleSetDef, pcm: SetPcm): boolean {
     // smooth MP3 coding error at loop seams: crossfade the material before le into the
     // material before ls (equal in the source after the build's loop crossfade, so this only
     // removes codec noise)
-    for (const z of scaled.zones) if (z.ls !== undefined && z.le !== undefined) for (const c of chs) seamFix(c, z.o + z.ls, z.o + z.le);
-    bank.set(def.name, { def: scaled, sr: scaled.sr, ch: chs, k });
+    for (const z of def.zones) if (z.ls !== undefined && z.le !== undefined) for (const c of chs) seamFix(c, z.o + z.ls, z.o + z.le);
+    bank.set(def.name, { def, sr: def.sr, ch: chs, k });
     return true;
   } catch (e) {
     pendingWarnings.push(`set ${def.name}: ${String(e)}`);
@@ -436,6 +436,18 @@ function kernel(): Float32Array {
   return k;
 }
 
+/** A whole decoded channel from rate `from` to rate `to` (same kernel; the decoded sprites of the
+ *  24 / 32 kHz MP3s hold nothing above their own Nyquist, so no extra low-pass is needed). */
+function resampleChannel(x: Float32Array, from: number, to: number): Float32Array {
+  const inc = from / to;
+  const n = Math.max(1, Math.floor((x.length - 1) / inc) + 1);
+  const padded = new Float32Array(x.length + TAPS);
+  padded.set(x, HALF - 1);
+  const out = new Float32Array(n);
+  resampleInto(padded, out, inc, 1);
+  return out;
+}
+
 /** out[i] = src(pos0 + i·inc) with sinc interpolation; src must hold HALF samples of margin. */
 function resampleInto(src: Float32Array, out: Float32Array, inc: number, gain: number): void {
   const K = kernel();
@@ -522,13 +534,13 @@ function chooseZone(spec: SampledSpec, set: StoredSet, midiIn: number, variant: 
     // round robins: the velocity layer decides first, the take within it; a layer without the
     // requested take repeats its first take with a micro-variation (never sample-identical)
     pool = nearestLayer(zones, layer);
-    const want = spec.rr === 'set' ? variant : 0;
+    const want = spec.rr === 'set' ? (spec.takes ? spec.takes[variant % spec.takes.length] ?? 0 : variant) : 0;
     const rr = pool.filter((z) => z.r === want);
     if (rr.length) pool = rr;
     else {
       const r0 = pool.filter((z) => z.r === 0);
       if (r0.length) pool = r0;
-      micro = variant % 2 === 1;
+      micro = want % 2 === 1;
     }
   }
   const vgDb = spec.vg ? spec.vg[variant % spec.vg.length] ?? 0 : 0;
@@ -708,6 +720,7 @@ function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
     id: spec.id,
     kind: spec.kind,
     variants: spec.variants ?? 1,
+    rrCycle: spec.rrCycle ?? (spec.rr === 'art' ? [0] : undefined),
     release: spec.release,
     ring: spec.ring,
     gate: spec.gate,
@@ -842,17 +855,89 @@ function widen(a: Rendered, b: Rendered, width: number): Rendered {
   return { chans: [L, R], pre: P, truncated: a.truncated || b.truncated };
 }
 
+/** furthest the summed takes' onset may move the beat from the takes' own (s) */
+const SUM_ONSET_MAX = 0.025;
+/** release tail the mixer plays after the gate, in time constants (render.ts TAIL_TAU) */
+const MIX_TAIL_TAU = 3.6;
+
+/**
+ * Onset (sample index) of what a centred note plays — the mono sum of the channels — as the mixer
+ * plays it: full level up to `cut` (the gate end; Infinity = the whole sample), then the release
+ * decay (factor k per sample) for `tail` samples. The onset is the first point where the RMS over
+ * the preceding 5 ms comes within 10 dB of its maximum over the note (at most 0.5 s after `pre`):
+ * the perceptual onset the build places each take's beat on, measured on what is heard.
+ */
+function heardOnset(chans: Float32Array[], sr: number, pre: number, cut = Infinity, k = 1, tail = 0): number {
+  const n = Math.min(chans[0].length, pre + Math.round(0.5 * sr), cut + tail);
+  const W = Math.max(1, Math.round(0.005 * sr));
+  const cs = new Float64Array(n + 1);
+  const inv = 1 / chans.length;
+  let env = 1;
+  for (let i = 0; i < n; i++) {
+    if (i >= cut) env *= k;
+    let v = 0;
+    for (const c of chans) v += c[i];
+    v *= inv * env;
+    cs[i + 1] = cs[i] + v * v;
+  }
+  // trailing window [t - W, t): the onset is the first t where it reaches the threshold
+  let pk = 0;
+  for (let t = 1; t <= n; t++) pk = Math.max(pk, cs[t] - cs[Math.max(0, t - W)]);
+  if (pk <= 0) return pre;
+  const thr = pk * 0.1; // power: -10 dB
+  let t = 1;
+  while (t < n && cs[t] - cs[Math.max(0, t - W)] < thr) t++;
+  return t;
+}
+
+/**
+ * sumOnset sets, short notes: a note gated while its spread attack is still rising peaks lower,
+ * so its own -10 dB point sits earlier in the sample than the whole note's. Returns gate (output
+ * samples) → onset index, the fixed point p = onset(the note cut at p + gate) — the mixer cuts a
+ * note `gate` samples after the onset it starts it on (memoised; within SUM_ONSET_MAX of `pre`).
+ */
+function shortOnsets(chans: Float32Array[], sr: number, pre: number, release: number): (gate: number) => number {
+  const lim = Math.round(SUM_ONSET_MAX * sr);
+  const rel = Math.max(0.001, release);
+  const k = Math.exp(-1 / (rel * sr));
+  const tail = Math.round(MIX_TAIL_TAU * rel * sr);
+  const whole = Math.round(0.5 * sr);
+  const memo = new Map<number, number>();
+  return (gate: number): number => {
+    const g = Math.max(1, Math.round(gate));
+    if (!(g < whole)) return pre;
+    let p = memo.get(g);
+    if (p === undefined) {
+      p = pre;
+      for (let it = 0; it < 8; it++) {
+        const q = Math.max(pre - lim, Math.min(pre + lim, heardOnset(chans, sr, p, p + g, k, tail)));
+        if (q === p) break;
+        p = q;
+      }
+      memo.set(g, p);
+    }
+    return p;
+  };
+}
+
 function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false): Sample {
   const ch = chooseZone(spec, set, midi, variant, layer);
   if (!ch) return { l: new Float32Array(1), r: null };
   const z = ch.zone;
   let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short);
+  let summed = false;
   if (spec.width !== undefined && set.ch.length === 1) {
     const pz = partnerZone(spec, set, ch, layer);
     const b = pz
       ? renderOne(spec, set, pz, ch.midi, ch.cents, sr, lenSec, pz.g * gain * ch.gain, short)
       : renderOne(spec, set, z, ch.midi, ch.cents + 6, sr, lenSec, z.g * gain * ch.gain, short);
     r = widen(r, b, spec.width);
+    if (spec.sumOnset) {
+      // the beat on the onset of the takes' sum (what is heard), at most SUM_ONSET_MAX from theirs
+      const lim = Math.round(SUM_ONSET_MAX * sr);
+      r.pre = Math.max(r.pre - lim, Math.min(r.pre + lim, heardOnset(r.chans, sr, r.pre)));
+      summed = true;
+    }
   }
   const outs = r.chans;
   const preOut = r.pre;
@@ -872,7 +957,9 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
     if (r.truncated) for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / nf);
     else for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= i / nf;
   }
-  return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut };
+  // short notes of summed spread attacks: their own onsets (read from the finished channels)
+  const preAt = summed && !spec.ring ? shortOnsets(outs, sr, preOut, spec.release) : undefined;
+  return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut, preAt };
 }
 
 /** test hook: the zone a note would use (measurement scripts) */

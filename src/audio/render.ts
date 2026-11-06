@@ -2,10 +2,11 @@
  * Song renderer: compiles a SongDef into timed events, synthesizes each unique instrument
  * sample once, mixes, adds the FDN reverb and masters — all in cooperative time slices.
  *
- * Seamless looping: the buffer holds [intro][loop body][first P seconds of the body again].
- * Playback loops over [loopStart + P, loopEnd + P): at both window edges all release/reverb
- * tails of *different* material have decayed, and the material itself is sample-identical, so
- * the seam is exact (no click, no reverb gap).
+ * Seamless looping: the buffer holds [intro][loop body][the body repeated for P more seconds]
+ * (as many copies as that takes: a loop may be shorter than P). Playback loops over
+ * [loopStart + P, loopEnd + P): at both window edges all release/reverb tails of *different*
+ * material have decayed, and the material itself is sample-identical, so the seam is exact (no
+ * click, no reverb gap).
  */
 import { Biquad, clamp, dbToGain, Slicer } from './dsp';
 import { INSTRUMENTS, type InstDef, type Sample } from './instruments';
@@ -157,13 +158,16 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const P = Math.round(LOOP_PAD * sr);
   const length = loop ? loopEndS + P : Math.round((comp.end + (song.tail ?? 2.5)) * sr);
 
-  // round-robin variants per channel
+  // round-robin variants per channel (a note without a variant cycles through the instrument's
+  // rrCycle: takes, never articulations such as rolls or the soft timpani stroke)
   const rr = new Map<string, number>();
   for (const e of comp.events) {
     if (e.vr >= 0) continue;
-    const n = chInst(e.ch)?.variants ?? 1;
+    const inst = chInst(e.ch);
+    const n = inst?.variants ?? 1;
+    const cyc = inst?.rrCycle && inst.rrCycle.length ? inst.rrCycle : null;
     const c = rr.get(e.ch) ?? 0;
-    e.vr = c % n;
+    e.vr = cyc ? cyc[c % cyc.length] : c % n;
     rr.set(e.ch, c + 1);
   }
 
@@ -216,11 +220,13 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     });
   };
   for (const e of comp.events) pushEv(e, 0);
-  if (loop) {
-    // copies of the loop's first P seconds after its end (plus the notes whose pre-roll starts
-    // before loopStart + P)
-    const lim = comp.loopStart + LOOP_PAD + MAX_PRE_SEC + 0.001;
-    for (const e of comp.events) if (e.fi >= lf && e.t < lim) pushEv(e, loopLenS);
+  if (loop && loopLenS > 0) {
+    // the loop body repeated after its end up to the buffer end (plus the notes whose pre-roll
+    // starts before it): the window [loopStart + P, loopEnd + P) then holds exactly one period of
+    // the endlessly repeated loop. A loop shorter than P + MAX_PRE_SEC needs several copies
+    // (pushEv drops the notes that start beyond the buffer)
+    const reps = Math.ceil((P + maxPre + 1) / loopLenS);
+    for (let k = 1; k <= reps; k++) for (const e of comp.events) if (e.fi >= lf) pushEv(e, k * loopLenS);
   }
   mixEvs.sort((a, b) => a.st - b.st);
   // arranger notes: notes folded by octaves into a sampled instrument's recorded range, or played
@@ -447,6 +453,18 @@ function track(prof: RenderStats['prof'], id: string, ms: number): void {
   p.n++;
 }
 
+/** Onset position of a note gated after `gate` samples (Sample.preAt; the whole note's `pre` when
+ *  that fails). */
+function preOfGate(s: Sample, gate: number): number {
+  const pre = s.pre ?? 0;
+  try {
+    const p = s.preAt ? s.preAt(gate) : pre;
+    return Number.isFinite(p) && p >= 0 ? Math.round(p) : pre;
+  } catch {
+    return pre;
+  }
+}
+
 /** Mix one note; returns true when its tail had to be faded at ev.capAt (loop seam). */
 function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, ev: MixEv): boolean {
   const len = L.length;
@@ -455,7 +473,8 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const slen = sl.length;
   const ring = !!ev.inst.ring;
   // recorded samples start `pre` samples before their onset: start early so the onset is on time
-  const pre = s.pre ?? 0;
+  // (short notes of spread attacks: the onset of the note as gated, see Sample.preAt)
+  const pre = s.preAt && !ring ? preOfGate(s, ev.gate) : s.pre ?? 0;
   const st = ev.st - pre;
   // indices relative to the sample start: release starts at the gate end; the end fade is 64
   // samples after a release, CHOKE_FADE when the next note on the string cuts it short, and

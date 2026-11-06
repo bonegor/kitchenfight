@@ -8,6 +8,8 @@
  *   - accChord chords: every chord tone sounds (spectral peaks at each pitch)
  *   - round robin: repeated notes alternate variants (render.ts) → different zones (timpani lh/rh,
  *     pizzicato rr1/rr2) — consecutive hits are not sample-identical
+ *   - auto round robin cycles takes, never articulations (InstDef.rrCycle): bass drum / cymbal hits
+ *     never become rolls, timpani strokes never the soft stroke (sampled and synthesized)
  *   - velocity: layer switches at the thresholds and loudness rises monotonically with v
  * Usage: node scripts/audio/test_instrument_semantics.mjs
  */
@@ -15,6 +17,9 @@ import { installBank, loadAudio } from './render-song.mjs';
 
 const SR = 48000;
 const A = await loadAudio();
+// the synthesized instruments (the fallback when the samples are unavailable), before the bank
+// replaces them
+const SYNTH = { ...A.INSTRUMENTS };
 installBank(A);
 let bad = 0;
 const check = (ok, msg) => {
@@ -255,6 +260,35 @@ for (const [id, m] of [['timp', 41], ['pizz', 62], ['strStab', 67]]) {
   const seg = (k) => r.left.subarray(Math.round((1 + 4 * k - 0.1) * SR), Math.round((1 + 4 * k + 0.05) * SR));
   const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
   check(!same(seg(0), seg(1)) && same(seg(0), seg(2)), `${id}: repeated notes alternate round robins (1st != 2nd, 1st == 3rd)`);
+}
+// ---------------------------------------------------------------- auto round robin: takes, never articulations
+// notes written without a variant cycle the instrument's takes (InstDef.rrCycle): a bass drum or
+// cymbal hit never turns into the roll, a timpani stroke never into the soft stroke (the sampled
+// timpani alternates its two takes at the same level), the tambourine alternates its two hit takes —
+// sampled and synthesized alike
+for (const synth of [false, true]) {
+  for (const [id, m, want] of [['bassDrum', 60, 'same'], ['cymbal', 60, 'same'], ['timp', 41, synth ? 'same' : 'level'], ['tamb', 60, 'alt']]) {
+    const inst = synth ? SYNTH[id] : A.INSTRUMENTS[id];
+    if (!inst) continue;
+    const part = () => [1, 5, 9, 13].map((s) => ({ s, d: 0.1, m, v: 0.8, ch: 'x' }));
+    const saved = A.INSTRUMENTS[id];
+    A.INSTRUMENTS[id] = inst;
+    A.clearSampleCache();
+    let r;
+    try {
+      r = await render(song(id, [part], { steps: 17, spb: 1, bpm: 60 }));
+    } finally {
+      A.INSTRUMENTS[id] = saved;
+      A.clearSampleCache();
+    }
+    const seg = (k) => r.left.subarray(Math.round((1 + 4 * k - 0.05) * SR), Math.round((1 + 4 * k + 0.6) * SR));
+    const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
+    const d01 = 20 * Math.log10((rms(seg(1), 0, seg(1).length) + 1e-12) / (rms(seg(0), 0, seg(0).length) + 1e-12));
+    const alt = !same(seg(0), seg(1)) && same(seg(0), seg(2));
+    const ok = want === 'same' ? same(seg(0), seg(1)) && same(seg(0), seg(2)) : want === 'alt' ? alt : alt && Math.abs(d01) < 2;
+    const what = want === 'same' ? 'the plain hit every time (never the roll / soft stroke)' : want === 'alt' ? 'alternating hit takes' : `alternating takes at the same level (${d01.toFixed(1)} dB)`;
+    check(ok, `${id}${synth ? ' (synth)' : ''}: notes without a variant play ${what}; rrCycle ${JSON.stringify(inst.rrCycle ?? null)}`);
+  }
 }
 // ---------------------------------------------------------------- ringing notes capped by maxLen
 // a recording that rings longer than its instrument's maxLen fades out over its last 0.3 s instead of

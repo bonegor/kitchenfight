@@ -39,8 +39,13 @@ const GRACE_MS = 1000;
 const PRELOAD_GRACE_MS = 1500;
 /** cross-fade from a provisional (partly synthesized) render to the sampled one, seconds */
 const UPGRADE_FADE = 1.2;
-/** a music worker that has not answered anything this long after its first sample set is dead */
-const WORKER_SILENT_MS = 6000;
+/** a music worker that has not answered a ping this long after its creation is dead (after one
+ *  re-check of WORKER_RECHECK_MS) */
+const WORKER_SILENT_MS = 3500;
+const WORKER_RECHECK_MS = 1000;
+/** longest wait for the worker's install answer once it has answered before (it may be busy
+ *  rendering a track first) */
+const BANK_DONE_MS = 15000;
 /** sample sets no track has asked for yet wait for the first user gesture (or this long), so the
  *  bank does not compete with the game's own boot downloads */
 const REST_HOLD_MS = 6000;
@@ -270,10 +275,14 @@ export class AudioEngine implements AudioAPI {
       this.bankDone = true;
       this.wakeSetWaiters();
     };
+    // a worker that never answers is dead (do not wait for its renders either). It is pinged as soon
+    // as it exists and must answer within WORKER_SILENT_MS — not only once the bank has decoded. When
+    // the time is up a second ping gets WORKER_RECHECK_MS more: an answer may sit queued behind a
+    // busy main thread (the timer and the message are separate task queues)
+    this.watchWorker();
     // stream every decoded set to the worker as soon as it is ready (no main-thread pile-up);
     // the sets of the tracks waiting to render are decoded first
     let sent = 0;
-    let watchdog: ReturnType<typeof setTimeout> | null = null;
     const loaded = await loadSampleBank(
       2,
       (def, pcm) => {
@@ -290,11 +299,6 @@ export class AudioEngine implements AudioAPI {
           bankTransfer(pcm),
         );
         if (ok) sent++;
-        // a worker that never answers: dead (do not wait for its renders either)
-        if (ok && sent === 1 && !this.musicWorker.heard)
-          watchdog = setTimeout(() => {
-            if (!this.musicWorker.heard) this.musicWorker.fail();
-          }, WORKER_SILENT_MS);
       },
       () => {
         const ids = [...(this.rendering ? [this.rendering] : []), ...(this.wanted ? [this.wanted] : []), ...this.queue, ...this.staleIds()];
@@ -302,8 +306,16 @@ export class AudioEngine implements AudioAPI {
       },
       () => !this.musicWorker.usable,
       () => this.restGate(),
+      (msg) => {
+        // one warning (e.g. a CSP refusing the reads), not one error per sample set
+        this.bankInfo.error = msg;
+        try {
+          console.warn('[audio] ' + msg);
+        } catch {
+          /* ignore */
+        }
+      },
     );
-    if (watchdog) clearTimeout(watchdog);
     if (!this.musicWorker.usable) {
       this.bankInfo.state = 'no-worker';
       this.bankDone = true;
@@ -318,15 +330,30 @@ export class AudioEngine implements AudioAPI {
     }
     this.bankInfo.load = loaded.stats;
     this.bankInfo.state = 'installing';
+    let timedOut = false;
     const ok = await new Promise<boolean>((resolve) => {
+      let done = false;
+      const finish = (v: boolean) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(v);
+      };
+      // the answer may queue behind renders the worker is busy with, but one that never comes must
+      // not leave the bank 'installing' (a worker that never answered anything is dead)
+      const timer = setTimeout(() => {
+        timedOut = true;
+        if (!this.musicWorker.heard) this.musicWorker.fail();
+        finish(false);
+      }, this.musicWorker.heard ? BANK_DONE_MS : WORKER_SILENT_MS);
       const req = this.musicWorker.request({ type: 'bankDone' }, (m) => {
         if (m && m.report) this.bankInfo.report = m.report as BankReport;
-        resolve(!!m && m.ok === true);
+        finish(!!m && m.ok === true);
         return true;
       });
-      if (!req) resolve(false);
+      if (!req) finish(false);
     });
-    this.bankInfo.state = ok ? 'ready' : this.musicWorker.usable ? 'install-failed' : 'no-worker';
+    this.bankInfo.state = ok ? 'ready' : !this.musicWorker.usable ? 'no-worker' : timedOut ? 'install-timeout' : 'install-failed';
     this.bankInfo.tReady = performance.now();
     this.bankDone = true;
     if (ok) this.bankReady = true;
@@ -334,6 +361,21 @@ export class AudioEngine implements AudioAPI {
     // tracks rendered before their sets arrived (and sets that will never come): settle them now
     for (const t of [...this.tracks.values()]) if (t.missing.length) this.refreshTrack(t);
     return ok;
+  }
+
+  /** Liveness check of the music worker: a ping now, failure if nothing has answered after
+   *  WORKER_SILENT_MS plus one re-check of WORKER_RECHECK_MS. */
+  private watchWorker(): void {
+    const port = this.musicWorker;
+    const ping = () => port.request({ type: 'ping' }, () => true);
+    if (!ping()) return;
+    setTimeout(() => {
+      if (port.heard || !port.usable) return;
+      ping();
+      setTimeout(() => {
+        if (!port.heard) port.fail();
+      }, WORKER_RECHECK_MS);
+    }, WORKER_SILENT_MS);
   }
 
   /** null once the first user gesture happened or REST_HOLD_MS passed; else a promise for that */

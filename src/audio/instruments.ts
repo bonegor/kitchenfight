@@ -36,6 +36,10 @@ export interface Sample {
   r: Float32Array | null;
   /** samples before the musical onset (recorded samples): the mixer starts the note this early */
   pre?: number;
+  /** slow-rising (spread) attacks: the onset position of a note gated after `gate` output samples
+   *  (replaces `pre` for that note). A note cut while its attack is still rising peaks lower, so its
+   *  perceptual onset sits earlier in the sample than the whole note's. */
+  preAt?: (gate: number) => number;
 }
 
 export interface InstDef {
@@ -43,6 +47,10 @@ export interface InstDef {
   kind: 'pluck' | 'sustain' | 'perc';
   /** number of alternating variants (round-robin) */
   variants: number;
+  /** the variants a note without an explicit variant cycles through (default: all of them).
+   *  Articulation variants (rolls, shakes, the soft timpani stroke) are left out: only a note that
+   *  asks for one plays it */
+  rrCycle?: number[];
   /** release time constant (s) applied at note-off; ignored when ring */
   release: number;
   /** let the sample ring past note-off */
@@ -1096,7 +1104,8 @@ const tubularBell: InstDef = {
 const timpani: InstDef = {
   id: 'timp',
   kind: 'pluck',
-  variants: 2,
+  variants: 2, // 0 stroke, 1 soft stroke
+  rrCycle: [0],
   release: 0.6,
   ring: true,
   make(sr, midi, v) {
@@ -1157,6 +1166,7 @@ const tamb: InstDef = {
   id: 'tamb',
   kind: 'perc',
   variants: 8, // 0,1 hit; 2,3 shake; 4,5 accent; 6,7 roll
+  rrCycle: [0, 1],
   release: 0.03,
   ring: true,
   make(sr, _midi, v) {
@@ -1592,7 +1602,8 @@ function clickPerc(id: string, o: { f: number; q: number; decay: number; len: nu
 const flexatone: InstDef = {
   id: 'flexatone',
   kind: 'perc',
-  variants: 4,
+  variants: 4, // 0, 1 shakes; 2 fast; 3 long
+  rrCycle: [0, 1],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1614,7 +1625,8 @@ const flexatone: InstDef = {
 const ratchet: InstDef = {
   id: 'ratchet',
   kind: 'perc',
-  variants: 3,
+  variants: 3, // 0 fast, 1 slow, 2 crank
+  rrCycle: [0],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1635,7 +1647,8 @@ const ratchet: InstDef = {
 const toyWhistle: InstDef = {
   id: 'toyWhistle',
   kind: 'perc',
-  variants: 4,
+  variants: 4, // 0 low, 1 high, 2 double, 3 falling
+  rrCycle: [0],
   release: 0.1,
   ring: true,
   make(sr, _m, v) {
@@ -1687,6 +1700,7 @@ const cymbal: InstDef = {
   id: 'cymbal',
   kind: 'perc',
   variants: 2,
+  rrCycle: [0],
   release: 0.6,
   make(sr, _m, v, lenSec) {
     const roll = v === 1;
@@ -1718,6 +1732,7 @@ const bassDrum: InstDef = {
   id: 'bassDrum',
   kind: 'perc',
   variants: 2,
+  rrCycle: [0],
   release: 0.4,
   make(sr, _m, v, lenSec) {
     const roll = v === 1;
