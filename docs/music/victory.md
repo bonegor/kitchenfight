@@ -275,7 +275,7 @@ Fanfare (`march`, `fin`):
 | `snare` | `snare` | after-beats and triplet pickups at 0.65–0.77 (the set's layer 2, which has the snares' crack), 16th build 0.6 → 0.88 (layers 1 → 3) into the final chord | — |
 | `bd` | `bassDrum` | downbeats of bars 2, 5, 8, 12; 1 and 3 in the tutti; final chord and button | — |
 | `crash` | `crash` | clash cymbals: bars 2 and 8, soft piatti on bars 9–11, final chord | — |
-| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1), the recorded roll does the crescendo; velocity 0.42 / 0.66 / 0.60 (< 0.7 keeps the roll layer) | — |
+| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1, the roll at any velocity), the recorded roll does the crescendo; velocity 0.42 / 0.66 / 0.60 | — |
 | `glock` | `glock` | "ti-ting" on the tag's button, doubling the accordion's top line an octave up | G6–A♭6 |
 | `acc` | `accordion` | the tag: triplet echo + V7–I button | C5–B♭5 |
 | `cast` | `castanets` | the wink in the trumpets' rests (bars 4, 10), the tag's rattle and triplet; in the lap: the call into a (a rattle on beat 3, 0.5 → 0.68, and the "tak" with the pickup on beat 4, 0.8) in the vamp and in the turnaround, and the wink in tail bar 3 (0.52–0.76) | — |
@@ -303,45 +303,43 @@ variant), so on the after-beats of a ♩ = 154 march they would drag; the lap us
 
 ## Levels (sample render)
 
-`node scripts/music/render-song.mjs victory out.wav` (recorded samples, 53 sets):
+`node scripts/music/render-song.mjs victory out.wav` (recorded samples, 54 sets; the march and tag
+channels, which play before the loop window, are left out of the channel table below):
 
 ```text
-victory: 44.52 s @ 48000 Hz, 876 events
-  loop: plays 0 → 44.519 s, then repeats 25.818 → 44.519 s (body 18.701 s = bars 15-26 from section "tail"; seam mismatch -133.3 dBFS)
+victory: 46.52 s @ 48000 Hz, 903 events
+  loop: plays 0 → 46.519 s, then repeats 27.818 → 46.519 s (body 18.701 s = bars 15-26 from section "tail"; seam mismatch -150.5 dBFS)
   form: march@0.00s fin@18.70s vamp@20.26s tail@21.82s
-  loop body: integrated -16.4 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.44 dBFS
-  soft clipper: 73 samples (0.002 %), DC 0.00000, first sound at 0.002 s
-  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -15.8 dB (share of total energy)
+  loop body: integrated -16.5 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.43 dBFS
+  soft clipper: 35 samples (0.001 %), DC -0.00000, first sound at 0.001 s
+  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -16.2 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
-  cast         castanets          27     -9      -36.9   -20.6       -42.2      -11.8
-  accR         accordion          30   1.75      -17.8    -1.4       -17.0       -7.8
-  mand         mandolin           47   3.85      -19.4    -3.0       -17.4       -6.8
-  clar         clarinet           16  -3.65      -23.0    -6.6       -22.2      -12.3
-  accC         accChord           19  -3.65      -25.5    -9.1       -25.0      -14.4
-  gtr          guitar             99  -5.15      -26.8   -10.4       -25.5      -11.1
-  ubass        uprightBass        34  -2.65      -26.2    -9.8       -24.8      -12.2
-  pizzT        pizz               17   1.85      -28.8   -12.4       -27.3      -14.9
-  tamb         tamb               23   5.35      -34.8   -18.4       -36.2      -17.9
+  cast         castanets          27   -9.3      -37.2   -20.7       -42.3      -12.0
+  accR         accordion          30      1      -17.8    -1.3       -17.1       -8.8
+  mand         mandolin           47    1.5      -19.7    -3.2       -17.7       -6.3
+  clar         clarinet           16   -4.4      -22.8    -6.3       -22.1      -12.1
+  accC         accChord           19   -5.2      -26.4    -9.9       -26.1      -17.3
+  gtr          guitar             99  -5.15      -26.9   -10.4       -25.5      -10.8
+  ubass        uprightBass        34  -2.65      -26.2    -9.7       -24.7      -11.8
+  pizzT        pizz               17    0.7      -28.5   -12.0       -27.1      -13.9
+  tamb         tamb               23    4.8      -34.9   -18.4       -36.3      -17.9
+  warnings: none
 ```
 
-(Integrated loop-body loudness −16.38 LUFS before rounding; `--json`: −16.375.) render-song
-measures the channel table over the loop window only. The 15 march and tag channels play before
-the loop, so they read −inf there, and each gets a "loudest 3 s … check it is audible" warning.
-These 15 warnings are the only ones, and they follow from the design. The vamp also plays before
-the loop window, so the `accC` row is the voices under b only. The channel table counts the
-mandolin's tremolo picks as notes.
+(Integrated loop-body loudness −16.51 LUFS before rounding.) render-song measures the channel
+table over the loop window; the 15 march and tag channels play before it, so render-song judges
+their audibility over the whole file instead, and none is flagged. The vamp also plays before the
+loop window, so the `accC` row is the voices under b only. The channel table counts the mandolin's
+tremolo picks as notes.
 
-- **Loop body −16.4 LUFS** (target −16.4 ± 0.5) with `gainDb` −1.2, unchanged: the lap is
-  balanced with its own channel gains, so the fanfare keeps its level.
-- **The fanfare is −15.1 LUFS** (−15.14 over 0–20.26 s of this render; march + tag as the loop
-  body of a scratch wrapper read −15.1 LUFS with a short-term max of −13.6 LUFS in an earlier
-  revision, whose fanfare render this one reproduces bit for bit): 1.2 LU above the lap's integrated
-  level, and above every phrase of it (the loudest, b′, is −15.7 LUFS). The lap is softer in texture
-  too (no brass attacks or cymbals, little energy above 4 kHz).
-- **Peaks:** sample peak −2.44 dBFS, in the fanfare (bars 12–13, as before). The loop window peaks
-  at −4.50 dBFS (tail bar 8's downbeat, mandolin + clarinet + bass + pizzicato), below the soft
-  clipper's threshold (−4.15 dBFS), so all 73 clipper samples (0.002 %, counted per channel) are
-  in the fanfare, as before; the previous revision also had 17 in the loop.
+- **Loop body −16.5 LUFS** (target −16.4 ± 0.5) with `gainDb` −1.2: the lap is balanced with its
+  own channel gains, so the fanfare keeps its level.
+- **The fanfare is −15.0 LUFS** (−14.96 over 0–20.26 s of this render, short-term max −13.6 LUFS):
+  1.5 LU above the lap's integrated level, and above every phrase of it. The lap is softer in
+  texture too (no brass attacks or cymbals, little energy above 4 kHz).
+- **Peaks:** sample peak −2.43 dBFS, in the fanfare (the downbeat of bar 13, 18.71 s). The loop
+  window peaks at −3.34 dBFS (38.60 s). Of the 35 soft-clipper samples (0.001 %, counted per
+  channel), 21 are in the fanfare and 14 in the loop.
 
 **Balance per phrase** of the loop (scratch measurement on the steady-state loop: three copies of
 the playback window, the middle one measured, so every bar has the loop itself before it;
@@ -412,12 +410,10 @@ row is history (the 3-bar tail it describes was replaced by the victory lap, see
 
 ### Notes for the sampler owner (not worked around in the song)
 
-- **The `cymbal` roll zone (variant 1) is very dark in the sprite:** of its energy, 1–4 kHz is
-  −14.4 dB, >4 kHz −30.9 dB and >8 kHz −77 dB (250 Hz–1 kHz holds almost all of it). The reviewer
-  measured the source `susCymb1_roll_f1_nloop.wav` at about −13 dB above 4 kHz and −42 dB above
-  8 kHz, so the build loses the shimmer. That is why the swells read as a mid-range "whoosh" and
-  need +3 dB of channel gain. VCSL also has real crescendo rolls (`susCymb1_cresc_1.5s/2s/4s.wav`).
-  When the zone is rebuilt, re-balance `cym` (it will need less gain).
+- **The `cymbal` roll zone (variant 1) was very dark in the sprite** (of its energy, >4 kHz
+  −30.9 dB, >8 kHz −77 dB), so the swells read as a mid-range "whoosh" and needed a high channel
+  gain. The zone has since been rebuilt from SSO's bright crescendo roll and `cym` re-balanced
+  (+7.2 → +1.2 dB): see "Polish" at the end.
 - **The `snare` is dark at the source:** the VCSL rope-tension snare's soft layers are almost all
   drum body. Measured on the first 250 ms, the source `RopeSnare_hi_sn_Main_vl1_rr1.wav` has
   1–4 kHz at −29.8 dB and >4 kHz at −43.8 dB of its energy, and `vl4_rr1` −16.5 / −25.2 dB; the
@@ -504,3 +500,27 @@ flatter (accordion 0.62 → 0.65 in a, 0.68 → 0.64 in b′, the second voice i
 layer); the mandolin's second voice plays E♭ instead of D♭ on the two beats over a plain E♭ chord;
 the lap's channel gains are 0.15 dB lower (loop −16.38 LUFS). The total stays 26 bars = 40.52 s
 (buffer 44.52 s); the music-cache arithmetic is written up for the lead in "Music cache".
+
+## Polish: the swells on the bright cymbal roll
+
+The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll, spectral centroid
+about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). With the channel still boosted for
+the old dark roll (+7.2 dB), the swells came through far too strong: the cymbal alone was only 5–8
+LU under the mix at their crests and raised it by up to 1.5 LU, nearly as loud as the trumpets.
+Re-balanced: `cym` gain +7.2 → +1.2 dB (velocities and lengths unchanged).
+
+Measure (scratch script on the full render, same method as the review): the largest third-octave
+rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest) in the last 150 ms of the swell; "cover" = how much the swell raises the momentary
+(400 ms, K-weighted) loudness there; "cymbal" / "trumpets" (`tpt` + `tptS`) = their own momentary
+loudness against the mix.
+
+| Swell | Rise before → after | Cover before → after | Cymbal vs mix before → after | Trumpets vs mix |
+|---|---|---|---|---|
+| intro (0.20 s, 1.23 s) | +27.6 → **+21.6 dB** (10 kHz) | 0.82 → **0.22 LU** | −7.7 → **−13.1 LU** | −0.6 LU |
+| bar 7 (10.13 s, 0.70 s) | +26.7 → **+20.7 dB** (7.9 kHz) | 1.53 → **0.44 LU** | −5.3 → **−10.2 LU** | −2.1 LU |
+| bar 12 (17.53 s, 1.05 s) | +15.2 → **+9.6 dB** (6.3 kHz) | 1.34 → **0.39 LU** | −5.9 → **−11.0 LU** | −3.3 LU |
+
+Every swell still rises 9.6–21.6 dB in its band at its end, now 7.7–12.5 LU under the trumpets.
+Melody channels are untouched; the nine compare.py proofs above give the same results. Render
+after the change: "Levels" above.

@@ -160,16 +160,16 @@ the notes of a dotted quarter or longer and single picks otherwise.
 
 ## Measurements (sample render)
 
-`node scripts/music/render-song.mjs kitchen out.wav` with the recorded sample bank (53 sets):
+`node scripts/music/render-song.mjs kitchen out.wav` with the recorded sample bank (54 sets):
 
 | | |
 |---|---|
-| Duration | 95.88 s rendered buffer (91.875 s of music + the renderer's 4 s loop pad), 1647 events, rendered in about 1.2 s |
-| Loop | plays 0 → 95.875 s, then repeats 11.5 → 95.875 s (body 84.375 s = bars 5–49 from `V`); seam mismatch −150.5 dBFS |
-| Loudness | loop body **−16.4 LUFS** (target −16.4 ± 0.5), whole file −16.7 LUFS, short-term max −13.3 LUFS |
-| Loudness range | loop body **5.2 LU** (ffmpeg `ebur128`; the stage peers: trattoria 4.9, streets 3.4, foodcourt 2.5) |
-| Peak / clipping | sample peak **−3.24 dBFS**; soft clipper 7 samples (0.000 %); RMS −19.8 dBFS; DC 0 |
-| Spectral balance | < 250 Hz −9.7 dB, 250 Hz–4 kHz −0.6 dB, > 4 kHz −16.0 dB |
+| Duration | 97.88 s rendered buffer (91.875 s of music + the renderer's 6 s loop pad), 1684 events, rendered in about 1.2 s |
+| Loop | plays 0 → 97.875 s, then repeats 13.5 → 97.875 s (body 84.375 s = bars 5–49 from `V`); seam mismatch −150.5 dBFS |
+| Loudness | loop body **−16.25 LUFS** (target −16.4 ± 0.5), whole file −16.6 LUFS, short-term max −12.8 LUFS |
+| Loudness range | loop body **5.2 LU** (ffmpeg `ebur128`, measured before the cymbal polish below; the stage peers: trattoria 4.9, streets 3.4, foodcourt 2.5) |
+| Peak / clipping | sample peak **−2.57 dBFS**; soft clipper 16 samples (0.000 %); RMS −19.6 dBFS; DC 0 |
+| Spectral balance | < 250 Hz −9.6 dB, 250 Hz–4 kHz −0.6 dB, > 4 kHz −16.0 dB |
 | Warnings | none (`gainDb` −0.6) |
 
 Per-section loudness and balance (each channel's solo loudness against the section's mix, LU; solo
@@ -182,7 +182,7 @@ the lead is in bold):
 | V | −17.9 | −3.2 | **accordion −0.3** (phrase 2), **clarinet −1.3** | hammer-bar timpani −4.6 and brass stab −5.3, upright bass −7.2, hammer-call anvil −7.8, guitar −9.8, pans −10.1, pizz −16.2, tambourine −21.7, bass drum −22.4 |
 | T1 | −16.7 | −5.6 | **accordion −1.8** | clarinet −6.6, tuba −9.2, accordion chords −11.9, anvil −15.7, timpani −15.8, slapstick −19.3, tambourine −23.6 |
 | C1 | −17.7 | −6.2 | **mandolin −2.2** | clarinet −6.2, tuba −7.1, timpani −10.1, pizz −14.7, slapstick −16.7, anvil −19.5, woodblock −20.4 |
-| brk | −22.0 | −3.8 | pan −3.9, anvil −4.7 | tuba −2.8, guitar −5.9, slapstick −11.6, timpani −12.6, bass drum −13.1, tambourine −15.3, cymbal −15.3, second anvil −16.3, woodblock −16.8, castanets −19.7 |
+| brk | −22.0 | −3.8 | pan −3.9, anvil −4.7 | tuba −2.8, guitar −5.9, slapstick −11.6, timpani −12.6, bass drum −13.1, tambourine −15.3, cymbal −20.0 (after the polish below), second anvil −16.3, woodblock −16.8, castanets −19.7 |
 | T2 | −14.6 | −4.7 | **trumpet −1.9** | accordion −8.5, tuba −11.6, brass −12.0, horns −12.5, anvil −14.4, pan −14.9, timpani −17.6, slapstick −20.1 |
 | C2 | −14.7 | −4.1 | **trumpet −1.8** | accordion −8.8, turnaround accordion chords −9.4, tuba −9.9, mandolin −10.3, brass −11.2, horns −11.9, timpani −12.3, anvil −14.9, pan −15.3, xylophone −19.2, slapstick −19.6 |
 
@@ -219,3 +219,27 @@ the stab and the tambourine stop there), and the turnaround's beat 4 likewise.
 all 53 sets without warnings and renders the track in the music worker in 1.22 s, with no page errors.
 That render matches the Node render: loop body −16.4 LUFS, loudness range 5.2 LU and peak −3.24 dBFS
 in both, difference signal −91 dB below the music, zero lag.
+
+## Polish: the cymbal roll on the bright roll
+
+The bank's suspended-cymbal roll (variant 1) was rebuilt bright (SSO's crescendo roll, spectral
+centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). The break's roll into the
+tutti, already audible with the old dark roll, came out too strong with the bright one: the
+cymbal alone was 5.7 LU under the mix at its crest and raised the mix by 1.4 LU. Re-balanced:
+`cym` gain −15.8 → −19.3 dB (velocity 0.75 unchanged).
+
+Measure (scratch script on the full render, same method as the review): the largest third-octave
+rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest) in the last 150 ms of the roll, the same over 4–12 kHz as one band, "cover" = how much
+the roll raises the momentary (400 ms, K-weighted) loudness there, and the cymbal's own momentary
+loudness against the mix.
+
+| Roll | Largest third-octave rise | 4–12 kHz rise | Cover | Cymbal vs mix |
+|---|---|---|---|---|
+| brk → T2, bars 32–33 (60.47 s, 1.27 s), before | +16.3 dB (400 Hz) | +9.1 dB | 1.40 LU | −5.7 LU |
+| after | **+12.9 dB** (400 Hz) | **+6.1 dB** | **0.69 LU** | **−8.5 LU** |
+
+The tune rests in the break (the pots and pans have it), so the roll may lead into the tutti; it
+now crests over the pots without covering them. Melody channels are untouched; the nine compare.py
+commands above give the same results (the "Close against Kerr" FAIL is the documented reference
+difference). Render after the change: "Measurements" above.

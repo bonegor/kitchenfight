@@ -215,8 +215,8 @@ export const victory: SongDef = {
     snare: { inst: 'snare', gain: -7.4, pan: 0.16, send: 0.14, hum: 0.4 },
     bd: { inst: 'bassDrum', gain: -8, pan: 0, send: 0.2, hum: 0 },
     crash: { inst: 'crash', gain: -11.5, pan: -0.2, send: 0.25, hum: 0 },
-    // the recorded roll is dark (its energy sits at 250 Hz–1 kHz), so it needs this much gain
-    cym: { inst: 'cymbal', gain: 7.2, pan: 0.25, send: 0.25, hum: 0 },
+    // the recorded roll is bright and grows into its end: under the trumpets, not over them
+    cym: { inst: 'cymbal', gain: 1.2, pan: 0.25, send: 0.25, hum: 0 },
     glock: { inst: 'glock', gain: -8.4, pan: 0.4, send: 0.3, hum: 0 },
     acc: { inst: 'accordion', gain: -6.9, pan: -0.1, send: 0.18 },
     cast: { inst: 'castanets', gain: -9.3, pan: 0.36, send: 0.12, hum: 0.5 },
@@ -276,9 +276,8 @@ export const victory: SongDef = {
           [bar(b) + 14, 60, 0.62],
         ])),
         // suspended-cymbal swells into the crashes: ONE roll note each (variant 1 = the recorded
-        // roll, which builds up by itself over about a second; velocity < 0.7 keeps the roll
-        // layer, above it the sampler plays the cymbal's hit). The cadence swell starts on beat 2
-        // so the roll has time to grow.
+        // roll at any velocity; a note grows evenly into its end, over about 0.8 s). The cadence
+        // swell starts on beat 2 so the roll has time to grow.
         hits('cym', [[2, 60, 0.42, 14], [bar(7) + 8, 60, 0.66, 8], [bar(12) + 4, 60, 0.6, 12]], 1),
         hits('crash', [
           [bar(2), 60, 0.82, 8],

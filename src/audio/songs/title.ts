@@ -210,7 +210,7 @@ export const title: SongDef = {
     kick: { inst: 'kick', gain: -12, pan: 0, send: 0.08, hum: 0 },
     snare: { inst: 'snare', gain: -16.4, pan: 0.1, send: 0.12, hum: 0 },
     crash: { inst: 'crash', gain: -11.5, pan: 0.25, send: 0.2, hum: 0 },
-    cym: { inst: 'cymbal', gain: -7.2, pan: -0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -4.2, pan: -0.2, send: 0.25, hum: 0 },
     timp: { inst: 'timpani', gain: -11.1, pan: 0.05, send: 0.2, hum: 0 },
   },
   sections: {
@@ -221,7 +221,7 @@ export const title: SongDef = {
         // accordion flourish: bellows shake on C7, a run up the arpeggio, then the verse pickup
         mel('acc', `${SHAKE} | C4:0.5 E4 G4 Bb4 C5 E5 G5*:3 | ${VERSE_PICKUP}`, { vel: 0.9 }),
         hits('timp', [...roll(0, 6, 12, 'C2', 0.3, 0.75), [6, 'C2', 0.85], [12, 'F2', 0.95]]),
-        hits('cym', [[0, 60, 0.5, 12]], 1),
+        hits('cym', [[0, 60, 0.55, 12]], 1),
         drums('tamb', 'R..R..|X.xxXx|X.....', TAMB),
         drums('cast', '............|X.....x.xxxx|X...........', CAST, { stepDiv: 2 }),
         hits('crash', [[12, 60, 0.8]]),
@@ -288,7 +288,7 @@ export const title: SongDef = {
         // build into refrain2
         hits('snare', roll(102, 6, 24, 'C4', 0.25, 0.95)),
         hits('timp', roll(102, 6, 12, 'C2', 0.3, 0.75)),
-        hits('cym', [[102, 60, 0.55, 6]], 1),
+        hits('cym', [[102, 60, 0.6, 6]], 1),
         comp('tbn', 'r:3 C:3', { lo: 'E3', hi: 'C4', n: 3, vel: 0.45, from: 17 }),
         // cartoon xylophone run up into the big refrain
         mel('xylo', `${rep('r:6 |', 17)} r:3 C5:0.25 D5 E5 F5 G5 A5 Bb5 C6 D6 E6 F6 G6 |`, { vel: 0.6 }),

@@ -164,16 +164,16 @@ inside the sample range. G major would push the octave doubling and the mandolin
 
 ## Render measurements (recorded sample bank)
 
-`node scripts/music/render-song.mjs title out.wav` (header: `instruments: recorded samples (53 sets …)`):
+`node scripts/music/render-song.mjs title out.wav` (header: `instruments: recorded samples (54 sets …)`):
 
 | Measure | Value | Target |
 |---|---|---|
-| Loop body integrated loudness | **−16.4 LUFS** (whole file −16.5) | −16.4 ± 0.5 |
-| Short-term max | −13.8 LUFS | |
-| Sample peak | **−2.93 dBFS** | < −1 dBFS |
-| Soft clipper | 33 samples (0.000 %) | ~0 % |
-| Loop seam mismatch | **−138.5 dBFS** (no jump) | seamless |
-| Spectral balance | < 250 Hz −7.4 dB, 250 Hz–4 kHz −1.0 dB, > 4 kHz −15.7 dB | in line with the other tracks |
+| Loop body integrated loudness | **−16.3 LUFS** (−16.32; whole file −16.5) | −16.4 ± 0.5 |
+| Short-term max | −13.5 LUFS | |
+| Sample peak | **−2.63 dBFS** | < −1 dBFS |
+| Soft clipper | 78 samples (0.001 %) | ~0 % |
+| Loop seam mismatch | **−150.5 dBFS** (no jump) | seamless |
+| Spectral balance | < 250 Hz −7.1 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −15.6 dB | in line with the other tracks |
 | Warnings | none (no skipped channels, no sequencer warnings) | |
 | `gainDb` | −1.5 | |
 
@@ -198,7 +198,8 @@ Bass and percussion against the section mix: upright bass −8 to −14 LU, tamb
 castanets −17 to −24, bass drum −10 under the intro stab and about −16 in the refrains, timpani
 −12 to −14 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
 run, crash, cymbal swells) measure −10 to −30 LU while they play. Every channel is audible:
-render-song flags none as inaudible.
+render-song flags none as inaudible. (The per-section figures and the browser check above predate
+the current bank; the measurement table is the current render.)
 
 ## Review fixes
 
@@ -211,6 +212,31 @@ numbers above are after the fixes; melody channels unchanged, every compare.py p
 | Verse fill (song bar 21): bass walk E2–D2–D♭2 against the C2 timpani roll | Bass falls C3–B♭2–G2 down the C7 chord into C2; the roll stays on C2 for the crescendo into the refrain | Clash scan: no low-register or semitone pairs. Solo bass + timpani over the walk: fundamentals now at 98, 117 and 131 Hz (G2, B♭2, C3; C3 coincides with the timpani's 2nd partial) instead of 69–82 Hz next to the timpani's C2. Ending the roll before the walk would also have been quiet enough (a scratch variant left a ring of −46 dBFS RMS under it, 23 dB below the bass), but the roll would then stop half a bar before the downbeat |
 | Refrain guitar window G3–E4 too narrow for a close F triad, so F was stacked at F4–A4–C5 above the tune | Window A3–F4 (as in the verse); same for the intro stab | Rendered guitar range A3–G4; no comping note above the lead |
 | Verse mandolin chops F4+A4 above the held F4 (bars 6 and 8) | Window A3–F4, `n: 2` (A3+F4, B♭3+E4, B♭3+D4) | Rendered range A3–F4; no comping note above the lead |
+
+## Polish: the cymbal swells on the bright roll
+
+The bank's suspended-cymbal roll (variant 1) was rebuilt: it is now bright (SSO's crescendo roll,
+spectral centroid about 3.7 kHz instead of 0.6 kHz) and grows evenly into its end. A review had
+found the three swells inaudible with the old, dark roll. The channel is re-balanced for the new
+one: `cym` gain −7.2 → −4.2 dB, the intro swell's velocity 0.5 → 0.55 and the middle-section fill's
+0.55 → 0.6 (the verse fill stays at 0.5: it is the most exposed).
+
+Measure (scratch script on the full render, recorded bank, same method as the review): the
+largest third-octave rise of the mix over the mix without the `cym` channel (bands 63 Hz–12.5 kHz
+that are within 40 dB of the window's loudest band), in the last 150 ms of the swell, before it
+hands over to the downbeat. "Cover" is how much the cymbal raises the momentary (400 ms,
+K-weighted) loudness there; "cymbal" is its own momentary loudness against the mix.
+
+| Swell | Before (bright roll, old balance) | After | Cover | Cymbal vs mix | Lead vs mix |
+|---|---|---|---|---|---|
+| intro, bar 1–2 (0.00 s, 1.74 s long) | +4.4 dB at 3.2 kHz | **+7.8 dB** at 3.2 kHz | 0.39 LU | −10.7 LU | `acc` −0.9 LU |
+| verse fill, bar 21 (19.36 s) | +10.1 dB at 4 kHz | **+12.8 dB** at 4 kHz | 0.22 LU | −12.9 LU | (tune rests) |
+| middle fill, bar 55 (52.26 s) | +3.9 dB at 3.2 kHz | **+6.8 dB** at 3.2 kHz | 0.55 LU | −9.4 LU | (tune rests) |
+
+Every swell now rises 6.8–12.8 dB in its band at its end (+8.6 to +11.6 dB over the 200 ms around
+the gate end), crests under the tune (in the intro the accordion stays 9.8 LU above it) and adds at
+most 0.55 LU to the mix. Melody channels are untouched; the nine compare.py proofs above give the
+same results. Render after the change: the measurement table above.
 
 ## Notes
 

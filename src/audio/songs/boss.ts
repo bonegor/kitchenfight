@@ -143,7 +143,7 @@ export const boss: SongDef = {
     sn: { inst: 'snare', gain: -8, pan: 0.12, send: 0.12, hum: 0 },
     bd: { inst: 'bassDrum', gain: -8, pan: 0, send: 0.15, hum: 0 },
     crash: { inst: 'crash', gain: -10.8, pan: -0.15, send: 0.25, hum: 0 },
-    cym: { inst: 'cymbal', gain: -9.7, pan: 0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -5.2, pan: 0.2, send: 0.25, hum: 0 },
     hit: { inst: 'orchHit', gain: -13.6, pan: 0, send: 0.25, hum: 0 },
     tamb: { inst: 'tamb', gain: -0.9, pan: -0.4, send: 0.1, hum: 0 },
     tri: { inst: 'triangleInst', gain: -2.9, pan: 0.45, send: 0.2, hum: 0 },
@@ -256,7 +256,7 @@ export const boss: SongDef = {
         drums('sn', 'x...o.o.x...o.o.|x...o.o.x...o.o.|X...x.x.X...x.x.|X.......23456789', SN, { stepDiv: 2, from: 4 }),
         hits('hit', [[0, 'B3', 0.75], [48, 'B3', 0.7], [56, 'B3', 0.9]]),
         hits('bd', [[0, 60, 0.7], [48, 60, 0.75], [52, 60, 0.65], [56, 60, 0.9]]),
-        hits('cym', [[58, 60, 0.7, 6]], 1),
+        hits('cym', [[58, 60, 0.84, 6]], 1),
         // the cavalry approaching: woodblock hooves under the calls, whip cracks on the stabs
         drums('wood', 'x.oox.oo|'.repeat(6), { x: { v: 0.5, vr: [0, 1] }, o: { v: 0.36, vr: [0, 1] } }, { to: 6 }),
         hits('whip', [[0, 60, 0.85], [56, 60, 0.9]]),
@@ -281,7 +281,7 @@ export const boss: SongDef = {
         hits('crash', [[0, 60, 0.8], [56, 60, 0.7], [88, 60, 0.7]]),
         hits('hit', [[0, 'E4', 0.7]]),
         hits('bd', [[0, 60, 0.85], [32, 60, 0.6], ...Array.from({ length: 8 }, (_, i): [number, number, number] => [56 + i * 8, 60, i % 4 === 0 ? 0.8 : 0.6])]),
-        hits('cym', [[104, 60, 0.6, 16]], 1),
+        hits('cym', [[104, 60, 0.66, 16]], 1),
       ],
     },
     coda: {

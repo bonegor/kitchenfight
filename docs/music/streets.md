@@ -142,9 +142,9 @@ notes actually played (`node scripts/music/export-song.mjs streets --per-section
 - `tamb` tambourine (accent / hit / shake / roll variants), `cast` castanets, `kick` orchestral
   bass drum.
 - `crash` clash cymbals on the section arrivals (intro, C, A2, C2).
-- `cym` suspended cymbal: the rolls into C and C2 use variant 1 at v < 0.7, the bank's roll zone;
-  at v ≥ 0.7 the bank plays the forte hit instead. The bank's roll is dark: most of its energy is
-  at 200–1000 Hz, because it is the first ~1.5 s of VCSL `susCymb1_roll_f1_nloop`.
+- `cym` suspended cymbal: the rolls into C and C2 (variant 1, the bank's roll at any velocity: SSO's
+  crescendo roll, bright, growing evenly into its end); the roll into C2 is louder (velocity 0.9
+  against 0.68), because the tutti's tambourine and castanets fill its band.
 - `timp` timpani D2–A2.
 
 Every part stays inside the brief's natural ranges. The clarinet parts leave breaths (rests every
@@ -157,40 +157,40 @@ refrain's closing A major chord becomes its dominant.
 
 ## Render (recorded samples)
 
-`node scripts/music/render-song.mjs streets out.wav` (48 kHz, sample bank: 53 sets):
+`node scripts/music/render-song.mjs streets out.wav` (48 kHz, sample bank: 54 sets):
 
-- duration 94.00 s buffer = 90.0 s of music + the renderer's 4 s loop pad; loop 3.333 → 90.0 s
-  (buffer window 7.333 → 94.000 s), body 86.667 s = bars 5–108 from section A;
-  **seam mismatch −145.7 dBFS**, no event rings past the seam
-- **loop body −16.4 LUFS** (whole file −16.6), short-term max −14.8 LUFS, RMS −19.4 dBFS,
-  **sample peak −3.72 dBFS**, soft clipper 9 samples (0.000 %), DC 0
-- spectral balance: < 250 Hz −8.5 dB, 250 Hz–4 kHz −0.8 dB, > 4 kHz −14.9 dB
+- duration 96.00 s buffer = 90.0 s of music + the renderer's 6 s loop pad; loop 3.333 → 90.0 s
+  (buffer window 9.333 → 96.000 s), body 86.667 s = bars 5–108 from section A;
+  **seam mismatch −150.5 dBFS**, no event rings past the seam
+- **loop body −16.3 LUFS** (−16.30; whole file −16.5), short-term max −14.8 LUFS, RMS −19.4 dBFS,
+  **sample peak −2.96 dBFS**, soft clipper 31 samples (0.000 %), DC 0
+- spectral balance: < 250 Hz −7.9 dB, 250 Hz–4 kHz −0.9 dB, > 4 kHz −14.9 dB
 - `gainDb` −2.3, no warnings
 
 | Channel | Instrument | Notes | Gain dB | Solo LUFS | vs mix (LU) | Peak dBFS |
 |---------|------------|------:|--------:|----------:|------------:|----------:|
-| mand | mandolin | 421 | 0.5 | −22.1 | −5.7 | −7.3 |
-| acc | accordion | 312 | −1 | −18.4 | **−2.0** | −7.9 |
-| clar | clarinet | 241 | −7 | −30.8 | −14.5 | −19.4 |
-| clarN | clarinet | 84 | −0.5 | −21.2 | −4.8 | −12.5 |
-| cello | cello | 42 | −8 | −30.2 | −13.9 | −20.2 |
-| accC | accChord | 876 | −9.5 | −35.8 | −19.4 | −20.0 |
-| gtr | guitar | 652 | −9 | −27.8 | −11.4 | −10.1 |
+| mand | mandolin | 421 | −1.7 | −22.1 | −5.8 | −7.4 |
+| acc | accordion | 312 | −2.4 | −18.2 | **−1.9** | −8.0 |
+| clar | clarinet | 241 | −7.7 | −30.8 | −14.5 | −18.2 |
+| clarN | clarinet | 84 | −1.6 | −21.0 | −4.7 | −12.2 |
+| cello | cello | 42 | −9.6 | −30.2 | −13.9 | −17.8 |
+| accC | accChord | 876 | −12.7 | −35.8 | −19.5 | −20.7 |
+| gtr | guitar | 652 | −9 | −27.7 | −11.4 | −10.0 |
 | bass | uprightBass | 215 | −5 | −27.9 | −11.6 | −14.4 |
-| tuba | tuba | 32 | −10 | −33.9 | −17.5 | −20.7 |
-| brass | brass | 164 | −16 | −27.4 | −11.1 | −10.9 |
-| xylo | xylophone | 16 | −7 | −30.0 | −13.7 | −16.1 |
-| str | strings | 25 | −8 | −31.6 | −15.2 | −19.8 |
-| tamb | tamb | 516 | −3.5 | −35.4 | −19.0 | −16.8 |
-| cast | castanets | 519 | −6 | −34.6 | −18.2 | −6.9 |
-| kick | kick | 105 | −16 | −33.7 | −17.4 | −18.0 |
-| crash | crash | 4 | −8 | −32.1 | −15.8 | −15.0 |
-| cym | cymbal | 2 | −9 | −37.2 | −20.8 | −23.9 |
-| timp | timpani | 33 | −8 | −29.0 | −12.7 | −12.1 |
+| tuba | tuba | 32 | −12.1 | −33.8 | −17.5 | −20.8 |
+| brass | brass | 164 | −13.2 | −27.3 | −11.0 | −10.2 |
+| xylo | xylophone | 16 | −7 | −29.8 | −13.5 | −17.8 |
+| str | strings | 25 | −7.7 | −31.6 | −15.3 | −20.1 |
+| tamb | tamb | 516 | −5.3 | −35.2 | −18.9 | −15.9 |
+| cast | castanets | 519 | −6 | −34.4 | −18.1 | −6.8 |
+| kick | kick | 105 | −16 | −33.7 | −17.4 | −18.5 |
+| crash | crash | 4 | −6.5 | −31.6 | −15.3 | −14.0 |
+| cym | cymbal | 2 | −1.2 | −27.9 | −11.6 | −15.2 |
+| timp | timpani | 33 | −6.8 | −28.9 | −12.6 | −11.9 |
 
 Per section (integrated loudness of the section, and the solo loudness of its lead relative to the
 section mix; measured with a scratch script that renders each channel solo through the same
-renderer and sample bank):
+renderer and sample bank; this table and the browser check below predate the current bank):
 
 | Section | Mix LUFS | Lead (solo vs section mix) | Bass | Tambourine | Castanets |
 |---------|---------:|----------------------------|-----:|-----------:|----------:|
@@ -243,3 +243,25 @@ figures are 1–2.5 / 2.5–6 / 6–16 kHz.
   the grace). compare.py with the xylophone merged into the line read two wrong notes there (95.9 %).
   It now waits for the grace (`r:1/4 A5':7/4 …`): 100 %. Gain −10 → −7 dB: −11.2 to −12.6 LU in
   the call bars (was −14.1 to −15.3), still 4–5 LU under the mandolin it doubles.
+
+## Polish: the cymbal rolls on the bright roll
+
+The bank's suspended-cymbal roll (variant 1) was rebuilt bright (SSO's crescendo roll, spectral
+centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). A review had found both
+rolls inaudible with the old, dark roll. Re-balanced for the new one: `cym` gain −5.2 → −1.2 dB,
+and the roll into C2 velocity 0.65 → 0.9 (the A2 tutti's tambourine and castanets fill 6–12 kHz).
+
+Measure (scratch script on the full render, same method as the review): the largest third-octave
+rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest), in the last 150 ms of the roll; "cover" = how much the roll raises the momentary
+(400 ms, K-weighted) loudness there; "cymbal" / "lead" (mandolin + accordion) = their own
+momentary loudness against the mix.
+
+| Roll | Before (bright roll, old balance) | After | Cover | Cymbal vs mix | Lead vs mix |
+|---|---|---|---|---|---|
+| B2 → C, bar 44 (35.83 s, 0.75 s) | +4.0 dB at 6.3 kHz | **+6.7 dB** at 6.3 kHz | 0.15 LU | −13.0 LU | −1.9 LU |
+| A2 → C2, bar 92 (75.83 s, 0.75 s) | +1.5 dB at 6.3 kHz | **+6.3 dB** at 6.3 kHz | 0.52 LU | −9.2 LU | −2.1 LU |
+
+Both rolls rise more than 6 dB in their band at their end (+8.3 and +10.4 dB over the 200 ms
+around it) and crest 7 LU or more under the tune. Melody channels are untouched; the five
+compare.py proofs above give the same results. Render after the change: "Render" above.

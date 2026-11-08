@@ -16,7 +16,8 @@
  * trombones (gath).
  * Arrangement: the break is the cartoon part — the same Dies-irae motif sneaks by on fat bassoons,
  * then on skeleton xylophone + piccolo, over a tuba/pizzicato oom-pah with timpani and woodblock;
- * then the chorus murmurs it again over the violas' swirl while the storm gathers.
+ * then the chorus murmurs it again over the violas' swirl while the storm gathers. The tutti gets
+ * its bright end from the triangle on the accents and the glockenspiel an octave above the violins.
  *
  * Form: intro(1, doom) | A(5) A2(5, heavier: brass + organ + piccolo + pan clangs) B(4, teste David)
  *       brk(4, comic break) gath(2, crescendo) bld(2, D7 build) → loop to A.  Loop 22 bars = 62.9 s.
@@ -113,6 +114,15 @@ const BD_A: Array<[number, number, number]> = [
   [32, 60, 0.95], [36, 60, 1.1], [44, 60, 1.05], [52, 60, 1.05], [60, 60, 1.1],
   [64, 60, 0.9], [96, 60, 0.75], [128, 60, 0.9],
 ];
+/** the triangle on the tutti accents the crash leaves free: hammer blows 2-4 and the runs bar's
+ *  chords (G, E♭/G, C♯°7/E, F, D/F♯) */
+const TRI_A: Array<[number, number, number]> = [
+  [8, 60, 0.75], [16, 60, 0.8], [24, 60, 0.9],
+  [32, 60, 0.85], [40, 60, 0.7], [48, 60, 0.75], [56, 60, 0.75], [60, 60, 0.8],
+];
+/** the glockenspiel doubles the violins an octave up: the runs bar and the scale's first half (the
+ *  violins' G5 → G4) */
+const GLOCK_A = `r:32 | ${RUN.replace('{C#5}', '')} | r:32 | r:32 | G5:1 F5 Eb5 D5 C#5 D5 C5 Bb4 A4 Bb4 A4 G4 r:20 |`;
 
 // ---------------------------------------------------------------------------------------------
 // B — Verdi bars 11-14: "teste David cum Sibylla" (D minor → A major)
@@ -126,6 +136,8 @@ const T2_CHOIR = 'r:8 D5:4 E5:4 E5:12 A5:4';
 /** violins: rising 32nds to the accented high A, falling arpeggio; the B♭-A shake, A major */
 const T1_VLN = rep('A4:1 D5:1 F5:1 G5:1 A5:4 r:1 F5:1 D5:1 A4:1 E5+A5:4', 2);
 const T2_VLN = `${rep('Bb5:1 A5:1', 4)} Bb5:4 G5:4 A5:12 E5+A5:4`;
+/** the glockenspiel's line: the violins' top notes */
+const GLOCK_T = (line: string): string => line.replace(/E5\+A5/g, 'A5');
 const T1_BRS = rep('r:4 D4+F4+A4:2 r:6 C4+E4+A4:2 r:2', 2);
 const T2_BRS = 'D4+F4+A4:2 r:2 C4+E4+A4:2 r:2 D4+G4+Bb4:2 r:2 E4+G4+Bb4+D5:2 r:2 C#4+E4+A4:12 C#4+E4+A4+E5:4';
 const T1_CB = 'D2:12 C2:4 D2:12 C2:4';
@@ -211,6 +223,10 @@ export const finalboss: SongDef = {
     crash: { inst: 'crash', gain: -6.1, pan: -0.15, send: 0.3, hum: 0 },
     cym: { inst: 'cymbal', gain: 5.9, pan: 0.2, send: 0.3, hum: 0 },
     tam: { inst: 'tamtam', gain: -5, pan: 0, send: 0.35, hum: 0 },
+    // the bright end of the orchestra (strings, choir, organ and brass leave 4-12 kHz nearly empty):
+    // the triangle on the tutti accents, the glockenspiel doubling the violins an octave up
+    tri: { inst: 'triangleInst', gain: 0, pan: 0.42, send: 0.25, hum: 0 },
+    glock: { inst: 'glock', gain: -4, pan: 0.3, send: 0.3, hum: 0 },
     pan: { inst: 'panClang', gain: -0.4, pan: 0.38, send: 0.2, hum: 0 },
     wb: { inst: 'woodblock', gain: 4, pan: -0.42, send: 0.15, hum: 0.3 },
     slap: { inst: 'slapstick', gain: 1, pan: 0.36, send: 0.2, hum: 0 },
@@ -252,6 +268,8 @@ export const finalboss: SongDef = {
         hits('bdR', [[144, 60, 0.3, 8], [152, 60, 0.45, 8]], 1),
         hits('crash', [[0, 60, 0.95], [64, 60, 0.7]]),
         hits('cym', [[144, 60, 0.35, 4], [148, 60, 0.45, 4], [152, 60, 0.55, 4], [156, 60, 0.66, 4]], 1),
+        hits('tri', TRI_A),
+        mel('glock', GLOCK_A, { vel: 0.7, oct: 1 }),
       ],
     },
     A2: {
@@ -280,12 +298,15 @@ export const finalboss: SongDef = {
         mel('tuba', TUBA_A, { vel: 0.8 }),
         hits('timp', TIMP_A.map(([s, m, v]): [number, string, number] => [s, m, Math.min(1.05, v * 1.04)])),
         hits('bd', BD_A),
-        // frying-pan clangs on the thwacks of the hammer bar (no crash on this downbeat to mask them)
+        // frying-pan clangs on the thwacks of the hammer bar
         hits('pan', [[4, 60, 0.9], [12, 60, 0.8], [20, 60, 0.85], [28, 60, 0.95]]),
         hits('bdR', [[144, 60, 0.3, 8], [152, 60, 0.45, 8]], 1),
-        hits('tam', [[0, 60, 0.8]]),
-        hits('crash', [[64, 60, 0.8], [128, 60, 0.7]]),
+        // the downbeat: crash and tam-tam (its roar blooms between the hammer blows)
+        hits('tam', [[0, 60, 1.3]]),
+        hits('crash', [[0, 60, 0.8], [64, 60, 0.8], [128, 60, 0.7]]),
         hits('cym', [[144, 60, 0.35, 4], [148, 60, 0.45, 4], [152, 60, 0.55, 4], [156, 60, 0.66, 4]], 1),
+        hits('tri', TRI_A),
+        mel('glock', GLOCK_A, { vel: 0.7, oct: 1 }),
       ],
     },
     B: {
@@ -303,7 +324,12 @@ export const finalboss: SongDef = {
         hits('timp', [...TIMP_T, ...at(2, TIMP_T)]),
         hits('bd', [...BD_T, ...at(2, BD_T)]),
         hits('crash', [[60, 60, 0.9], [124, 60, 1.0]]),
-        hits('tam', [[124, 60, 0.75]]),
+        hits('tam', [[124, 60, 1.2]]),
+        // suspended-cymbal swells into the fff blows, the triangle on the off-beat accents (the
+        // crash has the blows), the glockenspiel on the violins' top line an octave up
+        hits('cym', [[48, 60, 0.45, 12], [112, 60, 0.55, 12]], 1),
+        hits('tri', [4, 12, 20, 28, 36, 44].flatMap((s): Array<[number, number, number]> => [[s, 60, s % 16 === 4 ? 0.7 : 0.6], [s + 64, 60, s % 16 === 4 ? 0.7 : 0.6]])),
+        mel('glock', `${GLOCK_T(T1_VLN)} | ${GLOCK_T(T2_VLN)} | ${GLOCK_T(T1_VLN)} | ${GLOCK_T(T2_VLN)} |`, { vel: 0.55, oct: 1 }),
       ],
     },
     brk: {
@@ -359,6 +385,8 @@ export const finalboss: SongDef = {
         hits('bd', [[0, 60, 0.9], [24, 60, 0.95]]),
         hits('bdR', [[32, 60, 0.25, 8], [40, 60, 0.32, 8], [48, 60, 0.4, 8], [56, 60, 0.48, 8]], 1),
         hits('cym', [[32, 60, 0.3, 8], [40, 60, 0.42, 8], [48, 60, 0.54, 8], [56, 60, 0.66, 8]], 1),
+        // the triangle on the brass stabs of bar 2, in crescendo
+        hits('tri', Array.from({ length: 7 }, (_, i): [number, number, number] => [32 + i * 4, 60, 0.55 + i * 0.06])),
       ],
     },
   },

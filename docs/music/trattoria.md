@@ -87,7 +87,6 @@ $PY scripts/music/compare.py --abc $REFS/bb_libiamo.abc --voice 2 --ref-bars 1-9
 $PY scripts/music/compare.py --abc $REFS/lotro_brindisi.abc --tune 24 --ref-bars 2-17 --tol 0.1 --song trattoria --channel vln,mand --bars 67-82
 $PY scripts/music/compare.py --abc $REFS/bb_libiamo.abc --voice 1 --ref-bars 1-9 --song trattoria --channel acc --section C2 --bars 1-9
 $PY scripts/music/compare.py --abc $REFS/bb_libiamo.abc --voice 1 --ref-bars 1-9 --song trattoria --channel vln,mand --section C2 --bars 1-9
-$PY scripts/music/compare.py --abc $REFS/bb_libiamo.abc --voice 1 --ref-bars 1-9 --song trattoria --channel flute --section C2 --bars 1-9
 # For information only: the E-flat section against the other reference
 $PY scripts/music/compare.py --abc $REFS/lotro_brindisi.abc --tune 24 --ref-bars 121-141 --tol 0.1 --song trattoria --channel vln,mand --section G
 ```
@@ -103,7 +102,7 @@ $PY scripts/music/compare.py --abc $REFS/lotro_brindisi.abc --tune 24 --ref-bars
 | Chorus repeat, bb 1–9 | `acc` (C1 10–18) | PASS 100.0 % / 100.0 % |
 | Chorus alto line, bb V:2 1–9 | `clar` | PASS 100.0 % / 100.0 % |
 | Duet top line | `vln,mand` | PASS 100.0 % / 100.0 % (the slides are grace notes, which the tool ignores) |
-| Grand chorus C2 | `acc`; `vln,mand` and `flute` an octave up | PASS 100.0 % / 100.0 % each |
+| Grand chorus C2 | `acc`; `vln,mand` an octave up | PASS 100.0 % / 100.0 % each |
 | "Ah! godiamo" against LOTRO 121–141 (information) | `vln,mand` | 78.0 % / 79.7 %: the references differ (above) |
 
 No bar is allowed in the first statements, and no `--resync` is used.
@@ -118,7 +117,7 @@ No bar is allowed in the first statements, and no `--resync` is used.
 | `C1` | 46–63 | 39.13–54.78 | 15.65 s | **Chorus tutti**, 2 × bb bars 1–9. The accordion plays the tune; the violin sings its long notes. The clarinet plays the alto line; the horns play the tenor on "Ah! libiam" and hold chord tones under the turns. Accordion left hand and guitar "pa-pa", tambourine in sixteenths, clinks with glockenspiel. |
 | `brk` | 64–67 | 54.78–58.26 | 3.48 s | **Break**. The band stops on a chord, and a double clink answers ("cin cin!"). The clarinet hums the verse's turn, then the same turn sagging a semitone (B♭-minor colour), then hiccups (a grace leap up to A5). The tambourine shakes and a soft bass keep the pulse. Vamp and pickup back in. |
 | `duet` | 68–87 | 58.26–75.65 | 17.39 s | **Duet** in B♭. The violin and the mandolin on top, the accordion a third or sixth below. Pizzicato and guitar "pa-pa", clarinet arpeggio answers, and a two-bar suspended-cymbal roll into the last chorus. |
-| `C2` | 88–105 | 75.65–91.30 | 15.65 s | **Grand chorus**. The accordion plays the tune at pitch. The violin, the mandolin and the flute play it an octave up. Timpani, a cymbal crash on "Ah!", clinks. The last bar carries the accordion's pickup into V1. |
+| `C2` | 88–105 | 75.65–91.30 | 15.65 s | **Grand chorus**. The accordion plays the tune at pitch. The violin and the mandolin play it an octave up. Timpani, a cymbal crash on "Ah!", clinks. The last bar carries the accordion's pickup into V1. |
 
 - **Total**: 105 bars, 91.30 s of music (target 85–100 s).
 - **Loop**: `loopFrom: 1` (V1). In music time the loop runs from 3.478 to 91.304 s, a body of
@@ -200,7 +199,6 @@ the song actually exports (`export-song.mjs`), at sounding pitch.
 | `mand` | `mandolin` | Violetta's articulating voice: every note of her line, tremolo on the long notes; an octave up in C2 | F4–C6 (C2: B♭5–F6) |
 | `clar` | `clarinet` | answers (chalumeau arpeggios, runs into the choruses), the "Ah!" swell, the chorus alto line, the tipsy break | F3–A5 |
 | `horn` | `horn` | a soft pad in G; in the choruses the tenor on "Ah! libiam", then B♭3 / A3 under the turns | G3–F4 |
-| `flute` | `flute` | octave doubling in C2 | B♭5–F6 |
 | `gtr` | `guitar` | nylon guitar: "pa-pa" strums, broken into sixteenths in G; voiced below the accordion chords in the choruses | D3–E♭4 |
 | `pizz` | `pizz` | pizzicato "pa-pa" dyads (C2: D3–B♭3, under the clarinet) | D3–E♭4 |
 | `bass` | `uprightBass` | "oom" and the chorus bass | A♭1–D3 |
@@ -227,7 +225,7 @@ note has one clear leader.
   violin; the eighths and the turns' quick notes, which only it plays, are at lead level
   (velocity 0.9).
 - In C1 the violin sings only the long notes, and the accordion articulates the turns.
-- In C2 the octave line is the same `duo()` at a lower lead level (0.72), with the flute.
+- In C2 the octave line is the same `duo()` at a lower lead level (0.72).
 
 **Clarity, measured.** For each note of the tune, the energy at its own pitch (harmonics 1–3) is
 compared with the energy at the previous note's pitch, over 35–95 % of the written note. The
@@ -263,18 +261,11 @@ The measurement is the same as the review's, on sample renders of the full mix.
 cents apart, a mean of −0.4 cents; that is the instrument's natural shimmer. The violin D5 has a
 ±16-cent vibrato around +3 cents. So the accordion and violin unison does not beat audibly.
 
-**The cymbal.** The recorded suspended-cymbal set is dark.
-- The soft hit layer and the roll have their centroid at 350–950 Hz. In the roll's first second,
-  the energy above 4 kHz is 57–66 dB below its total.
-- The roll only opens up after about a second. A one-bar roll, as in the previous version, stays
-  in its dark start, and that version measured 19 dB under the mix in the roll bar and 24 dB under
-  on "Ah!".
-- The roll now spans two bars, the crash on "Ah!" uses the bright loud layer (velocity 0.8,
-  centroid 1.7 kHz), and the channel is 10 dB louder (−6 dB).
-- Measured against the mix: the roll is −10 dB in its first bar, −5 dB in its second and −3 dB
-  in its last 0.3 s, where the melody rests. The crash is −10 dB over its first 0.3 s.
-- The set's darkness is reported to the sampler owner; it is not worked around here beyond the
-  layer choice.
+**The cymbal.** The roll (variant 1) is the bank's rebuilt suspended-cymbal roll: bright (SSO's
+crescendo roll, spectral centroid about 3.7 kHz) and growing evenly into its end. It spans the last
+two bars of the duet, where the melody rests in the final bar, and the "Ah!" of C2 is a hit on the
+loud layer (velocity 1.25 against the channel's −8.7 dB, the hit's level of the previous balance).
+See "Polish" at the end for the measurements.
 
 ## Levels (recorded samples)
 
@@ -284,36 +275,35 @@ node scripts/music/render-song.mjs trattoria /tmp/trattoria.wav
 
 | | |
 |---|---|
-| Bank | instruments: recorded samples (53 sets) |
-| Duration | 95.30 s file (91.30 s of music plus the 4 s loop pad), 2601 events |
-| Loop | playback 0 → 95.304 s, then repeats 7.478 → 95.304 s of the buffer (music time 3.478 → 91.304 s), body 87.826 s = bars 5–105 from V1; **seam mismatch −150.5 dBFS** |
-| Loop body | **−16.4 LUFS** integrated (whole file −16.6), short-term max −14.5 LUFS, RMS −19.5 dBFS |
-| Peak | **sample peak −3.24 dBFS**; soft clipper 50 samples (0.001 %, the knee at −4.2 dBFS); DC 0 |
-| Spectral balance | <250 Hz −7.0 dB, 250 Hz–4 kHz −1.1 dB, >4 kHz −16.1 dB |
+| Bank | instruments: recorded samples (54 sets) |
+| Duration | 97.30 s file (91.30 s of music plus the 6 s loop pad), 2580 events |
+| Loop | playback 0 → 97.304 s, then repeats 9.478 → 97.304 s of the buffer (music time 3.478 → 91.304 s), body 87.826 s = bars 5–105 from V1; **seam mismatch −150.5 dBFS** |
+| Loop body | **−16.5 LUFS** integrated (−16.47; whole file −16.6), short-term max −14.6 LUFS, RMS −19.5 dBFS |
+| Peak | **sample peak −3.05 dBFS**; soft clipper 29 samples (0.000 %, the knee at −4.2 dBFS); DC 0 |
+| Spectral balance | <250 Hz −6.8 dB, 250 Hz–4 kHz −1.2 dB, >4 kHz −15.9 dB |
 | Warnings | none |
 
-Octave bands over the loop body (share of energy, dB): 63 Hz −11.7, 125 −9.0, 250 −10.8,
-**500 −3.9**, 1k −7.5, 2k −11.3, 4k −13.0, 8k −19.1. The tune's fundamentals lead, and the 2–4 kHz
+Octave bands over the loop body (share of energy, dB): 63 Hz −11.3, 125 −8.8, 250 −10.7,
+**500 −4.1**, 1k −7.4, 2k −11.3, 4k −12.9, 8k −18.9. The tune's fundamentals lead, and the 2–4 kHz
 region stays open for the game's sound effects.
 
 | Channel | Solo LUFS | vs mix | Loudest 3 s | Peak dBFS |
 |---|---|---|---|---|
-| acc | −18.0 | −1.6 | −17.3 | −8.7 |
-| vln | −18.8 | −2.3 | −16.4 | −4.9 |
-| accH | −26.8 | −10.3 | −26.0 | −15.4 |
-| clar | −27.3 | −10.9 | −26.1 | −16.4 |
-| accC | −31.6 | −15.2 | −31.1 | −13.1 |
-| gtr | −29.6 | −13.2 | −28.0 | −11.0 |
-| pizz | −34.9 | −18.5 | −34.0 | −17.1 |
-| bass | −25.3 | −8.9 | −23.5 | −9.3 |
-| horn | −32.2 | −15.8 | −30.5 | −20.9 |
-| flute | −35.8 | −19.4 | −35.3 | −26.9 |
-| mand | −23.5 | −7.0 | −21.1 | −9.7 |
-| tri | −34.6 | −18.2 | −33.3 | −15.3 |
-| glock | −37.6 | −21.1 | −42.2 | −23.0 |
-| tamb | −34.3 | −17.8 | −31.2 | −13.1 |
-| timp | −32.5 | −16.0 | −33.9 | −15.9 |
-| cym | −27.8 | −11.3 | −27.6 | −14.6 |
+| acc | −18.2 | −1.7 | −17.5 | −8.8 |
+| vln | −20.6 | −4.1 | −17.0 | −7.1 |
+| accH | −26.6 | −10.1 | −25.8 | −16.4 |
+| clar | −27.3 | −10.8 | −25.7 | −15.9 |
+| accC | −31.6 | −15.1 | −31.0 | −14.0 |
+| gtr | −29.6 | −13.1 | −27.8 | −11.5 |
+| pizz | −34.8 | −18.3 | −34.1 | −16.7 |
+| bass | −25.3 | −8.8 | −23.5 | −10.1 |
+| horn | −32.3 | −15.9 | −30.5 | −20.9 |
+| mand | −23.4 | −7.0 | −21.0 | −8.5 |
+| tri | −34.7 | −18.2 | −33.5 | −15.8 |
+| glock | −37.5 | −21.1 | −42.2 | −22.8 |
+| tamb | −33.9 | −17.5 | −31.0 | −11.5 |
+| timp | −32.4 | −15.9 | −33.8 | −15.3 |
+| cym | −30.3 | −13.8 | −30.0 | −14.2 |
 
 The whole-loop "vs mix" figures understate the channels that play in only part of the loop, so
 here they are per section. The section's mix loudness comes first. Each channel's solo loudness
@@ -327,8 +317,8 @@ renders.
 | G | −16.9 | violin + mandolin (violin +0.3, mandolin −6.4) | **−1.0** | −9.1 | −20.2 |
 | C1 | −15.6 | accordion (violin long notes −6.3) | **−2.2** | −8.6 | −16.1 |
 | brk | −23.6 | clarinet | **−2.1** | −4.9 | −14.1 |
-| duet | −16.9 | violin + mandolin (accordion second voice −9.8) | **−1.4** | −8.9 | −18.4 |
-| C2 | −14.9 | accordion (octave line −6.3; together ≈ −1.4) | −3.1 | −9.8 | −17.6 |
+| duet | −16.8 | violin + mandolin (accordion second voice −9.8) | **−1.3** | −9.0 | −17.7 |
+| C2 | −14.9 | accordion (octave line −6.0; together −1.5) | −3.3 | −9.7 | −17.5 |
 
 - **Build**: the verses sit at −17.6 to −16.9 LUFS and the choruses at −15.6 to −14.9, around a
   −23.6 break. That is enough contrast for a 15-minute stage loop without pumping.
@@ -370,3 +360,36 @@ the export name `trattoria` and the `SongDef` shape are unchanged. The song no l
    horns hold chord tones that no turn rubs against.
 7. **This document.** The loop line, the cadence description, the ranges and the clarity figures
    are corrected.
+
+## Polish: the bright cymbal roll, and the flute doubling dropped
+
+**Cymbal.** The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll, spectral
+centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). The channel's +10 dB
+boost for the old, dark roll made the new one dominate the duet's last bar: there the cymbal alone
+was 3 LU under the mix and raised it by 3 LU. Re-balanced: `cym` gain −2.2 → −8.7 dB; the "Ah!" hit
+velocity 0.8 → 1.25, which keeps the hit within 0.3 dB of its previous level.
+
+Measure (scratch script on the full render, same method as the review): the largest third-octave
+rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest), for the roll in its last 150 ms, for the hit in its first 100 ms (in brackets: the first
+300 ms); "cover" = how much the cymbal raises the momentary (400 ms, K-weighted) loudness there.
+
+| Cymbal | Before | After | Cover before → after | Cymbal vs mix before → after |
+|---|---|---|---|---|
+| roll into C2 (duet bars 19–20, 73.91 s, 1.56 s; the melody rests) | +24.6 dB at 3.2 kHz | **+18.2 dB** at 3.2 kHz | 3.01 → **0.88 LU** | −3.0 → **−7.4 LU** |
+| hit on "Ah!" (C2, 75.94 s) | +7.1 dB at 400 Hz (+8.8) | **+5.8 dB** at 400 Hz (+7.8) | 0.65 → 0.45 LU | −9.3 → −11.6 LU |
+
+The roll still leads clearly into the grand chorus, now as a crest rather than the loudest thing
+in the bar. (The hit's slight drop is the roll's release, which overlapped it and is now 6.5 dB
+lower.)
+
+**Flute.** The flute doubled the C2 tune an octave up, in unison with the violin and the
+mandolin, at −15.6 dB. A review found it inaudible: its notes raised their own third-octave band by
+a median 0.6 dB (5 of 56 notes reached 3 dB). Raising it does not make it heard without taking the
+violin's place: at +12 dB, 64 % of its notes reach 3 dB (median 5.4 dB) but the violin's notes in C2
+that reach 3 dB fall from 83 % to 58 %; at +14 dB, 75 % against the violin's 42 %. Three
+instruments in unison cannot each stand out, so the flute part and its channel are gone; the octave
+line is the violin and the mandolin, as in the duet. Its compare.py proof is dropped from the list
+above; the other proofs give the same results.
+
+Render after these changes: "Levels" above.

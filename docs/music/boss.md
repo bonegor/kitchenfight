@@ -239,25 +239,26 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
 
 ## Levels (recorded samples)
 
-`node scripts/music/render-song.mjs boss out.wav` (recorded sample bank, 53 sets):
+`node scripts/music/render-song.mjs boss out.wav` (recorded sample bank, 54 sets):
 
 | Measure | Value |
 |---------|-------|
-| duration | 48.95 s of music; rendered buffer 52.95 s (with the 4 s loop pad) |
-| loop window | 2.368 → 48.947 s, body 46.58 s = bars 4–62 from section A; seam mismatch −127.3 dBFS |
-| loudness | loop body **−16.35 LUFS** integrated (target −16.4 ± 0.5; whole file −16.44), short-term max −14.7 LUFS |
-| peak / RMS | sample peak **−3.58 dBFS**, RMS −19.6 dBFS |
-| soft clipper | 6 samples (0.000 %) |
-| spectral balance | < 250 Hz −9.0 dB, 250 Hz–4 kHz −0.7 dB, > 4 kHz −19.1 dB of the energy |
+| duration | 48.95 s of music; rendered buffer 54.95 s (with the 6 s loop pad) |
+| loop window | music 2.368 → 48.947 s (buffer 8.368 → 54.947 s), body 46.58 s = bars 4–62 from section A; seam mismatch −150.5 dBFS |
+| loudness | loop body **−16.34 LUFS** integrated (target −16.4 ± 0.5; whole file −16.43), short-term max −14.7 LUFS |
+| peak / RMS | sample peak **−2.80 dBFS**, RMS −19.6 dBFS |
+| soft clipper | 19 samples (0.000 %) |
+| spectral balance | < 250 Hz −8.4 dB, 250 Hz–4 kHz −0.8 dB, > 4 kHz −18.5 dB of the energy |
 | warnings | none (no skipped instrument, no note ringing past the seam) |
 | master | `gainDb: -0.3`; reverb rt60 1.5 s, size 1.15, wet 1.25 (a hall, kept short for the fast tempo) |
 
-Per-channel solo levels over the loop body (from the same report): trumpet −2.1 LU against the mix,
-accordion −3.0, staccato strings (tune) −3.6, brass −9.1, horn −10.6, timpani −11.0, clarinet −11.2,
-xylophone −11.9, guitar −13.0, tuba −13.0, galloping strings −13.4, horn section −14.7, snare −15.1,
-tambourine −16.8, orchestra hit −17.0, pizzicato −17.8, bass drum −18.0, crash −18.0, woodblock
-−20.5, whip −21.0, triangle −21.1, suspended cymbal −21.4; no channel's loudest 3 s is more than
-30 LU below the mix (render-song's audibility check passes).
+Per-channel solo levels over the loop body (from the same report): trumpet −2.6 LU against the mix,
+accordion −2.9, staccato strings (tune) −3.3, brass −8.9, horn −10.7, timpani −11.1, clarinet −11.2,
+xylophone −11.8, guitar −12.9, tuba −13.0, galloping strings −13.7, suspended cymbal −14.5, horn
+section −14.5, snare −14.8, tambourine −16.6, orchestra hit −17.0, pizzicato −17.7, crash −17.8,
+bass drum −18.0, woodblock −20.2, whip −20.8, triangle −20.8; no channel's loudest 3 s is more than
+30 LU below the mix (render-song's audibility check passes). The section table below predates the
+current bank.
 
 Per section (solo stems rendered with the renderer's `solo` option, BS.1770 integrated loudness per
 section window; the lead is the combined unison line where several instruments share the tune;
@@ -282,3 +283,28 @@ climax (+1 to +2 LU over A). Over the loop the short-term (3 s) loudness stays b
 
 The synth fallback (`--synth`) plays every channel (no skipped instrument) and measures −14.3 LUFS,
 2.0 LU louder, as expected for the synth set (see [`../MUSIC.md`](../MUSIC.md)).
+
+## Polish: the cymbal rolls on the bright roll
+
+The bank's suspended-cymbal roll (variant 1) was rebuilt bright (SSO's crescendo roll, spectral
+centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). A review had found the
+four rolls inaudible with the old, dark roll. Re-balanced for the new one: `cym` gain −9.7 → −5.2 dB,
+the break's short roll (0.53 s, so it never reaches its peak) velocity 0.7 → 0.84, the roll into
+the coda 0.6 → 0.66; the intro (0.45) and coda (0.55) rolls keep their velocities.
+
+Measure (scratch script on the full render, same method as the review): the largest third-octave
+rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest), in the last 150 ms of the roll; "cover" = how much the roll raises the momentary
+(400 ms, K-weighted) loudness there; "cymbal" / "lead" = their own momentary loudness against the
+mix (lead = trumpet, accordion, strings, brass and horns, whichever plays).
+
+| Roll | Before (bright roll, old balance) | After | Cover | Cymbal vs mix | Lead vs mix |
+|---|---|---|---|---|---|
+| intro, bar 1 (0.00 s, 0.71 s) | +6.2 dB at 6.3 kHz | **+9.9 dB** at 6.3 kHz | 0.11 LU | −15.4 LU | (timpani, snare and cymbal only) |
+| break, last beat (33.35 s, 0.53 s) | +3.5 dB at 6.3 kHz | **+8.6 dB** at 6.3 kHz | 0.35 LU | −10.7 LU | −3.0 LU |
+| into the coda (44.21 s, 1.42 s) | +3.7 dB at 7.9 kHz | **+7.9 dB** at 7.9 kHz | 0.31 LU | −11.5 LU | −1.2 LU |
+| coda, into A (47.37 s, 1.42 s) | +4.0 dB at 5 kHz | **+10.1 dB** at 12.6 kHz | 0.21 LU | −12.9 LU | −1.4 LU |
+
+Every roll rises 7.9–10.1 dB in its band at its end and stays 7.7–11.5 LU under the tune, adding
+at most 0.35 LU to the mix. Melody channels are untouched; the seven compare.py proofs above give
+the same results. Render after the change: the "Levels" table above.
