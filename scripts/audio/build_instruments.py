@@ -36,7 +36,8 @@ from scipy import signal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from instrument_dsp import (attack_points, crossfade_loop, db, dc_block, decode_mp3, encode_mp3, envelope,  # noqa: E402
-                            decay_slope, env_range_db, fade, find_loop, flatten_loop_envelope, flatten_sustain_loop, ftom,
+                            decay_slope, env_range_db, even_crescendo, fade, find_loop, flatten_loop_envelope,
+                            flatten_sustain_loop, ftom,
                             load_audio, loop_corr, loudness, onset_power, perceptual_onset,
                             max_short_loudness, measure_pitch, measure_pitch_centroid, measure_pitch_decay,
                             measure_pitch_hfit, measure_pitch_hsum, measure_pitch_track, mtof, note_name, onset_index,
@@ -99,6 +100,10 @@ class Cand:
     loop_len: float | None = None
     attack: str | None = None  # per-zone override of the attack model (see attack_points)
     onset_db: float | None = None  # per-zone override of SetSpec.onset_db (swelling rolls: -20)
+    repo: str | None = None  # source repository of this zone (None = the set's): sets mixing two libraries
+    fade_in: float | None = None  # per-zone override of SetSpec.fade_in (s; a roll entered mid-crescendo)
+    level_db: float = 0.0  # zone loudness re the set's (TARGET_LU): an articulation level-matched to the one it replaced
+    swell_db: float | None = None  # a sustained crescendo (roll): grown evenly from this re its peak (even_crescendo)
 
 
 @dataclass
@@ -123,6 +128,11 @@ class SetSpec:
     max_pre: float = 0.06  # 'perceptual' / 'sustain': longest build-up kept before the beat (s)
     max_attack: float | None = None  # 'sustain': cut slower attacks to reach -6 dB in this time (s)
     fade_in: float = 0.0  # 'sustain': minimum fade-in (s), e.g. chorus samples that start mid-sound
+    # 'transient': recordings that start right on the hit (castanets, drums trimmed at the stroke): the
+    # fade-in covers only the pre-roll before the attack's rise, a zone without pre_ms of it gets this
+    # anti-click ramp (s) and pre_ms of silence before the rise (attack_points hit_ramp). None = the
+    # min_fade anti-click fade (up to 3 ms from the zone start), which the other sets were built with
+    hit_ramp: float | None = None
     # decay / oneshot
     t_store: float = 1.0  # seconds kept after the onset (decay: before the decay loop ends)
     loop_len: float = 0.25  # loop length target (s)
@@ -379,6 +389,22 @@ def gleitz_cands(inst: str, notes: list[str], font: str = 'MusyngKite') -> Calla
 # Set table
 # ---------------------------------------------------------------------------------------------
 
+# The suspended-cymbal roll (set 'cymbal', variant 1): SSO's forte crescendo roll grows from -33 dB to
+# its peak over 1.6 s (slowly, then by 25-30 dB/s), its spectral centroid from 0.4 to 4 kHz, holds the
+# peak for 0.38 s and rings out. What the songs ask a roll for is a swell into the next downbeat over
+# 0.3-1.8 s: a roll note enters the crescendo at CYM_ROLL_ENTRY (source samples, 44.1 kHz; 17 dB under
+# the peak, where it starts to brighten), grown evenly from CYM_ROLL_SWELL dB (K-weighted, re the peak)
+# into the peak (instrument_dsp.even_crescendo: about 10 dB/s, slower than the 0.6 s release decays,
+# so a note of any length is at its loudest at its end), then looped on the peak. CYM_ROLL_LEVEL (dB re
+# the set's loudness target): the held roll at the level of the VCSL roll it replaced (measured on what the
+# sampler renders, before velocity and channel gains: -18.8 dB K-weighted over 2-2.5 s of a held note),
+# which the songs' cymbal channels were balanced against.
+CYM_ROLL_ENTRY = round(0.9 * 44100)
+CYM_ROLL_SWELL = -9.0
+CYM_ROLL_LEVEL = 0.84
+# anti-click ramp of the hits recorded from their stroke (SetSpec.hit_ramp): castanets, kick, snare
+HIT_RAMP = 0.0002
+
 SETS: list[SetSpec] = [
     # --- plucked / keyboard -------------------------------------------------------------------
     SetSpec('accordion', 'accordion', accordion_cands, 'sustain', quality=4, pre_ms=3, octave=0, max_attack=0.07,
@@ -513,8 +539,9 @@ SETS: list[SetSpec] = [
     SetSpec('snare', 'vcsl', fixed([
         vc(f'{VCSL_M}/Snare Drum, Rope Tension/Hi/RopeSnare_hi_sn_Main_vl{v}_rr{r}.wav', layer=v - 1, rr=i)
         for v, rrs in ((1, (1, 2)), (2, (1, 2)), (3, (1, 3)), (4, (1, 2))) for i, r in enumerate(rrs)]),
-            'oneshot', sr=44100, quality=5, t_store=0.5, fade_out=0.12, loud_win=(0.0, 0.1), octave=0,
-            note='VCSL rope-tension snare (high), 4 dynamics x 2 round robins'),
+            'oneshot', sr=44100, quality=5, t_store=0.5, fade_out=0.12, loud_win=(0.0, 0.1), octave=0, hit_ramp=HIT_RAMP,
+            note='VCSL rope-tension snare (high), 4 dynamics x 2 round robins; the recordings start on the stroke: '
+                 'its rise is kept whole behind a 0.2 ms ramp and 1.5 ms of silence'),
     SetSpec('crash', 'vcsl', fixed([
         vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_mf1.wav', 0, 0), vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_mf2.wav', 0, 1),
         vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_ff2.wav', 1, 0), vc(f'{VCSL_I}/Clash Cymbals 1/cymbal_crash1_ff3.wav', 1, 1)]),
@@ -523,8 +550,9 @@ SETS: list[SetSpec] = [
     SetSpec('kick', 'vcsl', fixed([
         vc(f'{VCSL_M}/Bass Drum 1/BDrumNew_hit_v{v}_rr{r}_Sum.wav', layer=li, rr=r - 1)
         for li, v in enumerate((3, 5, 7)) for r in (1, 2)]),
-            'oneshot', sr=24000, quality=5.5, t_store=0.8, fade_out=0.2, loud_win=(0.0, 0.2), octave=0,
-            note='VCSL orchestral bass drum, 3 dynamics x 2 round robins'),
+            'oneshot', sr=24000, quality=5.5, t_store=0.8, fade_out=0.2, loud_win=(0.0, 0.2), octave=0, hit_ramp=HIT_RAMP,
+            note='VCSL orchestral bass drum, 3 dynamics x 2 round robins; the beater\'s stroke is kept whole (the '
+                 'recordings start on it or 1.5 ms before it: a 0.2 ms ramp, or a fade over that 1.5 ms only)'),
     SetSpec('triangle', 'vcsl', fixed([
         vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v1_rr1_Mid.wav', 0, 0), vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v1_rr2_Mid.wav', 0, 1),
         vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v2_rr1_Mid.wav', 1, 0), vc(f'{VCSL_I}/Triangles/Triangle1_Hit_v2_rr2_Mid.wav', 1, 1)]),
@@ -545,7 +573,9 @@ SETS: list[SetSpec] = [
             'decay', quality=5, t_store=0.9, loop_len=0.15, loud_win=(0.0, 0.3), min_decay=5, octave=0, loud_max=True),
     SetSpec('castanets', 'worldperc', fixed([
         vc(f'samples/Castanets/{n:02d}.flac', rr=i) for i, n in enumerate((1, 4, 7, 10))]),
-            'oneshot', quality=5.5, t_store=0.22, fade_out=0.05, loud_win=(0.0, 0.08), octave=0),
+            'oneshot', quality=5.5, t_store=0.22, fade_out=0.05, loud_win=(0.0, 0.08), octave=0, hit_ramp=HIT_RAMP,
+            note='FreePats castanets, 4 takes; the recordings start on the click: kept whole behind a 0.2 ms ramp and '
+                 '1.5 ms of silence'),
     SetSpec('slapstick', 'vcsl', fixed([
         vc(f'{VCSL_I}/Slapstick/slapstick_quiet_rr1.wav', 0, 0), vc(f'{VCSL_I}/Slapstick/slapstick_quiet_rr2.wav', 0, 1),
         vc(f'{VCSL_I}/Slapstick/slapstick_rr1.wav', 1, 0), vc(f'{VCSL_I}/Slapstick/slapstick_rr2.wav', 1, 1)]),
@@ -563,10 +593,18 @@ SETS: list[SetSpec] = [
             'oneshot', quality=5.5, t_store=1.4, fade_out=0.3, loud_win=(0.0, 0.4), octave=0, onset_db=-20, loud_max=True),
     SetSpec('cymbal', 'vcsl', fixed([
         vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_hit_mp1.wav', 0, 0), vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_hit_f1.wav', 1, 0),
-        vc(f'{VCSL_I}/Suspended Cymbal 1/susCymb1_roll_f1_nloop.wav', 0, 1, mode='sustain', loop_len=0.6, onset_db=-20)]),
+        Cand(path=f'{SSOS}/Percussion/cymbal_roll-a-f.wav', repo='sso', nominal=60, layer=0, rr=1, pitched=False,
+             mode='sustain', offset=CYM_ROLL_ENTRY, loop_len=0.25, onset_db=-20, fade_in=0.03, swell_db=CYM_ROLL_SWELL,
+             level_db=CYM_ROLL_LEVEL, label='cymbal_roll-a-f.wav')]),
             'decay', sr=44100, channels=2, quality=5, t_store=1.5, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=3, octave=0,
-            loud_max=True, loop_min=0.9, loop_max=1.6, xfade=0.2,
-            note='VCSL suspended cymbal: hits + looped roll (variant 1), stereo (one take per articulation)'),
+            loud_max=True, loop_min=0.84, loop_max=0.88, xfade=0.06,
+            note='VCSL suspended cymbal hits (variant 0, 2 dynamics) + the SSO crescendo roll (variant 1, one take; '
+                 'VCSL\'s roll is dark: 4-8 kHz at -38 dB): entered 0.9 s into the recorded crescendo (17 dB under its '
+                 'peak, where it starts to brighten) and evened out to grow from 9 dB under the peak into it over 0.76 s '
+                 '(slower than the release decays: a roll note of any length is at its loudest at its end), then looped '
+                 'on the peak (the 0.38 s the player holds it before the cymbal rings out); the held roll plays at the '
+                 'level of the VCSL roll it replaces (the songs were balanced against it). Stereo recordings (one take '
+                 'per articulation)'),
     SetSpec('bassdrum', 'vcsl', fixed([
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_mf1.wav', 0, 0), vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_f.wav', 1, 0),
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_ff.wav', 2, 0),
@@ -671,7 +709,8 @@ def measure_zone_pitch(spec: SetSpec, x: np.ndarray, sr: int, w0: int, w1: int, 
 
 
 def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Zone:
-    path = src.fetch(spec.repo, [c.path])[0]
+    repo = c.repo or spec.repo
+    path = src.fetch(repo, [c.path])[0]
     x, sr0 = load_audio(path, mono=spec.channels == 1)
     if spec.channels == 2 and x.shape[0] == 1:
         x = np.vstack([x, x])
@@ -679,7 +718,7 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     if c.gain_db:
         x = x * 10 ** (c.gain_db / 20)
     for mp, mg in c.mix:  # layered premix (e.g. marcato = sustain + staccato accent)
-        y, _ = load_audio(src.fetch(spec.repo, [mp])[0], sr=sr0, mono=spec.channels == 1)
+        y, _ = load_audio(src.fetch(repo, [mp])[0], sr=sr0, mono=spec.channels == 1)
         if spec.channels == 2 and y.shape[0] == 1:
             y = np.vstack([y, y])
         y = dc_block(y, sr0)
@@ -711,7 +750,9 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
                                        rel_db=c.onset_db if c.onset_db is not None else spec.onset_db,
                                        perc_db=spec.perc_db, max_pre=spec.max_pre,
                                        sus_db=c.onset_db if c.onset_db is not None else spec.sus_db,
-                                       max_attack=spec.max_attack, fade_in=spec.fade_in, period=per0)
+                                       max_attack=spec.max_attack,
+                                       fade_in=c.fade_in if c.fade_in is not None else spec.fade_in, period=per0,
+                                       hit_ramp=spec.hit_ramp)
     info.update(ainfo)
     x = x[:, st:]
     pre = on - st
@@ -773,6 +814,11 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     n_keep = x.shape[1]
     per = period_of(pitch, sr) if c.pitched else None
     if mode == 'sustain':
+        if c.swell_db is not None:
+            # a crescendo roll: grown evenly in dB from its beat into its peak, where the loop is
+            # found next (so a roll note of any length swells into its end: even_crescendo)
+            x, sw = even_crescendo(x, sr, pre, c.swell_db)
+            info.update(sw)
         use_sfz = (spec.use_sfz_loop and loop_src and loop_src[1] <= min(x.shape[1], pre + spec.max_sfz_end * sr)
                    and loop_src[0] > pre + fin)
         if use_sfz:
@@ -950,10 +996,13 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
         lu = loudness(x, sr, pre + int(spec.loud_win[0] * sr), pre + int(spec.loud_win[1] * sr))
     # every transient / perceptual zone keeps pre_ms of pre-roll before its attack, padded with
     # silence when the recording starts right at the attack: the MP3 pre-echo of the transient then
-    # lands in that silence (the runtime fades the pre-roll in) instead of being cut into a step
+    # lands in that silence (the runtime fades the pre-roll in) instead of being cut into a step.
+    # Sets with hit_ramp keep pre_ms before the attack's RISE (attack_points info['hit_pad']): a hit
+    # recorded from its stroke plays its whole rise, behind a hit_ramp ramp only
     want = int(round(spec.pre_ms * sr / 1000))
-    if amode != 'sustain' and pre < want:
-        pad = want - pre
+    pad = want - pre if amode != 'sustain' and pre < want else 0
+    pad = max(pad, int(info.get('hit_pad', 0)))
+    if pad > 0:
         x = np.pad(x, ((0, 0), (pad, 0)))
         pre += pad
         if loop:
@@ -963,7 +1012,7 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     norm = PEAK / pk
     x = x * norm
     lu_n = lu + db(norm)
-    gain = 10 ** ((TARGET_LU - lu_n) / 20)
+    gain = 10 ** ((TARGET_LU + c.level_db - lu_n) / 20)
     if loop:
         info['seam'] = round(seam_click(x, loop[0], loop[1]), 2)
     return Zone(c, x, pitch, pre, loop, decay, gain, lu_n, info)
@@ -1088,9 +1137,18 @@ def key_ranges(zones: list[Zone], ext_down: int = 5, ext_up: int = 5) -> dict[in
     return res
 
 
+def cand_files(spec: SetSpec, cands: list[Cand]) -> dict[str, list[str]]:
+    """repository -> the source files (samples and premixes) the candidates read from it"""
+    out: dict[str, set[str]] = {}
+    for c in cands:
+        out.setdefault(c.repo or spec.repo, set()).update([c.path] + [p for p, _ in c.mix])
+    return {r: sorted(ps) for r, ps in out.items()}
+
+
 def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
     cands = spec.cands(src)
-    src.fetch(spec.repo, sorted({c.path for c in cands} | {p for c in cands for p, _ in c.mix}))
+    for repo, paths in cand_files(spec, cands).items():
+        src.fetch(repo, paths)
     # octave sanity: SFZ / file-name octave conventions differ, so measure a few zones and apply
     # one global octave correction for the set (unless the spec states it)
     zones: list[Zone] = []
@@ -1100,7 +1158,7 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
         probe = pitched[:: max(1, len(pitched) // 7)][:7]
         votes = []
         for c in probe:
-            path = src.fetch(spec.repo, [c.path])[0]
+            path = src.fetch(c.repo or spec.repo, [c.path])[0]
             x, sr0 = load_audio(path, mono=True)
             if c.offset:
                 x = x[:, c.offset:]
@@ -1209,6 +1267,11 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
                       + (f" loopAM={inf['loop_am_db']}dB" if 'loop_am_db' in inf else '')
                       + (f" h1-fit={inf['h1_vs_fit_cents']}c" if 'h1_vs_fit_cents' in inf else '')
                       + (f" rise={inf['rise_ms']}ms" if inf.get('rise_ms') else '')
+                      + (f" hitpad={inf['hit_pad'] * 1000 / sr:.2f}ms ramp={inf.get('hit_ramp_ms')}ms"
+                         if inf.get('hit_pad') else '')
+                      + (f" level{z.cand.level_db:+.1f}dB" if z.cand.level_db else '')
+                      + (f" swell={inf['swell_rate']}dB/s over {inf['swell_ms']}ms gain(start,max,min)={inf['swell_gain']}dB"
+                         if 'swell_rate' in inf else '')
                       + (f" spread={inf['pitch_spread']}c" if inf.get('pitch_spread') is not None else '')
                       + (f" check(yin,comb)={inf['pitch_check']}c" if inf.get('pitch_check') is not None else '')
                       + (f" range={inf['loop_range'][0]}/{inf['loop_range'][1]}dB" if inf.get('loop_range') else '')
@@ -1228,10 +1291,15 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
                       + (' narrow' if inf.get('narrow') is not None and 'pitch_fallback' not in inf else ''))
     for z in dropped:
         report.append(f"  DROPPED {z.cand.label} L{z.cand.layer} R{z.cand.rr}: {z.info['drop']}")
-    sources = sorted({z.cand.path for z in zones} | {mp for z in zones for mp, _ in z.cand.mix})
-    return {'name': spec.name, 'repo': spec.repo, 'sources': sources, 'note': spec.note,
-            'file': f'{spec.name}/{spec.name}.mp3', 'sr': sr, 'ch': spec.channels,
-            'marker': MARKER, 'win': MARKER_WINDOW, 'bytes': size, 'seconds': round(secs, 2), 'zones': zdefs}
+    files = cand_files(spec, [z.cand for z in zones])
+    out = {'name': spec.name, 'repo': spec.repo, 'sources': files.get(spec.repo, []), 'note': spec.note,
+           'file': f'{spec.name}/{spec.name}.mp3', 'sr': sr, 'ch': spec.channels,
+           'marker': MARKER, 'win': MARKER_WINDOW, 'bytes': size, 'seconds': round(secs, 2), 'zones': zdefs}
+    # zones from another library (Cand.repo): their files by repository, for the credits
+    other = {r: ps for r, ps in files.items() if r != spec.repo}
+    if other:
+        out['other_sources'] = other
+    return out
 
 
 def write_manifest(sets: list[dict]) -> None:
@@ -1277,15 +1345,53 @@ SPECIAL_LICENSES = [
     ('sso', 'Samples/Organ/', 'CC Sampling Plus 1.0',
      'Pipe organ samples: "St. Stephen\'s Anglican" (the St. Stephen\'s pipe organ) recorded by Nicholas Appleton, '
      'as included (converted to FLAC, sampled in minor thirds, denoised) in Sonatina Symphonic Orchestra'),
+    ('sso', 'Samples/Percussion/cymbal_roll', 'CC Sampling Plus 1.0',
+     'Suspended-cymbal crescendo roll from Sonatina Symphonic Orchestra, whose README names "davidjwoll cymbal rolls" '
+     '(freesound.org pack 5577) among its sources'),
 ]
+
+# the SSO README's own statement on where its samples came from (quoted in the credits, verbatim)
+SSO_PROVENANCE = [
+    'SSO was created from the following free/CC-licensed/public domain instrument samples: '
+    '[The University of Iowa MIS](http://theremin.music.uiowa.edu/MIS.html), [MSLP](http://www.mediafire.com/?zqff4hkyeec22), '
+    '[Philharmonia samples](http://www.philharmonia.co.uk/thesoundexchange/make_music/samples/library/), '
+    '[OLPC project](http://wiki.laptop.org/go/Free_sound_samples), '
+    '[The Complete K2000](http://www.sweetwater.com/k2000/sounds.html), '
+    '[ldk1609 violin](http://www.freesound.org/usersViewSingle.php?id=692375), '
+    '[stamperadam Kelon Xylophone](http://www.freesound.org/packsViewSingle.php?id=6168), '
+    '[Corsica_S Cello Pizzicato](http://www.freesound.org/packsViewSingle.php?id=2680), '
+    '[davidjwoll cymbal rolls](http://www.freesound.org/packsViewSingle.php?id=5577), '
+    '[Satoration Castanets](http://www.freesound.org/samplesViewSingle.php?id=57299), '
+    "Thores Triangle, Mystified timpani, Eddie's English Horn and a variety of classic soundfonts by Campbell Barton, "
+    '[Nando Florestan](http://oui.com.br/n/download.php?list.2), and [Ethan Winer](http://www.ethanwiner.com/ewsf2.html).',
+    '',
+    'In the case of a few very old soundfonts I have no idea who the original authors were or what licensing might apply. '
+    'But as these files have been modified by different people and included in countless GM banks and other soundfont '
+    "compilations over the last decade, I'm assuming that they are to be considered public domain or at least free to use "
+    'for sampling projects.',
+    '',
+    'I have done my very best to avoid samples of questionable legality, but as it is impossible for me to know the exact '
+    'origin of everything (i.e. I have no way of knowing if a soundfont labeled as "public domain" isn\'t actually sampled '
+    'from a proprietary source), I would appreciate if you let me know if you find anything fishy.',
+]
+
+# midi-js-soundfonts holds two fonts under different licenses: a set is labelled by the fonts its files come from
+GLEITZ_FONTS = {'MusyngKite': 'CC BY-SA 3.0 (MusyngKite)', 'FluidR3_GM': 'CC BY 3.0 (FluidR3_GM)'}
+
+
+def repo_license(repo: str, paths: list[str]) -> str:
+    """The license of the files `paths` of `repo` (the repository's own label; SPECIAL_LICENSES apply on top)."""
+    if repo == 'gleitz' and paths:
+        return ' / '.join(sorted({GLEITZ_FONTS[p.split('/')[0]] for p in paths}))
+    return REPOS[repo][1]
 
 SOURCE_NOTES = {
     'accordion': 'https://github.com/freepats/button-accordion-hn — Hohner button accordion recorded by Jeff Stauffer (2023), '
                  'sent to FreePats via Piotr Barz; bank by michael02022. freepats.zenvoid.org',
     'mandolin': 'https://github.com/sfzinstruments/terkelsen.mandolin — "Terkelsen\'s Mandolin" contributed by Lars Terkelsen, '
-                'converted from GigaSampler to SFZ by S. Christian Collins (www.schristiancollins.com). The repository states no '
-                'license; it is used with credit, as the Audio 2.0 brief allows for this prototype — replace before release '
-                'if the license cannot be confirmed.',
+                'converted from GigaSampler to SFZ by S. Christian Collins (www.schristiancollins.com). License: not stated '
+                '(unknown) — the repository states none; it is used with credit, as the Audio 2.0 brief allows for this '
+                'prototype — replace before release if the license cannot be confirmed.',
     'meta': 'https://github.com/facebookincubator/Meta-open-sound — Meta Piano, Meta Nylon Guitar, Meta Steel Guitar '
             '(Meta Creative Audio team), CC0 1.0. Source files are the repository\'s OGG previews.',
     'sso': 'https://github.com/peastman/sso — Sonatina Symphonic Orchestra by Mattias Westlund (2011), developed further '
@@ -1296,7 +1402,7 @@ SOURCE_NOTES = {
     'worldperc': 'https://github.com/freepats/world-percussion — FreePats World Percussion (recordings by Xavimart, '
                  'Gonzalo and Roberto, 2019), CC0 1.0.',
     'gleitz': 'https://github.com/gleitz/midi-js-soundfonts — pre-rendered "Musyng Kite" General MIDI soundfont, '
-              'CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).',
+              'CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/); only its MusyngKite font is used.',
 }
 
 
@@ -1334,21 +1440,40 @@ def write_credits(sets: list[dict]) -> None:
          f'Total: {len(sets)} MP3 sprites, {total:,} bytes = {total / 1e6:.3f} MB (SI; {total / 1048576:.2f} MiB).', '',
          '## Attribution lines (for the game credits)', '',
          '- Accordion: "Button Accordion HN" — FreePats project (Hohner accordion recorded by Jeff Stauffer; bank by michael02022), CC0 1.0.',
-         '- Mandolin: "Terkelsen\'s Mandolin" by Lars Terkelsen, SFZ conversion by S. Christian Collins (license not stated; credited).',
+         '- Mandolin: "Terkelsen\'s Mandolin" by Lars Terkelsen, SFZ conversion by S. Christian Collins (license: not stated',
+         '  (unknown); credited).',
          '- Piano, nylon guitar, steel guitar: "Meta Open Sound" by Meta (Creative Audio team), CC0 1.0.',
-         '- Orchestra (strings, brass, woodwinds, chorus, organ, harp, mallets, timpani, tam-tam): "Sonatina Symphonic Orchestra"',
-         '  by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section sustains by Mattias Westlund, CC BY-SA 3.0;',
-         '  celesta by stamperadam (freesound.org), CC0 1.0; pipe organ: "St. Stephen\'s Anglican" recorded by Nicholas Appleton,',
-         '  CC Sampling Plus 1.0.',
+         '- Orchestra (strings, brass, woodwinds, chorus, organ, harp, mallets, timpani, tam-tam, suspended-cymbal roll):',
+         '  "Sonatina Symphonic Orchestra" by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section sustains by',
+         '  Mattias Westlund, CC BY-SA 3.0; celesta by stamperadam (freesound.org), CC0 1.0; pipe organ: "St. Stephen\'s',
+         '  Anglican" recorded by Nicholas Appleton, CC Sampling Plus 1.0; the cymbal roll is from the cymbal rolls SSO took',
+         '  from davidjwoll (freesound.org), CC Sampling Plus 1.0.',
          '- Harpsichord, percussion (tambourine, snare, cymbals, bass drums, triangle, shaker, brake drum, anvil, slapstick,',
          '  woodblock, vibraslap, flexatone, claves, ratchet, toy whistle): "Versilian Community Sample Library" by Versilian',
          '  Studios, CC0 1.0.',
          '- Castanets: "World Percussion" — FreePats project, CC0 1.0.',
          '- Orchestra hit: "Musyng Kite" soundfont via midi-js-soundfonts (Benjamin Gleitzman), CC BY-SA 3.0.',
          '', '## Sources', '']
-    for repo in sorted({s['repo'] for s in sets}):
-        lic = REPOS[repo][1]
+    # every repository a set reads from (its own and, for mixed sets, Cand.repo), with the files it reads
+    used: dict[str, set[str]] = {}
+    for s in sets:
+        used.setdefault(s['repo'], set()).update(s['sources'])
+        for r, ps in s.get('other_sources', {}).items():
+            used.setdefault(r, set()).update(ps)
+    for repo in sorted(used):
+        lic = repo_license(repo, sorted(used[repo]))
         L.append(f'- **{repo}** ({lic}): {SOURCE_NOTES.get(repo, REPOS[repo][2])}')
+    sso_sets = [s['name'] for s in sets if s['repo'] == 'sso' or 'sso' in s.get('other_sources', {})]
+    L += ['', '## Residual provenance notes', '',
+          '- Sonatina Symphonic Orchestra (the sets ' + ', '.join(f'`{n}`' for n in sso_sets) + ') was assembled from other',
+          '  free libraries and soundfonts. Its README quotes Mattias Westlund\'s statement on the sources and licensing',
+          '  of the samples (verbatim):', '']
+    L += [('  > ' + p) if p else '  >' for p in SSO_PROVENANCE]
+    L += ['',
+          '  The SSO-derived files are used under CC Sampling Plus 1.0 (horn section sustains CC BY-SA 3.0, celesta CC0 1.0)',
+          '  as SSO distributes them; the caveat above is the one residual provenance risk SSO itself names.',
+          '- Mandolin (`mandolin`): license not stated (unknown) — the source repository states none; used with credit for',
+          '  this prototype, to be replaced before release unless the license can be confirmed.']
     # arranger reference: playable range per instrument id
     L += ['', '## Instrument reference (for arrangers)', '',
           'Sounding pitch, MIDI (C4 = 60). "zones" = the recorded range; notes up to the "playable" edges are pitch-shifted',
@@ -1395,6 +1520,10 @@ def write_credits(sets: list[dict]) -> None:
           '  right channel; `cymbal` is a stereo recording.',
           '- Variants keep the synth meaning: `timpani` variant 1 is the soft stroke (-4.5 dB); `tamb` accents (4, 5)',
           '  are +2 dB, shakes (2, 3) -3.5 dB; `cymbal` / `bassDrum` variant 1 is the roll at any velocity.',
+          '- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly (about 10 dB/s, from 9 dB under the',
+          '  roll\'s peak, brightening from about 1 to 4 kHz) for its first 0.76 s, then holds the peak — slower than its',
+          '  0.6 s release decays, so a roll note of any length is at its loudest at its end (the downbeat it swells into).',
+          '  The held roll plays at the level of the earlier (VCSL) roll.',
           '- Notes written without a variant cycle the takes only, never an articulation: `bassDrum` / `cymbal` / `ratchet`',
           '  / `toyWhistle` stay on variant 0, `timpani` alternates its two takes at the same level (variant 2 = the',
           '  second take at full level), `tamb` and `flexatone` alternate their two plain takes; ask for a roll, a shake or',
@@ -1406,20 +1535,26 @@ def write_credits(sets: list[dict]) -> None:
           'the files derived from Sonatina Symphonic Orchestra are under CC Sampling Plus 1.0.', '',
           '## Sample sets (file → instruments → exact source files)', '']
     for s in sets:
-        repo = s['repo']
-        lic = REPOS[repo][1]
-        special = [(lc, at) for (r, sub, lc, at) in SPECIAL_LICENSES if r == repo and any(sub in p for p in s['sources'])]
-        if special:
-            lic = ' / '.join(sorted({lc for lc, _ in special}))
         ids = ', '.join(f'`{i}`' for i in users.get(s['name'], [])) or '—'
         L.append(f"### `{s['file']}` — {len(s['zones'])} zones, {s['seconds']:.1f} s, {s['bytes'] / 1024:.0f} KB")
         L.append(f'- instruments: {ids}')
-        L.append(f'- source: {REPO_URL.get(repo, repo)}, license: {lic}')
-        for lc, at in special:
-            L.append(f'  - {at} ({lc})')
+        # the set's own repository, then any other one its zones come from (Cand.repo)
+        by_repo = [(s['repo'], s['sources'])] + sorted(s.get('other_sources', {}).items())
+        for repo, paths in by_repo:
+            lic = repo_license(repo, paths)
+            special = [(lc, at) for (r, sub, lc, at) in SPECIAL_LICENSES if r == repo and any(sub in p for p in paths)]
+            if special:
+                lic = ' / '.join(sorted({lc for lc, _ in special}))
+            L.append(f'- source: {REPO_URL.get(repo, repo)}, license: {lic}')
+            for lc, at in special:
+                L.append(f'  - {at} ({lc})')
         if s.get('note'):
             L.append(f"- {s['note']}")
-        L.append('- files: ' + '; '.join(f'`{p}`' for p in s['sources']))
+        if len(by_repo) == 1:
+            L.append('- files: ' + '; '.join(f'`{p}`' for p in s['sources']))
+        else:
+            for repo, paths in by_repo:
+                L.append(f'- files ({repo}): ' + '; '.join(f'`{p}`' for p in paths))
         L.append('')
     os.makedirs(os.path.join(ROOT, 'docs', 'credits'), exist_ok=True)
     with open(os.path.join(ROOT, 'docs', 'credits', 'music-samples.md'), 'w') as f:
@@ -1501,8 +1636,11 @@ def main() -> None:
     for o in out:
         if 'sources' not in o and o['name'] in by_name:
             sp = by_name[o['name']]
-            cs = sp.cands(src)
-            o['sources'] = sorted({c.path for c in cs} | {mp for c in cs for mp, _ in c.mix})
+            files = cand_files(sp, sp.cands(src))
+            o['sources'] = files.get(sp.repo, [])
+            other = {r: ps for r, ps in files.items() if r != sp.repo}
+            if other:
+                o['other_sources'] = other
             o['repo'] = sp.repo
             o['note'] = sp.note
     with open(state_path, 'w') as f:

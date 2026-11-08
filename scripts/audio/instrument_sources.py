@@ -20,13 +20,14 @@ HOME = os.environ.get('KF_SOURCES_HOME', '/home/user')
 REPOS = {
     'accordion': (f'{HOME}/freepats/button-accordion-hn', 'CC0 1.0',
                   'FreePats "Button Accordion HN" (Hohner accordion recorded by Jeff Stauffer; bank by michael02022)'),
-    'mandolin': (f'{HOME}/sfzinstruments/terkelsen.mandolin', 'free sample set, no license stated (credited)',
+    'mandolin': (f'{HOME}/sfzinstruments/terkelsen.mandolin', 'not stated (unknown)',
                  "Terkelsen's Mandolin by Lars Terkelsen, SFZ conversion by S. Christian Collins"),
     'meta': (f'{HOME}/facebookincubator/meta-open-sound', 'CC0 1.0', "Meta Open Sound (Meta Creative Audio team)"),
     'sso': (f'{HOME}/peastman/sso', 'CC Sampling Plus 1.0',
             'Sonatina Symphonic Orchestra by Mattias Westlund, maintained by Peter Eastman'),
     'vcsl': (f'{HOME}/sgossner/vcsl', 'CC0 1.0', 'Versilian Community Sample Library (VCSL) by Versilian Studios / Sam Gossner'),
     'worldperc': (f'{HOME}/freepats/world-percussion', 'CC0 1.0', 'FreePats World Percussion'),
+    # (both fonts' licenses: the credits label a set by the font its files come from, build_instruments.repo_license)
     'gleitz': (f'{HOME}/gleitz/midi-js-soundfonts', 'CC BY-SA 3.0 (MusyngKite) / CC BY 3.0 (FluidR3_GM)',
                'midi-js-soundfonts by Benjamin Gleitzman (MusyngKite soundfont by Ronald Gonzalez / FluidR3 GM by Frank Wen)'),
 }
