@@ -111,10 +111,14 @@ Fonts: Lobster, Lilita One, Playfair Display — SIL Open Font License.
 - Accordion: "Button Accordion HN", FreePats project (Hohner accordion recorded by Jeff Stauffer; bank by michael02022), CC0 1.0.
 - Mandolin: "Terkelsen's Mandolin" by Lars Terkelsen, SFZ conversion by S. Christian Collins (license not stated; credited).
 - Piano, nylon and steel guitar: "Meta Open Sound" by Meta (Creative Audio team), CC0 1.0.
-- Orchestra: "Sonatina Symphonic Orchestra" by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section
-  sustains by Mattias Westlund, CC BY-SA 3.0; pipe organ "St. Stephen's Anglican" by Nicholas Appleton, CC Sampling Plus 1.0;
-  celesta by stamperadam (freesound.org), CC0 1.0.
-- Harpsichord and percussion: "Versilian Community Sample Library" by Versilian Studios, CC0 1.0.
+- Orchestra (strings, brass, woodwinds, chorus, organ, harp, mallets, timpani, tam-tam, suspended-cymbal roll):
+  "Sonatina Symphonic Orchestra" by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section sustains by
+  Mattias Westlund, CC BY-SA 3.0; pipe organ "St. Stephen's Anglican" by Nicholas Appleton, CC Sampling Plus 1.0; celesta
+  by stamperadam (freesound.org), CC0 1.0; the cymbal roll is from SSO, whose README lists "davidjwoll cymbal rolls"
+  (freesound.org) among its sources, CC Sampling Plus 1.0.
+- Harpsichord and percussion (tambourine, snare, clash cymbals, suspended-cymbal strokes, bass drums, triangle, shaker,
+  brake drum, anvil, slapstick, woodblock, vibraslap, flexatone, claves, ratchet, toy whistle): "Versilian Community
+  Sample Library" by Versilian Studios, CC0 1.0.
 - Castanets: "World Percussion", FreePats project, CC0 1.0.
 - Orchestra hit: "Musyng Kite" soundfont via midi-js-soundfonts (Benjamin Gleitzman), CC BY-SA 3.0.
 - The edited files under CC BY-SA 3.0 (`src/audio/assets/inst/horns`, `src/audio/assets/inst/orchhit`) are shared under the same license.
@@ -131,9 +135,10 @@ this game; details per sound in [docs/credits/sfx.md](docs/credits/sfx.md):
 **Before any release** (this build is a prototype; its audio is meant to be replaced):
 - *'O sole mio* (menu music) may still be under copyright in the EU (see above).
 - The mandolin recordings (Terkelsen's Mandolin) carry no stated license.
-- The Sonatina Symphonic Orchestra files (CC Sampling Plus 1.0, 26 of the 54 instrument sets: strings, winds,
-  brass, chorus, organ, harp, mallets, timpani, tam-tam) may be shared verbatim only noncommercially and may not
-  be used to advertise anything but this game: no paid or ad-supported builds with them.
+- The Sonatina Symphonic Orchestra files (CC Sampling Plus 1.0, 27 of the 54 instrument sets: strings, winds,
+  brass, chorus, organ, harp, mallets, timpani, tam-tam, and the suspended-cymbal roll in `cymbal.mp3`, variant 1;
+  that set's strokes are VCSL's) may be shared verbatim only noncommercially and may not be used to advertise
+  anything but this game: no paid or ad-supported builds with them.
 - Files under CC BY-SA 3.0 (horn section, orchestra hit) must stay under that license when shared.
 - Some harmonisations (La Danza, the game-over intro) follow modern published arrangements rather than the
   composers' own scores; check them against a public-domain edition.
