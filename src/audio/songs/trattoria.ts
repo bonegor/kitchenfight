@@ -242,13 +242,12 @@ export const trattoria: SongDef = {
     pizz: { inst: 'pizz', gain: -11.6, pan: -0.38, send: 0.16, hum: 0.6 },
     bass: { inst: 'uprightBass', gain: -3, pan: 0, send: 0.06, hum: 0.5 },
     horn: { inst: 'horn', gain: -10, pan: -0.05, send: 0.3, hum: 0.3 },
-    flute: { inst: 'flute', gain: -15.6, pan: 0.25, send: 0.26 },
     mand: { inst: 'mandolin', gain: -5, pan: 0.08, send: 0.2 },
     tri: { inst: 'triangleInst', gain: -10.1, pan: 0.42, send: 0.25, hum: 0.4 },
     glock: { inst: 'glock', gain: -11.6, pan: 0.45, send: 0.3, hum: 0.3 },
     tamb: { inst: 'tamb', gain: -3.1, pan: 0.3, send: 0.1, hum: 0.6 },
     timp: { inst: 'timpani', gain: -8.9, pan: 0.05, send: 0.2, hum: 0 },
-    cym: { inst: 'cymbal', gain: -2.2, pan: 0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -6.6, pan: 0.2, send: 0.25, hum: 0 },
   },
   sections: {
     intro: {
@@ -341,19 +340,18 @@ export const trattoria: SongDef = {
         comp('gtr', PAPA, { accent: WALTZ, lo: 'D3', hi: 'F4', n: 3, vel: 0.55, strum: 0.012, gate: 0.55 }),
         drums('tamb', TAMB_MID, TAMB, { vel: 0.85 }),
         clinks('tri', [[0, 1, 0.8], [4, 1, 0.75], [10, 1, 0.8], [14, 1, 0.85, true]]),
-        // suspended-cymbal roll over the last two bars into the grand chorus (the recorded roll
-        // only opens up after about a second)
+        // suspended-cymbal roll over the last two bars into the grand chorus (it grows over its whole
+        // length into its peak on the downbeat)
         hits('cym', [[162, 60, 0.62, 18]], 1),
       ],
     },
-    // grand chorus: violin, flute and mandolin an octave up, timpani, cymbal on "Ah!"
+    // grand chorus: violin and mandolin an octave up, timpani, cymbal on "Ah!"
     C2: {
       bars: 18,
       chords: CHORUS_CH,
       parts: [
         mel('acc', CHORUS + CHORUS_TO_VERSE, { vel: 0.84 }),
         ...duo(CHORUS + CHORUS, { vln: 0.72, trem: 0.42, lead: 0.72, oct: 1 }),
-        mel('flute', CHORUS + CHORUS, { vel: 0.5, oct: 1 }),
         mel('clar', CHORUS_ALTO + CHORUS_ALTO, { vel: 0.7 }),
         mel('horn', CHORUS_HORN + CHORUS_HORN, { vel: 0.6 }),
         mel('bass', CHORUS_BASS, { vel: 0.82 }),
@@ -363,8 +361,8 @@ export const trattoria: SongDef = {
         comp('pizz', PAPA, { accent: WALTZ, lo: 'D3', hi: 'C4', n: 2, vel: 0.6 }),
         drums('tamb', TAMB_16, TAMB, { stepDiv: 2 / 3, vel: 0.95 }),
         hits('timp', [[0, 'Bb2', 0.8], [18, 'F2', 0.7], [36, 'Bb2', 0.75], [54, 'F2', 0.7], [81, 'Bb2', 0.8], [99, 'F2', 0.7], [117, 'Bb2', 0.75], [135, 'F2', 0.7], [153, 'Bb2', 0.85]]),
-        // the bright (loud-layer) hit on "Ah!"
-        hits('cym', [[3, 60, 0.8]], 0),
+        // the loud-layer hit on "Ah!" (velocity 1.08: the channel is set for the bright roll)
+        hits('cym', [[3, 60, 1.08]], 0),
         clinks('tri', [[0, 1, 0.9, true], [9, 1, 0.9, true], [8, 2, 0.75], [16, 1, 0.8]]),
         hits('glock', [[3, 'Bb6', 0.55], [4, 'D7', 0.45], [84, 'Bb6', 0.55], [85, 'D7', 0.45]]),
       ],

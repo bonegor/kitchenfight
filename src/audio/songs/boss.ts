@@ -143,7 +143,7 @@ export const boss: SongDef = {
     sn: { inst: 'snare', gain: -8, pan: 0.12, send: 0.12, hum: 0 },
     bd: { inst: 'bassDrum', gain: -8, pan: 0, send: 0.15, hum: 0 },
     crash: { inst: 'crash', gain: -10.8, pan: -0.15, send: 0.25, hum: 0 },
-    cym: { inst: 'cymbal', gain: -9.7, pan: 0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -4.2, pan: 0.2, send: 0.25, hum: 0 },
     hit: { inst: 'orchHit', gain: -13.6, pan: 0, send: 0.25, hum: 0 },
     tamb: { inst: 'tamb', gain: -0.9, pan: -0.4, send: 0.1, hum: 0 },
     tri: { inst: 'triangleInst', gain: -2.9, pan: 0.45, send: 0.2, hum: 0 },
@@ -161,7 +161,7 @@ export const boss: SongDef = {
       chords: 'B7:8 | E:8 | E:6 B7:2',
       parts: [
         hits('timp', roll(0, 8, 'B2', 0.25, 0.8, 1.5)), // 16th triplets against the snare's 32nds
-        hits('cym', [[0, 60, 0.45, 8]], 1),
+        hits('cym', [[0, 60, 0.4, 8]], 1),
         mel('brs', rest(1) + 'E4:2 B3:1 B3 E4:2 B3:1 B3 | G#4:2 E4:1 E4 B4:2 r:2 |', { vel: 0.85, gate: DET }),
         mel('hn', rest(1) + 'E3:2 B2:1 B2 E3:2 B2:1 B2 | G#3:2 E3:1 E3 B3:2 r:2 |', { vel: 0.8, gate: DET }),
         mel('tpt', rest(2) + 'r:6 B4:1 B4 |', { vel: 0.85, gate: DET }),
@@ -281,7 +281,7 @@ export const boss: SongDef = {
         hits('crash', [[0, 60, 0.8], [56, 60, 0.7], [88, 60, 0.7]]),
         hits('hit', [[0, 'E4', 0.7]]),
         hits('bd', [[0, 60, 0.85], [32, 60, 0.6], ...Array.from({ length: 8 }, (_, i): [number, number, number] => [56 + i * 8, 60, i % 4 === 0 ? 0.8 : 0.6])]),
-        hits('cym', [[104, 60, 0.6, 16]], 1),
+        hits('cym', [[104, 60, 0.75, 16]], 1),
       ],
     },
     coda: {
@@ -299,7 +299,7 @@ export const boss: SongDef = {
         hits('crash', [[0, 60, 0.85]]),
         hits('hit', [[0, 'E4', 0.8]]),
         hits('bd', [[0, 60, 0.9], [16, 60, 0.7]]),
-        hits('cym', [[16, 60, 0.55, 16]], 1),
+        hits('cym', [[16, 60, 0.62, 16]], 1),
       ],
     },
   },

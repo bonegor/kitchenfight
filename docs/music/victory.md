@@ -31,44 +31,45 @@ and then opens the results screen ("Vittoria!"). The screen stays until the play
 is **loopable**: the fanfare plays once (20.26 s), then the one-bar vamp (1.56 s, also once), and
 the victory lap loops (`loopFrom` = 3, the `tail` section: 12 bars = 18.70 s). A minute on the
 results screen is the fanfare, the vamp and two passes of the lap. `startRun` preloads `victory` at
-the start of every run. The first sound (the timpani roll) is at 0.002 s.
+the start of every run. The first sound (the timpani roll) is at 0.001 s.
 
 | | |
 |---|---|
 | Music | 26 bars = **40.52 s**: fanfare 13 bars (20.26 s) + vamp 1 bar (1.56 s) + loop 12 bars (**18.70 s**); the cap for this revision is 45 s |
-| Rendered buffer | 44.52 s: the renderer appends `LOOP_PAD` = 4 s of the loop body for the seam (`src/audio/render.ts`) |
-| Playback | 0 → 44.52 s, then the window 25.82 → 44.52 s repeats |
+| Rendered buffer | 46.52 s: the renderer appends `LOOP_PAD` = 6 s of the loop body for the seam (`src/audio/render.ts`) |
+| Playback | 0 → 46.52 s, then the window 27.82 → 46.52 s repeats |
 
 ### Music cache (for the lead)
 
-The engine keeps rendered tracks up to `MUSIC_CACHE_SECONDS` = 280 s (`src/audio/engine.ts`; it
-counts each track's buffer length) and, when a new render pushes the total over, evicts the least
-recently used track that is neither playing nor wanted. `startRun` plays the stage track and
-preloads `gameover`, `victory`, `boss` and `finalboss` (in that order), so during a run the cache
-has to hold the stage track plus those four. Buffer lengths of the worktree's tracks (from
-`export-song --form`: loop end + the 4 s pad, or a one-shot's end + its `tail`):
+The engine keeps rendered tracks up to `MUSIC_CACHE_SECONDS` = 300 s (`src/audio/engine.ts`; it
+counts each track's buffer length, so the cache holds at most about 115 MB of Float32 stereo at
+48 kHz). Tracks are stamped when they are asked for: `ensure()` records the time of every preload
+or play request, a render that finishes later takes that time as its LRU stamp (not the time it
+finished), a cached track asked for again moves up, and starting a track stamps it again. When a
+finished render pushes the total over 300 s, `evict()` drops the least recently used tracks that
+are neither playing nor wanted until the rest fits. `startRun` plays the stage track and then
+preloads `gameover`, `victory`, `boss` and `finalboss`, in that order (each is asked for when the
+one before it has rendered), so during a run the cache has to hold the stage track plus these four.
+`title` and `menu` (preloaded at boot) and a stage track preloaded for another stage carry older
+stamps, so they are the ones evicted. Buffer lengths (render-song, recorded bank: loop end + the
+6 s `LOOP_PAD`, or a one-shot's end + its `tail`):
 
 | Track | Buffer | | Stage track | Buffer | Stage + per-run set | Headroom |
 |---|---|---|---|---|---|---|
-| `gameover` | 13.79 s | | `kitchen` | 95.88 s | 276.85 s | **3.15 s** |
-| `victory` | 44.52 s (old 3-bar tail: 28.94 s) | | `trattoria` | 95.30 s | 276.28 s | 3.72 s |
-| `boss` | 52.95 s | | `streets` | 94.00 s | 274.97 s | 5.03 s |
-| `finalboss` | 69.71 s | | `foodcourt` | 92.89 s | 273.86 s | 6.14 s |
-| **per-run set** | **180.97 s** (old: 165.39 s) | | | | | |
+| `gameover` | 13.79 s | | `kitchen` | 97.88 s | 284.85 s | **15.15 s** |
+| `victory` | 46.52 s | | `trattoria` | 97.30 s | 284.28 s | 15.72 s |
+| `boss` | 54.95 s | | `streets` | 96.00 s | 282.97 s | 17.03 s |
+| `finalboss` | 71.71 s | | `foodcourt` | 94.89 s | 281.86 s | 18.14 s |
+| **per-run set** | **186.97 s** | | | | | |
 
-It fits today, with 3.15–6.14 s to spare (18.7–21.7 s with the old 3-bar tail). A stage track
-whose buffer exceeds **99.03 s** (about 95 s of music) would make `evict()` drop the oldest
-preload, `gameover`, which would then be rendered again when the run ends. The stage briefs allow
-up to 100 s of music (a 104 s buffer), which would leave 39.55 s for `victory`: less than its
-44.52 s, and less than the 42.96 s it would have without the vamp. The fix belongs to the lead:
-keep the stage buffers ≤ 99 s, or raise `MUSIC_CACHE_SECONDS` in the engine (not an arrangement
-file; each extra 10 s costs 3.8 MB of Float32 stereo at 48 kHz). Playing the vamp once outside the
-loop does **not** shorten the victory buffer: `render.ts` allocates the whole song up to the loop
-end plus the pad
-(`length = loopEnd + LOOP_PAD`), so the buffer is 44.52 s with the previous 13-bar loop and with
-the vamp + 12-bar loop alike. Only cutting the vamp bar from the song would save its 1.56 s (limit
-99.03 → 100.59 s), at the cost of the lap starting on the downbeat after the tag's button with no
-breath and no pickup; that would not change the conclusion above, so the vamp stays.
+It fits, with 15.15–18.14 s to spare. Only a stage track whose buffer exceeds **113.03 s** (about
+107 s of music) would make `evict()` drop the least recently used track of the run, `gameover`
+(the stage track is playing), which would then be rendered again when a run is lost. The stage
+briefs allow up to 100 s of music (a 106 s buffer, 292.97 s with the per-run set), so every stage
+the briefs allow fits with `victory` at its current length, with 7.03 s to spare. The victory
+buffer is the whole song up to the loop end plus the pad (`render.ts`: `length = loopEnd +
+LOOP_PAD`): the vamp, played once before the loop, is in it either way, and nothing needs to
+shrink it.
 
 ## Reference and melody proof
 
@@ -158,7 +159,7 @@ strut.
 Length (this revision: the whole track at most 45 s, a 12–16-bar loop of about 19–25 s):
 
 - the fanfare stays as it was: the pickup bar + the 12-bar theme + the final chord/tag bar,
-  13 bars = 20.26 s (its render is bit-identical to the previous versions, see "Other checks");
+  13 bars = 20.26 s (the victory lap left its render bit-identical, see "Other checks");
 - the vamp, played once: reference bar 1 (three beats of oom-pah and the accordion's pickup),
   1 bar = 1.56 s;
 - the loop is the theme once more, 12 bars = **18.70 s**: reference bars 2–12 plus the landing /
@@ -275,26 +276,27 @@ Fanfare (`march`, `fin`):
 | `snare` | `snare` | after-beats and triplet pickups at 0.65–0.77 (the set's layer 2, which has the snares' crack), 16th build 0.6 → 0.88 (layers 1 → 3) into the final chord | — |
 | `bd` | `bassDrum` | downbeats of bars 2, 5, 8, 12; 1 and 3 in the tutti; final chord and button | — |
 | `crash` | `crash` | clash cymbals: bars 2 and 8, soft piatti on bars 9–11, final chord | — |
-| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1), the recorded roll does the crescendo; velocity 0.42 / 0.66 / 0.60 (< 0.7 keeps the roll layer) | — |
+| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1, the roll at any velocity), the recorded roll does the crescendo, over the whole note into its downbeat; velocity 0.44 / 0.57 / 0.60 | — |
 | `glock` | `glock` | "ti-ting" on the tag's button, doubling the accordion's top line an octave up | G6–A♭6 |
 | `acc` | `accordion` | the tag: triplet echo + V7–I button | C5–B♭5 |
 | `cast` | `castanets` | the wink in the trumpets' rests (bars 4, 10), the tag's rattle and triplet; in the lap: the call into a (a rattle on beat 3, 0.5 → 0.68, and the "tak" with the pickup on beat 4, 0.8) in the vamp and in the turnaround, and the wink in tail bar 3 (0.52–0.76) | — |
 
 Victory lap only (`vamp` + `tail`; the tail channels' gains were trimmed by −0.15 dB in this
-revision to keep the loop at −16.4 LUFS):
+revision to keep the loop at −16.4 LUFS, then offset per channel for the recalibrated bank in
+commit bf24871, which kept the balance within 0.3 dB):
 
 | Channel | Instrument id | Gain | Role | Range used |
 |---|---|---|---|---|
-| `accR` | `accordion` | +1.75 dB | the tune: the vamp's pickup and a (tail bars 1–3) at velocity 0.65, b′ + landing (tail bars 10–12) at 0.64, and the pickup into the next pass (tail bar 12, beat 4) at 0.65 | E♭4–D♭5 |
-| `mand` | `mandolin` | +3.85 dB | the tune: b (tail bars 4–6, picked, 0.74) and a′ (tail bars 7–9, 0.77, 16th-note tremolo on notes of a dotted quarter and longer); the second voice under b′ (0.47: the softer of the mandolin's two velocity layers) | C4–D♭5 |
-| `clar` | `clarinet` | −3.65 dB | counter-melody under a′ (chalumeau, 0.72), the turnaround fill on beats 2–3 (0.95) | G3–A♭4 |
-| `accC` | `accChord` | −3.65 dB | the accordion's left hand: chord buttons on 2 and 4 in the vamp (0.55); two soft sustained voices under the mandolin's b (0.45) | G3–F4 |
+| `accR` | `accordion` | +1 dB | the tune: the vamp's pickup and a (tail bars 1–3) at velocity 0.65, b′ + landing (tail bars 10–12) at 0.64, and the pickup into the next pass (tail bar 12, beat 4) at 0.65 | E♭4–D♭5 |
+| `mand` | `mandolin` | +1.5 dB | the tune: b (tail bars 4–6, picked, 0.74) and a′ (tail bars 7–9, 0.77, 16th-note tremolo on notes of a dotted quarter and longer); the second voice under b′ (0.47: the softer of the mandolin's two velocity layers) | C4–D♭5 |
+| `clar` | `clarinet` | −4.4 dB | counter-melody under a′ (chalumeau, 0.72), the turnaround fill on beats 2–3 (0.95) | G3–A♭4 |
+| `accC` | `accChord` | −5.2 dB | the accordion's left hand: chord buttons on 2 and 4 in the vamp (0.55); two soft sustained voices under the mandolin's b (0.45) | G3–F4 |
 | `gtr` | `guitar` | −5.15 dB | the "pah": three-note after-beats on 2 and 4 (the march's voicings), strummed low → high 12 ms apart; one strum per beat in the turnaround (0.55) | G3–F4 |
 | `ubass` | `uprightBass` | −2.65 dB | the "oom" on 1 and 3 (the march's bass line), walking in tail bars 5, 11 and 12 (0.78) | F1–E♭2 |
-| `pizzT` | `pizz` | +1.85 dB | second pass (tail bars 7–12): doubles the bass an octave up (0.55) | F2–E♭3 |
-| `tamb` | `tamb` | +5.35 dB | the brush: light taps on 2 and 4 (the set's hit articulations, variants 0/1, velocity 0.5); beat 4 is left to the castanets in the vamp and in tail bars 3 and 12 | — |
+| `pizzT` | `pizz` | +0.7 dB | second pass (tail bars 7–12): doubles the bass an octave up (0.55) | F2–E♭3 |
+| `tamb` | `tamb` | +4.8 dB | the brush: light taps on 2 and 4 (the set's hit articulations, variants 0/1, velocity 0.5); beat 4 is left to the castanets in the vamp and in tail bars 3 and 12 | — |
 
-Every id is a contract id with recorded samples (render-song: "recorded samples (53 sets)", no
+Every id is a contract id with recorded samples (render-song: "recorded samples (54 sets)", no
 skipped channels); `timpani` and `uprightBass` are the long aliases of `timp` and `ubass`. All
 parts stay within the natural ranges of the brief (accordion B3–G6, mandolin G3–A6, clarinet
 D3–C7, guitar E2–B5, upright bass E1–G3). The tambourine's shake articulations (variants 2/3) peak
@@ -303,45 +305,43 @@ variant), so on the after-beats of a ♩ = 154 march they would drag; the lap us
 
 ## Levels (sample render)
 
-`node scripts/music/render-song.mjs victory out.wav` (recorded samples, 53 sets):
+`node scripts/music/render-song.mjs victory out.wav` (recorded samples, 54 sets; the march and tag
+channels, which play before the loop window, are left out of the channel table below):
 
 ```text
-victory: 44.52 s @ 48000 Hz, 876 events
-  loop: plays 0 → 44.519 s, then repeats 25.818 → 44.519 s (body 18.701 s = bars 15-26 from section "tail"; seam mismatch -133.3 dBFS)
+victory: 46.52 s @ 48000 Hz, 903 events
+  loop: plays 0 → 46.519 s, then repeats 27.818 → 46.519 s (body 18.701 s = bars 15-26 from section "tail"; seam mismatch -150.5 dBFS)
   form: march@0.00s fin@18.70s vamp@20.26s tail@21.82s
-  loop body: integrated -16.4 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.44 dBFS
-  soft clipper: 73 samples (0.002 %), DC 0.00000, first sound at 0.002 s
-  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -15.8 dB (share of total energy)
+  loop body: integrated -16.5 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.46 dBFS
+  soft clipper: 38 samples (0.001 %), DC -0.00000, first sound at 0.001 s
+  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -16.2 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
-  cast         castanets          27     -9      -36.9   -20.6       -42.2      -11.8
-  accR         accordion          30   1.75      -17.8    -1.4       -17.0       -7.8
-  mand         mandolin           47   3.85      -19.4    -3.0       -17.4       -6.8
-  clar         clarinet           16  -3.65      -23.0    -6.6       -22.2      -12.3
-  accC         accChord           19  -3.65      -25.5    -9.1       -25.0      -14.4
-  gtr          guitar             99  -5.15      -26.8   -10.4       -25.5      -11.1
-  ubass        uprightBass        34  -2.65      -26.2    -9.8       -24.8      -12.2
-  pizzT        pizz               17   1.85      -28.8   -12.4       -27.3      -14.9
-  tamb         tamb               23   5.35      -34.8   -18.4       -36.2      -17.9
+  cast         castanets          27   -9.3      -37.2   -20.7       -42.3      -12.0
+  accR         accordion          30      1      -17.8    -1.3       -17.1       -8.8
+  mand         mandolin           47    1.5      -19.7    -3.2       -17.7       -6.3
+  clar         clarinet           16   -4.4      -22.8    -6.3       -22.1      -12.1
+  accC         accChord           19   -5.2      -26.4    -9.9       -26.1      -17.3
+  gtr          guitar             99  -5.15      -26.9   -10.4       -25.5      -10.8
+  ubass        uprightBass        34  -2.65      -26.2    -9.7       -24.7      -11.8
+  pizzT        pizz               17    0.7      -28.5   -12.0       -27.1      -13.9
+  tamb         tamb               23    4.8      -34.9   -18.4       -36.3      -17.9
+  warnings: none
 ```
 
-(Integrated loop-body loudness −16.38 LUFS before rounding; `--json`: −16.375.) render-song
-measures the channel table over the loop window only. The 15 march and tag channels play before
-the loop, so they read −inf there, and each gets a "loudest 3 s … check it is audible" warning.
-These 15 warnings are the only ones, and they follow from the design. The vamp also plays before
-the loop window, so the `accC` row is the voices under b only. The channel table counts the
-mandolin's tremolo picks as notes.
+(Integrated loop-body loudness −16.51 LUFS before rounding.) render-song measures the channel
+table over the loop window; the 15 march and tag channels play before it, so render-song judges
+their audibility over the whole file instead, and none is flagged. The vamp also plays before the
+loop window, so the `accC` row is the voices under b only. The channel table counts the mandolin's
+tremolo picks as notes.
 
-- **Loop body −16.4 LUFS** (target −16.4 ± 0.5) with `gainDb` −1.2, unchanged: the lap is
-  balanced with its own channel gains, so the fanfare keeps its level.
-- **The fanfare is −15.1 LUFS** (−15.14 over 0–20.26 s of this render; march + tag as the loop
-  body of a scratch wrapper read −15.1 LUFS with a short-term max of −13.6 LUFS in an earlier
-  revision, whose fanfare render this one reproduces bit for bit): 1.2 LU above the lap's integrated
-  level, and above every phrase of it (the loudest, b′, is −15.7 LUFS). The lap is softer in texture
-  too (no brass attacks or cymbals, little energy above 4 kHz).
-- **Peaks:** sample peak −2.44 dBFS, in the fanfare (bars 12–13, as before). The loop window peaks
-  at −4.50 dBFS (tail bar 8's downbeat, mandolin + clarinet + bass + pizzicato), below the soft
-  clipper's threshold (−4.15 dBFS), so all 73 clipper samples (0.002 %, counted per channel) are
-  in the fanfare, as before; the previous revision also had 17 in the loop.
+- **Loop body −16.5 LUFS** (target −16.4 ± 0.5) with `gainDb` −1.2: the lap is balanced with its
+  own channel gains, so the fanfare keeps its level.
+- **The fanfare is −15.0 LUFS** (−14.97 over 0–20.26 s of this render, short-term max −13.7 LUFS):
+  1.5 LU above the lap's integrated level, and above every phrase of it. The lap is softer in
+  texture too (no brass attacks or cymbals, little energy above 4 kHz).
+- **Peaks:** sample peak −2.46 dBFS, in the fanfare (the downbeat of bar 13, 18.71 s, where the
+  bar-12 cymbal swell crests). The loop window peaks at −3.34 dBFS (38.60 s). Of the 38
+  soft-clipper samples (0.001 %, counted per channel), 24 are in the fanfare and 14 in the loop.
 
 **Balance per phrase** of the loop (scratch measurement on the steady-state loop: three copies of
 the playback window, the middle one measured, so every bar has the loop itself before it;
@@ -349,57 +349,60 @@ K-weighted, ungated, each solo stem against the mix in the same window):
 
 | Segment | Tail bars | Mix (LUFS) | Tune vs mix | Other parts vs mix (LU) |
 |---|---|---|---|---|
-| a | 1–3 | −16.9 | accordion **−0.7** | guitar −11.9, bass −11.0, tambourine −20.5, castanets −29.4 |
-| b | 4–6 | −16.7 | mandolin **−1.9** | accordion voices −8.5, guitar −10.3, bass −9.3, tambourine −19.9 |
-| a′ | 7–9 | −16.1 | mandolin **−2.0** | clarinet −6.7, guitar −12.6, bass −11.7, pizzicato −14.4, tambourine −20.3 |
-| b′ | 10–11 | −15.7 | accordion **−2.2** | mandolin second voice −8.8, guitar −11.1, bass −9.7, pizzicato −12.5, tambourine −20.8 |
-| turnaround | 12 | −16.5 | (accordion landing + pickup −4.0, clarinet fill −7.3) | guitar −9.2, bass −8.4, pizzicato −10.9, tambourine −22.8, castanets −22.9 |
+| a | 1–3 | −16.8 | accordion **−0.7** | guitar −11.2, bass −10.7, tambourine −18.1, castanets −20.7 |
+| b | 4–6 | −16.9 | mandolin **−2.0** | accordion voices −9.3, guitar −9.5, bass −8.8, tambourine −17.9 |
+| a′ | 7–9 | −16.1 | mandolin **−2.0** | clarinet −6.5, guitar −11.4, bass −11.3, pizzicato −13.8, tambourine −18.4 |
+| b′ | 10–11 | −15.6 | accordion **−2.1** | mandolin second voice −9.4, guitar −10.6, bass −9.8, pizzicato −12.0, tambourine −19.2 |
+| turnaround | 12 | −17.1 | (accordion landing + pickup −3.4, clarinet fill −4.6) | guitar −8.6, bass −7.8, pizzicato −10.2, tambourine −17.3, castanets −19.5 |
 
-Per bar (tail bars 1–12, ungated): −16.5 −16.6 −17.6 | −16.8 −16.4 −16.8 | −15.8 −15.8 −16.8 |
-−16.1 −15.4 | −16.5 LUFS, a range of 2.2 LU. The loop's loudness range (short-term 3 s windows,
-p95 − p10) is 1.4 LU, short-term −17.2 to −15.5 LUFS.
+Per bar (tail bars 1–12, ungated): −17.1 −16.3 −17.7 | −17.0 −16.7 −17.1 | −15.8 −16.1 −17.1 |
+−15.7 −15.4 | −16.8 LUFS, a range of 2.3 LU. The loop's loudness range (short-term 3 s windows,
+p95 − p10) is 1.5 LU, short-term −17.5 to −15.5 LUFS.
 
 - **Melody on top:** in every phrase the tune's carrier is within about 2 LU of the mix (b′:
-  2.2 LU, with the second voice and the pizzicato under it) and at least 4.7 LU above the next part
-  (the clarinet's counter-melody in a′). Over the whole loop window the accordion reads −1.4 LU and
-  the mandolin −3.0 LU (each carries the tune for about half of it).
+  2.1 LU, with the second voice and the pizzicato under it) and at least 4.5 LU above the next part
+  (the clarinet's counter-melody in a′). Over the whole loop window the accordion reads −1.3 LU and
+  the mandolin −3.2 LU (each carries the tune for about half of it).
 - **A gentle arc over a steady pulse:** pass 1 (a, b) has one line at a time over the oom-pah;
-  pass 2 (a′, b′) adds the counter-melody, the second voice and the pizzicato (a′ is 0.8 LU above
-  a, b′ 1.0 LU above b; the whole rise from a to b′ is 1.2 LU); the turnaround relaxes it for two
+  pass 2 (a′, b′) adds the counter-melody, the second voice and the pizzicato (a′ is 0.7 LU above
+  a, b′ 1.3 LU above b; the whole rise from a to b′ is 1.2 LU); the turnaround relaxes it for two
   beats, and the castanets' call starts the next pass. The bass, the after-beats and the
   tambourine never stop.
-- **The restart** (momentary loudness, 400 ms, steady state): b′ −14.5 to −15.9 LUFS → the landing
-  −15.6 → the turnaround's beats 2½–3½ (clarinet fill, castanet rattle) −17.0 to −18.5 → the
-  pickup with the "tak" −16.9 → −15.8 → a −15.7 to −16.2. The quietest 400 ms of the loop are no
-  longer at the restart but in Verdi's own rests (the tune's beat-4 rest in tail bars 3 and 9:
-  −22.9 / −21.3 LUFS, where the castanets wink and the clarinet runs). Time below −19 LUFS: 4.0 %
-  of the loop (previous revision 9.4 %).
+- **The restart** (momentary loudness, 400 ms windows by their end, steady state): b′'s last bar
+  −14.5 to −16.4 LUFS → the landing (beat 1) −16.3 → the turnaround's beats 2½–3½ (clarinet fill,
+  castanet rattle) −16.9 to −17.9 → the pickup with the "tak" −17.4 → −16.2 → a −16.0 to −16.7
+  over its first two beats. The quietest 400 ms of the loop are not at the restart but in Verdi's
+  own rests (the tune's beat-4 rest in tail bars 3 and 9: −22.7 / −21.1 LUFS, where the castanets
+  wink and the clarinet runs). Time below −19 LUFS: 4.3 % of the loop (previous revision 9.4 %).
 - **Every secondary part is audible where it plays** (lift = how much the part raises the mix:
-  mix against mix minus that stem, same window): the mandolin's tune +3.2 to +11.3 dB across
-  250 Hz–8 kHz (b: +5.6 / +7.1 / +9.0, a′: +3.2 / +8.6 / +11.3 at 250 Hz–1 kHz / 1–4 kHz /
-  >4 kHz); the clarinet's counter-melody +2.1 dB at 250 Hz–1 kHz over a′ (per note median +1.7 dB,
-  its run up to +8.0 dB) and its turnaround fill +2.7 to +9.3 dB per note (150 ms); the mandolin's
-  second voice +0.5 to +1.2 dB per note at 250 Hz–1 kHz and median +1.3 dB at 1–4 kHz over b′; the
-  accordion's voices under b +0.6 / +0.9 dB (250 Hz–1 kHz / 1–4 kHz); the guitar median +0.9 dB per
-  strum (250 Hz–1 kHz, 120 ms); the bass +3.0 to +5.8 dB below 250 Hz per phrase (median +5.3 dB
-  per note); the pizzicato median +0.9 dB per note below 250 Hz (up to +2.9); the tambourine median
-  +2.3 dB per tap above 4 kHz (150 ms; up to +21.5 dB where the texture is open); the castanets
-  above 4 kHz (60 ms): the call +6.3 / +14.2 / +17.2 / +14.9 dB for the rattle and +13.1 dB for the
-  "tak" on the pickup, the wink in tail bar 3 +1.9 / +7.8 / +16.4 dB.
-- Bass and percussion sit under the tune: upright bass −9.8 LU, pizzicato −12.4 LU, tambourine
-  −18.4 LU, castanets −20.6 LU over the loop.
-- **The way into the loop** (first pass, once): momentary loudness falls from −15.9 LUFS (the tag's
-  button, 20.2 s) to −22.0 to −24.7 LUFS over the vamp's first three beats (the band settles; the
-  vamp bar is −20.0 LUFS ungated), the castanets' call and the pickup bring it back (−21.6 → −16.6),
-  and a comes in at −15.5 to −16.1 LUFS (21.8 s on).
+  mix against mix minus that stem, same window; the loop as it repeats): the mandolin's tune +2.9
+  to +13.2 dB across 250 Hz–8 kHz (b: +5.0 / +8.6 / +9.1, a′: +2.9 / +13.2 / +11.0 at
+  250 Hz–1 kHz / 1–4 kHz / >4 kHz); the clarinet's counter-melody +2.4 dB at 250 Hz–1 kHz over a′
+  (per note median +2.5 dB, its run up to +13.7 dB) and its turnaround fill +3.9 to +9.3 dB per
+  note (150 ms); the mandolin's second voice +0.4 to +1.4 dB per note at 250 Hz–1 kHz and median
+  +1.0 dB at 1–4 kHz over b′; the accordion's voices under b +0.9 / +0.7 dB (250 Hz–1 kHz /
+  1–4 kHz); the guitar median +0.8 dB per strum (250 Hz–1 kHz, 120 ms); the bass +3.2 to +6.7 dB
+  below 250 Hz per phrase (median +5.8 dB per note); the pizzicato median +1.1 dB per note below
+  250 Hz (up to +1.8); the tambourine median +3.3 dB per tap above 4 kHz (150 ms; up to +18.4 dB
+  where the texture is open); the castanets above 4 kHz (60 ms): the call +7.8 / +4.2 / +19.3 /
+  +10.6 dB for the rattle and +3.7 dB for the "tak" on the pickup, the wink in tail bar 3 +4.3 /
+  +7.1 / +20.1 dB.
+- Bass and percussion sit under the tune: upright bass −9.7 LU, pizzicato −12.0 LU, tambourine
+  −18.4 LU, castanets −20.7 LU over the loop.
+- **The way into the loop** (first pass, once): momentary loudness falls from −15.3 LUFS (the tag's
+  button, 20.3 s) to −21.4 to −25.0 LUFS over the vamp's first three beats (the band settles; the
+  vamp bar is −19.7 LUFS ungated), the castanets' call and the pickup bring it back (−21.3 → −15.8),
+  and a comes in at −15.6 to −16.9 LUFS (21.8 s on).
 
 ## Review fixes (measured on 16-bit stems of sample renders)
 
 Before = the snapshot in commit aeb18e2, after = the review revision (commit c3167cb). Both were
 rendered with the same scratch stem tool (`renderSong` with `solo` per channel, recorded bank) and
 analysed the same way. "Lifts" = how much the channel raises the mix (mix against mix minus that
-stem) in the given window and band. The fanfare rows still describe the current track; the tail
-row is history (the 3-bar tail it describes was replaced by the victory lap, see "Changes").
+stem) in the given window and band. The fanfare rows describe the fanfare's parts as the review
+fixed them (since then the bank's recalibration has offset every channel's gain, and the cymbal
+swells were re-balanced for the bright roll: see "Polish"); the tail row is history (the 3-bar
+tail it describes was replaced by the victory lap, see "Changes").
 
 | Finding | Before | After |
 |---|---|---|
@@ -412,12 +415,11 @@ row is history (the 3-bar tail it describes was replaced by the victory lap, see
 
 ### Notes for the sampler owner (not worked around in the song)
 
-- **The `cymbal` roll zone (variant 1) is very dark in the sprite:** of its energy, 1–4 kHz is
-  −14.4 dB, >4 kHz −30.9 dB and >8 kHz −77 dB (250 Hz–1 kHz holds almost all of it). The reviewer
-  measured the source `susCymb1_roll_f1_nloop.wav` at about −13 dB above 4 kHz and −42 dB above
-  8 kHz, so the build loses the shimmer. That is why the swells read as a mid-range "whoosh" and
-  need +3 dB of channel gain. VCSL also has real crescendo rolls (`susCymb1_cresc_1.5s/2s/4s.wav`).
-  When the zone is rebuilt, re-balance `cym` (it will need less gain).
+- **The `cymbal` roll zone (variant 1) was very dark in the sprite** (of its energy, >4 kHz
+  −30.9 dB, >8 kHz −77 dB), so the swells read as a mid-range "whoosh" and needed a high channel
+  gain. The zone has since been rebuilt from SSO's bright crescendo roll and `cym` re-balanced
+  (+7.2 → +1.2 dB, then +3 dB when the roll was made to swell into its downbeat): see "Polish" at
+  the end.
 - **The `snare` is dark at the source:** the VCSL rope-tension snare's soft layers are almost all
   drum body. Measured on the first 250 ms, the source `RopeSnare_hi_sn_Main_vl1_rr1.wav` has
   1–4 kHz at −29.8 dB and >4 kHz at −43.8 dB of its energy, and `vl4_rr1` −16.5 / −25.2 dB; the
@@ -439,39 +441,43 @@ ungated per bar / per phrase, momentary = 400 ms.
 |---|---|---|
 | **The tune missing for 6 beats at every restart; the vamp a level hole** | loop = vamp + a b a′ b′ + landing/turnaround, 13 bars (20.26 s); the tune silent for 6 beats per pass (2.34 s, 11.5 %): the turnaround's beats 2–4 and the vamp's beats 1–3. Per bar: vamp **−20.5**, a −17.2 / −17.1 / −17.9, b −16.7 / −16.4 / −16.3, a′ −15.5 / −15.6 / −16.7, b′ −15.0 / **−14.3**, turnaround −16.5 (range 6.2 LU); phrases a −17.4 → b′ −14.6 (+2.8 LU), b′ louder than the fanfare (−15.14); momentary at the restart: b′ −13.5 to −14.6, landing −14.3, turnaround −17.0 to −18.6, vamp **−22.3 to −24.9**; time below −19 LUFS 9.4 %; LRA 3.2 LU | the vamp plays **once**, before the loop (`form` march, fin, vamp, tail; `loopFrom` 3); the loop = a b a′ b′ + landing/turnaround, **12 bars (18.70 s)**, and the turnaround carries the pickup E♭4 on beat 4 (accordion), with the castanets' rattle on beat 3 and their "tak" on the pickup (the same call ends the vamp); the tune is silent for **2 beats** per pass (0.78 s, 4.2 %), where the clarinet's fill and the rattle play. b′ softer and a stronger: accordion 0.68 → **0.64** in b′, 0.62 → 0.65 in a; the mandolin's second voice 0.53 → 0.47 (its softer layer); the clarinet's fill 0.85 → 0.95; all lap channels −0.15 dB. Per bar: −16.5 / −16.6 / −17.6, −16.8 / −16.4 / −16.8, −15.8 / −15.8 / −16.8, −16.1 / −15.4, −16.5 (**range 2.2 LU**); phrases a −16.9 → b′ −15.7 (**+1.2 LU**), all below the fanfare; momentary at the restart: b′ −14.5 to −15.9, landing −15.6, turnaround −17.0 to −18.5, pickup −16.9 → −15.8, a −15.7 to −16.2; time below −19 LUFS 4.0 %; **LRA 1.4 LU**; tune vs mix −0.7 / −1.9 / −2.0 / −2.2 LU per phrase; loop −16.38 LUFS |
 | The doc's "always on chord tones" for the mandolin's second voice in b′ was wrong on two beats | D♭4 under the tune's B♭4 on old tail bar 11 beat 4 (over E♭2) and bar 12 beat 2 (over G1, a tritone), where the chord track and the guitar (G3 B♭3 E♭4) have a plain E♭ triad: an E♭7 the band does not play, and the D♭ then moved up to E♭ over Cm. Onset scan: 2 of 15 notes off the chord | the second voice takes **E♭4** (a fifth under B♭4) on those two beats (now tail bar 10 beat 4 and bar 11 beat 2); onset scan **0 of 15** off the chord; the Harmony text says exactly what the line does. The tune is untouched (compare.py 100 %) |
-| The longer track leaves 3–6 s of the 280 s music cache during a run | — | verified (buffer 44.52 s; per-run set 180.97 s; headroom 3.15 s with `kitchen` to 6.14 s with `foodcourt`), written up for the lead in "Music cache"; the buffer cannot shrink by moving the vamp out of the loop (it stays in the song), and the fix (stage buffers ≤ 99 s or a larger `MUSIC_CACHE_SECONDS`) is outside the arrangement files |
+| The longer track leaves 3–6 s of the 280 s music cache during a run | — | verified (then: buffer 44.52 s with the 4 s pad; per-run set 180.97 s; headroom 3.15 s with `kitchen` to 6.14 s with `foodcourt`) and written up for the lead; the buffer cannot shrink by moving the vamp out of the loop (it stays in the song), and the fix was outside the arrangement files. The engine now has `MUSIC_CACHE_SECONDS` = 300 s and a 6 s pad: buffer 46.52 s, per-run set 186.97 s, headroom 15.15–18.14 s ("Music cache") |
 | (found while fixing) The turnaround's castanet rattle masked by the new pickup | in a first draft of this revision the rattle stayed on beat 4, under the accordion's pickup: strokes 2–4 lifted the mix above 4 kHz by only +0.7 / +0.4 / +0.5 dB (60 ms) | the rattle moved to beat 3 (where only the clarinet plays) and the "tak" onto the pickup: **+6.3 / +14.2 / +17.2 / +14.9 dB**, tak +13.1 dB |
 
 ## Other checks
 
-- **The fanfare is unchanged:** float renders of this version and of commit c3167cb (the 3-bar
-  tail) are bit-identical from 0 to 20.25 s; the first differing sample is at 20.2507 s, where the
-  old tail's first notes start a few ms early through humanize, strum and the samples' pre-roll.
-  Against the previous (13-bar) revision the render is bit-identical up to 20.2591 s, 0.7 ms before
-  the vamp, whose humanize stream (seeded per section name) now differs. The fanfare's humanize
-  streams are seeded per section too, so nothing after it can shift it, and `gainDb` is unchanged.
-  The fanfare's measurements (−15.1 LUFS, the peaks, the review fixes) therefore stand.
+- **The victory lap left the fanfare unchanged:** at the second review round, float renders of
+  that version and of commit c3167cb (the 3-bar tail) were bit-identical from 0 to 20.25 s; the
+  first differing sample was at 20.2507 s, where the old tail's first notes start a few ms early
+  through humanize, strum and the samples' pre-roll. Against the previous (13-bar) revision the
+  render was bit-identical up to 20.2591 s, 0.7 ms before the vamp, whose humanize stream (seeded
+  per section name) differed. The fanfare's humanize streams are seeded per section too, so nothing
+  after it can shift it, and `gainDb` is unchanged. So the fanfare's measurements (then −15.1 LUFS,
+  the peaks, the review fixes) stood. Since then the bank's recalibration (each channel's gain
+  offset in commit bf24871) and the cymbal polish have moved it slightly: it now measures
+  −15.0 LUFS (−14.97) with its peak at −2.46 dBFS ("Levels").
 - **compare.py:** every statement PASSes at the default thresholds, all at 100 % / 100 % except
   the later-pass check through the turnaround (98.4 %: the listed landing note, see above).
 - **Chromium (the game's real worker):** `audiotest.html` → `__at.samplerTrack('victory')`
-  decodes the 53 MP3 sprites with Chromium's decoder (0.73 s), installs them in the render worker
-  and renders the track there (0.76 s). The output has the same length (2 136 935 samples =
-  44.52 s) and loop window (samples 1 239 273 → 2 136 935 = 25.82 → 44.52 s), the same peak
-  (−2.44 dBFS), and equals the Node render to −88 dBFS (the page's WAV is 16-bit). There are no
-  console errors, and the bank report is OK with no warnings.
-- **Seam:** mismatch −133.3 dBFS. No note of the loop is held across its end: every part is written
+  decodes the 54 MP3 sprites with Chromium's decoder (0.45 s), installs them in the render worker
+  and renders the track there (0.86 s). The output has the same length (2 232 935 samples =
+  46.52 s) and loop window (samples 1 335 273 → 2 232 935 = 27.82 → 46.52 s), the same peak
+  (−2.46 dBFS), and equals the Node render to −90.3 dBFS, one 16-bit step (the page's WAV is
+  16-bit). There are no console errors, and the bank report is OK with no warnings.
+- **Seam:** mismatch −150.5 dBFS. No note of the loop is held across its end: every part is written
   inside its bar (no sequencer warnings), and the turnaround's last notes (the accordion's pickup
   E♭4, a quarter on beat 4; the guitar's E♭7 strum; the bass's E♭2; the castanets' "tak") are gated
-  before the bar line, so only their natural releases ring into the next pass, where the 4 s pad
-  renders them. Nothing from the fanfare or the vamp rings past the 4 s seam pad (render.ts warns
+  before the bar line, so only their natural releases ring into the next pass, where the 6 s pad
+  renders them. Nothing from the fanfare or the vamp rings past the 6 s seam pad (render.ts warns
   if it does; it does not).
 - **Clicks:** a second-difference scan of the loop window finds its 20 largest spikes at note
-  attacks: 17 within 0–7.4 ms after a listed onset (mandolin, accordion chord buttons, guitar,
-  clarinet, pizzicato), 3 on the mandolin's tremolo re-picks in tail bar 7 (the picks are
-  generated by the sequencer, not listed).
+  attacks: 19 within −1.1 to +4.6 ms of a listed onset (mandolin 8, guitar 3, tambourine 3,
+  clarinet 2, upright bass 2, accordion 1; the mandolin's sit 1.0 ms before their picks' listed
+  onsets), and 1 on the second string of a guitar strum, 14.6 ms after the strum's first.
 - `node scripts/music/selftest/formcheck.mjs`: "ok victory 821 events, 4 form entries, loop from
-  "tail" bars 15-26". render-song counts 876 events: the same 821 plus the 55 tail events of the
-  first 4 s of the loop, which the renderer copies after the loop end (the seam pad).
+  "tail" bars 15-26". render-song counts 903 events: the renderer's 837 (the same 821 notes, with the
+  mandolin's tremolo split into picks: 16 more) plus the 66 tail events of the first 6 s of the
+  loop, which the renderer copies after the loop end (the seam pad).
 - `npx tsc --noEmit` is clean.
 
 ## Changes from the previous `victory`
@@ -493,7 +499,8 @@ and a mandolin second voice on the second pass, pizzicato under the second pass,
 turnaround bar (A♭ F7 B♭m7 E♭7) with a castanet rattle back into the vamp. The march and the tag
 were untouched (bit-identical render); `gainDb` unchanged; the old tail channels `strT` and `hrnT`
 went, and `mand`, `clar`, `gtr`, `pizzT` and `tamb` came in. The track grew from 24.94 s to
-40.52 s of music (render buffer 28.94 → 44.52 s).
+40.52 s of music (render buffer 28.94 → 44.52 s with the 4 s pad of the time; 46.52 s with today's
+6 s pad).
 
 Second review round (this version; details in "Review fixes, second round"): the vamp is its own
 section, played once between the tag and the loop (`form` march, fin, vamp, tail; `loopFrom` 3),
@@ -503,4 +510,43 @@ and the loop is 12 bars (18.70 s) whose turnaround carries the pickup into a, so
 flatter (accordion 0.62 → 0.65 in a, 0.68 → 0.64 in b′, the second voice in the mandolin's softer
 layer); the mandolin's second voice plays E♭ instead of D♭ on the two beats over a plain E♭ chord;
 the lap's channel gains are 0.15 dB lower (loop −16.38 LUFS). The total stays 26 bars = 40.52 s
-(buffer 44.52 s); the music-cache arithmetic is written up for the lead in "Music cache".
+(buffer 44.52 s then, 46.52 s with today's 6 s pad); the music-cache arithmetic is in "Music
+cache".
+
+## Polish: the swells on the bright cymbal roll
+
+The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll, spectral centroid
+about 4 kHz on its peak instead of 0.6 kHz). With the channel still boosted for the old dark roll
+(+7.2 dB), the swells came through far too strong: the cymbal alone was only 5–8 LU under the mix
+at their crests and raised it by up to 1.5 LU, nearly as loud as the trumpets. They were
+re-balanced: `cym` gain +7.2 → +1.2 dB (velocities and lengths unchanged).
+
+A second review found that the swells did not reach their downbeats: the cymbal was gated at 90 %
+of the written length, so the release began 0.08–0.14 s before the crash (the intro swell was
+1.3 dB down when the trumpets' first downbeat arrived), and the roll's crescendo was 0.76 s long,
+so the 1.17 and 1.36 s swells grew for 0.76 s and then held. Both are fixed in the sampler (see
+`docs/credits/music-samples.md`): the cymbal plays its written length, and each swell grows evenly
+over its whole length into its peak on the crash. A swell's crest is now set by its velocity alone
+(before, the 0.78 s bar-7 swell ended below the roll's peak), and the held roll plays at the stereo
+loudness of the old VCSL roll, 1.5 dB under the bright roll's first build. Re-balanced so each swell
+crests where it crested before, now on its downbeat: `cym` gain +1.2 → +3 dB, the intro swell
+0.42 → 0.44, the bar-7 swell 0.66 → 0.57 (bar 12 stays at 0.60).
+
+Measure (scratch scripts on the full render, same method as the review): "crest" and "on the
+downbeat" = the cymbal's own level (`cym` solo, K-weighted, over the 150 ms up to that point) at the
+end of its gate and at the written downbeat; "rise" = the largest third-octave rise of the mix over
+the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's loudest) in the last
+150 ms before the downbeat; "cover" = how much the swell raises the momentary (400 ms, K-weighted)
+loudness there; "cymbal" / "trumpets" (`tpt` + `tptS`) = their own momentary loudness against the
+mix.
+
+| Swell | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Trumpets vs mix |
+|---|---|---|---|---|---|---|
+| intro (0.20 s, 1.36 s) | −26.4 → −26.3 dB | −27.7 → **−26.3 dB** | **+16.9 dB** (7.9 kHz) | 0.10 LU | −16.0 LU | −0.5 LU |
+| bar 7 (10.13 s, 0.78 s) | −22.8 → −22.7 dB | −22.8 → **−22.7 dB** | **+20.6 dB** (10 kHz) | 0.42 LU | −10.6 LU | −2.1 LU |
+| bar 12 (17.53 s, 1.17 s) | −22.0 → −22.0 dB | −21.8 → **−22.0 dB** | **+9.2 dB** (6.3 kHz) | 0.26 LU | −12.2 LU | −4.0 LU |
+
+The swells now grow by 6–14 dB over their whole length (the intro's by 14 dB), each at its loudest
+on its crash. Every swell rises 9.2–20.6 dB in its band in the last 150 ms before its downbeat,
+8.2–15.5 LU under the trumpets. Melody channels are untouched; the nine compare.py proofs above
+give the same results. Render after the change: "Levels" above.

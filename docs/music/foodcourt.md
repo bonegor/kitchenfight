@@ -2,8 +2,8 @@
 
 Gameplay music for the plastic, neon lair where the culinary crimes are born. De Curtis's
 Neapolitan classic is played as soulless shopping-mall **muzak**: a PA chime, then a cheesy
-D-major lounge jazz waltz (vibes, FM e-piano, synth pad, bossa synth bass, ride and shaker) on the
-song's major strains. When the tune turns to D minor the mall rots: a detuned warble lead, a
+D-major lounge jazz waltz (vibes, FM e-piano, bossa synth bass, ride and shaker) on the song's
+major strains. When the tune turns to D minor the mall rots: a detuned warble lead, a
 minor/chromatic reharmonisation, a creeping staccato bassoon, orchestra hits, a dark pad and
 ratchet / toy-whistle glitches. Then the **real orchestra pushes through the synthetic band**
 (cellos, then violins and brass on the refrain) while robot arps heckle it, until a PA chime
@@ -87,16 +87,16 @@ Bar numbers are the song's global bars (`node scripts/music/export-song.mjs food
 | Section | Song bars | Time (s) | Strain (ref bars) | Key / harmony | Lead and texture |
 |---|---|---|---|---|---|
 | intro | 1–4 | 0.00–4.44 | — | D6 vamp, Em7 A9 | PA chime (vibes + celesta, falling A–F♯–D–A in dotted quarters), then the muzak vamp; vibes pickup A–B–C♯ into B. Not looped. |
-| **B** | 5–12 | 4.44–13.33 | B (9–16) | D major, lounge colours; last bar Dmaj7 → A9 on 2& | MUZAK: vibes an octave up; e-piano comping on 2–3 with a 2& push, synth pad, bossa synth bass, jazz-waltz ride (hatC), shaker, feathered bass drum, cross-stick claves |
+| **B** | 5–12 | 4.44–13.33 | B (9–16) | D major, lounge colours; last bar Dmaj7 → A9 on 2& | MUZAK: vibes an octave up; e-piano comping on 2–3 with a 2& push, bossa synth bass, jazz-waltz ride (hatC), shaker, feathered bass drum, cross-stick claves |
 | **C** | 13–20 | 13.33–22.22 | C (17–24) | D major → B♭maj7 → D minor | muzak for 3 bars (vibes an octave up); on the B♭maj7 (bar 4) a ratchet "crank" and the phrase's last note, the held D, warps into the detuned warble in the same octave; the second phrase drops an octave into D minor, the dark pad creeps in and the ride turns into a ticking clock; toy whistle "fall" into A |
 | **A** | 21–28 | 22.22–31.11 | A (1–8) | D minor, lament bass, German sixth | SINISTER: warble lead, creeping staccato bassoon in quarters, dark pad, orchestra hits on bars 1/3/5/7, timpani, low strings swelling, toy-whistle pip, ratchet into A1 |
 | **A1** | 29–36 | 31.11–40.00 | A (1–8) | as A | THE ORCHESTRA PUSHES IN: the cellos sing strain A high; bassoon "oom" + pizzicato "pa-pa"; robot-arp bursts heckle in the held notes (bars 2, 4, 6, from 2&); strings swell; timpani (A2 eighths) + snare roll into D |
-| **D** | 37–44 | 40.00–48.89 | refrain (25–32) | D … Gm Dm/A A7 Dm | the violins carry the refrain over the muzak band (bars 1–4); at "Torna a Surriento" the orchestra takes over: trumpet doubles, tuba oom-pa-pa, string stabs, tamburello, horn pedal, trombone B♭–A–G–F, orchestra hits, cymbal, timpani; ratchet at the end |
+| **D** | 37–44 | 40.00–48.89 | refrain (25–32) | D … Gm Dm/A A7 Dm | the violins carry the refrain over the muzak band (bars 1–4); at "Torna a Surriento" the orchestra takes over: trumpet doubles, tuba oom-pa-pa, string stabs, tamburello, horn pedal, trombone B♭–A–G–F, orchestra hits, clash cymbals, timpani; ratchet at the end |
 | chime | 45–46 | 48.89–51.11 | — | D6, A9 (on 2&) | the falling PA chime snaps back to the muzak |
 | **B2** | 47–54 | 51.11–60.00 | B (9–16) | D major, vi–ii–V in the 2nd phrase; last bar as B | MUZAK RELAPSE (fake cheer): steel guitar at pitch (D4–D5), celesta sparkle two octaves up on the long notes, low vibes comping (with the 2& push in the last bar), bossa claves, open-hat lifts, a toy train whistle "toot-toot" |
 | **C2** | 55–62 | 60.00–68.89 | C (17–24) | as C | e-piano lead an octave up; on the B♭maj7 an orchestra hit (on D) and the phrase's last D warps into the warble; the minor phrase follows an octave lower with staccato bassoon two octaves below it; timpani (A2) + snare roll announce the orchestra |
-| **A2** | 63–70 | 68.89–77.78 | A (1–8) | the reference harmony | THE ORCHESTRA WINS: Neapolitan street-band waltz — violins an octave up + trumpet, horn counter-line, tuba oom, string stabs pa-pa, tamburello, timpani, cymbal; the robots' last heckles in the held notes of bars 4 (from 2&) and 6 (beat 3); snare roll into D2 |
-| **D2** | 71–78 | 77.78–86.67 | refrain (25–32) | as D | TUTTI: violins and mandolin tremolo an octave up, trumpet, horns, trombone, tuba, stabs, tamburello, the muzak drummer's ride and the synth bass join; orchestra hits, cymbals; ratchet + toy-whistle "fall" yank the tape |
+| **A2** | 63–70 | 68.89–77.78 | A (1–8) | the reference harmony | THE ORCHESTRA WINS: Neapolitan street-band waltz — violins an octave up + trumpet, horn counter-line, tuba oom, string stabs pa-pa, tamburello, timpani, clash cymbals; the robots' last heckles in the held notes of bars 4 (from 2&) and 6 (beat 3); snare roll into D2 |
+| **D2** | 71–78 | 77.78–86.67 | refrain (25–32) | as D | TUTTI: violins and mandolin tremolo an octave up, trumpet, horns, trombone, tuba, stabs, tamburello, the muzak drummer's ride and the synth bass join; orchestra hits, clash cymbals; ratchet + toy-whistle "fall" yank the tape |
 | chime2 | 79–80 | 86.67–88.89 | — | D6, A9 (on 2&) | the rising PA chime (A–D–F♯–A) closes the loop |
 
 The loop runs from B (bar 5, 4.444 s) to the end (88.889 s): loop body 76 bars = 84.44 s, total
@@ -125,9 +125,9 @@ note that the synth bass or the bassoon already plays:
 - **B** (ref D | Em | A7 | D | D | Em | A7 | D): D6 | Em7 | A9 | D6 | D6 | Em7 | A9 | Dmaj7 → A9.
   D6 rather than Dmaj7 wherever the tune sits on D (no C♯ under a melody D); B2 replaces the 5th
   bar with Bm7 (vi–ii–V–I). The last bar is the turnaround: Dmaj7 under the tune's F♯, then **A9
-  from 2&**, where the e-piano's (B) or the vibes' (B2) 2& push, the pad and the bossa bass's
-  second note (A1, then C♯2 on 3&) all change together. The tune rests on beat 3, so the A9 is
-  heard bare: C♯ G B over A; the F♯'s ring is its 13th.
+  from 2&**, where the e-piano's (B) or the vibes' (B2) 2& push and the bossa bass's second note
+  (A1, then C♯2 on 3&) change together. The tune rests on beat 3, so the A9 is heard bare: C♯ G B
+  over A; the F♯'s ring is its 13th.
 - **C** (ref D | Em | A7 | B♭ | Gm | Dm | A7 | Dm): D6 | Em7 | A9 | B♭maj7 | Gm | DmM7 | A7♭9 |
   Dm A7♭9. The B♭maj7 is where the tape warps, under the tune's held D (its 3rd). Gm is the
   reference chord: the tune's on-beat notes D–F–D are its 5th and 7th, the off-beat E a
@@ -173,9 +173,8 @@ contract's synthetic ids). Sounding ranges as written:
 
 - **muzak band**: `vib` vibes lead (D5–E6), `vibC` vibes comping (C♯3–D4 in B2, under the steel
   guitar; E3–D4 in C2), `chm` vibes PA chime (A4–A5), `cel` celesta (A5–B6), `sgtr` steelGuitar
-  lead (D4–D5), `ep` epiano comping (E3–D4), `epL` epiano lead (A5–E6), `spad` synthPad (D3–G4:
-  A3–A4 in B/C/chimes, D3–D4 in B2), `sb` synthBass (A1–B2), `robo` roboArp (F5–F6, five short
-  bursts per loop in A1 and A2 only), `hat` hatC (ride / clock), `hatO` hatO (lifts), `shk`
+  lead (D4–D5), `ep` epiano comping (E3–D4), `epL` epiano lead (A5–E6), `sb` synthBass (A1–B2),
+  `robo` roboArp (F5–F6, five short bursts per loop in A1 and A2 only), `hat` hatC (ride / clock), `hatO` hatO (lifts), `shk`
   shaker, `clv` claves, `kick` (orchestral bass drum, feathered on 1).
 - **corruption**: `warb` warble lead (D4–D6), `dpad` darkPad (E3–E4), `bsn` bassoon (D2–A3,
   staccato), `hit` orchHit (G3–D4), `ratch` ratchet (crank / slow / fast), `whis` toyWhistle
@@ -183,8 +182,10 @@ contract's synthetic ids). Sounding ranges as written:
 - **orchestra / street band**: `vln` violin (G4–F6), `vc` cello (D4–F5), `tpt` trumpet (D4–F5),
   `mand` mandolin (G5–F6, tremolo on quarters and longer), `hrn` horn (A3–A4), `tbn` trombone
   (F3–B♭3), `tuba` (G1–E2), `pizz` pizzicato strings (F3–E4), `stab` strStab (E3–D4), `str`
-  strings (D3–G4), `timp` timpani (D2, G2, A2, B♭2: a D–A pair plus G and B♭), `cym` suspended
-  cymbal, `snare` (rolls), `tamb` tambourine (accent / hit / shake / roll).
+  strings (D3–G4: the low swell of A, the A1 swell, a soft pad under the violins in D bars 1–4),
+  `timp` timpani (D2, G2, A2, B♭2: a D–A pair plus G and B♭), `crash` clash cymbals (the
+  orchestra's arrivals in D, A2 and D2), `snare` (rolls), `tamb` tambourine (accent / hit / shake /
+  roll).
 
 Every part is inside the brief's natural ranges (guitar E2–B5, bassoon, the strings, brass and
 mandolin as listed in the brief; timpani D2–B♭2, the standard drums' compass). The vibes comping
@@ -198,89 +199,96 @@ light jazz-waltz lilt on the off-beat eighths).
 
 ## Render (recorded samples)
 
-`node scripts/music/render-song.mjs foodcourt out.wav` (48 kHz, sample bank: 53 sets):
+`node scripts/music/render-song.mjs foodcourt out.wav` (48 kHz, sample bank: 54 sets):
 
-- duration 92.89 s buffer = 88.89 s of music + the renderer's 4 s loop pad; loop 4.444 → 88.889 s
-  (buffer window 8.444 → 92.889 s), body 84.444 s = bars 5–80 from section B;
-  **seam mismatch −124.9 dBFS**, no event rings past the seam
-- **loop body −16.4 LUFS** (whole file −16.5), short-term max −14.1 LUFS, RMS −19.5 dBFS,
-  **sample peak −3.95 dBFS**, soft clipper 1 sample (0.000 %), DC 0
-- spectral balance: < 250 Hz −10.1 dB, 250 Hz–4 kHz −0.5 dB, > 4 kHz −19.6 dB (darker than the
+- duration 94.89 s buffer = 88.89 s of music + the renderer's 6 s loop pad; loop 4.444 → 88.889 s
+  (buffer window 10.444 → 94.889 s), body 84.444 s = bars 5–80 from section B;
+  **seam mismatch −150.5 dBFS**, no event rings past the seam
+- **loop body −16.3 LUFS** (−16.28; whole file −16.4), short-term max −14.6 LUFS, RMS −19.4 dBFS,
+  **sample peak −1.99 dBFS**, soft clipper 11 samples (0.000 %), DC 0
+- spectral balance: < 250 Hz −10.0 dB, 250 Hz–4 kHz −0.5 dB, > 4 kHz −19.4 dB (darker than the
   street-band tracks, as muzak should be)
 - `gainDb` −1.1, **no warnings**
 
 | Channel | Instrument | Notes | Gain dB | Solo LUFS | vs mix (LU) | Peak dBFS |
 |---|---|--:|--:|--:|--:|--:|
-| vib | vibes | 48 | −1.5 | −17.3 | **−1.0** | −8.8 |
-| vibC | vibes | 39 | −3 | −26.0 | −9.7 | −12.0 |
-| chm | vibes | 12 | −3 | −22.2 | −5.8 | −13.3 |
-| cel | celesta | 16 | −10 | −35.8 | −19.4 | −20.3 |
-| sgtr | steelGuitar | 31 | −3 | −18.2 | **−1.8** | −6.1 |
-| ep | epiano | 108 | −9 | −32.4 | −16.0 | −17.2 |
+| vib | vibes | 48 | 0 | −17.9 | **−1.6** | −9.7 |
+| vibC | vibes | 39 | −0.9 | −25.9 | −9.6 | −11.5 |
+| chm | vibes | 12 | −0.9 | −22.1 | −5.8 | −13.6 |
+| cel | celesta | 16 | −10 | −35.8 | −19.5 | −20.4 |
+| sgtr | steelGuitar | 31 | −3 | −18.0 | **−1.7** | −5.4 |
+| ep | epiano | 108 | −9 | −32.3 | −16.0 | −17.2 |
 | epL | epiano | 14 | −4 | −18.3 | **−1.9** | −10.9 |
-| spad | synthPad | 67 | −17 | −38.6 | −22.2 | −26.7 |
-| sb | synthBass | 95 | −5 | −24.8 | −8.4 | −14.6 |
+| sb | synthBass | 95 | −5 | −24.8 | −8.5 | −14.6 |
 | robo | roboArp | 28 | −5 | −28.8 | −12.4 | −18.1 |
-| hat | hatC | 234 | −5 | −38.9 | −22.6 | −19.1 |
-| hatO | hatO | 8 | −10 | −39.8 | −23.4 | −27.1 |
-| shk | shaker | 144 | −8 | −40.2 | −23.8 | −18.9 |
-| clv | claves | 16 | −10 | −42.9 | −26.5 | −24.6 |
-| kick | kick | 74 | −10 | −31.3 | −14.9 | −15.0 |
-| warb | warble | 65 | −3 | −18.0 | **−1.6** | −7.7 |
-| dpad | darkPad | 67 | −15 | −34.9 | −18.5 | −23.0 |
-| bsn | bassoon | 50 | −5 | −28.1 | −11.8 | −13.5 |
-| hit | orchHit | 12 | −11 | −31.2 | −14.9 | −16.5 |
-| ratch | ratchet | 5 | −15 | −38.3 | −21.9 | −18.0 |
+| hat | hatC | 234 | −5 | −39.0 | −22.6 | −19.1 |
+| hatO | hatO | 8 | −10 | −39.8 | −23.5 | −27.1 |
+| shk | shaker | 144 | −6.7 | −40.3 | −23.9 | −19.0 |
+| clv | claves | 16 | −10 | −42.7 | −26.4 | −24.5 |
+| kick | kick | 74 | −10 | −31.2 | −14.9 | −14.9 |
+| warb | warble | 65 | −3 | −18.0 | **−1.7** | −7.7 |
+| dpad | darkPad | 67 | −15 | −34.9 | −18.6 | −23.0 |
+| bsn | bassoon | 50 | −5 | −28.0 | −11.7 | −13.7 |
+| hit | orchHit | 12 | −10.6 | −31.2 | −14.9 | −16.6 |
+| ratch | ratchet | 5 | −15 | −38.3 | −22.0 | −17.9 |
 | whis | toyWhistle | 5 | −13 | −39.1 | −22.7 | −24.5 |
-| vln | violin | 75 | −1 | −17.4 | **−1.0** | −6.7 |
-| vc | cello | 31 | −3 | −17.2 | **−0.8** | −7.2 |
-| tpt | trumpet | 63 | −5 | −24.1 | −7.7 | −13.5 |
-| mand | mandolin | 22 | −6 | −28.2 | −11.8 | −16.7 |
-| hrn | horn | 31 | −9 | −30.2 | −13.8 | −18.9 |
-| tbn | trombone | 8 | −9 | −28.6 | −12.2 | −15.2 |
-| tuba | tuba | 26 | −5 | −26.5 | −10.1 | −11.8 |
-| pizz | pizz | 48 | −9 | −31.5 | −15.1 | −17.6 |
-| stab | strStab | 120 | −10.5 | −31.1 | −14.7 | −16.0 |
-| str | strings | 26 | −16 | −35.1 | −18.7 | −20.9 |
-| timp | timpani | 32 | −9 | −32.4 | −16.0 | −15.7 |
-| cym | cymbal | 4 | −16 | −36.8 | −20.5 | −23.7 |
-| snare | snare | 24 | −5 | −25.7 | −9.3 | −8.9 |
-| tamb | tamb | 80 | −2 | −35.3 | −18.9 | −15.0 |
+| vln | violin | 75 | −4 | −17.3 | **−1.0** | −6.3 |
+| vc | cello | 31 | −3 | −16.8 | **−0.5** | −6.4 |
+| tpt | trumpet | 63 | −5 | −24.0 | −7.6 | −13.3 |
+| mand | mandolin | 22 | −8.2 | −28.1 | −11.8 | −15.7 |
+| hrn | horn | 31 | −9 | −30.4 | −14.1 | −19.6 |
+| tbn | trombone | 8 | −8.4 | −28.6 | −12.3 | −16.0 |
+| tuba | tuba | 26 | −7.1 | −26.5 | −10.2 | −12.3 |
+| pizz | pizz | 48 | −9.9 | −31.5 | −15.2 | −17.9 |
+| stab | strStab | 120 | −12.5 | −31.2 | −14.9 | −16.0 |
+| str | strings | 26 | −9.3 | −25.3 | −9.1 | −12.5 |
+| timp | timpani | 32 | −8 | −32.5 | −16.2 | −15.6 |
+| crash | crash | 4 | −7 | −30.1 | −13.7 | −14.7 |
+| snare | snare | 24 | −5 | −25.3 | −9.0 | −8.5 |
+| tamb | tamb | 80 | −3.2 | −35.1 | −18.8 | −13.1 |
 
-Every lead channel (bold) is within 2 LU of the loop mix. Per section (integrated loudness and
-sample peak of the section in the render; each lead's solo loudness relative to the mix over the
-same bars, from mono stems that a scratch script renders through the same renderer and bank):
+Every lead channel (bold) is within 2 LU of the loop mix. Per section (gated integrated loudness
+and sample peak of the section in the render, the loop sections as they repeat; each lead's solo
+loudness relative to the mix over the same bars, from solo stems that a scratch script renders
+through the same renderer and bank):
 
 | Section | Mix LUFS | Mix peak dBFS | Lead (solo vs mix, same bars) |
 |---|--:|--:|---|
 | intro | −21.3 | −9.5 | chime −0.2 (bars 1–2) |
-| B | −16.4 | −6.0 | vibes −1.1 |
-| C | −16.5 | −6.3 | vibes −0.9 (bars 1–3), warble on the held D6 −1.5 (bar 4), warble −1.1 (bars 5–8) |
-| A | −16.7 | −6.4 | warble −0.7 |
-| A1 | −16.5 | −6.5 | cello −0.6 |
-| D | −15.7 | −4.7 | violin −1.7 |
-| chime | −20.8 | −11.8 | chime −0.6 |
-| B2 | −16.5 | −4.0 | steel guitar −1.6 |
-| C2 | −16.6 | −6.0 | e-piano −1.4 (bars 1–3), warble on the held D6 −1.8 (bar 4), warble −1.5 (bars 5–8) |
-| A2 | −15.9 | −4.8 | violin −2.0 |
-| D2 | −15.0 | −4.7 | violin −1.6 |
-| chime2 | −20.7 | −11.7 | chime −0.6 |
+| B | −16.9 | −6.2 | vibes −1.1 |
+| C | −16.7 | −6.6 | vibes −1.0 (bars 1–3), warble on the held D6 −1.4 (bar 4), warble −1.1 (bars 5–8) |
+| A | −16.6 | −5.8 | warble −0.7 |
+| A1 | −16.1 | −5.8 | cello −0.7 |
+| D | −15.7 | −4.1 | violin −2.0 |
+| chime | −20.6 | −11.8 | chime −0.7 |
+| B2 | −16.4 | −3.5 | steel guitar −1.5 |
+| C2 | −16.6 | −5.3 | e-piano −1.4 (bars 1–3), warble on the held D6 −2.0 (bar 4), warble −1.6 (bars 5–8) |
+| A2 | −15.0 | −4.1 | violin −1.5 |
+| D2 | −15.3 | −2.0 | violin −2.0 |
+| chime2 | −20.6 | −12.3 | chime −0.6 |
 
-The groove sections sit within 1.7 LU of each other (muzak and sinister −16.4…−16.7, orchestra
-−15.9/−15.7, the tutti −15.0), so the loop does not pump under gameplay; the two chimes are the
-2-bar breathers.
+The groove sections sit within 1.9 LU of each other (muzak and sinister −16.1…−16.9, orchestra
+−15.7 in D and −15.0 in A2, the tutti −15.3), so the loop does not pump under gameplay; the two
+chimes are the 2-bar breathers.
 
-**Audibility of the small parts** (scratch script: the channel's solo against the mix without
-it, in third-octave bands, 85 ms frames, over each burst; "unmasked" = frames in which the
-channel is louder than the rest of the mix in at least one band; momentary loudness = 400 ms
-window). For scale, the trombone counter-line, which is audible but not prominent, reads 83 %
-unmasked with a best band of −3 dB on the same scale.
+**Audibility of the small parts** (scratch script, measured when the review fixes went in: the
+channel's solo against the mix without it, in third-octave bands, 85 ms frames, over each burst;
+"unmasked" = frames in which the channel is louder than the rest of the mix in at least one band;
+momentary loudness = 400 ms window). For scale, the trombone counter-line, which is audible but
+not prominent, reads 83 % unmasked with a best band of −3 dB on the same scale.
 
 | Part | Bursts | Best band (dB) | Unmasked frames | Burst vs mix, momentary |
 |---|---|--:|--:|--:|
 | robot heckles, A1 bars 2 / 4 / 6 | 6 sixteenths from 2& | +0.7 / +10.6 / +4.3 | 87 % each | −12.2 / −11.5 / −10.9 LU |
 | robot heckles, A2 bars 4 / 6 | 6 from 2& / 4 from beat 3 | +3.2 / −1.4 | 81 % / 64 % | −13.7 / −11.8 LU |
 | snare rolls, A1 / C2 / A2 bar 8 | 8 sixteenths, crescendo | +2.0 / +0.3 / +1.2 | 91 % / 68 % / 82 % | −7.2 / −4.6 / −8.5 LU |
+
+Re-checked on the current render, with the louder low strings of the polish below (the loop as it
+repeats; frames as above, each burst's middle 400 ms against the mix): the robot heckles are
+unmasked in 83 / 100 / 100 % of their frames in A1 bars 2 / 4 / 6 and in 100 / 100 % in A2 bars
+4 / 6, at −11.4 / −10.7 / −10.2 and −11.4 / −10.6 LU; the snare rolls (A1 / C2 / A2 bar 8) in 90 %
+each, at −6.8 / −4.0 / −6.5 LU; the trombone counter-line in 81 %. None of them lost ground to the
+strings.
 
 A chroma check (scratch script: per-bar FFT chroma of the render against the pitch classes of the
 written notes) gives a median correlation of 0.85; every bar's strongest pitch classes are its
@@ -289,10 +297,15 @@ turnaround bars (12 and 54) the strongest bins are now the A9's (bar 54: B3 0 dB
 C♯4 −6, A3 −8), where the review measured D4 0 dB, F♯3 −3, C♯4 −3.
 
 **Chromium, real engine**: `audiotest.html` → `__at.samplerTrack('foodcourt')` (browser MP3
-decoding, fresh music worker, a private dev server with `scripts/vite.agent.config.ts`): 53 sets,
-no warnings, no page errors; decode 1.53 s, worker render 2.09 s, longest main-thread frame gap
-42 ms; the result equals the Node render (same length 4 458 667 samples and loop points, same
-−3.95 dBFS peak, difference 92.5 dB below the signal, zero lag).
+decoding, fresh music worker, a private dev server with `scripts/vite.agent.config.ts`): 54 sets,
+no warnings, no page errors; decode 0.51 s, worker render 1.45 s, longest main-thread frame gap
+21 ms. The result has the Node render's length (4 554 667 samples), loop points and −1.99 dBFS
+peak, and equals it within one 16-bit step everywhere except at the shaker's accented stroke on
+the downbeat of every other bar of the muzak sections (93 of its 10 ms blocks), where the two differ
+by up to 174 steps (−45.5 dBFS; −97.2 dBFS RMS over the whole render). The cause is in the bank:
+Chromium's decoder and ffmpeg disagree on the first take of the `shaker` sprite (zone r0) by
+−44.8 dB of its level, while its other three takes agree to −113 dB. That is the sampler's to
+fix; the song does not work around it.
 
 ## Review fixes
 
@@ -325,3 +338,62 @@ An independent review found six problems; all are fixed in the song and above.
    'I' parto, addio!") stays in the phrase's octave (D6, on the warble: the tape warps on the held
    note), and the octave drop comes with the second phrase (reference bar 21). compare.py now
    reports the displacement as ref bars 21–24 instead of 17–19.
+
+## Polish: clash cymbals on the arrivals, the low strings heard, the synth pad dropped
+
+A review found three described parts inaudible. Measure for all of them (scratch script on the
+full render, recorded bank, the review's method): for each note, the largest third-octave rise of
+the mix over the mix without that channel (63 Hz–12.5 kHz, bands within 40 dB of the window's
+loudest); a part is heard when its notes rise 3 dB or more in their own band. Windows: hits over
+their first 100 ms, sustained notes over the note.
+
+**Cymbal hits → clash cymbals.** The four suspended-cymbal hits (D bar 5, A2 bar 1, D2 bars 1
+and 5) rose +0.8 to +1.5 dB, all at 500–630 Hz and nothing at 4–12 kHz: the VCSL mallet strokes
+have their attack energy at 250 Hz–1 kHz (spectral centroid 0.6–0.7 kHz over the first 100 ms),
+and the orchestra hits and the tutti landing on the same beats cover that. Even 10 dB louder they
+rose only +2.9 to +5.2 dB, still at 500–630 Hz. They are now clash cymbals (`crash`, the bank's
+VCSL piatti, gain −7 dB, velocity 0.8 / 0.8 / 0.85 / 0.85), the orchestra's own accent:
+
+| Hit | Before (suspended cymbal) | After (clash cymbals) | Cover | Cymbal vs mix |
+|---|---|---|---|---|
+| D bar 5, "Torna a Surriento" (44.44 s) | +1.5 dB at 500 Hz | **+11.1 dB** at 12.6 kHz | 0.18 LU | −13.9 LU |
+| A2 bar 1, the orchestra wins (68.89 s) | +1.0 dB at 630 Hz | **+8.3 dB** at 12.6 kHz | 0.17 LU | −14.3 LU |
+| D2 bar 1, the tutti (77.78 s) | +1.1 dB at 500 Hz | **+5.4 dB** at 2 kHz | 0.20 LU | −13.0 LU |
+| D2 bar 5 (82.22 s) | +0.8 dB at 630 Hz | **+5.9 dB** at 12.6 kHz | 0.19 LU | −14.0 LU |
+
+("Cover": how much the crash raises the momentary loudness; "cymbal vs mix": its own momentary
+loudness against the mix. The tune stays on top: it is 1.8–6.2 LU under the mix there, the crash
+13–14 LU.)
+
+**Low strings.** Channel −15.3 → −9.3 dB, and A's swell (bars 5–8) now rises from velocity × 0.45
+to × 1.3 (was 0.3 → 1), so it starts audible and crests into A1, where the tune rests.
+
+| Strings | Before: rise per note (dB) | After |
+|---|---|---|
+| A, the low swell (bars 5–8, 5 chords) | 1.4, 2.3, 0.7, 0.7, 5.7 | **7.1, 10.3, 4.3, 3.4, 12.4** |
+| A1, the swell (bars 7–8) | 1.4, 3.5, 2.0 | **4.1, 7.4, 4.7** |
+| D bars 1–4, the soft pad under the violins | 1.1, 1.5, 0.5, 0.7 | 2.5, 4.0, 1.5, 2.2 → **4.7, 8.7, 3.6, 5.1** (velocity 0.45 → 0.66, below) |
+
+The A swell stays 7.5–10.5 LU under the mix while the warble sings (cover ≤ 0.43 LU) and crests
+in its last two beats, where the tune rests (the strings 4.5 LU under the mix there, cover 1.9
+LU).
+
+**The D pad, heard.** A second review found that the pad under the violins in D bars 1–4 was still
+under the 3 dB rule (3 of its 4 chords; per note, L and R third-octave bands over each note: 2.3,
+1.9, 3.7, 2.5, 1.3, 2.3, 1.4 dB), so it was neither heard nor dropped; it shares its register with
+the e-piano's waltz comping (E3–D4). Its velocity goes 0.45 → 0.66 (the channel gain, which sets
+A's and A1's swells, stays −9.3 dB): every chord rises 3.6–8.7 dB in its band, every note
+3.5–8.3 dB (per note: 4.4, 4.3, 8.3, 6.2, 3.8, 5.6, 3.5 dB), and the pad stays 5.0–7.1 LU under the
+violins (it adds 0.6–0.9 LU to the mix there). The violins keep the bars: all 13 of their notes in
+D bars 1–4 still rise 7.9 dB or more in their band (median 17.8 dB, 20.3 before). Per section, the
+strings sit 11–12.5 LU under the mix (7.5 in D, under the violins), the lead 0.7–2.0 LU.
+
+**Synth pad dropped.** The muzak's synth pad (`spad`, −17 dB) rose 0.1–2.4 dB in its band: none
+of its 30 notes reached 3 dB, masked by the e-piano and vibes comping in the same register. 6 dB
+louder, 4 of 30 notes reach 3 dB; 10 dB louder, 16 of 30, but in B2 only 1 of 9 (under the
+vibes comping) while it covers the intro by 1.5 LU. So the part and its channel are gone, and the
+muzak band is described without it (vibes, e-piano, synth bass, ride, shaker, claves). The
+removal changes the mix by less than 0.1 LU.
+
+Melody channels are untouched; the four compare.py proofs above give the same results. Render
+after these changes: "Render" above.

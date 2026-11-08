@@ -8,7 +8,7 @@
 | Public domain | Yes: Denza died in 1922, Turco in 1903; the 1880 publication is out of copyright everywhere. The arrangement is new; only the melody, its printed harmony and bass are taken from the sources below. |
 | Track | `src/audio/songs/title.ts`, export `title`, id `title`: title screen and attract mode, looping |
 | Key / meter / tempo | F major, 6/8, dotted quarter = 124 (`bpm: 124`, `stepsPerBeat: 3`, `barSteps: 6`, one step = an eighth) |
-| Length | 68.7 s of music (71 bars); intro 2.9 s, loop body 65.8 s (bars 4–71); rendered buffer 72.7 s including the 4 s seam pad |
+| Length | 68.7 s of music (71 bars); intro 2.9 s, loop body 65.8 s (bars 4–71); rendered buffer 74.7 s including the 6 s seam pad |
 
 ## Reference
 
@@ -93,8 +93,9 @@ No `--allow-bars` and no `--resync` are used. The remaining differences:
 | `middle` | 38–55 | 35.81–53.23 | 20–37 | Contrast: A minor, mandolin tremolo lead, guitar arpeggios, pizzicato off-beats, castanets, staccato bassoon answers. C-major half: accordion thirds under the mandolin, accordion chords, string-pad crescendo, clarinet answers. Bar 18: snare/timpani rolls, cymbal swell, trombone C7 swell, xylophone run up |
 | `refrain2` | 56–71 | 53.23–68.71 | 38–53 ornamented | As `refrain`, bigger: trumpet doubles the "Jammo, jammo" call, tuba joins the bass, string pad, louder bass drum, a third crash on the final button; the last bar carries the verse pickup |
 
-`loopFrom: 1` (the verse). The loop window is 2.903 → 68.710 s. The verse pickup is in the last
-bar of both the intro and `refrain2`, so the melody runs straight across the seam.
+`loopFrom: 1` (the verse). The loop window is 2.903 → 68.710 s of music; in the rendered buffer
+playback runs 0 → 74.710 s, then repeats 8.903 → 74.710 s (render-song). The verse pickup is in the
+last bar of both the intro and `refrain2`, so the melody runs straight across the seam.
 
 ## Harmony and bass
 
@@ -164,41 +165,42 @@ inside the sample range. G major would push the octave doubling and the mandolin
 
 ## Render measurements (recorded sample bank)
 
-`node scripts/music/render-song.mjs title out.wav` (header: `instruments: recorded samples (53 sets …)`):
+`node scripts/music/render-song.mjs title out.wav` (header: `instruments: recorded samples (54 sets …)`):
 
 | Measure | Value | Target |
 |---|---|---|
-| Loop body integrated loudness | **−16.4 LUFS** (whole file −16.5) | −16.4 ± 0.5 |
-| Short-term max | −13.8 LUFS | |
-| Sample peak | **−2.93 dBFS** | < −1 dBFS |
-| Soft clipper | 33 samples (0.000 %) | ~0 % |
-| Loop seam mismatch | **−138.5 dBFS** (no jump) | seamless |
-| Spectral balance | < 250 Hz −7.4 dB, 250 Hz–4 kHz −1.0 dB, > 4 kHz −15.7 dB | in line with the other tracks |
+| Loop body integrated loudness | **−16.3 LUFS** (−16.32; whole file −16.5) | −16.4 ± 0.5 |
+| Short-term max | −13.5 LUFS | |
+| Sample peak | **−2.63 dBFS** | < −1 dBFS |
+| Soft clipper | 76 samples (0.001 %) | ~0 % |
+| Loop seam mismatch | **−150.5 dBFS** (no jump) | seamless |
+| Spectral balance | < 250 Hz −7.1 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −15.6 dB | in line with the other tracks |
 | Warnings | none (no skipped channels, no sequencer warnings) | |
 | `gainDb` | −1.5 | |
 
 The lead channel against the mix over the loop body is `acc` −1.2 LU. Per section (scratch
-analysis: section LUFS of the mix, and the lead's solo loudness against it):
+analysis on the same render: gated section LUFS of the mix, the loop sections as they repeat, and
+the lead's solo loudness against it):
 
 | Section | Mix LUFS | Lead vs mix |
 |---|---|---|
-| intro | −18.1 | `acc` −1.0 LU |
-| verse | −17.7 | `acc` −1.4 LU |
-| refrain | −15.7 | `acc` −2.0 LU (`mand` −8.9, `accLo` −12.7) |
-| middle | −18.5 | `mand` −1.3 LU |
+| intro | −17.2 | `acc` −0.8 LU |
+| verse | −17.8 | `acc` −1.4 LU |
+| refrain | −15.5 | `acc` −2.0 LU (`mand` −9.1, `accLo` −13.0) |
+| middle | −18.3 | `mand` −1.3 LU |
 | refrain2 | −14.4 | `acc` −1.8 LU |
 
 **In the browser:** `window.__at.samplerTrack('title')` on `audiotest.html` (Chromium, Vite dev
 server) decodes the MP3 sprites with the browser's decoder, installs them in the music worker and
-renders the track there. The result has the same length as the Node render and nulls against it
-to −90.3 dBFS peak (−110.6 dBFS RMS). Peak −2.93 dBFS and −16.5 LUFS whole-file (ffmpeg
-`ebur128`) in both; the bank loads 53 sets with no failures.
+renders the track there. The result has the same length (3 586 065 samples) and loop window as the
+Node render and nulls against it to −90.3 dBFS peak, one 16-bit step (−110.4 dBFS RMS). Peak
+−2.63 dBFS and −16.5 LUFS whole-file in both; the bank loads 54 sets with no failures.
 
-Bass and percussion against the section mix: upright bass −8 to −14 LU, tambourine −16 to −22,
-castanets −17 to −24, bass drum −10 under the intro stab and about −16 in the refrains, timpani
-−12 to −14 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
-run, crash, cymbal swells) measure −10 to −30 LU while they play. Every channel is audible:
-render-song flags none as inaudible.
+Bass and percussion against the section mix: upright bass −8 to −14 LU, tambourine −17 to −21,
+castanets −18 to −24, bass drum −11 under the intro stab and about −16 in the refrains, timpani
+−12 to −13 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
+run, crash, cymbal swells) measure −10 to −26 LU in the sections where they play. Every channel is
+audible: render-song flags none as inaudible.
 
 ## Review fixes
 
@@ -211,6 +213,44 @@ numbers above are after the fixes; melody channels unchanged, every compare.py p
 | Verse fill (song bar 21): bass walk E2–D2–D♭2 against the C2 timpani roll | Bass falls C3–B♭2–G2 down the C7 chord into C2; the roll stays on C2 for the crescendo into the refrain | Clash scan: no low-register or semitone pairs. Solo bass + timpani over the walk: fundamentals now at 98, 117 and 131 Hz (G2, B♭2, C3; C3 coincides with the timpani's 2nd partial) instead of 69–82 Hz next to the timpani's C2. Ending the roll before the walk would also have been quiet enough (a scratch variant left a ring of −46 dBFS RMS under it, 23 dB below the bass), but the roll would then stop half a bar before the downbeat |
 | Refrain guitar window G3–E4 too narrow for a close F triad, so F was stacked at F4–A4–C5 above the tune | Window A3–F4 (as in the verse); same for the intro stab | Rendered guitar range A3–G4; no comping note above the lead |
 | Verse mandolin chops F4+A4 above the held F4 (bars 6 and 8) | Window A3–F4, `n: 2` (A3+F4, B♭3+E4, B♭3+D4) | Rendered range A3–F4; no comping note above the lead |
+
+## Polish: the cymbal swells on the bright roll
+
+The bank's suspended-cymbal roll (variant 1) is bright (SSO's crescendo roll, spectral centroid
+about 4 kHz on its peak instead of the old VCSL roll's 0.6 kHz). A review had found the three
+swells inaudible with the old, dark roll, and the channel was re-balanced for the bright one
+(`cym` −7.2 → −4.2 dB, the intro swell's velocity 0.5 → 0.55, the middle-section fill's 0.55 → 0.6;
+the verse fill stays at 0.5: it is the most exposed).
+
+A second review found that the swells did not reach their downbeats. The cymbal was gated at 90 %
+of the written length, so the release began 0.1–0.2 s before the downbeat (the intro swell was
+2.2 dB down when the verse arrived), and the roll's crescendo was 0.76 s long, so the 1.94 s intro
+swell grew for 0.76 s and then held flat for 0.85 s. Both are fixed in the sampler (see
+`docs/credits/music-samples.md`): the cymbal plays its written length, and a roll note grows evenly
+over its whole length into its peak on the downbeat (by about 17 dB in the intro swell, 10 dB in
+the 0.97 s fills). The held roll also plays at the stereo loudness of the old VCSL roll now,
+1.5 dB under the bright roll's first build, so the channel is `cym` −4.2 → −2.5 dB and the intro
+swell 0.55 → 0.6: every swell crests where it crested before, now on its downbeat.
+
+Measure (scratch scripts on the full render, recorded bank, the review's method): "crest" and "on
+the downbeat" = the cymbal's own level (`cym` solo, K-weighted, over the 150 ms up to that point) at
+the end of its gate and at the written downbeat; "rise" = the largest third-octave rise of the mix
+over the mix without `cym` (bands 63 Hz–12.5 kHz within 40 dB of the window's loudest) in the last
+150 ms before the downbeat; "cover" = how much the cymbal raises the momentary (400 ms, K-weighted)
+loudness there; "cymbal" / "lead" = their own momentary loudness against the mix.
+
+| Swell | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Lead vs mix |
+|---|---|---|---|---|---|---|
+| intro, bars 1–2 (0.00 s, 1.94 s) | −27.3 → −27.3 dB | −29.5 → **−27.3 dB** | **+11.4 dB** at 3.2 kHz | 0.34 LU | −11.1 LU | `acc` −0.8 LU |
+| verse fill, bar 21 (19.36 s, 0.97 s) | −29.8 → −29.8 dB | −29.7 → **−29.8 dB** | **+13.3 dB** at 4 kHz | 0.21 LU | −13.5 LU | −19.8 LU (the tune rests) |
+| middle fill, bar 55 (52.26 s, 0.97 s) | −27.3 → −27.3 dB | −27.2 → **−27.3 dB** | **+9.0 dB** at 4 kHz | 0.40 LU | −10.7 LU | −9.8 LU (the refrain's pickup) |
+
+The intro swell now grows steadily, about 9 dB/s, from −44.7 dB 0.15 s in to −27.3 dB on the
+downbeat; before, it grew from −36 to −28 dB over its first 0.9 s and then held. Every swell rises
+9.0–13.3 dB in its band in the last 150 ms before its downbeat, is at its loudest there, crests
+under the tune (in the intro the accordion stays 10.3 LU above it) and adds at most 0.40 LU to the
+mix. Melody channels are untouched; the nine compare.py proofs above give the same results. Render
+after the change: the measurement table above.
 
 ## Notes
 

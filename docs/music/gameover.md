@@ -122,8 +122,8 @@ ah@0.00 s, ridi@1.58 s, wah@7.89 s, 8 bars = 12.63 s of grid, plus a 1.16 s tail
 | `ridi` | 2–5 | 1.58–7.89 s on the grid; sounds 1.58–8.81 s | ref. bars 26–29 | "Ridi, Pagliaccio, sul tuo amore infranto!" (accordion, rubato as above). Fermata G5 7.49–8.78 s. |
 | `wah` | 6–8 | 7.89–12.63 s (+1.16 s tail) | original comic coda | A 0.30 s breath after the fermata, then the trombone from step 18: G3 – F#3 – F3 in triplet quarters (9.08 / 9.61 / 10.13 s), E3 "waaah" 10.66–11.96 s with the flexatone wobble. **BONK** at 12.11 s (bar 8, a triplet eighth after beat 2): timpani E2 + slapstick + upright bass E1 + pizzicato E2/B2/E3, which then ring out. |
 
-Total 13.79 s. In the 100 ms before the renderer's final 80 ms fade the mix is at −54.7 dBFS RMS
-(−46.3 dBFS peak), so the ring-out has decayed and the ending is clean.
+Total 13.79 s. In the 100 ms before the renderer's final 80 ms fade the mix is at −59.2 dBFS RMS
+(−50.1 dBFS peak), so the ring-out has decayed and the ending is clean.
 
 ### Harmony (from `bb_vesti.abc` V:2–V:4)
 
@@ -138,7 +138,7 @@ The F#5 of "-di" and "-cio" over the A–C of the accompaniment is Leoncavallo's
 clash. The passing G5s in bar 28 sound against F#4 as in the reduction. A sonority listing found no
 other dissonance. In the coda the trombone descends a minor third, chromatically, from the 3rd to
 the tonic (G – F# – F♮ – E, through the Neapolitan F), unaccompanied: the strings' last E4–B4 has
-died away to about 18 dB under the first "wah". The BONK is an open fifth on E.
+died away to about 20 dB under the first "wah". The BONK is an open fifth on E.
 
 **The intro arpeggio (deliberate change of rhythm).** Leoncavallo writes bar 25's arpeggio as
 four accented eighths from the downbeat. Here the four strokes are compressed into the bar's last
@@ -198,50 +198,55 @@ trombone a quarter-tone flat was also tried for a beating "wobble" on the last n
 
 ## Levels (sample render)
 
-`node scripts/music/render-song.mjs gameover out.wav` (recorded samples, 53 sets):
+`node scripts/music/render-song.mjs gameover out.wav` (recorded samples, 54 sets):
 
 ```text
 gameover: 13.79 s @ 48000 Hz, 70 events
   one-shot (no loop)
   form: ah@0.00s ridi@1.58s wah@7.89s
-  whole: integrated -16.4 LUFS (whole file -16.4), short-term max -14.9 LUFS, RMS -19.6 dBFS, sample peak -4.35 dBFS
-  soft clipper: 0 samples (0.000 %), DC 0.00000, first sound at 0.001 s
-  spectral balance: <250 Hz -11.0 dB, 250 Hz-4 kHz -0.4 dB, >4 kHz -21.8 dB (share of total energy)
+  whole: integrated -16.3 LUFS (whole file -16.3), short-term max -14.3 LUFS, RMS -19.6 dBFS, sample peak -1.54 dBFS
+  soft clipper: 22 samples (0.002 %), DC 0.00000, first sound at 0.001 s
+  spectral balance: <250 Hz -10.3 dB, 250 Hz-4 kHz -0.5 dB, >4 kHz -19.2 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
-  acc          accordion          13      0      -16.8    -0.4       -15.5       -9.0
-  str          strings            11     -6      -27.6   -11.2       -26.1      -15.8
-  vc           cello               7     -3      -29.6   -13.2       -28.5      -15.6
-  cb           contrabass          4     -4      -30.7   -14.3       -33.4      -18.0
-  pz           pizz               15     -3      -30.6   -14.2       -33.3      -12.7
-  db           uprightBass         9     -1      -28.4   -12.0       -28.9      -13.3
-  tbn          trombone            4      2      -18.2    -1.8       -17.8       -4.9
-  flex         flexatone           1     -3      -26.1    -9.7       -30.0      -12.7
-  timp         timpani             1      0      -21.1    -4.7       -26.3       -7.2
-  slap         slapstick           1      0      -28.1   -11.7       -36.8       -6.9
+  acc          accordion          13    0.9      -16.6    -0.3       -14.8       -5.7
+  str          strings            11   -4.2      -27.4   -11.1       -26.3      -15.7
+  vc           cello               7   -3.5      -29.6   -13.2       -27.8      -13.3
+  cb           contrabass          4   -8.5      -30.5   -14.2       -33.5      -20.0
+  pz           pizz               15     -4      -30.8   -14.5       -33.2      -13.7
+  db           uprightBass         9     -1      -28.3   -12.0       -28.9      -13.0
+  tbn          trombone            4      2      -18.3    -2.0       -17.9       -5.5
+  flex         flexatone           1     -3      -26.1    -9.7       -30.0      -12.8
+  timp         timpani             1      1      -21.1    -4.7       -26.3       -7.4
+  slap         slapstick           1      0      -27.8   -11.5       -36.6       -6.7
   warnings: none
 ```
 
-- `gainDb` −3.8 gives −16.39 LUFS over the whole file (one-shot target −16.4 ± 0.5). The peak is
-  −4.35 dBFS, just under the soft clipper's knee (0.62 = −4.15 dBFS), which never engages.
-- The accordion leads the lament (0.4 LU under the mix) and the trombone leads the coda (1.8 LU
+- `gainDb` −3.8 gives −16.35 LUFS over the whole file (one-shot target −16.4 ± 0.5). The peak is
+  −1.54 dBFS, on the BONK (12.109 s): there the slapstick's crack and the timpani stroke's attack
+  add up in phase (each alone peaks at −6.7 dBFS), over the soft clipper's knee (0.62 =
+  −4.15 dBFS). The clipper rounds 22 samples (0.002 %), all in the BONK, and takes 0.2 dB off its
+  peak (−1.37 dBFS before it).
+- The accordion leads the lament (0.3 LU under the mix) and the trombone leads the coda (2.0 LU
   under the mix).
-- Momentary loudness (`ffmpeg -af ebur128`: 400 ms windows every 100 ms, time = window end):
-  the lament (from the cry to the end of the fermata, windows ending 0.8–8.9 s) runs from −21.6
-  LUFS (5.2 s: the catch-breath rest before "sul") to −13.9 LUFS (8.7 s: the fermata). The breath
-  before the trombone dips to −23.3 LUFS (9.2 s). The trombone runs from −20.4 LUFS (11.0 s: the
-  soft start of the "waaah") to −15.3 LUFS (11.8 s: "waaah" + flexatone); the BONK reads −15.6
-  (12.2 s).
-- Sample peaks: the lament (0–9.0 s) −6.83 dBFS at 0.81 s (the second stroke of the arpeggio, with
-  the cry); the trombone −4.79 dBFS at 9.53 s; the BONK −4.35 dBFS at 12.115 s, the track's peak.
-- Accompaniment: strings, cello, contrabass, pizzicato and upright bass sit 11–14 LU under the mix:
+- Momentary loudness (BS.1770 momentary, as `ffmpeg -af ebur128` reports it: 400 ms windows every
+  100 ms, time = window end): the lament (from the cry to the end of the fermata, windows ending
+  0.8–8.9 s) runs from −21.3 LUFS (5.2 s: the catch-breath rest before "sul") to −12.3 LUFS
+  (7.3–7.4 s: the high A5 of "in-FRAN-to" going into the fermata), and the held G5 swells back to
+  −12.8 (8.8 s). The breath before the trombone dips to −22.7 LUFS (9.2 s). The trombone runs from
+  −19.4 LUFS (11.0 s: the soft start of the "waaah") to −15.6 LUFS (11.5 s: "waaah" + flexatone);
+  the BONK reads −15.5 (12.2 s).
+- Sample peaks: the lament (0–9.0 s) −4.31 dBFS at 6.64 s (the accordion's high A5 of
+  "in-FRAN-to" over the strings' chord); the trombone −5.51 dBFS at 9.52 s; the BONK −1.54 dBFS at
+  12.109 s, the track's peak.
+- Accompaniment: strings, cello, contrabass, pizzicato and upright bass sit 11–15 LU under the mix:
   soft, but present on every beat.
 - Pitch (YIN on the accordion stem): medians +2.0 to +3.3 cents on the held notes.
 - No clicks: the only spike in a second-difference scan of the mix (ratio to its 20 ms
   neighbourhood) is the slapstick's crack on the BONK.
 - **Chromium:** `audiotest.html` `__at.samplerTrack('gameover')` decodes the MP3 sprites with
-  Chromium's decoder and renders in the real worker (no console errors, bank report ok, 53 sets).
-  Its output equals the Node render within 16-bit quantization (largest sample difference
-  −87.7 dBFS), at the same −16.4 LUFS / −4.35 dBFS.
+  Chromium's decoder and renders in the real worker (no console errors, bank report ok, 54 sets).
+  Its output equals the Node render within 16-bit quantization (no sample more than one 16-bit
+  step apart, −90.3 dBFS), at the same −16.3 LUFS / −1.54 dBFS.
 
 Other checks: `node scripts/music/export-song.mjs gameover --form` reports no sequencer warnings,
 and `node scripts/music/selftest/formcheck.mjs` says "ok gameover 70 events, 3 form entries,

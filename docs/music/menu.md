@@ -58,19 +58,20 @@ across the bar's middle. A mandolinist lifts and re-strikes, so the first note i
 `C5~:1.75 r:0.25` (a sixteenth's lift; `~` keeps the shortened note in tremolo). compare.py counts
 this as articulation: the scores above are unchanged.
 
-Measured on the mandolin solo render, the last 50 ms before the second note sit below the first
-note's median level by:
+Measured on the mandolin solo render (10 ms RMS envelope), the last 50 ms before the second note
+sit below the first note's median level by (the right-hand column re-measured on the current bank,
+whose mandolin plucks sound on their beat: see the end of this page):
 
-| Bar | Before the lift | With the lift |
+| Bar | Before the lift (earlier bank) | With the lift |
 |---|---|---|
-| 22 | 0.1 dB | 7.7 dB |
-| 26 | 3.2 dB | 8.8 dB |
-| 28 | 0.7 dB | 6.4 dB |
-| A tied whole note (control) | −0.3 dB | −0.3 dB |
+| 22 | 0.1 dB | 9.2 dB |
+| 26 | 3.2 dB | 8.6 dB |
+| 28 | 0.7 dB | 10.6 dB |
+| A whole note, the same 50 ms before its middle (control: the C5 of ref bar 20; the D5 of bar 24 reads 3.1 dB) | −0.3 dB | 1.9 dB |
 
-The 10 ms envelope falls 15–17 dB across the lift, then the new note attacks. The quarter →
-half repeats (verse bars 6 and 8, refrain bar 18) were already re-articulated: there a single
-stroke decays before the tremolo starts.
+The 10 ms envelope falls 11–15 dB under the note's median level across the lift, then the new note
+attacks. The quarter → half repeats (verse bars 6 and 8, refrain bar 18) were already
+re-articulated: there a single stroke decays before the tremolo starts.
 
 **Cross-checks** (same transcriber family, as the brief asks). The mandolin differs from these
 editions exactly where they differ from X:1:
@@ -125,8 +126,8 @@ Other liberties:
 | `chorus` | 18–33 | 25.5–49.5 s | 17–32 | mandolin (lifts before the repeated half notes of bars 22, 26 and 28) | guitar (now with its own low note on the downbeat, voiced from D3 up), bass, light strings pad (A3–G4, below the tune, common tones tied); harp lands the glissando with a rolled G chord, a G7 roll fills the rest of ref bar 25, and a G3→G5 glissando leads into the second refrain |
 | `chorus2` | 34–49 | 49.5–73.5 s | 17–30, coda 35–36 | violin | mandolin second voice (tremolo, sixths then thirds, 7ths resolving), harp arpeggios (a sweep up and back per bar, ringing), accordion after-beats on 2 and 4, bass with approach notes, strings pad very soft. It rises to the coda's high G while the bass walks G–F♯–E down to the turnaround's D |
 
-**Loop.** `loopFrom: 0`: the whole form loops, 49 bars = 73.5 s. Playback runs 0 → 77.5 s, then
-repeats 4.0 → 77.5 s (the renderer's 4 s seam pad). Each pass rises to the coda's high V–I
+**Loop.** `loopFrom: 0`: the whole form loops, 49 bars = 73.5 s. Playback runs 0 → 79.5 s, then
+repeats 6.0 → 79.5 s (the renderer's 6 s seam pad). Each pass rises to the coda's high V–I
 cadence, the song's own ending. The D7 bar then turns that tonic into a dominant at once, and the
 bass walk (G–F♯–E → D) leads there. So the seam reads as a turnaround into the next verse, not as
 the piece ending and starting over. The old loop (`loopFrom: 1`, 72 s) went from that final
@@ -136,14 +137,14 @@ Loudness bar by bar across the seam (K-weighted, the audio as it plays):
 
 | Bar | Loudness |
 |---|---|
-| Last bar (coda G) | −14.8 LUFS |
-| D7 turnaround | −21.7 LUFS |
-| First verse bar | −18.8 LUFS |
+| Last bar (coda G) | −15.5 LUFS |
+| D7 turnaround | −22.6 LUFS |
+| First verse bar | −19.0 LUFS |
 
-The loudest bar of the loop is −14.1 LUFS. The turnaround is a breath between strophes, where the
-old loop dropped straight from the cadence into the verse.
+The loudest bar of the loop is −15.0 LUFS (song bar 27, in the refrain). The turnaround is a
+breath between strophes, where the old loop dropped straight from the cadence into the verse.
 
-Seam mismatch: −134.8 dBFS. No event outlasts the loop end.
+Seam mismatch: −150.5 dBFS. No event outlasts the loop end.
 
 ## Harmony and bass
 
@@ -219,78 +220,72 @@ What remains are the tune's own non-chord tones against the reference harmony:
 
 | Channel | Instrument id | Role | Range | Gain dB |
 |---|---|---|---|---|
-| `mand` | `mandolin` | lead in verse and refrain; tremolo on notes ≥ 𝅗𝅥 (13.3 Hz), single strokes on ♩; grace notes as written; lifts before re-struck repeated notes | D4–G5 | 0 (hum 0.6) |
-| `vln` | `violin` | lead of the second refrain | G4–B5 | −4 |
-| `mandH` | `mandolin` | second voice under the violin, tremolo | E♭4–E♭5 | −6 |
+| `mand` | `mandolin` | lead in verse and refrain; tremolo on notes ≥ 𝅗𝅥 (13.3 Hz), single strokes on ♩; grace notes as written; lifts before re-struck repeated notes | D4–G5 | −2.4 (hum 0.6) |
+| `vln` | `violin` | lead of the second refrain | G4–B5 | −4.9 |
+| `mandH` | `mandolin` | second voice under the violin, tremolo | E♭4–E♭5 | −8.2 |
 | `gtr` | `guitar` (nylon) | fingerpicked arpeggios; notes ring until the chord changes (2 steps at most) | D3–F4 | −8 |
 | `harp` | `harp` | intro arpeggio, glissandi, rolled chords, arpeggios on fixed shapes in the second refrain (strings ring to the bar end unless the bass moves above them) | A2–G5 | −8 |
 | `bass` | `uprightBass` | bass in two | D2–E♭3 | −4.5 |
-| `acc` | `accordionDry` | soft sustained chords, second half of the verse | D3–C4 | −15 |
-| `accC` | `accChord` | after-beats (staccato) in the second refrain | F♯3–F4 | −10 |
-| `str` | `strings` | light pad in the refrains | A3–G4 | −15 |
+| `acc` | `accordionDry` | soft sustained chords, second half of the verse | D3–C4 | −14.2 |
+| `accC` | `accChord` | after-beats (staccato) in the second refrain | F♯3–F4 | −11.9 |
+| `str` | `strings` | light pad in the refrains | A3–G4 | −14 |
 
 All ids are contract instruments and render with recorded samples. Reverb: rt60 1.9 s, wet 1.6 (a
 warm evening room).
 
 ## Measurements (sample render)
 
-`node scripts/music/render-song.mjs menu out.wav --target -17.4` (recorded bank, 53 sets):
+`node scripts/music/render-song.mjs menu out.wav --target -17.4` (recorded bank, 54 sets):
 
 ```
-menu: 77.50 s @ 48000 Hz, 1230 events
-  loop: plays 0 → 77.500 s, then repeats 4.000 → 77.500 s (body 73.500 s = bars 1-49 from section "intro"; seam mismatch -134.8 dBFS)
-  loop body: integrated -17.4 LUFS (whole file -17.5), short-term max -15.9 LUFS, RMS -20.7 dBFS, sample peak -4.99 dBFS
-  soft clipper: 0 samples (0.000 %)
-  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -14.5 dB (share of total energy)
+menu: 79.50 s @ 48000 Hz, 1253 events
+  loop: plays 0 → 79.500 s, then repeats 6.000 → 79.500 s (body 73.500 s = bars 1-49 from section "intro"; seam mismatch -150.5 dBFS)
+  form: intro@0.00s verse@1.50s chorus@25.50s chorus2@49.50s
+  loop body: integrated -17.4 LUFS (whole file -17.5), short-term max -16.0 LUFS, RMS -20.7 dBFS, sample peak -3.79 dBFS
+  soft clipper: 2 samples (0.000 %), DC -0.00000, first sound at 0.001 s
+  spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -14.7 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
-  mand         mandolin           80      0      -18.8    -1.4       -17.1       -6.2
-  vln          violin             34     -4      -18.1    -0.8       -17.1       -8.6
-  mandH        mandolin           30     -6      -29.5   -12.1       -28.8      -16.4
-  gtr          guitar            208     -8      -27.0    -9.7       -26.4      -13.9
-  harp         harp              166     -8      -26.6    -9.2       -25.0      -11.6
+  mand         mandolin           80   -2.4      -18.9    -1.6       -17.0       -5.7
+  vln          violin             34   -4.9      -18.0    -0.6       -17.2       -7.7
+  mandH        mandolin           30   -8.2      -29.4   -12.1       -28.7      -15.2
+  gtr          guitar            208     -8      -26.9    -9.6       -26.3      -12.1
+  harp         harp              166     -8      -26.6    -9.2       -25.2      -10.5
   bass         uprightBass       101   -4.5      -27.0    -9.7       -26.2      -10.6
-  acc          accordionDry       11    -15      -31.5   -14.1       -31.2      -20.6
-  accC         accChord           96    -10      -32.9   -15.5       -33.5      -15.3
-  str          strings            38    -15      -33.1   -15.7       -31.1      -19.1
+  acc          accordionDry       11  -14.2      -31.6   -14.2       -31.3      -20.7
+  accC         accChord           96  -11.9      -33.0   -15.6       -33.8      -18.0
+  str          strings            38    -14      -33.2   -15.8       -31.2      -21.1
   warnings: none
 ```
 
-- **Loudness**: −17.4 LUFS over the loop body (−17.48 at `gainDb` 1.2, so 1.3), the menu target
+- **Loudness**: −17.4 LUFS over the loop body (−17.36 at `gainDb` 1.3), the menu target
   (−17.4 ± 0.5).
-- **Peak** −5.0 dBFS, below the soft clipper's knee (0.62 = −4.2 dBFS), so the clipper never acts.
-  An earlier version touched it with one mandolin stroke, when humanize velocity jitter, the left
-  pan and that stroke's attack added up. The mandolin's humanize scale is 0.6 (a steadier player).
-- **Lead on top**: the mandolin is −1.4 LU and the violin −0.8 LU against the whole mix. Per
-  section (K-weighted, gated), the lead is −1.3 / −1.1 / −1.3 LU below the section mix.
+- **Peak** −3.79 dBFS: a mandolin stroke over the bass in the refrain (35.26 s), just above the soft
+  clipper's knee (0.62 = −4.2 dBFS), so the clipper rounds 2 samples (0.000 %). Humanize velocity
+  jitter, the left pan and a stroke's attack add up there; the mandolin's humanize scale is 0.6 (a
+  steadier player), which keeps it to that one stroke.
+- **Lead on top**: the mandolin is −1.6 LU and the violin −0.6 LU against the whole mix. Per
+  section (K-weighted, gated), the lead is −1.4 / −1.2 / −1.2 LU below the section mix.
 - **Arc** (section loudness):
 
   | Section | Loudness |
   |---|---|
-  | D7 intro / turnaround | −22.7 LUFS |
-  | verse | −18.1 LUFS |
-  | refrain | −17.1 LUFS |
-  | varied refrain | −16.9 LUFS |
+  | D7 intro / turnaround | −22.9 LUFS |
+  | verse | −18.4 LUFS |
+  | refrain | −17.0 LUFS |
+  | varied refrain | −16.7 LUFS |
 
   It builds gently, and the turnaround is a breath before the next strophe.
 - **Chromium**: `audiotest.html` `__at.samplerTrack('menu')` (MP3s decoded by Chromium, real
-  render worker) renders in 1.10 s with no errors. Its output is the same as the Node render, with
-  the same length and the same loop window (192000 → 3720000 samples). The difference is
-  −111.5 dBFS RMS, at most one 16-bit step.
+  render worker, 54 sets) renders in 1.02 s with no errors. Its output is the same as the Node
+  render, with the same length and the same loop window (288000 → 3816000 samples). The difference
+  is −111.6 dBFS RMS, at most one 16-bit step.
 - `npx tsc --noEmit` clean; `node scripts/music/selftest/formcheck.mjs`: `ok menu`.
 
-**Recorded-bank issue, not handled in the song.** Some mandolin zones attack late after their
-marked onset. On single plucks pinned to their own zone:
-
-| Note | Late by |
-|---|---|
-| C5 | +32 ms |
-| C♯4 | +27 ms |
-| D5 | +18 ms |
-| B4 | +8 ms |
-| G4, A4, F♯5, G5 | about +1 ms |
-| E5 | +4 ms |
-
-The choke ends the previous stroke on time, so tremolo on C5, D5, E♭5 and D4 has short holes,
-about 30 ms long, every 150 ms. The sampler owns the bank and is re-detecting these onsets; the
-song does not work around them. After the bank fix, re-measure the mandolin's onsets and
-tremolo, and the lifts above, whose last 50 ms then lose the extra late-onset gap.
+**Recorded-bank issue, fixed in the bank.** When this track was arranged, some mandolin zones
+attacked late after their marked onset (single plucks pinned to their own zone: C5 +32 ms, C♯4
++27 ms, D5 +18 ms, B4 +8 ms, E5 +4 ms, G4, A4, F♯5 and G5 about +1 ms), so tremolo on C5, D5, E♭5
+and D4 had short holes, about 30 ms long, every 150 ms; the song did not work around them. The
+sampler now puts every zone's beat on its heard onset:
+`node scripts/audio/check_instrument_attacks.mjs --only mandolin` measures all 58 mandolin zones
+within −1.0 to +1.7 ms of the beat (median 0.1 ms; C5 0 / 1.0 ms in its two layers, C♯4 −0.1,
+D5 0, B4 0, E5 0.4 / 0.1). The lifts above are re-measured on that bank.

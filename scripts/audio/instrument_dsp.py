@@ -209,7 +209,7 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
                   rel_db: float = -12.0, max_walk: float = 0.025, perc_db: float = -10.0, max_pre: float = 0.06,
                   max_attack: float | None = None, fade_in: float = 0.0, min_fade: float = 0.003,
                   sus_db: float = -12.0, sus_win: tuple[float, float] = (0.3, 1.0),
-                  period: float | None = None) -> tuple[int, int, int, dict]:
+                  period: float | None = None, hit_ramp: float | None = None) -> tuple[int, int, int, dict]:
     """Where a zone starts (`st`, everything before is dropped), where its beat is (`on`, the
     sample the mixer puts on the grid) and how many samples to fade in from `st` (`fin`).
     The beat is the PERCEPTUAL onset (where the attack has become loud enough to be heard as the
@@ -235,7 +235,12 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
       point of the (faded) attack, at most max_pre after the start: the build's reference for the
       zone's loop, pitch and loudness windows and the zone's gate anchor (the manifest's beat is then
       moved onto the perceptual onset of the finished zone: build_instruments.sustain_beat).
-    Every zone that does not start from silence gets at least min_fade of fade-in (no click)."""
+    Every zone that does not start from silence gets at least min_fade of fade-in (no click).
+    hit_ramp (s; 'transient' only, for recordings that start right on the hit — percussion trimmed at
+      the stroke): the fade-in covers the pre-roll kept before the attack's rise and never reaches into
+      the rise (min_fade would cut a castanet click or a drum's stroke); a recording with less than
+      pre_ms before its rise gets a hit_ramp anti-click ramp on its first sample instead, and
+      info['hit_pad'] = the silence the zone needs in front (the caller pads it: pre_ms before the rise)."""
     m = to_mono(x) if x.ndim > 1 else x
     n = len(m)
     info: dict = {'attack': mode}
@@ -306,7 +311,16 @@ def attack_points(x: np.ndarray, sr: int, mode: str, *, pre_ms: float = 1.5, loo
     # never start with a step: a zone that starts loud (> -30 dB of its peak, e.g. a sample trimmed
     # into the sound) gets at least min_fade of fade-in, any other non-silent start at least 1 ms
     head = float(np.max(np.abs(m[st:st + max(1, mf // 4)]))) if st < n else 0.0
-    if fin < mf and head > pk * 10 ** (-30 / 20):
+    if hit_ramp is not None and mode == 'transient':
+        # a hit recorded from its stroke: fade the kept pre-roll only (`fin` = rise - st); the zone
+        # that starts on its rise (or with less than pre_ms before it) gets a hit_ramp ramp and is
+        # padded with silence instead, so the MP3 pre-echo and the runtime's pre-roll fade-in (both
+        # before the rise) find silence and the attack plays as recorded
+        fin = max(fin, int(round(hit_ramp * sr)) if head > 0 else 0)
+        info['hit_pad'] = max(0, pre_n - (rise - st))
+        if info['hit_pad']:
+            info['hit_ramp_ms'] = round(fin * 1000 / sr, 2)
+    elif fin < mf and head > pk * 10 ** (-30 / 20):
         fin = mf
         info['anti_click'] = True
     elif fin < int(0.001 * sr) and head > pk * 10 ** (-60 / 20):
@@ -964,6 +978,58 @@ def flatten_sustain_loop(x: np.ndarray, sr: int, ls: int, le: int, range_db: flo
         r = np.linspace(0.0, 1.0, e)
         y[..., ls - e:ls] *= 10 ** (g_db[0] * (0.5 - 0.5 * np.cos(np.pi * r)) / 20)
     return y, env_range_db(y, sr, ls, le, circular=True)
+
+
+def even_crescendo(x: np.ndarray, sr: int, a: int, start_db: float, win: float = 0.15, smooth: float = 0.08,
+                   within_db: float = 1.5, look: float = 1.5, end: int | None = None) -> tuple[np.ndarray, dict]:
+    """A recorded crescendo (a roll) reshaped to grow evenly: its loudness (K-weighted RMS over `win`)
+    rises linearly in dB from start_db re its peak at `a` (the beat) to where the recording first comes
+    within within_db of that peak (`b`, searched over `look` s), by a smooth gain curve (smoothed over
+    `smooth`, tapered into 0 dB at b); the recording is unchanged from b on and keeps its own timbre
+    all along (a roll brightens as it grows). A recorded crescendo grows unevenly — slowly, then by
+    25-30 dB/s near its peak: a note cut there keeps growing under the release and peaks after its end,
+    and a short note ends where the recording is still far below its peak.
+    `end` (sample index): b is that point instead — where the recording holds its peak (the zone's loop
+    starts there) — and start_db is re the recording's level at b: the roll grows evenly all the way into
+    the peak it holds, and a note entered (b - a) - its length after `a` ends on that peak (the runtime
+    does so: ZoneDef.sw), whatever its length.
+    Returns the new signal and details (swell_rate dB/s, swell_ms = b - a, swell_gain dB at a / max / min)."""
+    y = np.array(x, copy=True)
+    m = to_mono(np.atleast_2d(y))
+    n = len(m)
+    k = k_weight(m, sr)
+    cs = np.concatenate([[0.0], np.cumsum(k * k)])
+    h = max(1, int(win * sr) // 2)
+    t = np.arange(n)
+    lo, hi = np.maximum(0, t - h), np.minimum(n, t + h)
+    e = 10 * np.log10((cs[hi] - cs[lo]) / np.maximum(1, hi - lo) + 1e-24)  # centred, clipped at the ends
+    if end is not None:
+        b = int(end)
+        if b >= n or b - a < int(0.1 * sr):
+            return y, {}
+        top = float(e[b])
+        eb = 0.0
+    else:
+        end = min(n, a + int(look * sr))
+        if end - a < int(0.2 * sr):
+            return y, {}
+        top = float(e[a:end].max())
+        b = a + int(np.argmax(e[a:end] >= top - within_db))
+        if b - a < int(0.1 * sr):
+            return y, {}
+        eb = float(e[b]) - top
+    g = np.zeros(n)
+    r = (np.arange(a, b) - a) / (b - a)
+    g[a:b] = top + start_db + (eb - start_db) * r - e[a:b]
+    g[:a] = g[a]
+    s = max(1, int(smooth * sr))
+    gp = np.concatenate([np.full(s, g[0]), g[:b], np.zeros(s)])
+    g[:b] = np.convolve(gp, np.ones(s) / s, mode='same')[s:s + b]
+    tp = min(b, s)
+    g[b - tp:b] *= 0.5 + 0.5 * np.cos(np.pi * (np.arange(tp) + 0.5) / tp)
+    y *= 10 ** (g / 20)
+    return y, {'swell_rate': round((eb - start_db) * sr / (b - a), 1), 'swell_ms': round((b - a) * 1000 / sr),
+               'swell_gain': (round(float(g[a]), 1), round(float(g[:b].max()), 1), round(float(g[:b].min()), 1))}
 
 
 def decay_slope(x: np.ndarray, sr: int, a: int, b: int, period: float | None) -> float | None:

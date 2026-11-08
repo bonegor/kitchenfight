@@ -74,12 +74,22 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
     if not z or not n.get('set'):
         return None
     x, zsr = sprite(n['set'])
-    zone = to_mono(x)[z['o']:z['o'] + min(z['n'], z.get('ls', z['n']))].copy()
-    if z.get('fi'):  # a slow swell entered late fades in (as the runtime plays it)
-        zone[:z['fi']] *= fade_in_curve(z['fi'])
     # (cents: the micro-variation of a repeated take — round robin without a second recording)
     ratio = 2 ** ((n['folded'] - z['p']) / 12 + n.get('cents', 0) / 1200) if not n.get('unpitched') else 2 ** (n.get('cents', 0) / 1200)
     inc = ratio * zsr / out_sr
+    # a crescendo roll (ZoneDef sw / sd) shorter than its swell is read from sw - its gate on, behind a
+    # 30 ms raised-cosine fade-in, its beat the zone's pre-roll into the read (sampled.ts swellEntry)
+    frm = 0
+    if z.get('sw') and z.get('sd') is not None and n.get('dur'):
+        g_src = round(n['dur'] * out_sr) * inc
+        if g_src < z['sw']:
+            frm = int(math.floor(z['sw'] - g_src + 0.5))  # (Math.round)
+    zone = to_mono(x)[z['o'] + frm:z['o'] + min(z['n'], z.get('ls', z['n']))].copy()
+    if frm:
+        nf = max(8, int(math.floor(0.03 * zsr * ratio + 0.5)))
+        zone[:nf] *= fade_in_curve(nf)
+    elif z.get('fi'):  # a slow swell entered late fades in (as the runtime plays it)
+        zone[:z['fi']] *= fade_in_curve(z['fi'])
     # reference at the output rate: zone index i -> output (i - pre) / inc after the onset
     t_out = np.arange(int(len(zone) / inc))
     ref = np.interp(t_out * inc, np.arange(len(zone)), zone)

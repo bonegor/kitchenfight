@@ -156,7 +156,7 @@ export const streets: SongDef = {
     cast: { inst: 'castanets', gain: -6, pan: -0.34, send: 0.1, hum: 0.6 },
     kick: { inst: 'kick', gain: -16, pan: 0, send: 0.05, hum: 0 },
     crash: { inst: 'crash', gain: -6.5, pan: 0.2, send: 0.25, hum: 0 },
-    cym: { inst: 'cymbal', gain: -5.2, pan: -0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -1.2, pan: -0.2, send: 0.25, hum: 0 },
     timp: { inst: 'timpani', gain: -6.8, pan: 0.05, send: 0.2, hum: 0 },
   },
   sections: {
@@ -220,7 +220,7 @@ export const streets: SongDef = {
           [21, 'G#2', 0.7],
           ...Array.from({ length: 12 }, (_, i): [number, string, number] => [42 + i * 0.5, 'E2', 0.3 + i * 0.05]),
         ]),
-        // suspended-cymbal roll into C (variant 1 = roll; the roll exists only below v 0.7)
+        // suspended-cymbal roll into C (variant 1 = the roll, at any velocity)
         hits('cym', [[42, 60, 0.68, 6]], 1),
       ],
     },
@@ -282,7 +282,8 @@ export const streets: SongDef = {
         drums('kick', 'K..k..', KK),
         hits('crash', [[0, 60, 0.7]]),
         hits('timp', Array.from({ length: 12 }, (_, i): [number, string, number] => [90 + i * 0.5, 'E2', 0.3 + i * 0.05])),
-        hits('cym', [[90, 60, 0.65, 6]], 1),
+        // the roll into C2 is louder: the tutti's tambourine and castanets fill its band
+        hits('cym', [[90, 60, 0.9, 6]], 1),
       ],
     },
     C2: {

@@ -2,8 +2,8 @@
  * FOODCOURT (stage 4, La Food Court) — "Torna a Surriento" (Ernesto De Curtis, 1902), turned
  * into soulless shopping-mall MUZAK that keeps getting corrupted.
  *
- * A PA chime, then a cheesy D-major lounge jazz waltz (vibes, FM e-piano, synth pad, bossa synth
- * bass, ride + shaker) plays the song's major strains. When the tune turns to D minor the mall
+ * A PA chime, then a cheesy D-major lounge jazz waltz (vibes, FM e-piano, bossa synth bass, ride +
+ * shaker) plays the song's major strains. When the tune turns to D minor the mall
  * rots: detuned warble lead, minor/chromatic reharmonisation (B♭maj7 tape warp, DmM7, lament
  * bass, German sixth), staccato bassoon creeping, orchestra hits, dark pad, ratchet / toy-whistle
  * glitches — and the real orchestra pushes through the synthetic band, the robot arps heckling it.
@@ -106,9 +106,8 @@ const ROBO_LAST = 'r:4 0:0.5 1 2 3';
  *  their root) */
 const COMP = { lo: 'E3', hi: 'G4', n: 3 };
 const PADR = { lo: 'A3', hi: 'A4', n: 3 };
-/** B2: the steel guitar plays the tune at pitch (D4-D5), so its comping and pad sit below D4 */
+/** B2: the steel guitar plays the tune at pitch (D4-D5), so its comping sits below D4 */
 const COMP_B2 = { lo: 'C3', hi: 'D4', n: 3 };
-const PAD_B2 = { lo: 'D3', hi: 'D4', n: 3 };
 const DARK = { lo: 'F3', hi: 'D4', n: 3 };
 const PAPAR = { lo: 'E3', hi: 'E4', n: 3 };
 
@@ -165,7 +164,6 @@ export const foodcourt: SongDef = {
     sgtr: { inst: 'steelGuitar', gain: -3, pan: -0.12, send: 0.25, hum: 0.4 },
     ep: { inst: 'epiano', gain: -9, pan: -0.22, send: 0.25, hum: 0.3 },
     epL: { inst: 'epiano', gain: -4, pan: -0.05, send: 0.28, hum: 0.2 },
-    spad: { inst: 'synthPad', gain: -17, pan: 0, send: 0.4, hum: 0 },
     sb: { inst: 'synthBass', gain: -5, pan: 0, send: 0.03, hum: 0 },
     robo: { inst: 'roboArp', gain: -5, pan: 0.38, send: 0.15, hum: 0 },
     hat: { inst: 'hatC', gain: -5, pan: 0.25, send: 0.05, hum: 0.3 },
@@ -190,9 +188,11 @@ export const foodcourt: SongDef = {
     tuba: { inst: 'tuba', gain: -7.1, pan: 0, send: 0.06, hum: 0.5 },
     pizz: { inst: 'pizz', gain: -9.9, pan: 0.32, send: 0.15, hum: 0.5 },
     stab: { inst: 'strStab', gain: -12.5, pan: 0.28, send: 0.18, hum: 0.3 },
-    str: { inst: 'strings', gain: -15.3, pan: 0, send: 0.3, hum: 0 },
+    str: { inst: 'strings', gain: -9.3, pan: 0, send: 0.3, hum: 0 },
     timp: { inst: 'timpani', gain: -8, pan: 0, send: 0.2, hum: 0 },
-    cym: { inst: 'cymbal', gain: -11.4, pan: 0.3, send: 0.25, hum: 0 },
+    // clash cymbals on the orchestra's arrivals (the suspended cymbal's mallet strokes are dark at
+    // the attack: the orchestra hits and the tutti covered them)
+    crash: { inst: 'crash', gain: -7, pan: 0.3, send: 0.25, hum: 0 },
     snare: { inst: 'snare', gain: -5, pan: -0.1, send: 0.12, hum: 0.3 },
     tamb: { inst: 'tamb', gain: -3.2, pan: 0.36, send: 0.12, hum: 0.6 },
   },
@@ -205,7 +205,6 @@ export const foodcourt: SongDef = {
         mel('chm', `${CHIME} r:6 | r:6 |`, { vel: 0.72 }),
         mel('cel', `${CHIME} r:6 | r:6 |`, { vel: 0.5, oct: 1 }),
         mel('vib', 'r:6 | r:6 | r:6 | r:3 A5:1 B5 C#6 |', { vel: 0.72 }),
-        pad('spad', { ...PADR, vel: 0.42, from: 2 }),
         comp('ep', EP_WALTZ, { ...COMP, vel: 0.5, from: 2 }),
         mel('sb', 'r:6 | r:6 | D2:3 A2 | E2:3 A1:2 C#2:1 |', { vel: 0.75 }),
         drums('hat', RIDE, HAT, { from: 2 }),
@@ -220,7 +219,6 @@ export const foodcourt: SongDef = {
       parts: [
         mel('vib', B_MEL, { vel: 0.82, oct: 1 }),
         comp('ep', EP_WALTZ, { ...COMP, vel: 0.5 }),
-        pad('spad', { ...PADR, vel: 0.42 }),
         mel('sb', SB_B, { vel: 0.78 }),
         drums('hat', RIDE, HAT),
         drums('shk', SHK, SHAKE),
@@ -238,7 +236,6 @@ export const foodcourt: SongDef = {
         mel('warb', C_MEL_1_END, { vel: 0.85, oct: 1, at: 18 }),
         mel('warb', C_MEL_2, { vel: 0.85, at: 24 }),
         comp('ep', EP_WALTZ, { ...COMP, vel: 0.5, to: 4 }),
-        pad('spad', { ...PADR, vel: 0.42, to: 3 }),
         cresc(pad('dpad', { ...DARK, vel: 0.55, from: 3 }), 0.5, 1),
         mel('sb', SB_C, { vel: 0.78 }),
         drums('hat', RIDE, HAT, { to: 3 }),
@@ -257,7 +254,8 @@ export const foodcourt: SongDef = {
         mel('warb', A_MEL, { vel: 0.92 }),
         mel('bsn', BSN_A, { vel: 0.8 }),
         pad('dpad', { ...DARK, vel: 0.5 }),
-        cresc(pad('str', { lo: 'D3', hi: 'D4', n: 2, vel: 0.5, from: 4 }), 0.3, 1),
+        // the low strings swell through the second half and crest into A1, where the tune rests
+        cresc(pad('str', { lo: 'D3', hi: 'D4', n: 2, vel: 0.5, from: 4 }), 0.45, 1.3),
         // the hit sample is an octave-stacked unison: on A7♭9 it takes the leading tone C♯ (an A
         // stack would rub against the pads' ♭9 B♭3)
         hits('hit', [[0, 'D4', 0.75], [12, 'G3', 0.7], [24, 'Bb3', 0.75], [36, 'C#4', 0.8]]),
@@ -299,7 +297,9 @@ export const foodcourt: SongDef = {
         comp('ep', EP_WALTZ, { ...COMP, vel: 0.45, to: 4 }),
         mel('sb', SB_D, { vel: 0.75 }),
         drums('hat', RIDE, HAT, { to: 4 }),
-        pad('str', { lo: 'E3', hi: 'E4', n: 3, vel: 0.45, to: 4 }),
+        // the soft string pad under the violins (bars 1-4): at 0.66 every chord rises 3.5 dB or more in
+        // its band over the e-piano's comping, 5-7 LU under the violins
+        pad('str', { lo: 'E3', hi: 'E4', n: 3, vel: 0.66, to: 4 }),
         mel('tpt', D_MEL_2, { vel: 0.72, at: 24 }),
         mel('hrn', HRN_D_2, { vel: 0.62, at: 24 }),
         mel('tbn', TBN_D_2, { vel: 0.7, at: 24 }),
@@ -308,7 +308,7 @@ export const foodcourt: SongDef = {
         drums('tamb', TAMB_WALTZ, TAMB, { from: 4, vel: 0.85 }),
         hits('hit', [[24, 'G3', 0.85], [36, 'A3', 0.85]]),
         hits('timp', [[24, 'G2', 0.75], [30, 'A2', 0.6], [36, 'A2', 0.7], [42, 'D2', 0.8]]),
-        hits('cym', [[24, 60, 0.8, 12]], 0),
+        hits('crash', [[24, 60, 0.8]]),
         drums('kick', 'K.....', KICK),
         hits('ratch', [[46, 60, 0.7]], 1),
       ],
@@ -320,7 +320,6 @@ export const foodcourt: SongDef = {
       parts: [
         mel('chm', CHIME, { vel: 0.72 }),
         mel('cel', CHIME, { vel: 0.5, oct: 1 }),
-        pad('spad', { ...PADR, vel: 0.38, from: 1 }),
         mel('sb', 'r:6 | r:2 A1:2 A1:1 C#2:1 |', { vel: 0.7 }),
         drums('hat', TICK, HAT, { vel: 0.7 }),
       ],
@@ -332,7 +331,6 @@ export const foodcourt: SongDef = {
       parts: [
         mel('chm', CHIME_UP, { vel: 0.72 }),
         mel('cel', CHIME_UP, { vel: 0.5, oct: 1 }),
-        pad('spad', { ...PADR, vel: 0.38, from: 1 }),
         mel('sb', 'r:6 | r:2 A1:2 A1:1 C#2:1 |', { vel: 0.7 }),
         drums('hat', TICK, HAT, { vel: 0.7 }),
       ],
@@ -347,7 +345,6 @@ export const foodcourt: SongDef = {
         mel('cel', B_MEL, { vel: 0.5, oct: 2, minDur: 4 }),
         comp('vibC', VIB_COMP, { ...COMP_B2, vel: 0.46, to: 7 }),
         comp('vibC', VIB_PUSH, { ...COMP_B2, vel: 0.46, from: 7 }),
-        pad('spad', { ...PAD_B2, vel: 0.42 }),
         mel('sb', SB_B2, { vel: 0.78 }),
         drums('hat', RIDE, HAT),
         drums('hatO', '......|.....o', OPEN),
@@ -368,7 +365,6 @@ export const foodcourt: SongDef = {
         mel('warb', C_MEL_2, { vel: 0.85, at: 24 }),
         mel('bsn', C_MEL_1_END + C_MEL_2, { vel: 0.66, at: 18, oct: -2, gate: 0.45 }),
         comp('vibC', VIB_COMP, { ...COMP, vel: 0.42, to: 4 }),
-        pad('spad', { ...PADR, vel: 0.42, to: 3 }),
         pad('dpad', { ...DARK, vel: 0.55, from: 3 }),
         mel('sb', SB_C, { vel: 0.8 }),
         // the warp hit doubles the tune's D (a B♭ stack would rub against the maj7 A3 of the pad)
@@ -397,7 +393,7 @@ export const foodcourt: SongDef = {
         arp('robo', ROBO_GAP, { lo: 'D5', hi: 'D6', vel: 0.62, n: 3, from: 3, to: 4 }),
         arp('robo', ROBO_LAST, { lo: 'D5', hi: 'D6', vel: 0.62, n: 3, from: 5, to: 6 }),
         hits('timp', [[0, 'D2', 0.75], [18, 'D2', 0.6], [30, 'A2', 0.65], [36, 'A2', 0.7], [42, 'D2', 0.75]]),
-        hits('cym', [[0, 60, 0.75, 12]], 0),
+        hits('crash', [[0, 60, 0.8]]),
         hits('snare', ROLL(0.4)),
         drums('kick', 'K.....', KICK),
       ],
@@ -420,7 +416,7 @@ export const foodcourt: SongDef = {
         drums('hatO', '......|.....o', OPEN),
         hits('hit', [[24, 'G3', 0.82], [36, 'A3', 0.82], [42, 'D4', 0.85]]),
         hits('timp', [[0, 'D2', 0.75], [24, 'G2', 0.8], [30, 'A2', 0.65], [36, 'A2', 0.75], [42, 'D2', 0.85]]),
-        hits('cym', [[0, 60, 0.75, 12], [24, 60, 0.85, 12]], 0),
+        hits('crash', [[0, 60, 0.85], [24, 60, 0.85]]),
         drums('kick', 'K.....', KICK),
         hits('ratch', [[44, 60, 0.75]], 0),
         hits('whis', [[45, 60, 0.75]], 3),

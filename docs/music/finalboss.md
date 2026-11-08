@@ -8,7 +8,7 @@
 | Public domain | Yes: Verdi died in 1901 and the score was published by Ricordi in 1874, out of copyright everywhere. The arrangement is new; only Verdi's notes (as listed below) are taken from the reference. |
 | Track | `src/audio/songs/finalboss.ts`, export `finalboss`, id `finalboss`: the final boss at 15:00, looping |
 | Key / meter / tempo | G minor (Verdi's key), 4/4, ♩ = 84 (`bpm: 84`, `stepsPerBeat: 8`, `barSteps: 32`: one step = a 32nd note, the note value of Verdi's runs and swirl). Verdi writes *Allegro agitato* ♩ = 80; 84 is a touch more relentless for gameplay. |
-| Length | 65.7 s of music (23 bars): intro 2.86 s (bar 1, played once), loop body 62.86 s (bars 2–23); rendered buffer 69.7 s including the 4 s seam pad |
+| Length | 65.7 s of music (23 bars): intro 2.86 s (bar 1, played once), loop body 62.86 s (bars 2–23); rendered buffer 71.7 s including the 6 s seam pad |
 
 ## Reference
 
@@ -219,12 +219,12 @@ Notes:
 | Section | Song bars | Time (s) | Verdi | Texture |
 |---|---|---|---|---|
 | `intro` | 1 | 0.00–2.86 | — | Doom: tam-tam, organ G1–G2–D3–G3, the "oh" choir humming G minor, timpani roll on D crescendo, suspended-cymbal roll. Played once. |
-| `A` | 2–6 | 2.86–17.14 | 1–5 | **Hammer bar**: tutti G-minor chords on the beats (strings, brass, trumpets, tuba, basses, timpani G), the bass drum THWACKING every off-beat, crash on 1. **Runs**: strings rush down (violins G5…, violas an octave lower), brass chords E♭/G, C♯°7/E, F, D/F♯, trumpet top G-G-G-A-F♯, cellos in 16th arpeggios over the rising bass G–E♭–E–F–F♯, bass drum on 1 and the off-beats. **Chorus** (2 bars): the choir in octaves with trumpets and clarinets in unison sings the motif over the violins' G–F♯ swirl (violas an octave lower), the basses hold G in the first bar, then move G–C–G–C–D (i–iv–i–iv–V) under the triplets, cellos in 8ths, timpani; cadence C–D→G. **Scale**: the unison scale with turns from G5 to G2 (violins; violas one octave below for the first two beats, G4 → E♭3, the basses then continue one octave below from D3; trombones in unison with the violins for the last two beats), bass-drum and cymbal rolls and a timpani roll on D into the next hammer bar. |
-| `A2` | 7–11 | 17.14–31.43 | 6–10 | The same, heavier: tam-tam on 1 (no crash there) and **frying-pan clangs on the four off-beat thwacks** (the kitchen joke), piccolo doubling the runs **one octave above the violins** (G6 → G5), the chorus doubled by trumpets and clarinets in unison and **trombones an octave below**, **organ chords** G2–D3–G3 / C3–E♭3–G3 under the chorus. |
-| `B` | 12–15 | 31.43–42.86 | 11–14 | "Teste David cum Sibylla" in D minor: violins' rising 32nds to an accented high A and falling arpeggios, brass and bass drum on the off-beat accents with the choir's F–E sighs, cellos' arpeggios, basses D–C; the organ doubles the bass line in octaves with a chord tone on top, chord by chord (D–A, C–A, D–G, E–G, A–E); timpani D2 and A2; the B♭–A shake, then the A-major rising scale and the fff A-major blow (crash; tam-tam the second time). Twice, as in Verdi. |
+| `A` | 2–6 | 2.86–17.14 | 1–5 | **Hammer bar**: tutti G-minor chords on the beats (strings, brass, trumpets, tuba, basses, timpani G), the bass drum THWACKING every off-beat, crash on 1, the triangle on blows 2–4. **Runs**: strings rush down (violins G5…, violas an octave lower; the glockenspiel an octave above the violins), brass chords E♭/G, C♯°7/E, F, D/F♯ with the triangle, trumpet top G-G-G-A-F♯, cellos in 16th arpeggios over the rising bass G–E♭–E–F–F♯, bass drum on 1 and the off-beats. **Chorus** (2 bars): the choir in octaves with trumpets and clarinets in unison sings the motif over the violins' G–F♯ swirl (violas an octave lower), the basses hold G in the first bar, then move G–C–G–C–D (i–iv–i–iv–V) under the triplets, cellos in 8ths, timpani; cadence C–D→G. **Scale**: the unison scale with turns from G5 to G2 (violins, the glockenspiel an octave above them down to G5; violas one octave below for the first two beats, G4 → E♭3, the basses then continue one octave below from D3; trombones in unison with the violins for the last two beats), bass-drum and cymbal rolls and a timpani roll on D into the next hammer bar. |
+| `A2` | 7–11 | 17.14–31.43 | 6–10 | The same, heavier: crash and a louder tam-tam on 1 (its roar blooms between the hammer blows) and **frying-pan clangs on the four off-beat thwacks** (the kitchen joke), piccolo doubling the runs **one octave above the violins** (G6 → G5), the chorus doubled by trumpets and clarinets in unison and **trombones an octave below**, **organ chords** G2–D3–G3 / C3–E♭3–G3 under the chorus. |
+| `B` | 12–15 | 31.43–42.86 | 11–14 | "Teste David cum Sibylla" in D minor: violins' rising 32nds to an accented high A and falling arpeggios, brass and bass drum on the off-beat accents with the choir's F–E sighs, cellos' arpeggios, basses D–C; the organ doubles the bass line in octaves with a chord tone on top, chord by chord (D–A, C–A, D–G, E–G, A–E); timpani D2 and A2; the B♭–A shake, then the A-major rising scale and the fff A-major blow (crash, a suspended-cymbal swell into it; tam-tam the second time). The triangle rings with the off-beat accents, the glockenspiel doubles the violins' top line an octave up. Twice, as in Verdi. |
 | `brk` | 16–19 | 42.86–54.29 | motif of 3–4 | The cartoon break: the motif sneaks by on bassoons in octaves (staccato, bars 1–2), then on skeleton xylophone + piccolo an octave above (bars 3–4), over an oom-pah that keeps the pulse: tuba on every beat, pizzicato chords on every off-beat (G3–G4–B♭4 under the motif's chromatic bar, so no D meets its E♭; then G minor / C minor), timpani G and bass drum on beats 1 and 3, a woodblock tick on the off-beats, a slapstick crack on beat 4½ of bars 2 and 4. |
 | `gath` | 20–21 | 54.29–60.00 | motif of 3–4 | The storm gathers (its own 2-bar section, so the crescendo spans exactly these bars): the chorus sings the motif again with clarinets in unison and trombones an octave below, crescendo 0.8 → 1.1 (trombones 0.75 → 1.1); the violas swirl G4–F♯4 underneath, crescendo 0.55 → 1.1; the basses and tenors hum a low G ("oh"); the basses and cellos in 8ths, G in the first bar, then G–C–G–C–D (i–iv–i–iv–V) under the triplets; timpani G and a G roll (G minor and C minor both contain G); cymbal roll. |
-| `bld` | 22–23 | 60.00–65.71 | — | The dominant build: rising D-scale runs per beat (D3→D4→D5→D6), brass stabs and the choir on D7 in crescendo, horns, organ D2–A2–D3 then D2–A2–C3–F♯3, basses in 8ths then 16ths, timpani on D, bass-drum and cymbal rolls; the sustained parts cut off on beat 4½ so the hammer blows land on a clean G minor. → loop to `A`. |
+| `bld` | 22–23 | 60.00–65.71 | — | The dominant build: rising D-scale runs per beat (D3→D4→D5→D6), brass stabs and the choir on D7 in crescendo, horns, organ D2–A2–D3 then D2–A2–C3–F♯3, basses in 8ths then 16ths, timpani on D, bass-drum and cymbal rolls, the triangle on the brass stabs of bar 2; the sustained parts cut off on beat 4½ so the hammer blows land on a clean G minor. → loop to `A`. |
 
 Loop: `loopFrom: 1` (section `A`, bar 2), body 22 bars = 62.86 s. The build ends on D7 and the loop
 restarts on the G-minor hammer blows, as the intro's D roll does on the first pass.
@@ -255,9 +255,11 @@ restarts on the G-minor hammer blows, as the intro's D roll does on the first pa
 | `timp` | `timpani` | G with the hammer chords, D rolls, D/A in B, G on 1 and 3 in the break, G roll in `gath`, D in the build |
 | `bd` | `bassDrum` | the off-beat THWACKS (hits, ff layer), off-beat accents in B, beats 1 and 3 in the break |
 | `bdR` | `bassDrum` | rolls (variant 1; velocity kept under 0.5, the only layer with a roll) |
-| `crash` | `crash` | piatti on the A hammer bar, the chorus entries (A, A2), A2's scale and the fff blows of B |
-| `cym` | `cymbal` | suspended-cymbal rolls (variant 1, velocity under 0.7) into the hammer bars and the build |
-| `tam` | `tamtam` | intro, A2 downbeat, end of B |
+| `crash` | `crash` | piatti on the hammer bars' downbeats (A, A2), the chorus entries (A, A2), A2's scale and the fff blows of B |
+| `cym` | `cymbal` | suspended-cymbal rolls (variant 1: the bank's bright crescendo roll, at its peak on the downbeat it swells into; velocity 0.28–0.67) into the hammer bars, the fff blows of B and the build |
+| `tam` | `tamtam` | intro, A2 downbeat, end of B (the last two at velocity 1.3 / 1.2) |
+| `tri` | `triangleInst` | the tutti accents: hammer blows 2–4 and the runs bar's chords (A, A2), the off-beat accents of B, the brass stabs of the build |
+| `glock` | `glock` | the violins an octave up: the runs and the first half of the scale (A, A2), the top line of "teste David" (B) |
 | `pan` | `panClang` | frying-pan clangs on the A2 thwacks |
 | `wb`, `slap` | `woodblock`, `slapstick` | break ticks and cracks |
 
@@ -274,50 +276,55 @@ instrument, are on A2).
 node scripts/music/render-song.mjs finalboss out.wav
 ```
 
-Recorded samples (53 sets). 69.71 s @ 48 kHz, 2244 events.
+Recorded samples (54 sets). 71.71 s @ 48 kHz (with the 6 s loop pad), 2523 events.
 
 | Measure | Value |
 |---|---|
-| Loop body (bars 2–23, 62.86 s) | **−16.4 LUFS** integrated (whole file −16.6), short-term max −13.6 LUFS, RMS −19.2 dBFS |
-| Sample peak | **−2.36 dBFS** |
-| Soft clipper | 122 samples (0.002 %) |
-| Loop seam | −94.1 dBFS mismatch |
-| Spectral balance | < 250 Hz −6.7 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −22.4 dB |
-| Lead | `choir` −20.9 LUFS solo (−4.5 LU); the chorus as heard (`choir,trpC,clar`) −1.5 LU in A's chorus bars, with `tbn` −2.0 LU in A2's; bassoons −2.2 LU and xylophone + piccolo −2.1 LU in the break; `choir,clar,tbn` −1.5 LU in `gath` |
-| Other channels (loop body, vs mix) | strings `vln` −6.2 LU, brass −8.2, trumpets `trpC` −6.3, trombones −8.7, organ −8.3, clarinets −8.5, bass drum −10.0, timpani −11.9 |
+| Loop body (bars 2–23, 62.86 s) | **−16.3 LUFS** integrated (−16.32; whole file −16.5), short-term max −14.3 LUFS, RMS −19.2 dBFS |
+| Sample peak | **−1.54 dBFS** |
+| Soft clipper | 312 samples (0.005 %) |
+| Loop seam | −131.9 dBFS mismatch |
+| Spectral balance | < 250 Hz −6.7 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
+| Lead | `choir` −20.6 LUFS solo (−4.3 LU); the chorus as heard (`choir,trpC,clar`) −1.4 LU in A's chorus bars, with `tbn` −1.7 LU in A2's; bassoons −2.6 LU and xylophone + piccolo −2.0 LU in the break; `choir,clar,tbn` −1.6 LU in `gath` |
+| Other channels (loop body, vs mix) | strings `vln` −6.4 LU, brass −8.7, trumpets `trpC` −6.6, trombones −8.8, organ −8.0, clarinets −8.6, bass drum −10.0, timpani −11.9, tam-tam −10.9, glockenspiel −12.8, cymbal −15.4, triangle −16.1, crash −18.3 |
 | Warnings | none |
 | `gainDb` | −7.8 |
 
-Per section (LUFS over each section, solo renders of channel groups):
+Per section (gated LUFS over each section, the loop sections as they repeat; solo renders of
+channel groups: strings = violins, violas, sustained strings, cellos, basses and pizzicato; brass +
+tuba = brass, trumpets, trombones, horns and tuba; percussion = timpani, bass drums, crash, cymbal,
+tam-tam, triangle, glockenspiel, pan, woodblock and slapstick):
 
 | | intro | A | A2 | B | brk | gath | bld |
 |---|---|---|---|---|---|---|---|
-| mix | −20.8 | −16.8 | −15.6 | −15.7 | −18.1 | −17.5 | −15.7 |
-| choir + choirO + trpC + clar | −24.6 | −17.9 | −18.7 | −19.3 | — | −19.7 | −22.0 |
-| strings | — | −20.5 | −19.7 | −22.7 | −26.9 | −25.0 | −19.9 |
-| brass + tuba | — | −23.6 | −22.2 | −25.5 | −27.5 | −27.1 | −23.4 |
-| bassoons + piccolo + xylophone | — | — | −22.6 | — | −20.2 | — | — |
-| organ | −28.3 | — | −26.9 | −23.9 | — | — | −24.4 |
-| percussion | −24.9 | −24.8 | −24.2 | −25.4 | −26.0 | −28.1 | −24.5 |
+| mix | −20.7 | −16.7 | −15.8 | −15.2 | −18.0 | −18.1 | −15.6 |
+| choir + choirO + trpC + clar | −24.3 | −18.2 | −19.3 | −18.0 | — | −20.4 | −21.5 |
+| strings | — | −20.4 | −19.9 | −23.5 | −26.7 | −25.0 | −20.2 |
+| brass + tuba | — | −23.8 | −22.7 | −25.7 | −27.4 | −27.0 | −23.1 |
+| bassoons + piccolo + xylophone | — | — | −22.1 | — | −20.3 | — | — |
+| organ | −29.2 | — | −27.3 | −23.3 | — | — | −24.3 |
+| percussion | −24.3 | −23.4 | −22.6 | −23.8 | −25.1 | −28.2 | −23.5 |
 
 — = the group does not play there (at most a reverb tail of the previous section).
 
-Per bar (K-weighted LUFS of the mix over each bar; loop body −16.4):
+Per bar (K-weighted LUFS of the mix over each bar, the loop as it repeats; loop body −16.3):
 
 | Bars | Section | LUFS per bar |
 |---|---|---|
-| 2–6 | A | −18.7, −16.3, −15.1, −16.8, −18.0 |
-| 7–11 | A2 | −17.6, −14.6, −13.7, −16.1, −17.5 |
-| 12–15 | B | −16.0, −15.3, −15.9, −15.5 |
-| 16–19 | brk | −18.0, −18.3, −18.1, −17.6 |
-| 20–21 | gath | −18.1, −17.0 |
-| 22–23 | bld | −17.8, −14.3 |
+| 2–6 | A | −18.8, −15.8, −15.5, −17.2, −16.6 |
+| 7–11 | A2 | −17.7, −14.5, −14.5, −16.7, −16.2 |
+| 12–15 | B | −15.2, −15.2, −15.2, −15.1 |
+| 16–19 | brk | −17.3, −18.7, −18.2, −17.6 |
+| 20–21 | gath | −19.0, −17.3 |
+| 22–23 | bld | −17.5, −14.3 |
 
-The break and the gathering are a breath, not a drop-out: at most 1.9 LU under the loop body
+The break and the gathering are a breath, not a drop-out: at most 1.8 LU under the loop body
 (before the review fixes they reached −22.4 LUFS, 6 LU under it, and the loop swung 8.5 LU; now
-the quietest bar outside the gappy hammer bar is −18.3 and the loudest −13.7).
+the quietest bar is −19.0, the gathering's first, and the loudest −14.3, the build's last).
 
-What the review asked to make audible (mix vs the mix without the channel, same bars):
+What the review asked to make audible (mix vs the mix without the channel, same bars; measured
+when the review fixes went in, on the bank of that time and before the polish below, whose own
+measurements of the crash, tam-tam, cymbal, triangle and glockenspiel are at the end):
 
 | Element | Contribution |
 |---|---|
@@ -329,8 +336,9 @@ What the review asked to make audible (mix vs the mix without the channel, same 
 | Organ | A2 chorus +1.6 dB at 150–600 Hz; B +1.2 dB at 30–120 Hz and +1.7 dB at 150–600 Hz; build +2.0 dB at 30–120 Hz; intro +2.0 dB at 30–120 Hz |
 | `gath` | lead (`choir,clar,tbn`) −19.0 LUFS against −22.9 for everything else; violas' swirl +1.2 dB at 1–6 kHz |
 
-In the hammer bars the envelope alternates chord (beat) and bass-drum stroke (off-beat); below
-120 Hz the off-beat thwacks stand about 5.5 dB above the chords (RMS over each 16th, A and A2).
+In the hammer bars the envelope alternates chord (beat) and bass-drum stroke (off-beat); at the
+review fixes, below 120 Hz the off-beat thwacks stood about 5.5 dB above the chords (RMS over each
+16th, A and A2).
 
 ## Changes after the review
 
@@ -351,3 +359,106 @@ In the hammer bars the envelope alternates chord (beat) and bass-drum stroke (of
 - Timpani A1 → A2 in B. The `gath` roll is on G (on D it rubbed against C minor).
 - The violas' half of the unison scale is one octave below the violins (it was two, G3 → E♭2), so
   the line runs on into the basses' D3.
+
+## Polish: the bright cymbal roll, the tam-tam, and high-frequency life
+
+**Method** (scratch script on the full render, recorded bank, the review's method): for each note,
+the largest third-octave rise of the mix over the mix without that channel (63 Hz–12.5 kHz, bands
+within 40 dB of the window's loudest); a part is heard when its notes rise 3 dB or more in their
+own band. Windows: rolls over their last 150 ms, hits over their first 100 ms, the tam-tam also
+over its bloom. "Cymbal vs mix" and "lead vs mix" are momentary (400 ms, K-weighted) loudness at
+that point; the lead is the chorus with its doublings, or the violins.
+
+**Cymbal rolls.** The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll,
+spectral centroid about 4 kHz on its peak instead of 0.6 kHz). A review had found every swell
+inaudible with the old roll; with the new one, at the unchanged `cym` gain (+5.9 dB), each swell
+crested clearly but under the tune.
+
+A second review found that the rolls did not reach their downbeats: the cymbal was gated at 90 % of
+the written length, so the release began before each downbeat (B's swells were 0.6 dB down at the
+fff blows), and the roll's crescendo was 0.76 s long, so B's 1.07 s swells held flat at their end
+while the short rolls (0.36 and 0.71 s) ended below the roll's peak. Both are fixed in the sampler
+(see `docs/credits/music-samples.md`): the cymbal plays its written length, and every roll note
+grows evenly over its whole length into its peak on the downbeat, so its crest is now set by its
+velocity alone; the held roll also plays at the stereo loudness of the old VCSL roll, 1.5 dB under
+the bright roll's first build. Re-balanced so every roll crests where it crested before (within
+0.4 dB, the cymbal's own K-weighted level over the 150 ms up to it), now on its downbeat: `cym` gain
++5.9 → +5.4 dB, A's and A2's four-roll crescendo 0.35 / 0.45 / 0.55 / 0.66 → 0.28 / 0.37 / 0.45 /
+0.55, B's swells 0.45 / 0.55 → 0.55 / 0.67. The 0.36 s rolls of A and A2 now end in the roll's
+bright peak (4–12 kHz 3–6.5 dB higher at the same crest), and the four join into one crescendo:
+each grows 4 dB and starts within 1.5 dB of where the one before it ended.
+
+Rises in the last 150 ms before each downbeat (each roll note); cover, cymbal and lead there for the
+loudest:
+
+| Swell (velocities) | Rise on the downbeat (each roll note) | Cover | Cymbal vs mix / lead vs mix |
+|---|---|---|---|
+| intro (0.3 → 0.62) | +13.7, +24.3, **+28.5 dB** | 0.55 LU | −9.4 LU / (doom pad only) |
+| A, into A2's hammer (0.28 → 0.55) | +8.7, +12.0, +17.9, **+19.8 dB** | 0.26 LU | −12.0 / −3.6 LU |
+| A2, into B (0.28 → 0.55) | +8.0, +12.1, +19.9, **+18.0 dB** | 0.27 LU | −12.6 / −3.3 LU |
+| B, into each fff blow (0.55 / 0.67) | **+11.5 / +13.8 dB** | 0.17 / 0.30 LU | −14.4 / −11.9 LU against −3.0 / −3.2 LU |
+| gath (0.3 → 0.45) | +7.7, **+13.0 dB** | 0.12 LU | −16.1 / −4.4 LU |
+| bld, into the loop (0.3 → 0.66) | +2.8, +6.3, +8.8, **+25.7 dB** | 0.47 LU | −10.0 / −5.1 LU |
+
+(The build's roll is a crescendo out of the texture: its first quarter-beat is under the band, its
+end rises 26 dB where the sustained parts cut off on beat 4½.)
+
+**Tam-tam** (review: the A2-downbeat and end-of-B strokes rose 0.3 / 0.6 dB). A tam-tam's stroke is
+a dull thud (its first 100 ms sit at 250 Hz, 30 dB under its bloom), and its roar blooms over the
+next second; under the tutti's downbeat no level makes the thud itself heard. So: the **crash is
+restored on A2's downbeat** (it had been left out for the pan clangs, which stay clear: their rises
+are +10.1, +17.3, +16.5, +24.3 dB), and both strokes are louder (velocity 0.8 → 1.3 and
+0.75 → 1.2) so the roar is heard:
+
+| Stroke | First 100 ms | 0.1–0.6 s | 0–1 s | 0.3–1.5 s | Cover (0.1–0.6 s) |
+|---|---|---|---|---|---|
+| A2 downbeat, before (v 0.8) | +0.7 dB | — | +0.7 dB | +1.4 dB | — |
+| A2 downbeat, after (v 1.3) + crash | +1.5 dB; **crash +20.6 dB** | **+5.0 dB** | +2.7 dB | **+4.2 dB** | 1.5 LU |
+| end of B, before (v 0.75) | +1.0 dB | — | +1.5 dB | +5.3 dB | — |
+| end of B, after (v 1.2) | +2.3 dB | **+4.7 dB** | **+3.6 dB** | **+10.8 dB** | 0.8 LU |
+
+Per section the tam-tam sits 11.9 LU under the mix in A2 and 12.9 in B (the chorus 3.5 and 2.9).
+
+**High-frequency life.** The track was much darker than the other nine: render-song's > 4 kHz
+share −22.2 dB (the review measured −22.6 on the old bank) against −14.7 (menu) … −19.4
+(foodcourt); spectral centroid 718 Hz (scratch FFT of the loop body) against 839–1063 Hz. Its
+orchestra (strings, choir, organ, brass, timpani, bass drum) leaves 5–11 kHz nearly empty: the 8 kHz
+octave held 3–5 dB less of the energy than in `boss`, `gameover` or `foodcourt`. The reverb's
+low-pass (7000 → 9000 / 12000 / 16000 Hz) and its damping (0.5 → 0.8) change the share by under
+0.1 dB (its send is band-limited and half-rate), so they stay. The additions, all on the tutti's
+own accents and lines:
+
+- the **triangle** on the hammer blows 2–4 and the runs bar's chords (A, A2), on the off-beat
+  accents of B, and on the brass stabs of the build (gain 0 dB); it stays off the crash's beats, so
+  the crashes keep their +16 to +24 dB;
+- the **glockenspiel** an octave above the violins: the runs and the first half of the scale (A,
+  A2), the top line of "teste David" (B) (gain −4 dB);
+- the **crash** restored on A2's downbeat and the **cymbal swells** into B's fff blows (above).
+
+| > 4 kHz share | intro | A | A2 | B | brk | gath | bld | loop (render-song) |
+|---|---|---|---|---|---|---|---|---|
+| before | −22.0 | −23.1 | −23.0 | −26.5 | −17.1 | −26.0 | −23.1 | **−22.2 dB** |
+| after | −21.8 | −18.0 | −18.5 | −19.8 | −17.0 | −25.9 | −20.1 | **−18.8 dB** |
+
+(The "after" row is the current render, with the cymbal rolls on their downbeats.)
+The loop's > 4 kHz share is now −18.8 dB, inside the other tracks' range, between `boss` (−18.5)
+and `gameover` (−19.2): the air above 4 kHz that the orchestra lacked is the brightness this polish
+set out to give it, and the goal is met on that measure. By its spectral centroid the track is still
+the darkest of the ten: 791 Hz over the loop body, against 839 Hz (`victory`) to 1077 Hz (`menu`)
+for the others (scratch Welch spectrum of the mono loop body, master output). That is its low-mid
+weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.4 dB of the
+total, the others −9.3 to −12.5 dB: trombones, tuba, organ pedal, timpani, cellos and basses, the
+bass drum), which pulls a full-band centroid down. Above 250 Hz its centroid is 1041 Hz, inside the
+others' 947–1403 Hz; its 2–5 kHz presence and its > 4 kHz share, each against its own 250 Hz–2 kHz
+band (−10.8 and −15.9 dB), are inside theirs (−6.0 to −14.4 and −11.0 to −18.3 dB). Moving the
+full-band centroid into the others' range would take about +1.5 dB over all of 2–5 kHz, or 2 dB less
+at 125–250 Hz: a different balance from the Dies irae's, which keeps its weight. The new parts are
+heard without leading:
+
+| Part | Notes rising ≥ 3 dB | Median rise | Part vs mix (momentary, median) | Per section (LU): part / chorus / violins |
+|---|---|---|---|---|
+| triangle | 35 of 35 | +13.6 dB | −16.7 LU | A −14.8 / −1.5 / −5.9; A2 −15.6 / −3.5 / −6.0; B −20.1 / −2.9 / −11.3 |
+| glockenspiel | 132 of 132 | +16.8 dB | −12.6 LU | A −10.5; A2 −11.5; B −16.6 |
+
+Loop body −16.3 LUFS, peak −1.54 dBFS, soft clipper 0.005 %, no warnings (table above). Melody
+channels are untouched; all compare.py commands above give the same results.
