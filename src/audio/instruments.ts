@@ -61,6 +61,9 @@ export interface Sample {
    *  recordings sum louder or softer by up to ~3 dB with their relative offset; the takes now start together
    *  on their onsets) */
   gainAt?: (gate: number) => number;
+  /** with gainAt: the gain of the note's reverb send (its mid: two takes' coherent sum changes the mono energy apart
+   *  from the stereo one, so the send keeps the mid energy the songs were balanced with) */
+  sendAt?: (gate: number) => number;
 }
 
 export interface InstDef {

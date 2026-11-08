@@ -67,12 +67,16 @@ let CHOKE_FADE = 192;
 let CAP_FADE = 24000;
 /** a note whose pre-roll starts before t = 0 (a first-bar note) fades in from the buffer start: over
  *  CLIP_FADE_MIN_SEC (linear) — and a sustained note, whose clipped pre-roll is a build-up, over as much
- *  of it as was clipped (raised cosine, at most CLIP_FADE_MAX_SEC), but never past its onset: a fade
- *  that reached into the attack would make the note late */
+ *  of it as was clipped (raised cosine, CLIP_FADE_MIN_SEC..CLIP_FADE_MAX_SEC), ending by its onset or at
+ *  most CLIP_FADE_PAST_SEC after it: a note on the song's first beat whose build-up is cut away enters at
+ *  -20..-6 dB of its peak, and a 2 ms fade of that is a bright click (up to +6 dB of HF re its sustain);
+ *  5 ms keep it 8 dB or more under the sustain's HF and soften the first attack by a few ms */
 const CLIP_FADE_MIN_SEC = 0.002;
 const CLIP_FADE_MAX_SEC = 0.01;
+const CLIP_FADE_PAST_SEC = 0.005;
 let CLIP_FADE_MIN = 96;
 let CLIP_FADE_MAX = 480;
+let CLIP_FADE_PAST = 240;
 
 // ---------------------------------------------------------------------------------------------
 // Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
@@ -276,6 +280,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   CAP_FADE = Math.round(CAP_FADE_SEC * sr);
   CLIP_FADE_MIN = Math.max(1, Math.round(CLIP_FADE_MIN_SEC * sr));
   CLIP_FADE_MAX = Math.max(CLIP_FADE_MIN, Math.round(CLIP_FADE_MAX_SEC * sr));
+  CLIP_FADE_PAST = Math.max(CLIP_FADE_MIN, Math.round(CLIP_FADE_PAST_SEC * sr));
   const lastOn = new Map<string, MixEv>();
   for (const ev of mixEvs) {
     if (!ev.inst.choke) continue;
@@ -473,10 +478,10 @@ function preOfGate(s: Sample, gate: number): number {
   }
 }
 
-/** Loudness gain of a note gated after `gate` samples (Sample.gainAt; 1 when that fails). */
-function gainOfGate(s: Sample, gate: number): number {
+/** Loudness gain of a note gated after `gate` samples (Sample.gainAt, or `fn`; 1 when that fails). */
+function gainOfGate(s: Sample, gate: number, fn = s.gainAt): number {
   try {
-    const g = s.gainAt ? s.gainAt(gate) : 1;
+    const g = fn ? fn(gate) : 1;
     return Number.isFinite(g) && g > 0 ? g : 1;
   } catch {
     return 1;
@@ -522,14 +527,16 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   // plain copy up to the release / end fade, then release decay × end fade
   const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
-  // two takes summed: the note at the loudness the songs were balanced with (Sample.gainAt)
+  // two takes summed: the note at the loudness the songs were balanced with (Sample.gainAt; its reverb send, the mid,
+  // Sample.sendAt)
   const lg = s.gainAt ? gainOfGate(s, ev.gate) : 1;
-  const gs = ev.gs * lg;
+  const gs = ev.gs * (s.sendAt ? gainOfGate(s, ev.gate, s.sendAt) : lg);
   // a note clipped at the start of the buffer (pre-roll before t = 0) fades in: plucked / struck notes
   // over CLIP_FADE_MIN (their transient is right at the onset); sustained notes over the build-up they
-  // lost, up to CLIP_FADE_MAX but ending by their onset (ev.st), raised cosine
+  // lost, CLIP_FADE_MIN..CLIP_FADE_MAX, ending by their onset (ev.st) or at most CLIP_FADE_PAST after it,
+  // raised cosine
   const sus = ev.inst.kind === 'sustain';
-  const nIn = i0 <= 0 ? 0 : Math.min(a - i0, sus ? Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX, ev.st)) : CLIP_FADE_MIN);
+  const nIn = i0 <= 0 ? 0 : Math.min(a - i0, sus ? Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX, Math.max(ev.st, CLIP_FADE_PAST))) : CLIP_FADE_MIN);
   const fin = sus ? (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn) : (i: number): number => (i - i0) / nIn;
   if (sr2) {
     const gL = ev.bl * lg;

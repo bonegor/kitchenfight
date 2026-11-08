@@ -70,7 +70,7 @@ export async function loadAudio(songsIndex = '') {
     `export { SONGS } from ${songs};`,
     `export { renderSong, clearSampleCache } from ${src('render.ts')};`,
     `export { INSTRUMENTS, NEW_IDS, FALLBACK_TRIM_DB } from ${src('instruments.ts')};`,
-    `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice, onsetPower, perceptualOnset } from ${src('sampled.ts')};`,
+    `export { installSampleBank, SAMPLED_SPECS, INSTRUMENT_ALIASES, debugChoice, debugTakes, onsetPower, perceptualOnset } from ${src('sampled.ts')};`,
     `export { SAMPLE_SETS } from ${src('assets/inst/manifest.ts')};`,
     `export { Slicer } from ${src('dsp.ts')};`,
     `export { compileSong } from ${src('sequencer.ts')};`,
