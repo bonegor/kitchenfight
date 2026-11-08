@@ -221,7 +221,7 @@ export const finalboss: SongDef = {
     bd: { inst: 'bassDrum', gain: 3, pan: 0.05, send: 0.22, hum: 0 },
     bdR: { inst: 'bassDrum', gain: 5, pan: 0.05, send: 0.22, hum: 0 },
     crash: { inst: 'crash', gain: -6.1, pan: -0.15, send: 0.3, hum: 0 },
-    cym: { inst: 'cymbal', gain: 5.9, pan: 0.2, send: 0.3, hum: 0 },
+    cym: { inst: 'cymbal', gain: 5.4, pan: 0.2, send: 0.3, hum: 0 },
     tam: { inst: 'tamtam', gain: -5, pan: 0, send: 0.35, hum: 0 },
     // the bright end of the orchestra (strings, choir, organ and brass leave 4-12 kHz nearly empty):
     // the triangle on the tutti accents, the glockenspiel doubling the violins an octave up
@@ -267,7 +267,7 @@ export const finalboss: SongDef = {
         hits('bd', BD_A),
         hits('bdR', [[144, 60, 0.3, 8], [152, 60, 0.45, 8]], 1),
         hits('crash', [[0, 60, 0.95], [64, 60, 0.7]]),
-        hits('cym', [[144, 60, 0.35, 4], [148, 60, 0.45, 4], [152, 60, 0.55, 4], [156, 60, 0.66, 4]], 1),
+        hits('cym', [[144, 60, 0.28, 4], [148, 60, 0.37, 4], [152, 60, 0.45, 4], [156, 60, 0.55, 4]], 1),
         hits('tri', TRI_A),
         mel('glock', GLOCK_A, { vel: 0.7, oct: 1 }),
       ],
@@ -304,7 +304,7 @@ export const finalboss: SongDef = {
         // the downbeat: crash and tam-tam (its roar blooms between the hammer blows)
         hits('tam', [[0, 60, 1.3]]),
         hits('crash', [[0, 60, 0.8], [64, 60, 0.8], [128, 60, 0.7]]),
-        hits('cym', [[144, 60, 0.35, 4], [148, 60, 0.45, 4], [152, 60, 0.55, 4], [156, 60, 0.66, 4]], 1),
+        hits('cym', [[144, 60, 0.28, 4], [148, 60, 0.37, 4], [152, 60, 0.45, 4], [156, 60, 0.55, 4]], 1),
         hits('tri', TRI_A),
         mel('glock', GLOCK_A, { vel: 0.7, oct: 1 }),
       ],
@@ -327,7 +327,7 @@ export const finalboss: SongDef = {
         hits('tam', [[124, 60, 1.2]]),
         // suspended-cymbal swells into the fff blows, the triangle on the off-beat accents (the
         // crash has the blows), the glockenspiel on the violins' top line an octave up
-        hits('cym', [[48, 60, 0.45, 12], [112, 60, 0.55, 12]], 1),
+        hits('cym', [[48, 60, 0.55, 12], [112, 60, 0.67, 12]], 1),
         hits('tri', [4, 12, 20, 28, 36, 44].flatMap((s): Array<[number, number, number]> => [[s, 60, s % 16 === 4 ? 0.7 : 0.6], [s + 64, 60, s % 16 === 4 ? 0.7 : 0.6]])),
         mel('glock', `${GLOCK_T(T1_VLN)} | ${GLOCK_T(T2_VLN)} | ${GLOCK_T(T1_VLN)} | ${GLOCK_T(T2_VLN)} |`, { vel: 0.55, oct: 1 }),
       ],

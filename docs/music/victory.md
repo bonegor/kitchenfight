@@ -276,7 +276,7 @@ Fanfare (`march`, `fin`):
 | `snare` | `snare` | after-beats and triplet pickups at 0.65–0.77 (the set's layer 2, which has the snares' crack), 16th build 0.6 → 0.88 (layers 1 → 3) into the final chord | — |
 | `bd` | `bassDrum` | downbeats of bars 2, 5, 8, 12; 1 and 3 in the tutti; final chord and button | — |
 | `crash` | `crash` | clash cymbals: bars 2 and 8, soft piatti on bars 9–11, final chord | — |
-| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1, the roll at any velocity), the recorded roll does the crescendo; velocity 0.42 / 0.66 / 0.60 | — |
+| `cym` | `cymbal` | suspended-cymbal swells into the crashes: **one** roll note each (variant 1, the roll at any velocity), the recorded roll does the crescendo, over the whole note into its downbeat; velocity 0.44 / 0.57 / 0.60 | — |
 | `glock` | `glock` | "ti-ting" on the tag's button, doubling the accordion's top line an octave up | G6–A♭6 |
 | `acc` | `accordion` | the tag: triplet echo + V7–I button | C5–B♭5 |
 | `cast` | `castanets` | the wink in the trumpets' rests (bars 4, 10), the tag's rattle and triplet; in the lap: the call into a (a rattle on beat 3, 0.5 → 0.68, and the "tak" with the pickup on beat 4, 0.8) in the vamp and in the turnaround, and the wink in tail bar 3 (0.52–0.76) | — |
@@ -312,8 +312,8 @@ channels, which play before the loop window, are left out of the channel table b
 victory: 46.52 s @ 48000 Hz, 903 events
   loop: plays 0 → 46.519 s, then repeats 27.818 → 46.519 s (body 18.701 s = bars 15-26 from section "tail"; seam mismatch -150.5 dBFS)
   form: march@0.00s fin@18.70s vamp@20.26s tail@21.82s
-  loop body: integrated -16.5 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.43 dBFS
-  soft clipper: 35 samples (0.001 %), DC -0.00000, first sound at 0.001 s
+  loop body: integrated -16.5 LUFS (whole file -15.9), short-term max -15.5 LUFS, RMS -19.4 dBFS, sample peak -2.46 dBFS
+  soft clipper: 38 samples (0.001 %), DC -0.00000, first sound at 0.001 s
   spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -16.2 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
   cast         castanets          27   -9.3      -37.2   -20.7       -42.3      -12.0
@@ -336,12 +336,12 @@ tremolo picks as notes.
 
 - **Loop body −16.5 LUFS** (target −16.4 ± 0.5) with `gainDb` −1.2: the lap is balanced with its
   own channel gains, so the fanfare keeps its level.
-- **The fanfare is −15.0 LUFS** (−14.96 over 0–20.26 s of this render, short-term max −13.6 LUFS):
+- **The fanfare is −15.0 LUFS** (−14.97 over 0–20.26 s of this render, short-term max −13.7 LUFS):
   1.5 LU above the lap's integrated level, and above every phrase of it. The lap is softer in
   texture too (no brass attacks or cymbals, little energy above 4 kHz).
-- **Peaks:** sample peak −2.43 dBFS, in the fanfare (the downbeat of bar 13, 18.71 s). The loop
-  window peaks at −3.34 dBFS (38.60 s). Of the 35 soft-clipper samples (0.001 %, counted per
-  channel), 21 are in the fanfare and 14 in the loop.
+- **Peaks:** sample peak −2.46 dBFS, in the fanfare (the downbeat of bar 13, 18.71 s, where the
+  bar-12 cymbal swell crests). The loop window peaks at −3.34 dBFS (38.60 s). Of the 38
+  soft-clipper samples (0.001 %, counted per channel), 24 are in the fanfare and 14 in the loop.
 
 **Balance per phrase** of the loop (scratch measurement on the steady-state loop: three copies of
 the playback window, the middle one measured, so every bar has the loop itself before it;
@@ -418,7 +418,8 @@ tail it describes was replaced by the victory lap, see "Changes").
 - **The `cymbal` roll zone (variant 1) was very dark in the sprite** (of its energy, >4 kHz
   −30.9 dB, >8 kHz −77 dB), so the swells read as a mid-range "whoosh" and needed a high channel
   gain. The zone has since been rebuilt from SSO's bright crescendo roll and `cym` re-balanced
-  (+7.2 → +1.2 dB): see "Polish" at the end.
+  (+7.2 → +1.2 dB, then +3 dB when the roll was made to swell into its downbeat): see "Polish" at
+  the end.
 - **The `snare` is dark at the source:** the VCSL rope-tension snare's soft layers are almost all
   drum body. Measured on the first 250 ms, the source `RopeSnare_hi_sn_Main_vl1_rr1.wav` has
   1–4 kHz at −29.8 dB and >4 kHz at −43.8 dB of its energy, and `vl4_rr1` −16.5 / −25.2 dB; the
@@ -454,14 +455,14 @@ ungated per bar / per phrase, momentary = 400 ms.
   after it can shift it, and `gainDb` is unchanged. So the fanfare's measurements (then −15.1 LUFS,
   the peaks, the review fixes) stood. Since then the bank's recalibration (each channel's gain
   offset in commit bf24871) and the cymbal polish have moved it slightly: it now measures
-  −15.0 LUFS (−14.96) with its peak at −2.43 dBFS ("Levels").
+  −15.0 LUFS (−14.97) with its peak at −2.46 dBFS ("Levels").
 - **compare.py:** every statement PASSes at the default thresholds, all at 100 % / 100 % except
   the later-pass check through the turnaround (98.4 %: the listed landing note, see above).
 - **Chromium (the game's real worker):** `audiotest.html` → `__at.samplerTrack('victory')`
   decodes the 54 MP3 sprites with Chromium's decoder (0.45 s), installs them in the render worker
   and renders the track there (0.86 s). The output has the same length (2 232 935 samples =
   46.52 s) and loop window (samples 1 335 273 → 2 232 935 = 27.82 → 46.52 s), the same peak
-  (−2.43 dBFS), and equals the Node render to −90.3 dBFS, one 16-bit step (the page's WAV is
+  (−2.46 dBFS), and equals the Node render to −90.3 dBFS, one 16-bit step (the page's WAV is
   16-bit). There are no console errors, and the bank report is OK with no warnings.
 - **Seam:** mismatch −150.5 dBFS. No note of the loop is held across its end: every part is written
   inside its bar (no sequencer warnings), and the turnaround's last notes (the accordion's pickup
@@ -515,23 +516,37 @@ cache".
 ## Polish: the swells on the bright cymbal roll
 
 The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll, spectral centroid
-about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). With the channel still boosted for
-the old dark roll (+7.2 dB), the swells came through far too strong: the cymbal alone was only 5–8
-LU under the mix at their crests and raised it by up to 1.5 LU, nearly as loud as the trumpets.
-Re-balanced: `cym` gain +7.2 → +1.2 dB (velocities and lengths unchanged).
+about 4 kHz on its peak instead of 0.6 kHz). With the channel still boosted for the old dark roll
+(+7.2 dB), the swells came through far too strong: the cymbal alone was only 5–8 LU under the mix
+at their crests and raised it by up to 1.5 LU, nearly as loud as the trumpets. They were
+re-balanced: `cym` gain +7.2 → +1.2 dB (velocities and lengths unchanged).
 
-Measure (scratch script on the full render, same method as the review): the largest third-octave
-rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
-loudest) in the last 150 ms of the swell; "cover" = how much the swell raises the momentary
-(400 ms, K-weighted) loudness there; "cymbal" / "trumpets" (`tpt` + `tptS`) = their own momentary
-loudness against the mix.
+A second review found that the swells did not reach their downbeats: the cymbal was gated at 90 %
+of the written length, so the release began 0.08–0.14 s before the crash (the intro swell was
+1.3 dB down when the trumpets' first downbeat arrived), and the roll's crescendo was 0.76 s long,
+so the 1.17 and 1.36 s swells grew for 0.76 s and then held. Both are fixed in the sampler (see
+`docs/credits/music-samples.md`): the cymbal plays its written length, and each swell grows evenly
+over its whole length into its peak on the crash. A swell's crest is now set by its velocity alone
+(before, the 0.78 s bar-7 swell ended below the roll's peak), and the held roll plays at the stereo
+loudness of the old VCSL roll, 1.5 dB under the bright roll's first build. Re-balanced so each swell
+crests where it crested before, now on its downbeat: `cym` gain +1.2 → +3 dB, the intro swell
+0.42 → 0.44, the bar-7 swell 0.66 → 0.57 (bar 12 stays at 0.60).
 
-| Swell | Rise before → after | Cover before → after | Cymbal vs mix before → after | Trumpets vs mix |
-|---|---|---|---|---|
-| intro (0.20 s, 1.23 s) | +27.6 → **+21.6 dB** (10 kHz) | 0.82 → **0.22 LU** | −7.7 → **−13.1 LU** | −0.6 LU |
-| bar 7 (10.13 s, 0.70 s) | +26.7 → **+20.7 dB** (7.9 kHz) | 1.53 → **0.44 LU** | −5.3 → **−10.2 LU** | −2.1 LU |
-| bar 12 (17.53 s, 1.05 s) | +15.2 → **+9.6 dB** (6.3 kHz) | 1.34 → **0.39 LU** | −5.9 → **−11.0 LU** | −3.3 LU |
+Measure (scratch scripts on the full render, same method as the review): "crest" and "on the
+downbeat" = the cymbal's own level (`cym` solo, K-weighted, over the 150 ms up to that point) at the
+end of its gate and at the written downbeat; "rise" = the largest third-octave rise of the mix over
+the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's loudest) in the last
+150 ms before the downbeat; "cover" = how much the swell raises the momentary (400 ms, K-weighted)
+loudness there; "cymbal" / "trumpets" (`tpt` + `tptS`) = their own momentary loudness against the
+mix.
 
-Every swell still rises 9.6–21.6 dB in its band at its end, now 7.7–12.5 LU under the trumpets.
-Melody channels are untouched; the nine compare.py proofs above give the same results. Render
-after the change: "Levels" above.
+| Swell | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Trumpets vs mix |
+|---|---|---|---|---|---|---|
+| intro (0.20 s, 1.36 s) | −26.4 → −26.3 dB | −27.7 → **−26.3 dB** | **+16.9 dB** (7.9 kHz) | 0.10 LU | −16.0 LU | −0.5 LU |
+| bar 7 (10.13 s, 0.78 s) | −22.8 → −22.7 dB | −22.8 → **−22.7 dB** | **+20.6 dB** (10 kHz) | 0.42 LU | −10.6 LU | −2.1 LU |
+| bar 12 (17.53 s, 1.17 s) | −22.0 → −22.0 dB | −21.8 → **−22.0 dB** | **+9.2 dB** (6.3 kHz) | 0.26 LU | −12.2 LU | −4.0 LU |
+
+The swells now grow by 6–14 dB over their whole length (the intro's by 14 dB), each at its loudest
+on its crash. Every swell rises 9.2–20.6 dB in its band in the last 150 ms before its downbeat,
+8.2–15.5 LU under the trumpets. Melody channels are untouched; the nine compare.py proofs above
+give the same results. Render after the change: "Levels" above.

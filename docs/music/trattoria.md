@@ -264,10 +264,10 @@ cents apart, a mean of −0.4 cents; that is the instrument's natural shimmer. T
 ±16-cent vibrato around +3 cents. So the accordion and violin unison does not beat audibly.
 
 **The cymbal.** The roll (variant 1) is the bank's rebuilt suspended-cymbal roll: bright (SSO's
-crescendo roll, spectral centroid about 3.7 kHz) and growing evenly into its end. It spans the last
-two bars of the duet, where the melody rests in the final bar, and the "Ah!" of C2 is a hit on the
-loud layer (velocity 1.25 against the channel's −8.7 dB, the hit's level of the previous balance).
-See "Polish" at the end for the measurements.
+crescendo roll, spectral centroid about 4 kHz on its peak), growing evenly over its whole length
+into its peak on C2's downbeat. It spans the last two bars of the duet, where the melody rests in
+the final bar, and the "Ah!" of C2 is a hit on the loud layer (velocity 1.08 against the channel's
+−6.6 dB, the hit's level of the previous balance). See "Polish" at the end for the measurements.
 
 ## Levels (recorded samples)
 
@@ -305,7 +305,7 @@ region stays open for the game's sound effects.
 | glock | −37.5 | −21.1 | −42.2 | −22.8 |
 | tamb | −33.9 | −17.5 | −31.0 | −11.5 |
 | timp | −32.4 | −15.9 | −33.8 | −15.3 |
-| cym | −30.3 | −13.8 | −30.0 | −14.2 |
+| cym | −30.2 | −13.7 | −30.6 | −13.9 |
 
 The whole-loop "vs mix" figures understate the channels that play in only part of the loop, so
 here they are per section. The section's mix loudness comes first. Each channel's solo loudness
@@ -368,24 +368,35 @@ the export name `trattoria` and the `SongDef` shape are unchanged. The song no l
 ## Polish: the bright cymbal roll, and the flute doubling dropped
 
 **Cymbal.** The bank's suspended-cymbal roll was rebuilt bright (SSO's crescendo roll, spectral
-centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). The channel's +10 dB
-boost for the old, dark roll made the new one dominate the duet's last bar: there the cymbal alone
-was 3 LU under the mix and raised it by 3 LU. Re-balanced: `cym` gain −2.2 → −8.7 dB; the "Ah!" hit
-velocity 0.8 → 1.25, which keeps the hit within 0.3 dB of its previous level.
+centroid about 4 kHz on its peak instead of 0.6 kHz). The channel's +10 dB boost for the old,
+dark roll made the new one dominate the duet's last bar: there the cymbal alone was 3 LU under the
+mix and raised it by 3 LU. It was re-balanced: `cym` gain −2.2 → −8.7 dB; the "Ah!" hit velocity
+0.8 → 1.25, which kept the hit within 0.3 dB of its previous level.
 
-Measure (scratch script on the full render, same method as the review): the largest third-octave
+A second review found that the roll did not reach the grand chorus: the cymbal was gated at 90 % of
+the written length, so the release began 0.17 s before C2's downbeat (the roll was 0.8 dB down
+there), and the roll's crescendo was 0.76 s long, so the 1.74 s roll grew for 0.76 s and then held
+flat. Both are fixed in the sampler (see `docs/credits/music-samples.md`): the cymbal plays its
+written length, and the roll grows evenly over its whole length (by about 16 dB) into its peak on
+the downbeat. The held roll also plays at the stereo loudness of the old VCSL roll now, 1.5 dB under
+the bright roll's first build: `cym` −8.7 → −6.6 dB puts the roll's crest where it was (−30.7 dB,
+the cymbal's own K-weighted level over the 150 ms up to it), now on the downbeat, and the hit's
+velocity 1.25 → 1.08 keeps the hit's level (within 0.1 dB).
+
+Measure (scratch scripts on the full render, same method as the review): the largest third-octave
 rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
-loudest), for the roll in its last 150 ms, for the hit in its first 100 ms (in brackets: the first
-300 ms); "cover" = how much the cymbal raises the momentary (400 ms, K-weighted) loudness there.
+loudest), for the roll in its last 150 ms (before: of its gate; now: before the downbeat), for the
+hit in its first 100 ms (in brackets: the first 300 ms); "cover" = how much the cymbal raises the
+momentary (400 ms, K-weighted) loudness there.
 
-| Cymbal | Before | After | Cover before → after | Cymbal vs mix before → after |
-|---|---|---|---|---|
-| roll into C2 (duet bars 19–20, 73.91 s, 1.56 s; the melody rests) | +24.6 dB at 3.2 kHz | **+18.2 dB** at 3.2 kHz | 3.01 → **0.88 LU** | −3.0 → **−7.4 LU** |
-| hit on "Ah!" (C2, 75.94 s) | +7.1 dB at 400 Hz (+8.8) | **+5.8 dB** at 400 Hz (+7.8) | 0.65 → 0.45 LU | −9.3 → −11.6 LU |
+| Cymbal | Before | First re-balance | Now | Cover before → first → now | Cymbal vs mix before → first → now |
+|---|---|---|---|---|---|
+| roll into C2 (duet bars 19–20, 73.91 s, 1.74 s; the melody rests) | +24.6 dB at 3.2 kHz | +18.2 dB at 3.2 kHz | **+23.4 dB** at 5 kHz | 3.01 → 0.88 → **0.86 LU** | −3.0 → −7.4 → **−7.4 LU** |
+| hit on "Ah!" (C2, 75.94 s) | +7.1 dB at 400 Hz (+8.8) | +5.8 dB at 400 Hz (+7.8) | **+6.1 dB** at 400 Hz (+7.8) | 0.65 → 0.45 → 0.54 LU | −9.3 → −11.6 → −10.5 LU |
 
-The roll still leads clearly into the grand chorus, now as a crest rather than the loudest thing
-in the bar. (The hit's slight drop is the roll's release, which overlapped it and is now 6.5 dB
-lower.)
+The roll leads clearly into the grand chorus as a crest, now on its downbeat, rather than the
+loudest thing in the bar. (The hit's figures include the roll's release, which now starts on the
+downbeat, 0.29 s before the hit, instead of 0.46 s before it.)
 
 **Flute.** The flute doubled the C2 tune an octave up, in unison with the violin and the
 mandolin, at −15.6 dB. A review found it inaudible: its notes raised their own third-octave band by

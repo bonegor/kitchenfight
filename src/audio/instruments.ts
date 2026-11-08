@@ -86,7 +86,11 @@ export interface InstDef {
    *  the recording in its sustain with a fast fade-in, so a short note speaks at once (long notes
    *  keep the recorded attack) */
   shortArt?: number;
-  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number): Sample;
+  /** sampled crescendo rolls (the suspended cymbal's variant 1): true when a note's sample depends on
+   *  its length — make(..., gateSec) enters the roll so it reaches its peak as the gate ends, and the
+   *  renderer keys such samples by their gate */
+  swellOf?(midi: number, variant: number, layer: number): boolean;
+  make(sr: number, midi: number, variant: number, lenSec: number, layer?: number, art?: number, gateSec?: number): Sample;
 }
 
 // ---------------------------------------------------------------------------------------------

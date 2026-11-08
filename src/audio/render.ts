@@ -204,11 +204,19 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     } catch {
       layer = 0;
     }
+    const gate = Math.max(1, Math.round(e.d * sr));
+    // a crescendo roll is made for its note's length (it reaches its peak as the gate ends): keyed by it
+    let swell = false;
+    try {
+      swell = !!inst.swellOf && inst.swellOf(e.m, vr, layer);
+    } catch {
+      swell = false;
+    }
     mixEvs.push({
       st,
-      gate: Math.max(1, Math.round(e.d * sr)),
+      gate,
       inst,
-      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}|${art}`,
+      key: `${inst.id}|${e.m}|${vr}|${layer}|${sr}|${art}` + (swell ? `|${gate}` : ''),
       voice: `${e.ch}|${e.m}`,
       chokeAt: Infinity,
       // loop songs: intro notes must be silent by loopStart + P, loop-body notes by the buffer end
@@ -318,12 +326,14 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
   const prof: RenderStats['prof'] = {};
   let made = 0;
   for (const [key, n] of need) {
-    const [id, midiS, vrS, layerS, , artS] = key.split('|');
+    const [id, midiS, vrS, layerS, , artS, gateS] = key.split('|');
     const inst = keyInst.get(key) ?? INSTRUMENTS[id];
     const lenSec = n === 0 ? 0 : Math.max(0.5, Math.ceil(n * 4) / 4);
+    // (crescendo rolls: the note's gate, s)
+    const gateSec = gateS ? +gateS / sr : 0;
     const tt = performance.now();
     if (inst.kind === 'sustain') {
-      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings, +artS));
+      local.set(key, safeMake(inst, sr, +midiS, +vrS, Math.max(lenSec, 0.5), +layerS, warnings, +artS, gateSec));
       track(prof, id, performance.now() - tt);
       made++;
     } else {
@@ -334,7 +344,7 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
         globalCache.set(key, have);
         local.set(key, have);
       } else {
-        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings, +artS);
+        const smp = safeMake(inst, sr, +midiS, +vrS, lenSec, +layerS, warnings, +artS, gateSec);
         const pre = smp.pre ?? 0;
         cachePut(key, smp, n === 0 || (smp.l.length - pre) / sr < lenSec - 0.01);
         local.set(key, smp);
@@ -444,9 +454,9 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
 }
 
 /** Instrument sample, never throwing (a broken instrument renders silence + a warning). */
-function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[], art = 0): Sample {
+function safeMake(inst: InstDef, sr: number, midi: number, vr: number, lenSec: number, layer: number, warnings: string[], art = 0, gateSec = 0): Sample {
   try {
-    const s = art ? inst.make(sr, midi, vr, lenSec, layer, art) : inst.make(sr, midi, vr, lenSec, layer);
+    const s = gateSec > 0 ? inst.make(sr, midi, vr, lenSec, layer, art, gateSec) : art ? inst.make(sr, midi, vr, lenSec, layer, art) : inst.make(sr, midi, vr, lenSec, layer);
     if (s && s.l && s.l.length) return s;
     warnings.push(`empty sample ${inst.id} ${midi}`);
   } catch (e) {

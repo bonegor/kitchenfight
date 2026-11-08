@@ -172,7 +172,7 @@ inside the sample range. G major would push the octave doubling and the mandolin
 | Loop body integrated loudness | **−16.3 LUFS** (−16.32; whole file −16.5) | −16.4 ± 0.5 |
 | Short-term max | −13.5 LUFS | |
 | Sample peak | **−2.63 dBFS** | < −1 dBFS |
-| Soft clipper | 78 samples (0.001 %) | ~0 % |
+| Soft clipper | 76 samples (0.001 %) | ~0 % |
 | Loop seam mismatch | **−150.5 dBFS** (no jump) | seamless |
 | Spectral balance | < 250 Hz −7.1 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −15.6 dB | in line with the other tracks |
 | Warnings | none (no skipped channels, no sequencer warnings) | |
@@ -184,7 +184,7 @@ the lead's solo loudness against it):
 
 | Section | Mix LUFS | Lead vs mix |
 |---|---|---|
-| intro | −17.1 | `acc` −0.8 LU |
+| intro | −17.2 | `acc` −0.8 LU |
 | verse | −17.8 | `acc` −1.4 LU |
 | refrain | −15.5 | `acc` −2.0 LU (`mand` −9.1, `accLo` −13.0) |
 | middle | −18.3 | `mand` −1.3 LU |
@@ -216,28 +216,41 @@ numbers above are after the fixes; melody channels unchanged, every compare.py p
 
 ## Polish: the cymbal swells on the bright roll
 
-The bank's suspended-cymbal roll (variant 1) was rebuilt: it is now bright (SSO's crescendo roll,
-spectral centroid about 3.7 kHz instead of 0.6 kHz) and grows evenly into its end. A review had
-found the three swells inaudible with the old, dark roll. The channel is re-balanced for the new
-one: `cym` gain −7.2 → −4.2 dB, the intro swell's velocity 0.5 → 0.55 and the middle-section fill's
-0.55 → 0.6 (the verse fill stays at 0.5: it is the most exposed).
+The bank's suspended-cymbal roll (variant 1) is bright (SSO's crescendo roll, spectral centroid
+about 4 kHz on its peak instead of the old VCSL roll's 0.6 kHz). A review had found the three
+swells inaudible with the old, dark roll, and the channel was re-balanced for the bright one
+(`cym` −7.2 → −4.2 dB, the intro swell's velocity 0.5 → 0.55, the middle-section fill's 0.55 → 0.6;
+the verse fill stays at 0.5: it is the most exposed).
 
-Measure (scratch script on the full render, recorded bank, same method as the review): the
-largest third-octave rise of the mix over the mix without the `cym` channel (bands 63 Hz–12.5 kHz
-that are within 40 dB of the window's loudest band), in the last 150 ms of the swell, before it
-hands over to the downbeat. "Cover" is how much the cymbal raises the momentary (400 ms,
-K-weighted) loudness there; "cymbal" is its own momentary loudness against the mix.
+A second review found that the swells did not reach their downbeats. The cymbal was gated at 90 %
+of the written length, so the release began 0.1–0.2 s before the downbeat (the intro swell was
+2.2 dB down when the verse arrived), and the roll's crescendo was 0.76 s long, so the 1.94 s intro
+swell grew for 0.76 s and then held flat for 0.85 s. Both are fixed in the sampler (see
+`docs/credits/music-samples.md`): the cymbal plays its written length, and a roll note grows evenly
+over its whole length into its peak on the downbeat (by about 17 dB in the intro swell, 10 dB in
+the 0.97 s fills). The held roll also plays at the stereo loudness of the old VCSL roll now,
+1.5 dB under the bright roll's first build, so the channel is `cym` −4.2 → −2.5 dB and the intro
+swell 0.55 → 0.6: every swell crests where it crested before, now on its downbeat.
 
-| Swell | Before (bright roll, old balance) | After | Cover | Cymbal vs mix | Lead vs mix |
-|---|---|---|---|---|---|
-| intro, bar 1–2 (0.00 s, 1.74 s long) | +4.4 dB at 3.2 kHz | **+7.8 dB** at 3.2 kHz | 0.39 LU | −10.7 LU | `acc` −0.9 LU |
-| verse fill, bar 21 (19.36 s) | +10.1 dB at 4 kHz | **+12.8 dB** at 4 kHz | 0.22 LU | −12.9 LU | (tune rests) |
-| middle fill, bar 55 (52.26 s) | +3.9 dB at 3.2 kHz | **+6.8 dB** at 3.2 kHz | 0.55 LU | −9.4 LU | (tune rests) |
+Measure (scratch scripts on the full render, recorded bank, the review's method): "crest" and "on
+the downbeat" = the cymbal's own level (`cym` solo, K-weighted, over the 150 ms up to that point) at
+the end of its gate and at the written downbeat; "rise" = the largest third-octave rise of the mix
+over the mix without `cym` (bands 63 Hz–12.5 kHz within 40 dB of the window's loudest) in the last
+150 ms before the downbeat; "cover" = how much the cymbal raises the momentary (400 ms, K-weighted)
+loudness there; "cymbal" / "lead" = their own momentary loudness against the mix.
 
-Every swell now rises 6.8–12.8 dB in its band at its end (+8.6 to +11.6 dB over the 200 ms around
-the gate end), crests under the tune (in the intro the accordion stays 9.8 LU above it) and adds at
-most 0.55 LU to the mix. Melody channels are untouched; the nine compare.py proofs above give the
-same results. Render after the change: the measurement table above.
+| Swell | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Lead vs mix |
+|---|---|---|---|---|---|---|
+| intro, bars 1–2 (0.00 s, 1.94 s) | −27.3 → −27.3 dB | −29.5 → **−27.3 dB** | **+11.4 dB** at 3.2 kHz | 0.34 LU | −11.1 LU | `acc` −0.8 LU |
+| verse fill, bar 21 (19.36 s, 0.97 s) | −29.8 → −29.8 dB | −29.7 → **−29.8 dB** | **+13.3 dB** at 4 kHz | 0.21 LU | −13.5 LU | −19.8 LU (the tune rests) |
+| middle fill, bar 55 (52.26 s, 0.97 s) | −27.3 → −27.3 dB | −27.2 → **−27.3 dB** | **+9.0 dB** at 4 kHz | 0.40 LU | −10.7 LU | −9.8 LU (the refrain's pickup) |
+
+The intro swell now grows steadily, about 9 dB/s, from −44.7 dB 0.15 s in to −27.3 dB on the
+downbeat; before, it grew from −36 to −28 dB over its first 0.9 s and then held. Every swell rises
+9.0–13.3 dB in its band in the last 150 ms before its downbeat, is at its loudest there, crests
+under the tune (in the intro the accordion stays 10.3 LU above it) and adds at most 0.40 LU to the
+mix. Melody channels are untouched; the nine compare.py proofs above give the same results. Render
+after the change: the measurement table above.
 
 ## Notes
 

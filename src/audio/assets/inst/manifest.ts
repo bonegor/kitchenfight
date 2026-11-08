@@ -13,6 +13,8 @@
  *   fi  fade-in from the zone start (a slow swell entered late: sustained pre-roll cap)
  *   ga  gate anchor (sustained): a note's gate counts from here, its onset `pre` goes on the beat
  *   dw  dwell weight (sustained): the beat moved from the -10 dB point onto the attack by this much
+ *   sw/sd  crescendo roll: swell length (beat to the held peak, the loop start) and depth (dB at the
+ *       beat re that peak); a roll note is entered so it ends on the peak
  */
 import type { SampleSetDef } from '../../sampled';
 
@@ -1209,7 +1211,7 @@ export const SAMPLE_SETS: SampleSetDef[] = [
     zones: [
       {p:60,lo:55,hi:65,l:0,r:0,o:8192,n:65076,pre:126,g:0.31157,ls:50753,le:65076,dec:-7.703},
       {p:60,lo:55,hi:65,l:1,r:0,o:74420,n:63681,pre:317,g:0.24778,ls:49710,le:63681,dec:-9.315},
-      {p:60,lo:55,hi:65,l:0,r:1,o:139253,n:52570,pre:388,g:0.24639,ls:39905,le:52570},
+      {p:60,lo:55,hi:65,l:0,r:1,o:139253,n:79997,pre:456,g:0.20257,ls:67762,le:79997,sw:67306,sd:-18.0},
     ],
   },
   {

@@ -182,7 +182,7 @@ sections as they repeat; the lead is in bold):
 | V | −17.8 | −4.3 | **accordion −0.1** (phrase 2), **clarinet −1.7** | hammer-bar timpani −4.6 and brass stab −5.7, upright bass −7.4, hammer-call anvil −7.8, guitar −10.0, pans −10.1, pizz −16.7, tambourine −22.0, bass drum −22.5 |
 | T1 | −16.3 | −6.1 | **accordion −2.0** | clarinet −7.5, tuba −9.6, accordion chords −12.4, anvil −16.0, timpani −16.4, slapstick −19.4, tambourine −23.7 |
 | C1 | −17.7 | −6.0 | **mandolin −2.2** | clarinet −6.8, tuba −7.0, timpani −10.2, pizz −14.9, slapstick −16.5, anvil −19.5, woodblock −20.2 |
-| brk | −21.9 | −4.1 | pan −3.9, anvil −4.8 | tuba −3.1, guitar −5.6, slapstick −11.5, timpani −12.8, bass drum −13.2, tambourine −15.3, cymbal −20.0, second anvil −16.4, woodblock −16.9, castanets −19.7 |
+| brk | −21.9 | −4.1 | pan −3.9, anvil −4.8 | tuba −3.1, guitar −5.6, slapstick −11.5, timpani −12.8, bass drum −13.2, tambourine −15.3, second anvil −16.4, woodblock −16.9, castanets −19.7, cymbal −24.0 (its swell starts 14 dB under its crest) |
 | T2 | −14.5 | −2.6 | **trumpet −1.9** | accordion −8.5, tuba −11.8, brass −12.3, horns −12.7, anvil −14.5, pan −14.9, timpani −18.0, slapstick −20.0 |
 | C2 | −14.5 | −3.7 | **trumpet −1.9** | accordion −9.1, turnaround accordion chords −9.7, tuba −10.0, mandolin −10.4, brass −11.5, horns −12.3, timpani −12.6, anvil −15.1, pan −15.4, xylophone −19.3, slapstick −19.7 |
 
@@ -224,22 +224,36 @@ loop body −16.25 LUFS and peak −2.57 dBFS in both, no sample more than one 1
 
 ## Polish: the cymbal roll on the bright roll
 
-The bank's suspended-cymbal roll (variant 1) was rebuilt bright (SSO's crescendo roll, spectral
-centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). The break's roll into the
-tutti, already audible with the old dark roll, came out too strong with the bright one: the
-cymbal alone was 5.7 LU under the mix at its crest and raised the mix by 1.4 LU. Re-balanced:
-`cym` gain −15.8 → −19.3 dB (velocity 0.75 unchanged).
+The bank's suspended-cymbal roll (variant 1) is bright (SSO's crescendo roll, spectral centroid
+about 4 kHz on its peak instead of the old VCSL roll's 0.6 kHz). The break's roll into the tutti,
+already audible with the old dark roll, came out too strong with the bright one: the cymbal alone
+was 5.7 LU under the mix at its crest and raised the mix by 1.4 LU. It was re-balanced: `cym` gain
+−15.8 → −19.3 dB (velocity 0.75 unchanged).
 
-Measure (scratch script on the full render, same method as the review): the largest third-octave
+A second review found that the roll did not reach the tutti: the cymbal was gated at 90 % of the
+written length, so the release began 0.14 s before the downbeat, and the roll's crescendo was
+0.76 s long, so the 1.41 s roll grew for 0.76 s and then held flat. Both are fixed in the sampler
+(see `docs/credits/music-samples.md`): the cymbal plays its written length, and the roll grows
+evenly over its whole length (by about 14 dB) into its peak on T2's downbeat. The held roll also
+plays at the stereo loudness of the old VCSL roll now, 1.5 dB under the bright roll's first build,
+so the channel is `cym` −19.3 → −17.3 dB, which puts the crest where it was (−39.1 dB, the cymbal's
+own K-weighted level over the 150 ms up to it).
+
+Measure (scratch scripts on the full render, same method as the review): the largest third-octave
 rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
-loudest) in the last 150 ms of the roll, the same over 4–12 kHz as one band, "cover" = how much
-the roll raises the momentary (400 ms, K-weighted) loudness there, and the cymbal's own momentary
-loudness against the mix.
+loudest) in the last 150 ms of the roll (before: of its gate; now: before the downbeat), the same
+over 4–12 kHz as one band, "cover" = how much the roll raises the momentary (400 ms, K-weighted)
+loudness there, and the cymbal's own momentary loudness against the mix.
 
 | Roll | Largest third-octave rise | 4–12 kHz rise | Cover | Cymbal vs mix |
 |---|---|---|---|---|
-| brk → T2, bars 32–33 (60.47 s, 1.27 s), before | +16.3 dB (400 Hz) | +9.1 dB | 1.40 LU | −5.7 LU |
-| after | **+12.9 dB** (400 Hz) | **+6.1 dB** | **0.69 LU** | **−8.5 LU** |
+| brk → T2, bars 32–33 (60.47 s, 1.41 s), before | +16.3 dB (400 Hz) | +9.1 dB | 1.40 LU | −5.7 LU |
+| first re-balance (gate end) | +12.9 dB (400 Hz) | +6.1 dB | 0.69 LU | −8.5 LU |
+| now (on the downbeat) | **+24.8 dB** (4 kHz) | **+23.2 dB** | **0.77 LU** | **−8.0 LU** |
+
+At the end of the old gate the largest rise was at 400 Hz, the roll's low wash; on the downbeat it is
+the roll's bright crest, at 4 kHz and +23.2 dB over 4–12 kHz (the trumpet enters there, 3.3 LU
+above the cymbal).
 
 The tune rests in the break (the pots and pans have it), so the roll may lead into the tutti; it
 now crests over the pots without covering them. Melody channels are untouched; the nine compare.py

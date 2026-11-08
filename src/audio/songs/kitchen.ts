@@ -171,7 +171,7 @@ export const kitchen: SongDef = {
     bd: { inst: 'bassDrum', gain: -12, pan: 0, send: 0.15, hum: 0 },
     timp: { inst: 'timpani', gain: -7.8, pan: 0.05, send: 0.2, hum: 0 },
     crash: { inst: 'crash', gain: -14.7, pan: 0.2, send: 0.25, hum: 0 },
-    cym: { inst: 'cymbal', gain: -19.3, pan: -0.2, send: 0.25, hum: 0 },
+    cym: { inst: 'cymbal', gain: -17.3, pan: -0.2, send: 0.25, hum: 0 },
   },
   sections: {
     // The kitchen wakes up: two smiths, the anvil and the frying pan, alone (anvil on 1 and 3, the pan

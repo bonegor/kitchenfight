@@ -981,15 +981,18 @@ def flatten_sustain_loop(x: np.ndarray, sr: int, ls: int, le: int, range_db: flo
 
 
 def even_crescendo(x: np.ndarray, sr: int, a: int, start_db: float, win: float = 0.15, smooth: float = 0.08,
-                   within_db: float = 1.5, look: float = 1.5) -> tuple[np.ndarray, dict]:
+                   within_db: float = 1.5, look: float = 1.5, end: int | None = None) -> tuple[np.ndarray, dict]:
     """A recorded crescendo (a roll) reshaped to grow evenly: its loudness (K-weighted RMS over `win`)
     rises linearly in dB from start_db re its peak at `a` (the beat) to where the recording first comes
     within within_db of that peak (`b`, searched over `look` s), by a smooth gain curve (smoothed over
     `smooth`, tapered into 0 dB at b); the recording is unchanged from b on and keeps its own timbre
     all along (a roll brightens as it grows). A recorded crescendo grows unevenly — slowly, then by
     25-30 dB/s near its peak: a note cut there keeps growing under the release and peaks after its end,
-    and a short note ends where the recording is still far below its peak. Evened out (start_db / the
-    crescendo's length slower than a release decays), a note cut anywhere is at its loudest at its end.
+    and a short note ends where the recording is still far below its peak.
+    `end` (sample index): b is that point instead — where the recording holds its peak (the zone's loop
+    starts there) — and start_db is re the recording's level at b: the roll grows evenly all the way into
+    the peak it holds, and a note entered (b - a) - its length after `a` ends on that peak (the runtime
+    does so: ZoneDef.sw), whatever its length.
     Returns the new signal and details (swell_rate dB/s, swell_ms = b - a, swell_gain dB at a / max / min)."""
     y = np.array(x, copy=True)
     m = to_mono(np.atleast_2d(y))
@@ -1000,14 +1003,21 @@ def even_crescendo(x: np.ndarray, sr: int, a: int, start_db: float, win: float =
     t = np.arange(n)
     lo, hi = np.maximum(0, t - h), np.minimum(n, t + h)
     e = 10 * np.log10((cs[hi] - cs[lo]) / np.maximum(1, hi - lo) + 1e-24)  # centred, clipped at the ends
-    end = min(n, a + int(look * sr))
-    if end - a < int(0.2 * sr):
-        return y, {}
-    top = float(e[a:end].max())
-    b = a + int(np.argmax(e[a:end] >= top - within_db))
-    if b - a < int(0.1 * sr):
-        return y, {}
-    eb = float(e[b]) - top
+    if end is not None:
+        b = int(end)
+        if b >= n or b - a < int(0.1 * sr):
+            return y, {}
+        top = float(e[b])
+        eb = 0.0
+    else:
+        end = min(n, a + int(look * sr))
+        if end - a < int(0.2 * sr):
+            return y, {}
+        top = float(e[a:end].max())
+        b = a + int(np.argmax(e[a:end] >= top - within_db))
+        if b - a < int(0.1 * sr):
+            return y, {}
+        eb = float(e[b]) - top
     g = np.zeros(n)
     r = (np.arange(a, b) - a) / (b - a)
     g[a:b] = top + start_db + (eb - start_db) * r - e[a:b]

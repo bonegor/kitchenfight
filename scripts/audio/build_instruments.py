@@ -389,19 +389,23 @@ def gleitz_cands(inst: str, notes: list[str], font: str = 'MusyngKite') -> Calla
 # Set table
 # ---------------------------------------------------------------------------------------------
 
-# The suspended-cymbal roll (set 'cymbal', variant 1): SSO's forte crescendo roll grows from -33 dB to
+# The suspended-cymbal roll (set 'cymbal', variant 1): SSO's forte crescendo roll grows from -36 dB to
 # its peak over 1.6 s (slowly, then by 25-30 dB/s), its spectral centroid from 0.4 to 4 kHz, holds the
-# peak for 0.38 s and rings out. What the songs ask a roll for is a swell into the next downbeat over
-# 0.3-1.8 s: a roll note enters the crescendo at CYM_ROLL_ENTRY (source samples, 44.1 kHz; 17 dB under
-# the peak, where it starts to brighten), grown evenly from CYM_ROLL_SWELL dB (K-weighted, re the peak)
-# into the peak (instrument_dsp.even_crescendo: about 10 dB/s, slower than the 0.6 s release decays,
-# so a note of any length is at its loudest at its end), then looped on the peak. CYM_ROLL_LEVEL (dB re
-# the set's loudness target): the held roll at the level of the VCSL roll it replaced (measured on what the
-# sampler renders, before velocity and channel gains: -18.8 dB K-weighted over 2-2.5 s of a held note),
-# which the songs' cymbal channels were balanced against.
-CYM_ROLL_ENTRY = round(0.9 * 44100)
-CYM_ROLL_SWELL = -9.0
-CYM_ROLL_LEVEL = 0.84
+# peak for 0.4 s (1.72-2.12 s into the recording) and rings out. What the songs ask a roll for is a swell
+# that grows over the whole note into the next downbeat, 0.3-1.9 s long: the zone enters the recording at
+# CYM_ROLL_ENTRY (source samples, 44.1 kHz; 30 dB under the peak) and grows evenly from CYM_ROLL_SWELL dB
+# (K-weighted, re the held peak) into the peak where the recording holds it (CYM_ROLL_HOLD s into the
+# recording: instrument_dsp.even_crescendo with `end`), looped there. The swell keeps the recording's
+# timbre: dark at its soft start, bright (centroid 4 kHz) on the peak. The manifest stores its length
+# (ZoneDef.sw, beat to loop start) and depth (sd): the runtime enters a roll note that much before the
+# peak that it ends on it, a longer note than the swell grows at the slower rate its length gives
+# (sampled.ts renderOne), so every roll is at its loudest at its downbeat. CYM_ROLL_LEVEL (dB re the
+# set's loudness target): the held roll at the stereo loudness (K-weighted power of both channels, as the
+# songs' mixes are measured) of the VCSL roll it replaced: -20.7 dB over its loop at its zone gain.
+CYM_ROLL_ENTRY = round(0.25 * 44100)
+CYM_ROLL_HOLD = 1.78
+CYM_ROLL_SWELL = -18.0
+CYM_ROLL_LEVEL = -0.83
 # anti-click ramp of the hits recorded from their stroke (SetSpec.hit_ramp): castanets, kick, snare
 HIT_RAMP = 0.0002
 
@@ -574,8 +578,8 @@ SETS: list[SetSpec] = [
     SetSpec('castanets', 'worldperc', fixed([
         vc(f'samples/Castanets/{n:02d}.flac', rr=i) for i, n in enumerate((1, 4, 7, 10))]),
             'oneshot', quality=5.5, t_store=0.22, fade_out=0.05, loud_win=(0.0, 0.08), octave=0, hit_ramp=HIT_RAMP,
-            note='FreePats castanets, 4 takes; the recordings start on the click: kept whole behind a 0.2 ms ramp and '
-                 '1.5 ms of silence'),
+            note='FreePats castanets, 4 takes; 3 of them start on the click: kept whole behind a 0.2 ms ramp and '
+                 '1.5 ms of silence; the fourth (10.flac) keeps 1.5 ms of its own pre-roll before the click, faded in'),
     SetSpec('slapstick', 'vcsl', fixed([
         vc(f'{VCSL_I}/Slapstick/slapstick_quiet_rr1.wav', 0, 0), vc(f'{VCSL_I}/Slapstick/slapstick_quiet_rr2.wav', 0, 1),
         vc(f'{VCSL_I}/Slapstick/slapstick_rr1.wav', 1, 0), vc(f'{VCSL_I}/Slapstick/slapstick_rr2.wav', 1, 1)]),
@@ -597,14 +601,17 @@ SETS: list[SetSpec] = [
              mode='sustain', offset=CYM_ROLL_ENTRY, loop_len=0.25, onset_db=-20, fade_in=0.03, swell_db=CYM_ROLL_SWELL,
              level_db=CYM_ROLL_LEVEL, label='cymbal_roll-a-f.wav')]),
             'decay', sr=44100, channels=2, quality=5, t_store=1.5, loop_len=0.35, loud_win=(0.0, 0.5), min_decay=3, octave=0,
-            loud_max=True, loop_min=0.84, loop_max=0.88, xfade=0.06,
+            # (the roll's loop window: from CYM_ROLL_HOLD on, the beat and fade-in about 39 ms into the zone)
+            loud_max=True, loop_min=CYM_ROLL_HOLD - CYM_ROLL_ENTRY / 44100 - 0.039,
+            loop_max=CYM_ROLL_HOLD - CYM_ROLL_ENTRY / 44100 + 0.001, xfade=0.06,
             note='VCSL suspended cymbal hits (variant 0, 2 dynamics) + the SSO crescendo roll (variant 1, one take; '
-                 'VCSL\'s roll is dark: 4-8 kHz at -38 dB): entered 0.9 s into the recorded crescendo (17 dB under its '
-                 'peak, where it starts to brighten) and evened out to grow from 9 dB under the peak into it over 0.76 s '
-                 '(slower than the release decays: a roll note of any length is at its loudest at its end), then looped '
-                 'on the peak (the 0.38 s the player holds it before the cymbal rings out); the held roll plays at the '
-                 'level of the VCSL roll it replaces (the songs were balanced against it). Stereo recordings (one take '
-                 'per articulation)'),
+                 'VCSL\'s roll is dark: 4-8 kHz at -38 dB): entered 0.25 s into the recorded crescendo (30 dB under its '
+                 'peak) and evened out to grow from 18 dB under the peak into it over 1.53 s, keeping the recording\'s '
+                 'timbre (dark at the soft start, bright on the peak), then looped on the peak (the 0.4 s the player '
+                 'holds it before the cymbal rings out). A roll note is entered that much before the peak that it ends '
+                 'on it (a longer note grows at the slower rate its length gives): every roll is at its loudest on the '
+                 'downbeat it swells into. The held roll plays at the stereo loudness (K-weighted, both channels) of '
+                 'the VCSL roll it replaces. Stereo recordings (one take per articulation)'),
     SetSpec('bassdrum', 'vcsl', fixed([
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_mf1.wav', 0, 0), vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_f.wav', 1, 0),
         vc(f'{VCSL_M}/Bass Drum 2/bassdrum_hit_ff.wav', 2, 0),
@@ -815,9 +822,10 @@ def process_zone(spec: SetSpec, src: Sources, c: Cand, octave_shift: float) -> Z
     per = period_of(pitch, sr) if c.pitched else None
     if mode == 'sustain':
         if c.swell_db is not None:
-            # a crescendo roll: grown evenly in dB from its beat into its peak, where the loop is
-            # found next (so a roll note of any length swells into its end: even_crescendo)
-            x, sw = even_crescendo(x, sr, pre, c.swell_db)
+            # a crescendo roll: grown evenly in dB from its beat into the peak the recording holds, where
+            # the loop window starts (the loop is found there next); the runtime enters a roll note so
+            # it ends on that peak (ZoneDef.sw / sd, written by build_set)
+            x, sw = even_crescendo(x, sr, pre, c.swell_db, end=pre + fin + int(spec.loop_min * sr))
             info.update(sw)
         use_sfz = (spec.use_sfz_loop and loop_src and loop_src[1] <= min(x.shape[1], pre + spec.max_sfz_end * sr)
                    and loop_src[0] > pre + fin)
@@ -1203,6 +1211,10 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
             zd['le'] = z.loop[1]
         if z.decay:
             zd['dec'] = round(z.decay, 3)
+        if z.cand.swell_db is not None and z.loop and 'swell_ms' in z.info:
+            # a crescendo roll: its length (beat to the held peak, the loop start) and depth
+            zd['sw'] = z.loop[0] - z.pre
+            zd['sd'] = z.cand.swell_db
         zdefs.append(zd)
         pos += n + GAP
     os.makedirs(os.path.join(OUT_DIR, spec.name), exist_ok=True)
@@ -1271,7 +1283,7 @@ def build_set(spec: SetSpec, src: Sources, report: list[str]) -> dict:
                          if inf.get('hit_pad') else '')
                       + (f" level{z.cand.level_db:+.1f}dB" if z.cand.level_db else '')
                       + (f" swell={inf['swell_rate']}dB/s over {inf['swell_ms']}ms gain(start,max,min)={inf['swell_gain']}dB"
-                         if 'swell_rate' in inf else '')
+                         + (f" sw={zd['sw'] / sr:.3f}s" if 'sw' in zd else '') if 'swell_rate' in inf else '')
                       + (f" spread={inf['pitch_spread']}c" if inf.get('pitch_spread') is not None else '')
                       + (f" check(yin,comb)={inf['pitch_check']}c" if inf.get('pitch_check') is not None else '')
                       + (f" range={inf['loop_range'][0]}/{inf['loop_range'][1]}dB" if inf.get('loop_range') else '')
@@ -1319,6 +1331,8 @@ def write_manifest(sets: list[dict]) -> None:
         ' *   fi  fade-in from the zone start (a slow swell entered late: sustained pre-roll cap)',
         ' *   ga  gate anchor (sustained): a note\'s gate counts from here, its onset `pre` goes on the beat',
         ' *   dw  dwell weight (sustained): the beat moved from the -10 dB point onto the attack by this much',
+        ' *   sw/sd  crescendo roll: swell length (beat to the held peak, the loop start) and depth (dB at the',
+        ' *       beat re that peak); a roll note is entered so it ends on the peak',
         ' */',
         "import type { SampleSetDef } from '../../sampled';",
         '',
@@ -1446,11 +1460,11 @@ def write_credits(sets: list[dict]) -> None:
          '- Orchestra (strings, brass, woodwinds, chorus, organ, harp, mallets, timpani, tam-tam, suspended-cymbal roll):',
          '  "Sonatina Symphonic Orchestra" by Mattias Westlund and Peter Eastman, CC Sampling Plus 1.0; horn section sustains by',
          '  Mattias Westlund, CC BY-SA 3.0; celesta by stamperadam (freesound.org), CC0 1.0; pipe organ: "St. Stephen\'s',
-         '  Anglican" recorded by Nicholas Appleton, CC Sampling Plus 1.0; the cymbal roll is from the cymbal rolls SSO took',
-         '  from davidjwoll (freesound.org), CC Sampling Plus 1.0.',
-         '- Harpsichord, percussion (tambourine, snare, cymbals, bass drums, triangle, shaker, brake drum, anvil, slapstick,',
-         '  woodblock, vibraslap, flexatone, claves, ratchet, toy whistle): "Versilian Community Sample Library" by Versilian',
-         '  Studios, CC0 1.0.',
+         '  Anglican" recorded by Nicholas Appleton, CC Sampling Plus 1.0; the cymbal roll is from SSO, whose README lists',
+         '  "davidjwoll cymbal rolls" (freesound.org) among its sources, CC Sampling Plus 1.0.',
+         '- Harpsichord, percussion (tambourine, snare, clash cymbals, suspended-cymbal strokes, bass drums, triangle, shaker,',
+         '  brake drum, anvil, slapstick, woodblock, vibraslap, flexatone, claves, ratchet, toy whistle): "Versilian Community',
+         '  Sample Library" by Versilian Studios, CC0 1.0.',
          '- Castanets: "World Percussion" — FreePats project, CC0 1.0.',
          '- Orchestra hit: "Musyng Kite" soundfont via midi-js-soundfonts (Benjamin Gleitzman), CC BY-SA 3.0.',
          '', '## Sources', '']
@@ -1520,10 +1534,13 @@ def write_credits(sets: list[dict]) -> None:
           '  right channel; `cymbal` is a stereo recording.',
           '- Variants keep the synth meaning: `timpani` variant 1 is the soft stroke (-4.5 dB); `tamb` accents (4, 5)',
           '  are +2 dB, shakes (2, 3) -3.5 dB; `cymbal` / `bassDrum` variant 1 is the roll at any velocity.',
-          '- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly (about 10 dB/s, from 9 dB under the',
-          '  roll\'s peak, brightening from about 1 to 4 kHz) for its first 0.76 s, then holds the peak — slower than its',
-          '  0.6 s release decays, so a roll note of any length is at its loudest at its end (the downbeat it swells into).',
-          '  The held roll plays at the level of the earlier (VCSL) roll.',
+          '- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly over its whole length and reaches the',
+          '  roll\'s peak as it ends — about 12 dB/s, so a 0.36 s note grows 4 dB and a note of 1.53 s or longer 18 dB (a',
+          '  longer one more slowly); its soft start is dark, its end bright (centroid about 4 kHz). The cymbal\'s gate is',
+          '  the written length, so every roll is at its loudest on the downbeat it swells into and its 0.6 s release',
+          '  starts there; a roll\'s velocity sets that crest. The held roll plays at the stereo loudness of the earlier',
+          '  (VCSL) roll (K-weighted, both channels); on a mono downmix it is 1.3 dB softer than that roll (its two',
+          '  channels are less alike: L/R correlation 0.35, the VCSL roll\'s 0.9).',
           '- Notes written without a variant cycle the takes only, never an articulation: `bassDrum` / `cymbal` / `ratchet`',
           '  / `toyWhistle` stay on variant 0, `timpani` alternates its two takes at the same level (variant 2 = the',
           '  second take at full level), `tamb` and `flexatone` alternate their two plain takes; ask for a roll, a shake or',
@@ -1642,7 +1659,10 @@ def main() -> None:
             if other:
                 o['other_sources'] = other
             o['repo'] = sp.repo
-            o['note'] = sp.note
+        # a set's note is prose about it (the credits print it): always its spec's, so a corrected note
+        # needs no rebuild of the set (--docs-only)
+        if o['name'] in by_name:
+            o['note'] = by_name[o['name']].note
     with open(state_path, 'w') as f:
         json.dump(out, f)
     write_manifest(out)

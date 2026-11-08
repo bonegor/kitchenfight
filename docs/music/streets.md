@@ -143,7 +143,7 @@ notes actually played (`node scripts/music/export-song.mjs streets --per-section
   bass drum.
 - `crash` clash cymbals on the section arrivals (intro, C, A2, C2).
 - `cym` suspended cymbal: the rolls into C and C2 (variant 1, the bank's roll at any velocity: SSO's
-  crescendo roll, bright, growing evenly into its end); the roll into C2 is louder (velocity 0.9
+  crescendo roll, bright, growing evenly over the whole note into its peak on the downbeat); the roll into C2 is louder (velocity 0.9
   against 0.68), because the tutti's tambourine and castanets fill its band.
 - `timp` timpani D2–A2.
 
@@ -163,7 +163,7 @@ refrain's closing A major chord becomes its dominant.
   (buffer window 9.333 → 96.000 s), body 86.667 s = bars 5–108 from section A;
   **seam mismatch −150.5 dBFS**, no event rings past the seam
 - **loop body −16.3 LUFS** (−16.30; whole file −16.5), short-term max −14.8 LUFS, RMS −19.4 dBFS,
-  **sample peak −2.96 dBFS**, soft clipper 31 samples (0.000 %), DC 0
+  **sample peak −2.96 dBFS**, soft clipper 32 samples (0.000 %), DC 0
 - spectral balance: < 250 Hz −7.9 dB, 250 Hz–4 kHz −0.9 dB, > 4 kHz −14.9 dB
 - `gainDb` −2.3, no warnings
 
@@ -185,7 +185,7 @@ refrain's closing A major chord becomes its dominant.
 | cast | castanets | 519 | −6 | −34.4 | −18.1 | −6.8 |
 | kick | kick | 105 | −16 | −33.7 | −17.4 | −18.5 |
 | crash | crash | 4 | −6.5 | −31.6 | −15.3 | −14.0 |
-| cym | cymbal | 2 | −1.2 | −27.9 | −11.6 | −15.2 |
+| cym | cymbal | 2 | −1.2 | −28.9 | −12.6 | −15.5 |
 | timp | timpani | 33 | −6.8 | −28.9 | −12.6 | −11.9 |
 
 Per section (gated integrated loudness of the section, the loop sections as they repeat, and the
@@ -247,7 +247,7 @@ figures are 1–2.5 / 2.5–6 / 6–16 kHz.
 ## Polish: the cymbal rolls on the bright roll
 
 The bank's suspended-cymbal roll (variant 1) was rebuilt bright (SSO's crescendo roll, spectral
-centroid about 3.7 kHz instead of 0.6 kHz; it grows evenly into its end). A review had found both
+centroid about 4 kHz on its peak instead of 0.6 kHz). A review had found both
 rolls inaudible with the old, dark roll. Re-balanced for the new one: `cym` gain −5.2 → −1.2 dB,
 and the roll into C2 velocity 0.65 → 0.9 (the A2 tutti's tambourine and castanets fill 6–12 kHz).
 
@@ -262,6 +262,19 @@ momentary loudness against the mix.
 | B2 → C, bar 44 (35.83 s, 0.75 s) | +4.0 dB at 6.3 kHz | **+6.7 dB** at 6.3 kHz | 0.15 LU | −13.0 LU | −1.9 LU |
 | A2 → C2, bar 92 (75.83 s, 0.75 s) | +1.5 dB at 6.3 kHz | **+6.3 dB** at 6.3 kHz | 0.52 LU | −9.2 LU | −2.1 LU |
 
-Both rolls rise more than 6 dB in their band at their end (+8.3 and +10.4 dB over the 200 ms
-around it) and crest 7 LU or more under the tune. Melody channels are untouched; the five
-compare.py proofs above give the same results. Render after the change: "Render" above.
+Both rolls rose more than 6 dB in their band at the end of their gate (+8.3 and +10.4 dB over the
+200 ms around it) and crested 7 LU or more under the tune.
+
+A second review found that the bank's cymbal rolls did not reach their downbeats: the cymbal was
+gated at 90 % of the written length and the roll's crescendo was 0.76 s long. Both are fixed in the
+sampler (see `docs/credits/music-samples.md`): the cymbal plays its written length and a roll grows
+evenly over its whole length into its peak on the downbeat; the held roll also plays at the stereo
+loudness of the old VCSL roll now, 1.5 dB under the bright roll's first build. With the channel and
+velocities unchanged, these two 0.83 s rolls crest where they did (−24.7 → −24.6 and −20.8 → −20.7 dB,
+the cymbal's own K-weighted level over the 150 ms up to it, now on the downbeat): at their old gate
+end the old roll was still about 2 dB under its plateau, as far as the new roll's crest is under it.
+They now swell by about 7 dB over their whole length. In the
+last 150 ms before the downbeat they rise **+9.6 dB** at 6.3 kHz (cover 0.16 LU, cymbal −13.8 LU
+vs mix, lead −1.9 LU) and **+10.4 dB** at 4 kHz (cover 0.37 LU, cymbal −9.8 LU, lead −2.1 LU): both
+crest 7.7 LU or more under the tune. Melody channels are untouched; the five compare.py proofs above
+give the same results. Render after the change: "Render" above.

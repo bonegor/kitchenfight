@@ -58,6 +58,13 @@ export interface ZoneDef {
   /** dwell weight (sustained zones): how far the beat moved from the -10 dB point onto the attack of
    *  an envelope that dwells below it (the build's perceptual_onset `w`, 0..1; default 0) */
   dw?: number;
+  /** crescendo roll: swell length (samples from the beat to the peak the roll holds, its loop start) and
+   *  depth (dB at the beat re that peak). A roll note is made for its length (InstDef.swellOf): a note
+   *  shorter than the swell is entered that much before the peak that its gate ends on it, a longer one
+   *  plays the whole swell under a gain ramp, so it grows at depth / its length (renderOne). Either way
+   *  the roll is at its loudest when its gate ends, on the downbeat it swells into */
+  sw?: number;
+  sd?: number;
 }
 
 export interface SampleSetDef {
@@ -216,7 +223,9 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   S('woodblock', 'woodblock', 'perc', 0.03, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.6], gainDb: 5.2 }),
   S('vibraslap', 'vibraslap', 'perc', 0.1, { ring: true, unpitched: true, variants: 2, rr: 'set', gainDb: 1.8 }),
   S('flexatone', 'flexatone', 'perc', 0.1, { ring: true, unpitched: true, variants: 4, rr: 'art', rrCycle: [0, 1], gainDb: 4.5 }),
-  S('cymbal', 'cymbal', 'perc', 0.6, { unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 5.1 }),
+  // (gate 1: a roll, variant 1, swells into its written end, the downbeat — its peak is there, not 10 %
+  // of the note earlier with the release under way)
+  S('cymbal', 'cymbal', 'perc', 0.6, { gate: 1, unpitched: true, variants: 2, rr: 'art', layers: [0.7], gainDb: 5.1 }),
   S('bassDrum', 'bassdrum', 'perc', 0.4, { unpitched: true, variants: 2, rr: 'art', layers: [0.5, 0.85], gainDb: 0.4 }),
   S('tamtam', 'tamtam', 'perc', 1.2, { ring: true, unpitched: true, maxLen: 6, variants: 2, rr: 'set', width: 0.4, gainDb: 4.4 }),
   S('claves', 'claves', 'perc', 0.02, { ring: true, unpitched: true, variants: 2, rr: 'set', layers: [0.7], gainDb: 3.9 }),
@@ -731,6 +740,8 @@ function firLowpassInPlace(x: Float32Array, fc: number): void {
 function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
   const gain = Math.pow(10, (spec.gainDb ?? 0) / 20);
   const thresholds = spec.layers ?? [];
+  // (only a set with a crescendo roll makes samples per note length)
+  const swells = set.def.zones.some(isSwell);
   const def: InstDef & { layerOf(v: number): number } = {
     id: spec.id,
     kind: spec.kind,
@@ -751,15 +762,44 @@ function makeSampledInst(spec: SampledSpec, set: StoredSet): InstDef {
       const c = chooseZone(spec, set, midi, 0, layer);
       return c ? { fold: c.fold, shift: c.midi - c.zone.p } : null;
     },
-    make(sr: number, midi: number, variant: number, lenSec: number, layer = 0, art = 0): Sample {
+    swellOf(midi: number, variant: number, layer: number): boolean {
+      if (!swells) return false;
+      const c = chooseZone(spec, set, midi, variant, layer);
+      return !!c && isSwell(c.zone);
+    },
+    make(sr: number, midi: number, variant: number, lenSec: number, layer = 0, art = 0, gateSec = 0): Sample {
       try {
-        return renderZone(spec, set, sr, midi, variant, lenSec, layer, gain, art === 1 && !!spec.short);
+        return renderZone(spec, set, sr, midi, variant, lenSec, layer, gain, art === 1 && !!spec.short, gateSec);
       } catch {
         return { l: new Float32Array(Math.max(1, Math.round(0.05 * sr))), r: null };
       }
     },
   };
   return def;
+}
+
+/** a crescendo roll zone (ZoneDef.sw / sd): looped on its peak, the swell before it */
+const isSwell = (z: ZoneDef): boolean =>
+  z.sw !== undefined && z.sw > 0 && z.sd !== undefined && z.sd < 0 && z.ls !== undefined && z.le !== undefined && z.le - z.ls > 16 && z.sw <= z.ls;
+
+/** fade-in of a roll note entered mid-swell (s): the zone's own entry fade (the build's Cand.fade_in) */
+const SWELL_FADE = 0.03;
+
+/**
+ * A crescendo roll made for a note gated after `gSrc` zone samples (renderOne): where to enter the zone
+ * and the gain ramp to play it under. A note shorter than the swell enters it sw - gSrc after its start
+ * (so its gate ends on the peak; the zone's pre-roll and a SWELL_FADE fade-in in front of its beat, as at
+ * the zone's own start); a longer note plays the whole swell, slowed by a gain ramp (dB, by zone sample
+ * after the beat t: sd·t·(1/sw - 1/gSrc) up to the peak, then sd·(1 - t/gSrc) up to the gate end) so it
+ * grows evenly at sd / its length and reaches the peak as its gate ends.
+ */
+function swellEntry(z: ZoneDef, gSrc: number): { from: number; ramp: ((t: number) => number) | null; until: number } {
+  const sw = z.sw as number;
+  const sd = z.sd as number;
+  if (!(gSrc > 0)) return { from: 0, ramp: null, until: 0 };
+  if (gSrc < sw) return { from: Math.round(sw - gSrc), ramp: null, until: 0 };
+  const k1 = sd * (1 / sw - 1 / gSrc);
+  return { from: 0, ramp: (t: number) => (t <= 0 ? 0 : t <= sw ? k1 * t : t < gSrc ? sd * (1 - t / gSrc) : 0), until: z.pre + Math.ceil(gSrc) };
 }
 
 interface Rendered {
@@ -775,13 +815,19 @@ interface Rendered {
 }
 
 /** Resample one zone to the output rate/pitch: unroll (loop/decay), band-limit, sinc-resample.
- *  short: the short articulation (sustained zones): enter at the loop start with a fast fade-in. */
-function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, cents: number, sr: number, lenSec: number, g: number, short = false): Rendered {
+ *  short: the short articulation (sustained zones): enter at the loop start with a fast fade-in.
+ *  gateSec: a crescendo roll (ZoneDef.sw) made for a note of that gate: entered / ramped so its gate
+ *  ends on the roll's peak (swellEntry; 0 = the whole zone as built). */
+function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, cents: number, sr: number, lenSec: number, g: number, short = false, gateSec = 0): Rendered {
   const shift = (spec.unpitched ? 0 : midi - z.p) + cents / 100;
   const pitchRatio = Math.pow(2, shift / 12);
   const inc = (pitchRatio * set.sr) / sr; // source samples per output sample
   const looped = z.ls !== undefined && z.le !== undefined && z.le - z.ls > 16;
   if (short && looped) return renderShort(set, z, midi, pitchRatio, inc, sr, lenSec, g);
+  // (the gate in zone samples: output samples × inc)
+  const se = gateSec > 0 && isSwell(z) ? swellEntry(z, gateSec * sr * inc) : null;
+  const from = se ? se.from : 0;
+  const nFin = from > 0 ? Math.max(8, Math.round(SWELL_FADE * set.sr * pitchRatio)) : 0;
   const preOut = Math.round(z.pre / inc);
   // output length: requested (plus the pre-roll), or the natural ring capped by maxLen
   const natural = naturalSec(z, set.sr) / pitchRatio;
@@ -796,9 +842,13 @@ function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, 
   const nSrc = Math.ceil(nOut * inc) + TAPS + 2;
   const chans: Float32Array[] = [];
   for (let c = 0; c < set.ch.length; c++) {
-    const tmp = unroll(set, z, c, nSrc);
+    const tmp = unroll(set, z, c, nSrc, from);
     // a slow swell entered late (sustained pre-roll cap): its kept build-up fades in
-    if (z.fi) for (let i = 0; i < z.fi && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / z.fi);
+    if (z.fi && !from) for (let i = 0; i < z.fi && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / z.fi);
+    // a roll note entered mid-swell: fades in like the zone's own start (its beat z.pre into the read)
+    for (let i = 0; i < nFin && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / nFin);
+    // a roll note longer than the swell: grows at the slower rate its length gives
+    if (se && se.ramp) for (let i = z.pre + 1; i < se.until && i < tmp.length; i++) tmp[i] *= Math.pow(10, se.ramp(i - z.pre) / 20);
     // shifting up so far that source content would land above the output Nyquist: band-limit first
     if (inc > 0.98) firLowpassInPlace(tmp, 0.46 / inc);
     // margin of HALF-1 zeros before the data so tap 0 can reach index -3
@@ -1140,12 +1190,12 @@ function sumForOnset(a: Rendered, b: Rendered, sr: number): Float32Array {
   return xa;
 }
 
-function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false): Sample {
+function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false, gateSec = 0): Sample {
   const ch = chooseZone(spec, set, midi, variant, layer);
   if (!ch) return { l: new Float32Array(1), r: null };
   const z = ch.zone;
   gain *= lpCompensation(spec.lp, ch.midi);
-  let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short);
+  let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short, gateSec);
   // spread attacks (strStab) summed from two takes: the beat on the onset of their sum
   let summed = false;
   // sustained notes of `width` sets: the takes' dwell weight and what the beat is measured on — their
