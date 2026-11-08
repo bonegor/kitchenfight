@@ -473,6 +473,16 @@ function preOfGate(s: Sample, gate: number): number {
   }
 }
 
+/** Loudness gain of a note gated after `gate` samples (Sample.gainAt; 1 when that fails). */
+function gainOfGate(s: Sample, gate: number): number {
+  try {
+    const g = s.gainAt ? s.gainAt(gate) : 1;
+    return Number.isFinite(g) && g > 0 ? g : 1;
+  } catch {
+    return 1;
+  }
+}
+
 /** Mix one note; returns true when its tail had to be faded at ev.capAt (loop seam). */
 function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, ev: MixEv): boolean {
   const len = L.length;
@@ -512,7 +522,9 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   // plain copy up to the release / end fade, then release decay × end fade
   const a = Math.max(i0, Math.min(relStart, total - fadeN, iEnd));
   const k = ev.relK;
-  const gs = ev.gs;
+  // two takes summed: the note at the loudness the songs were balanced with (Sample.gainAt)
+  const lg = s.gainAt ? gainOfGate(s, ev.gate) : 1;
+  const gs = ev.gs * lg;
   // a note clipped at the start of the buffer (pre-roll before t = 0) fades in: plucked / struck notes
   // over CLIP_FADE_MIN (their transient is right at the onset); sustained notes over the build-up they
   // lost, up to CLIP_FADE_MAX but ending by their onset (ev.st), raised cosine
@@ -520,8 +532,8 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
   const nIn = i0 <= 0 ? 0 : Math.min(a - i0, sus ? Math.max(CLIP_FADE_MIN, Math.min(i0, CLIP_FADE_MAX, ev.st)) : CLIP_FADE_MIN);
   const fin = sus ? (i: number): number => 0.5 - 0.5 * Math.cos((Math.PI * (i - i0 + 0.5)) / nIn) : (i: number): number => (i - i0) / nIn;
   if (sr2) {
-    const gL = ev.bl;
-    const gR = ev.br;
+    const gL = ev.bl * lg;
+    const gR = ev.br * lg;
     const gs2 = gs * 0.5;
     for (let i = i0; i < a; i++) {
       const f = i - i0 < nIn ? fin(i) : 1;
@@ -545,8 +557,8 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
     }
     return capped;
   }
-  const gl = ev.gl;
-  const gr = ev.gr;
+  const gl = ev.gl * lg;
+  const gr = ev.gr * lg;
   if (nIn > 0) {
     for (let i = i0; i < i0 + nIn; i++) {
       const v = sl[i] * fin(i);

@@ -32,7 +32,8 @@ const SINE = (() => {
 })();
 
 /** longest pre-roll a Sample may carry (s): the sample bank keeps at most 80 ms of a sustained
- *  build-up at the recording's own pitch — 110 ms on a note played 5.5 semitones below it — and a
+ *  build-up at the recording's own pitch — 110 ms on a note played 5.5 semitones below it — or, for a
+ *  build-up kept whole (one that holds an attack), what its zone's lowest key can carry within this; a
  *  two-take sum onset stays within this too (the renderer's loop-seam copies rely on it) */
 export const MAX_PRE_SEC = 0.12;
 
@@ -52,8 +53,14 @@ export interface Sample {
   take0?: number;
   /** slow-rising (spread) attacks: the onset position of a note gated after `gate` output samples
    *  (replaces `pre` for that note). A note cut while its attack is still rising peaks lower, so its
-   *  perceptual onset sits earlier in the sample than the whole note's. */
+   *  perceptual onset sits earlier in the sample than the whole note's. Sustained recordings: continuous
+   *  and non-decreasing in the gate, `pre` once the note reaches the whole note's peak, never above it. */
   preAt?: (gate: number) => number;
+  /** two takes summed (`width` sustained sets): the gain that keeps a note gated after `gate` output samples
+   *  at the loudness the songs were balanced with — the takes aligned on their gate anchors (two coherent
+   *  recordings sum louder or softer by up to ~3 dB with their relative offset; the takes now start together
+   *  on their onsets) */
+  gainAt?: (gate: number) => number;
 }
 
 export interface InstDef {

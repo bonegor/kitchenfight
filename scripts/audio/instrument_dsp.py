@@ -365,27 +365,43 @@ def onset_power(x: np.ndarray, sr: int, period: float | None = None) -> np.ndarr
 # attack suite implement the same)
 ONSET_DB = -10.0  # the onset: the envelope within this of its maximum over the next ONSET_LOOK s (att10)
 ONSET_LOOK = 0.5
+FLOOR_DB = -15.0  # a beat never sits lower than this re the note's maximum on a climb
+RISE_MAX = 0.015  # s: the beat at most this long after the -15 dB point (a slow climb, a creep below -10 dB)
 DWELL_SLOPE = 0.1  # dB/ms: an envelope climbing its last X dB below the threshold slower than this dwells
 DWELL_X = (1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)  # dB
-DWELL_BLEND = (0.75, 1.5)  # dwell ratios over which the beat moves from the -10 dB point onto the attack
-DWELL_PLATEAU = 0.1  # s: the plateau level is the median over this long from where the dwell starts
+DWELL_BLEND = (0.75, 1.5)  # dwell ratios over which the beat moves onto the attack
+ATTACK_FROM = -20.0  # dB re the maximum: an attack is looked for from where the envelope first gets here
+ATTACK_WIN = 0.015  # s
+ATTACK_SETTLE = 3.0  # dB: the attack ends where the envelope climbs less than this over the next ATTACK_WIN
+ATTACK_RISE = (6.0, 10.0)  # dB climbed over the ATTACK_WIN before it ends: no attack .. an attack (blended)
+ATTACK_TOP = 1.5  # dB: an attack that ends below FLOOR_DB crosses where it is this far below its end
+ATTACK_LEAD = RISE_MAX / 2  # s: an attack crosses -15 dB (or its top) this long before the beat
 
 
 def perceptual_onset(x: np.ndarray, sr: int, pre: int, period: float | None = None) -> tuple[int, dict]:
     """The beat on the perceptual onset of a sustained note (`x` from its first sample, `pre` = a first
     guess of the beat). Returns the sample index t (the end of the trailing 5 ms window that reaches the
-    onset, as the attack suite measures att10) and details.
+    onset, as the attack suite measures att10) and details. The runtime's sampled.ts perceptualOnset is
+    the same criterion.
 
     1. The -10 dB point (the attack suite's att10 = 0): the first t where the envelope (onset_power: the
        5 ms RMS, or one period for a low note) comes within 10 dB of its maximum over [0, t + 0.5 s] — the
-       fixed point from `pre` (monotone: a later beat can only raise the maximum).
-    2. A note can dwell below that threshold: a bow, breath or tongue attack onto a plateau at -11..-20 dB
-       followed by a slow crescendo, or a plateau just under -10 dB, where the -10 dB point lands on the
-       crescendo (up to 200 ms after the attack) or wherever a 1 dB fluctuation first touches it. The note
-       is heard where its attack is: when the last X dB below the threshold (X = 1.5..10) take longer than
-       X / DWELL_SLOPE ms (dwell ratio > 1: a climb slower than 0.1 dB/ms), the beat moves onto the attack,
-       the -10 dB point relative to the plateau the attack settles on (the median level over the first
-       0.1 s of the dwell). Between the dwell ratios DWELL_BLEND it moves there in proportion, so nearly
+       fixed point from `pre` (monotone: a later beat can only raise the maximum) — but at most RISE_MAX
+       after the -15 dB point (FLOOR_DB). Most recordings climb from -15 to -10 dB within that; one that
+       creeps over its last few dB below -10 dB (a slow, steady climb; a plateau just under the threshold)
+       is heard well before it gets there (its -10 dB point can be 60-200 ms after its -15 dB point), and
+       with the cap neighbouring recordings of one instrument cross -15 dB at most RISE_MAX apart, -10 dB
+       together where they climb within it. The beat never sits below -15 dB on a climb.
+    2. A real attack onto a plateau below -10 dB, then a slow crescendo (a bow, breath or tongue attack):
+       when the envelope dwells below the threshold — its last X dB below it (X = 1.5..10) take longer than
+       X / DWELL_SLOPE ms (dwell ratio > 1: a climb slower than 0.1 dB/ms) — and the climb out of the
+       build-up (from where the envelope first gets within 20 dB of its maximum) rose ATTACK_RISE dB over
+       the ATTACK_WIN before it stalls (climbs less than ATTACK_SETTLE dB over the next ATTACK_WIN), the
+       beat goes onto that attack: ATTACK_LEAD after its -15 dB point (or, for an attack that stalls lower,
+       its top: ATTACK_TOP below where it stalls) — the attack has no -10 dB point of its own, and a normal
+       climb crosses -15 dB 0..RISE_MAX before its beat. A slow climb (no real attack) keeps the point of
+       1: never a beat 10 dB under a plateau that hovers at -11 dB (-21 dB, tens of ms before the note is
+       heard). Both weights blend in over a range (dwell ratios DWELL_BLEND, rises ATTACK_RISE), so nearly
        equal envelopes get nearly equal beats (no threshold that flips a beat by tens of ms)."""
     e = onset_power(x, sr, period)
     n_all = len(e)
@@ -406,22 +422,37 @@ def perceptual_onset(x: np.ndarray, sr: int, pre: int, period: float | None = No
         p = q
     n = min(n_all, p + look)
     d = 10 * np.log10(e / max(float(e[:n].max()), 1e-30) + 1e-20)
-    ratio, td = 0.0, 0
+    p15 = min(p, first_ge(d[:p], FLOOR_DB))
+    base = min(p, p15 + int(round(RISE_MAX * sr)))
+    ratio = 0.0
     for X in DWELL_X:
         tx = first_ge(d[:p], ONSET_DB - X)
         if tx < p:
-            r = (p - tx) / (X / DWELL_SLOPE * sr / 1000)
-            if r > ratio:
-                ratio, td = r, tx
-    info = {'p10': p, 'dwell': round(ratio, 3)}
+            ratio = max(ratio, (p - tx) / (X / DWELL_SLOPE * sr / 1000))
+    info = {'p10': p, 'p15': p15, 'dwell': round(ratio, 3)}
     w = min(1.0, max(0.0, (ratio - DWELL_BLEND[0]) / (DWELL_BLEND[1] - DWELL_BLEND[0])))
     if w <= 0:
-        return p, info
-    hi = min(p, td + int(round(DWELL_PLATEAU * sr)))
-    lp = float(np.median(d[td - 1:hi])) if hi > td else float(d[td - 1])
-    q = min(p, first_ge(d[:p], lp + ONSET_DB))
-    info.update(plateau_db=round(lp, 1), attack=q, w=round(w, 3))
-    return int(round(p - w * (p - q))), info
+        return base, info
+    # the attack: from where the envelope first gets within 20 dB of its maximum, the first point after
+    # which it climbs less than ATTACK_SETTLE dB over ATTACK_WIN; how much it climbed over the ATTACK_WIN
+    # before that point
+    k = int(round(ATTACK_WIN * sr))
+    i0 = first_ge(d[:p], ATTACK_FROM) - 1
+    if i0 >= p - 1:
+        return base, info
+    idx = np.arange(i0, p)
+    fwd = d[np.minimum(idx + k, n_all - 1)] - d[idx]
+    stall = np.nonzero(fwd < ATTACK_SETTLE)[0]
+    i1 = int(idx[stall[0]]) if len(stall) else p - 1
+    top = float(d[i1])
+    rise = top - float(d[max(0, i1 - k)])
+    a = min(1.0, max(0.0, (rise - ATTACK_RISE[0]) / (ATTACK_RISE[1] - ATTACK_RISE[0]))) if top < ONSET_DB else 0.0
+    info.update(attack_db=round(top, 1), rise_db=round(rise, 1))
+    q = min(base, first_ge(d[:p], min(FLOOR_DB, top - ATTACK_TOP)) + int(round(ATTACK_LEAD * sr)))
+    if w * a <= 0 or q >= base:
+        return base, info
+    info.update(attack=q, w=round(w * a, 3))
+    return int(round(base - w * a * (base - q))), info
 
 
 def onset_index(x: np.ndarray, sr: int, rel_db: float = -30.0, slow: bool = False) -> int:

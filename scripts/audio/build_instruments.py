@@ -69,13 +69,20 @@ TARGET_LU = -20.0  # loudness every zone is normalised to (K-weighted dB), appli
 # that dwells on a plateau below -10 dB). The build-up before it stays as pre-roll, at most SUS_MAX_PRE
 # (at the recording's own pitch; instruments.ts MAX_PRE_SEC covers it shifted down a fourth). A slower
 # swell is entered later, with a SUS_FADE raised-cosine fade-in (ending at least SUS_FADE_GAP before the
-# beat) — only where it is still quiet (at most SUS_CUT_DB re the note's maximum): the rest of the
-# build-up keeps its recorded shape, and a louder build-up keeps the recording's start, its beat moving
-# to SUS_MAX_PRE instead (never cut into an attack).
+# beat) — only where everything cut away is still quiet (at most SUS_CUT_DB re the note's maximum) and holds
+# no attack out of silence (a climb of SUS_CUT_RISE dB within SUS_CUT_RISE_WIN to above SUS_CUT_ATTACK_DB: a
+# breath or bow attack, which a fade-in from the middle of what follows it would replace): the rest of the
+# build-up keeps its recorded shape. A louder build-up keeps the recording's start and its beat — a longer
+# pre-roll, as long as every key of the zone can carry it (RT_MAX_PRE, played down to the zone's lowest key)
+# — or, longer still, a beat that early (never cut into an attack).
 SUS_MAX_PRE = 0.08
 SUS_FADE = 0.02
 SUS_FADE_GAP = 0.005
 SUS_CUT_DB = -20.0
+SUS_CUT_RISE = 10.0
+SUS_CUT_RISE_WIN = 0.015
+SUS_CUT_ATTACK_DB = -25.0
+RT_MAX_PRE = 0.118  # s: the longest pre-roll a Sample may carry (instruments.ts MAX_PRE_SEC 0.12, a margin)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1057,18 +1064,28 @@ def sustain_beat(dz: np.ndarray, sr: int, zd: dict) -> tuple[dict, dict]:
         return {'pre': p}, info
     # a build-up longer than SUS_MAX_PRE: entered SUS_MAX_PRE before the beat with a short fade-in, where
     # it is still quiet (the onset measured again on the faded note: the fade can only lower what precedes
-    # the beat); a louder build-up keeps the recording's start and its beat moves to SUS_MAX_PRE (the end
-    # of the build-up sounds a little early instead of an attack being cut)
+    # the beat); a louder build-up keeps the recording's start: its beat where it is when every key of the
+    # zone can carry that pre-roll, else as late as they can (the end of the build-up sounds a little early
+    # instead of an attack being cut)
+    keep = int(RT_MAX_PRE * 2 ** ((min(zd.get('lo', zd['p']), zd['p']) - zd['p']) / 12) * sr)
     e = onset_power(m, sr, period)
     top = float(e[:min(len(e), info['p10'] + int(round(0.5 * sr)))].max())
     w5 = int(round(0.005 * sr))
+    kr = int(round(SUS_CUT_RISE_WIN * sr))
     s0, fi = 0, 0
     for _ in range(6):
         s0 = p - cap
-        lvl = 10 * math.log10(float(e[min(len(e), s0 + w5) - 1]) / top + 1e-20)
-        if lvl > SUS_CUT_DB:
+        # everything cut away (up to the entry point's 5 ms window): its loudest point, and the steepest
+        # climb (SUS_CUT_RISE_WIN) to an audible level within it
+        dcut = 10 * np.log10(e[:min(len(e), s0 + w5)] / top + 1e-20)
+        lvl = float(dcut.max())
+        loud = np.nonzero(dcut > SUS_CUT_ATTACK_DB)[0]
+        climb = max((float(dcut[t] - dcut[max(0, t - kr)]) for t in loud), default=0.0)
+        if lvl > SUS_CUT_DB or climb >= SUS_CUT_RISE:
             info['capped_db'] = round(lvl, 1)
-            return {'pre': cap}, info
+            if climb >= SUS_CUT_RISE:
+                info['capped_climb_db'] = round(climb, 1)
+            return {'pre': max(cap, min(p, keep))}, info
         fi = max(int(round(0.002 * sr)), min(int(round(SUS_FADE * sr)), p - s0 - gap))
         y = m[s0:].copy()
         y[:fi] *= fade_in_curve(fi)
@@ -1076,8 +1093,9 @@ def sustain_beat(dz: np.ndarray, sr: int, zd: dict) -> tuple[dict, dict]:
         # the onset of what plays is the same or later — iterate until the entry point holds)
         q, qi = perceptual_onset(y, sr, p - s0, period)
         info = {**qi, 'p10': qi['p10'] + s0, 'cut_db': round(lvl, 1)}
-        if 'attack' in qi:
-            info['attack'] = qi['attack'] + s0
+        for k in ('attack', 'p15'):
+            if k in qi:
+                info[k] = qi[k] + s0
         q += s0
         if q <= p:
             fi = min(fi, max(int(round(0.002 * sr)), q - s0 - gap))
@@ -1318,7 +1336,7 @@ def write_manifest(sets: list[dict]) -> None:
         ' *   ls/le loop start/end inside the zone            dec    decay after ls (dB/s, decaying loops)',
         ' *   fi  fade-in from the zone start (a slow swell entered late: sustained pre-roll cap)',
         ' *   ga  gate anchor (sustained): a note\'s gate counts from here, its onset `pre` goes on the beat',
-        ' *   dw  dwell weight (sustained): the beat moved from the -10 dB point onto the attack by this much',
+        ' *   dw  dwell weight (sustained): how far the beat moved onto the attack of a note that dwells below -10 dB',
         ' */',
         "import type { SampleSetDef } from '../../sampled';",
         '',
@@ -1501,17 +1519,23 @@ def write_credits(sets: list[dict]) -> None:
           '- Timing: every recording is aligned on its perceptual onset — where the RMS over the preceding 5 ms comes',
           '  within 10 dB of the note\'s peak (att10) — so the attack is on the beat; pick / bow noise and slow build-ups',
           '  sound just before it. Sustained recordings (bowed / blown / sung, the accordion: `instrument_dsp.perceptual_onset`)',
-          '  measure that over max(5 ms, one period) of the held note; one that dwells below the -10 dB point (a bow, breath',
-          '  or tongue attack onto a plateau, then a slow crescendo, where att10 would land on the crescendo) has its beat on',
-          '  the attack instead (zone field `dw`: how far, blended in by how slow the climb is). At most 80 ms of a',
-          '  build-up stays before the beat (about 110 ms on a note played a fourth below its recording); a slower swell is',
-          '  entered later with a 20 ms fade-in, only where it is still 20 dB or more below the note\'s peak (an attack is',
-          '  never cut). A note keeps its sounding length: its gate counts from the attack model\'s beat (`ga`, what the',
-          '  songs\' note lengths and loudness calibration were made with) and the note is moved so that its onset lands on',
-          '  the beat, so short notes of slow attacks are not lengthened. A note shifted from its recording keeps its',
-          '  zone\'s beat (the same point of the attack, played faster or slower); a note shorter than its attack goes on',
-          '  its own onset; two takes played together (`width`) are aligned on their gate anchors (moved to within 15 ms',
-          '  of each other\'s onset) and placed on the onset of their sum, within 25 ms (less for takes that dwell).',
+          '  measure that over max(5 ms, one period) of the held note, at most 15 ms after it comes within 15 dB (a slow',
+          '  climb or a creep just under -10 dB is heard before it gets there; the beat never sits lower than -15 dB on a',
+          '  climb). One that dwells below -10 dB after a real attack (a bow, breath or tongue attack onto a plateau,',
+          '  then a slow crescendo) has its beat on that attack instead, 7.5 ms after it crosses -15 dB (zone field `dw`:',
+          '  how far, blended in by how slow the climb and how steep the attack is). At most 80 ms of a build-up stays',
+          '  before the beat (about 110 ms on a note played a fourth below its recording); a slower swell is entered',
+          '  later with a 20 ms fade-in, only where everything cut away is 20 dB or more below the note\'s peak and holds',
+          '  no attack out of silence (otherwise the recording keeps its start and a longer pre-roll). A note keeps its',
+          '  sounding length: its gate counts from the attack model\'s beat (`ga`, what the songs\' note lengths and',
+          '  loudness calibration were made with) and the note is moved so that its onset lands on the beat, so short',
+          '  notes of slow attacks are not lengthened. A note shifted from its recording keeps its zone\'s beat (the same',
+          '  point of the attack, played faster or slower); a note gated before its attack peaks goes on the same rule',
+          '  relative to its own peak (smoothed over level bands: it changes evenly with the note\'s length and meets the',
+          '  whole note\'s beat); two takes played together (`width`) are aligned on their beats and placed on the onset',
+          '  of their sum, within 25 ms (less where they sit on the attack of a dwell), each note at the loudness it had',
+          '  with the takes aligned on their gate anchors (what the songs were balanced with); a tone-filtered voicing',
+          '  (`accChord`) moves its beat by what its filters move the attack.',
           '- `accordion` plays the recorded musette (two reeds about +5 and +28 cents, beating about 7 Hz at C5);',
           '  `accordionDry` / `accChord` play its lower reed alone (set `accdry`: the recorded attack, then the higher',
           '  reed removed from the loop spectrum), mono, with their own tone (low-pass, high-pass) — no musette beating.',
@@ -1604,7 +1628,8 @@ def main() -> None:
                   f"{float(np.median(moved)):+.1f}); {sum(1 for z in zs if z['_onset'].get('w'))} of {len(zs)} on the "
                   f"attack of a dwell (fully {sum(1 for z in zs if z['_onset'].get('w') == 1)}), "
                   f"{sum(1 for z in zs if 'fi' in z)} swells entered late, {sum(1 for z in zs if 'capped_db' in z['_onset'])} "
-                  f'beats capped (pre-roll cap {SUS_MAX_PRE * 1000:.0f} ms)', flush=True)
+                  f"build-ups kept whole (pre-roll over {SUS_MAX_PRE * 1000:.0f} ms: "
+                  f"{max([z['pre'] * 1000 / s['sr'] for z in zs if 'capped_db' in z['_onset']] or [0]):.0f} ms)", flush=True)
         missing = want - {s['name'] for s in out}
         if missing:
             raise SystemExit(f"--rebeat: no build state for {', '.join(sorted(missing))}")

@@ -24,12 +24,12 @@
  *           onset below for sustained notes.
  *   onset   sustained instruments: the perceptual onset (scripts/audio/instrument_dsp.py
  *           perceptual_onset, as sampled.ts perceptualOnset implements it): att10 measured over max(5 ms,
- *           one period), or — for a note whose envelope dwells below that threshold (an attack onto a
- *           plateau, then a slow crescendo, where att10 lands on the crescendo or wherever a 1 dB
- *           fluctuation touches it) — the attack, blended in by how slow the climb is. `dw` = that blend
- *           (0 = att10 itself). att10 is reported beside it.
+ *           one period), at most 15 ms after the -15 dB point (a slow climb), or — for a note whose envelope
+ *           dwells below -10 dB after a real attack (where att10 lands on the crescendo) — 7.5 ms after that
+ *           attack crosses -15 dB, blended in by how slow the climb and how steep the attack is. `dw` = that
+ *           blend (0 = the first rule). att10 is reported beside it.
  *
- * Every playable note (sustained sets, --notes to skip): each zone played at every pitch of its key range
+ * Every playable note (sustained sets, --no-notes to skip): each zone played at every pitch of its key range
  * (layer, round robin and the partner take as a song plays them), measured on what plays:
  *   onset   the perceptual onset relative to the beat the runtime put it on (a single take keeps its
  *           zone's beat mapped through the playback ratio; two takes summed are placed on their sum's
@@ -40,15 +40,36 @@
  *           (and one partner take) play the same attack a little faster or slower: their t15 must agree
  *           within 5 ms (a beat that jumps between semitones is a defect).
  *
+ * Sustained instruments as the songs play them (every sustained id: tone-filtered voicings and two takes summed
+ * too), every playable note gated at 0.1 / 0.2 / 0.4 / 0.8 s and mixed as render.ts mixes it (Sample.preAt, the
+ * gate from Sample.ga, the release), measured on what a centred note plays as the verification harness does:
+ * t20 / t15 / t10 / t6 = where the trailing mean square over max(5 ms, one period) first comes within 20 / 15 /
+ * 10 / 6 dB of its maximum over the note's first 0.5 s after the beat, re the beat:
+ *   one zone      neighbouring semitones of one zone and partner: every crossing moved the same way by more than
+ *                 8 ms is a placement jump;
+ *   other zones   neighbouring semitones from different zones (or partner takes): the part of their -15 / -10 dB
+ *                 disagreement a placement could remove — max(|d15|, |d10|) - |d15 - d10| / 2 (the rest is the
+ *                 recordings' attack shapes; > 8 ms counted) — or |d15| where a note creeps from -15 to -10 dB
+ *                 over more than 30 ms (a plateau under -10 dB: its -10 dB crossing is not where it is heard);
+ *   gated scan    Sample.preAt of every note (full articulation) for gates 40..495 ms in 5 ms steps: the onset
+ *                 of notes 5 ms apart in length, across 0.5 s, monotone in the gate, never later in the sample
+ *                 than a whole note's, a 1 s note on the whole note's beat;
+ *   pad chords    organ, choir, choirO, strings, accChord: triads (m, m+4, m+7), (m, m+3, m+7) and (m, m+7, m+12)
+ *                 from those notes, spread of the tones' -15 dB crossings and of the -10 dB crossings of the tones
+ *                 that do not creep (median / p90 / max).
+ *
  * Limits: plucked / struck zones (decay / oneshot sets with a transient attack) |att10| <= 5 ms;
  * section articulations (strStab, pizz, orchHit: spread attack, beat on the perceptual onset)
  * -10..+10 ms, attShort |.| <= 5 ms; sustained zones at their roots |onset| <= 8 ms (single takes: the
  * bank's beat, build_instruments.sustain_beat, read back through the runtime) or 33 ms (two takes
  * summed: the 25 ms the runtime corrects their beat by at most, plus those 8 ms; not graded where a take
- * dwells — its attack, not the sum's -10 dB point, is where it is heard), attShort |.| <= 5 ms (25 ms
- * summed), sus6 <= 160 ms (bowed strings / chorus) or 90 ms (the rest), head <= -30 dB, hfOn <= +6 dB;
- * every playable note of a single take |onset| <= 30 ms and neighbouring t15 within 5 ms (two takes
- * summed: reported).
+ * dwells — its attack, not the sum's -10 dB point, is where it is heard), attShort |.| <= 20 ms (25 ms
+ * summed; a short note's onset is the same rule smoothed over level bands, so it changes evenly with the
+ * note's length: the plain rule on the gated note jumps across plateaus by up to ~15 ms), sus6 <= 160 ms (bowed
+ * strings / chorus) or 90 ms (the rest), head <= -30 dB, hfOn <= +6 dB; every playable note of a single take
+ * |onset| <= 30 ms and neighbouring t15 within 5 ms (two takes summed: reported). At song lengths (LIM below):
+ * one-zone jumps 8 ms; other zones 16 ms (22 where a note creeps; two takes summed 28 ms); gated scan steps
+ * 12 ms, 0.495 -> 0.5 s 6 ms; pad chords at -15 dB 8 / 24 / 30 ms, at -10 dB 6 / 24 / 40 ms.
  *
  *   node scripts/audio/check_instrument_attacks.mjs [--only set,set] [--json FILE] [--verbose]
  * Exit code 1 when a zone is over a limit.
@@ -240,8 +261,8 @@ for (const set of A.SAMPLE_SETS) {
       // short notes: on their own onset; one later than the whole note's beat stays there (Sample.preAt
       // never places a short note later than a long one)
       const pre0 = s.pre ?? 0;
-      const bad = attShort ? attShort.filter((a, i) => (width ? Math.abs(a) > 25 && dwSum < 0.5 : Math.abs(a) > 5) && !(a > 0 && s.preAt(Math.round([0.04, 0.06, 0.1][i] * SR)) >= pre0)) : [];
-      if (bad.length) why.push(`short notes (40/60/100 ms) onset ${attShort.join('/')} ms from their beat (limit ${width ? 25 : 5})`);
+      const bad = attShort ? attShort.filter((a, i) => (width ? Math.abs(a) > 25 && dwSum < 0.5 : Math.abs(a) > 20) && !(a > 0 && s.preAt(Math.round([0.04, 0.06, 0.1][i] * SR)) >= pre0)) : [];
+      if (bad.length) why.push(`short notes (40/60/100 ms) onset ${attShort.join('/')} ms from their beat (limit ${width ? 25 : 20})`);
       if (sus6 > lim) why.push(`speaks late: -6 dB of the sustain after ${sus6} ms (limit ${lim})`);
       if (hfOn > 6) why.push(`note-on HF burst +${hfOn.toFixed(1)} dB`);
     } else if (PERCEPTUAL.has(set.name)) {
@@ -295,6 +316,210 @@ for (const set of A.SAMPLE_SETS) {
     if (nf.length) fails.push(`${set.name} zone ${zi} (p=${z.p.toFixed(2)}) playable notes: ${nf.join('; ')}`);
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Sustained instruments as the songs play them: every sustained id (tone-filtered voicings and two takes summed
+// included), every playable note at song lengths, mixed as render.ts mixes it (Sample.preAt(gate), the gate from
+// Sample.ga, the release, the end fade), measured on what a centred note plays like the verification harness does:
+// a trailing mean square over max(5 ms, one period), first within 20 / 15 / 10 / 6 dB of its maximum over the
+// note's first 0.5 s after the beat (t20 / t15 / t10 / t6, ms re the beat)
+// ---------------------------------------------------------------------------------------------------------------
+const GATES = [0.1, 0.2, 0.4, 0.8];
+const TAIL_TAU = 3.6;
+/** a note creeps from -15 to -10 dB slower than this (ms): a plateau just under -10 dB, a dwell after an attack —
+ *  its -10 dB crossing is not where it is heard, only its -15 dB one is compared */
+const CREEP_MS = 30;
+const LIM = {
+  // neighbouring semitones of one zone (and partner take): a placement jump — every crossing moved the same way
+  sameJump: 8,
+  // neighbouring semitones from different zones (or partner takes): the part of their -15 / -10 dB disagreement a
+  // placement could remove (max(|d15|, |d10|) - |d15 - d10| / 2; the rest is the recordings' attack shapes), or,
+  // where a note creeps, |d15| — single takes / two takes summed (their interference varies with the partner)
+  crossSingle: 16,
+  crossSingleCreep: 22,
+  crossSum: 28,
+  crossSumCreep: 28,
+  // gated scan: the onset index of notes 5 ms apart in length (ms), and across 0.5 s
+  gateStep: 12,
+  gateEdge: 6,
+  // pad chords (spread of the chord tones' crossings, ms): median / p90 / max at -15 dB, at -10 dB (tones that do
+  // not creep)
+  chord15: [8, 24, 30],
+  chord10: [6, 24, 40],
+};
+const PADS = ['organ', 'choir', 'choirO', 'strings', 'accChord'];
+const mixedNote = (s, inst, gate) => {
+  // render.ts mixInto for a centred note (dry, no choke / cap / clip fade)
+  const relN = Math.round(inst.release * TAIL_TAU * SR);
+  const k = Math.exp(-1 / (Math.max(0.001, inst.release) * SR));
+  const pre = s.preAt ? s.preAt(gate) : s.pre ?? 0;
+  const anchor = s.ga !== undefined ? Math.max(0, s.ga) : pre;
+  const relStart = Math.min(s.l.length, anchor + gate);
+  const total = Math.min(s.l.length, anchor + gate + relN);
+  const fadeN = Math.max(1, Math.min(64, total));
+  const y = new Float32Array(total);
+  let env = 1;
+  for (let i = 0; i < total; i++) {
+    if (i >= relStart) env *= k;
+    const e = total - i < fadeN ? (env * (total - i)) / fadeN : env;
+    y[i] = (s.r ? 0.5 * (s.l[i] + s.r[i]) : s.l[i]) * e;
+  }
+  return { y, pre };
+};
+const crossingsOf = (y, pre, midi) => {
+  const W = Math.max(Math.round(0.005 * SR), Math.round(periodOf(midi)));
+  const cs = new Float64Array(y.length + 1);
+  for (let i = 0; i < y.length; i++) cs[i + 1] = cs[i] + y[i] * y[i];
+  const env = (t) => (cs[t] - cs[Math.max(0, t - W)]) / W;
+  const top = Math.min(y.length + 1, pre + Math.round(0.5 * SR));
+  let M = 0;
+  for (let t = 1; t < top; t++) M = Math.max(M, env(t));
+  const r = {};
+  for (const d of [20, 15, 10, 6]) {
+    let c = -1;
+    for (let t = 1; t < top && M > 0; t++)
+      if (env(t) >= M * Math.pow(10, -d / 10)) {
+        c = t;
+        break;
+      }
+    r['t' + d] = c < 0 ? null : ms(c - pre);
+  }
+  return r;
+};
+const songRows = [];
+const gateRows = [];
+for (const spec of A.SAMPLED_SPECS) {
+  if (spec.kind !== 'sustain' || (ONLY && !ONLY.split(',').includes(spec.set)) || NO_NOTES) continue;
+  const inst = A.INSTRUMENTS[spec.id];
+  const set = A.SAMPLE_SETS.find((x) => x.name === spec.set);
+  if (!set) continue;
+  const lo = Math.min(...set.zones.map((z) => z.lo));
+  const hi = Math.max(...set.zones.map((z) => z.hi));
+  const relN = Math.round(inst.release * TAIL_TAU * SR);
+  for (let m = lo; m <= hi; m++) {
+    const c = A.debugChoice(spec.id, m, 0, 0);
+    if (!c) continue;
+    const key = `${c.zone.o}+${c.partner ? c.partner.o : -1}`;
+    for (const g of GATES) {
+      const art = inst.shortArt !== undefined && g <= inst.shortArt ? 1 : 0;
+      const gate = Math.round(g * SR);
+      const lenSec = Math.max(0.5, Math.ceil(((gate + relN) / SR + 0.03) * 4) / 4);
+      const sm = art ? inst.make(SR, m, 0, lenSec, 0, 1) : inst.make(SR, m, 0, lenSec, 0);
+      const { y, pre } = mixedNote(sm, inst, gate);
+      songRows.push({ id: spec.id, m, g, key, width: spec.width !== undefined && set.ch === 1, ...crossingsOf(y, pre, c.midi + c.cents / 100) });
+    }
+    // gated scan: the onset index (Sample.preAt) of the full articulation for gates 40..495 ms in 5 ms steps (from
+    // above the short articulation's limit), across 0.5 s and at 1 s (the whole note's beat)
+    const sf = inst.make(SR, m, 0, 1.25, 0);
+    if (!sf.preAt) continue;
+    const g0 = inst.shortArt !== undefined ? Math.ceil((inst.shortArt + 0.0001) * 200) / 200 : 0.04;
+    let prev = null;
+    let step = 0;
+    let stepAt = 0;
+    let down = 0;
+    for (let g = g0; g < 0.4999; g += 0.005) {
+      const p = sf.preAt(Math.round(g * SR));
+      if (prev !== null) {
+        if (Math.abs(p - prev) > step) {
+          step = Math.abs(p - prev);
+          stepAt = g;
+        }
+        down = Math.max(down, prev - p);
+      }
+      prev = p;
+    }
+    const edge = Math.abs(sf.preAt(Math.round(0.5 * SR)) - sf.preAt(Math.round(0.495 * SR)));
+    gateRows.push({ id: spec.id, m, step: ms(step), stepAt: +stepAt.toFixed(3), edge: ms(edge), down: ms(down), whole: ms(Math.abs(sf.preAt(Math.round(1.0 * SR)) - (sf.pre ?? 0))), over: ms(Math.max(0, Math.max(...[0.05, 0.1, 0.2, 0.3, 0.4].map((g) => sf.preAt(Math.round(g * SR)))) - (sf.pre ?? 0))) });
+  }
+}
+const songFails = [];
+const crossSummary = [];
+const byIdGate = new Map();
+for (const r of songRows) (byIdGate.get(`${r.id}|${r.g}`) ?? byIdGate.set(`${r.id}|${r.g}`, []).get(`${r.id}|${r.g}`)).push(r);
+const perId = new Map();
+for (const [k, rs] of byIdGate) {
+  const [id] = k.split('|');
+  const st = perId.get(id) ?? perId.set(id, { same: 0, sameMax: 0, cross: 0, crossMax: 0, over8: 0, pairs: 0 }).get(id);
+  rs.sort((a, b) => a.m - b.m);
+  for (let i = 1; i < rs.length; i++) {
+    const a = rs[i - 1];
+    const b = rs[i];
+    if (b.m !== a.m + 1 || [a, b].some((r) => r.t20 === null || r.t15 === null || r.t10 === null || r.t6 === null)) continue;
+    const d = ['t20', 't15', 't10', 't6'].map((x) => b[x] - a[x]);
+    if (a.key === b.key) {
+      const jump = d.every((x) => x > 0) || d.every((x) => x < 0) ? Math.min(...d.map(Math.abs)) : 0;
+      st.sameMax = Math.max(st.sameMax, jump);
+      if (jump > LIM.sameJump) {
+        st.same++;
+        songFails.push(`${a.id} ${a.g} s m${a.m}->m${b.m} (one zone): every crossing moved ${jump.toFixed(1)} ms or more the same way (t20/t15/t10/t6 ${a.t20}/${a.t15}/${a.t10}/${a.t6} -> ${b.t20}/${b.t15}/${b.t10}/${b.t6})`);
+      }
+      continue;
+    }
+    st.pairs++;
+    const creep = a.t10 - a.t15 > CREEP_MS || b.t10 - b.t15 > CREEP_MS;
+    const [d15, d10] = [d[1], d[2]];
+    const x = creep ? Math.abs(d15) : Math.max(Math.abs(d15), Math.abs(d10)) - Math.abs(d15 - d10) / 2;
+    const lim = a.width ? (creep ? LIM.crossSumCreep : LIM.crossSum) : creep ? LIM.crossSingleCreep : LIM.crossSingle;
+    st.crossMax = Math.max(st.crossMax, x);
+    if (x > 8) st.over8++;
+    if (x > lim) {
+      st.cross++;
+      songFails.push(`${a.id} ${a.g} s m${a.m}->m${b.m} (zones ${a.key} -> ${b.key}): ${creep ? '|d15|' : 'placement'} ${x.toFixed(1)} ms (limit ${lim}; t15/t10 ${a.t15}/${a.t10} -> ${b.t15}/${b.t10})`);
+    }
+  }
+}
+const q = (v, f) => {
+  const s2 = v.filter((x) => Number.isFinite(x)).sort((u, w) => u - w);
+  return s2.length ? s2[Math.min(s2.length - 1, Math.round(f * (s2.length - 1)))] : 0;
+};
+// pad chords from the same notes: triads (m, m+4, m+7), (m, m+3, m+7) and fifth + octave (m, m+7, m+12) at each gate
+const chordRows = [];
+for (const id of PADS) {
+  const s15 = [];
+  const s10 = [];
+  for (const g of GATES) {
+    const rs = byIdGate.get(`${id}|${g}`);
+    if (!rs) continue;
+    const at = new Map(rs.map((r) => [r.m, r]));
+    for (const r of rs)
+      for (const iv of [[0, 4, 7], [0, 3, 7], [0, 7, 12]]) {
+        const tones = iv.map((d) => at.get(r.m + d));
+        if (tones.some((t) => !t || t.t15 === null || t.t10 === null)) continue;
+        const a15 = tones.map((t) => t.t15);
+        s15.push(Math.max(...a15) - Math.min(...a15));
+        const a10 = tones.filter((t) => t.t10 - t.t15 <= CREEP_MS).map((t) => t.t10);
+        if (a10.length >= 2) s10.push(Math.max(...a10) - Math.min(...a10));
+      }
+  }
+  if (!s15.length) continue;
+  const row = { id, chords: s15.length, s15: [q(s15, 0.5), q(s15, 0.9), q(s15, 1)], s10: [q(s10, 0.5), q(s10, 0.9), q(s10, 1)], n10: s10.length };
+  chordRows.push(row);
+  if (row.s15.some((v, i) => v > LIM.chord15[i])) songFails.push(`${id} chords: spread at -15 dB median / p90 / max ${row.s15.map((v) => v.toFixed(1)).join(' / ')} ms (limit ${LIM.chord15.join(' / ')})`);
+  if (row.s10.some((v, i) => v > LIM.chord10[i])) songFails.push(`${id} chords: spread at -10 dB median / p90 / max ${row.s10.map((v) => v.toFixed(1)).join(' / ')} ms (limit ${LIM.chord10.join(' / ')})`);
+}
+for (const r of gateRows) {
+  const why = [];
+  if (r.step > LIM.gateStep) why.push(`onset moves ${r.step} ms between gates 5 ms apart (at ${r.stepAt} s; limit ${LIM.gateStep})`);
+  if (r.edge > LIM.gateEdge) why.push(`onset moves ${r.edge} ms from 0.495 to 0.5 s (limit ${LIM.gateEdge})`);
+  if (r.down > 0.05) why.push(`onset moves back ${r.down} ms as the gate grows (not monotone)`);
+  if (r.whole > 0.05) why.push(`a 1 s note is ${r.whole} ms off the whole note's beat`);
+  if (r.over > 0.05) why.push(`a short note starts ${r.over} ms later in the sample than a whole note`);
+  if (why.length) songFails.push(`${r.id} m${r.m} gated: ${why.join('; ')}`);
+}
+if (songRows.length) {
+  console.log(`\nsustained notes at song lengths (${GATES.join(' / ')} s, mixed as render.ts mixes them): neighbouring semitones`);
+  console.log('id            one zone: jumps (max)   other zone / take: pairs  over limit  over 8 ms  max     gated scan: step max  0.5 s edge max    pad chords: spread -15 dB med/p90/max   -10 dB med/p90/max');
+  for (const [id, st] of perId) {
+    const gr = gateRows.filter((r) => r.id === id);
+    const ch = chordRows.find((r) => r.id === id);
+    console.log(
+      `${id.padEnd(13)} ${String(st.same).padStart(5)} (${st.sameMax.toFixed(1).padStart(5)})          ${String(st.pairs).padStart(5)}  ${String(st.cross).padStart(9)}  ${String(st.over8).padStart(9)}  ${st.crossMax.toFixed(1).padStart(5)}` +
+        `              ${(gr.length ? Math.max(...gr.map((r) => r.step)) : 0).toFixed(1).padStart(6)}  ${(gr.length ? Math.max(...gr.map((r) => r.edge)) : 0).toFixed(1).padStart(14)}` +
+        (ch ? `              ${ch.s15.map((v) => v.toFixed(1)).join(' / ').padStart(18)}   ${ch.s10.map((v) => v.toFixed(1)).join(' / ').padStart(18)}` : ''),
+    );
+  }
+}
+for (const f of songFails) fails.push(f);
 const sets = [...new Set(rows.map((r) => r.set))];
 console.log('set           zones  att10 ms (min/med/max)   onset ms (min/med/max) dwell   sus6 ms (med/max)   head dB max   hfOn dB max   notes: |onset| max  t15 jump max');
 for (const s of sets) {
@@ -317,5 +542,5 @@ for (const s of sets) {
 }
 console.log(`\nverdict: ${fails.length ? fails.length + ' zones over limits' : 'all zones within limits'}`);
 for (const f of fails) console.log('  -', f);
-if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ rows, notes: noteRows, fails }, null, 1));
+if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ rows, notes: noteRows, songNotes: songRows, gated: gateRows, chords: chordRows, fails }, null, 1));
 process.exitCode = fails.length ? 1 : 0;
