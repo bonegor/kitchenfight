@@ -442,7 +442,18 @@ own accents and lines:
 
 (The "after" row is the current render, with the cymbal rolls on their downbeats.)
 The loop's > 4 kHz share is now −18.8 dB, inside the other tracks' range, between `boss` (−18.5)
-and `gameover` (−19.2); the centroid is 791 Hz. The new parts are heard without leading:
+and `gameover` (−19.2): the air above 4 kHz that the orchestra lacked is the brightness this polish
+set out to give it, and the goal is met on that measure. By its spectral centroid the track is still
+the darkest of the ten: 791 Hz over the loop body, against 839 Hz (`victory`) to 1077 Hz (`menu`)
+for the others (scratch Welch spectrum of the mono loop body, master output). That is its low-mid
+weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.4 dB of the
+total, the others −9.3 to −12.5 dB: trombones, tuba, organ pedal, timpani, cellos and basses, the
+bass drum), which pulls a full-band centroid down. Above 250 Hz its centroid is 1041 Hz, inside the
+others' 947–1403 Hz; its 2–5 kHz presence and its > 4 kHz share, each against its own 250 Hz–2 kHz
+band (−10.8 and −15.9 dB), are inside theirs (−6.0 to −14.4 and −11.0 to −18.3 dB). Moving the
+full-band centroid into the others' range would take about +1.5 dB over all of 2–5 kHz, or 2 dB less
+at 125–250 Hz: a different balance from the Dies irae's, which keeps its weight. The new parts are
+heard without leading:
 
 | Part | Notes rising ≥ 3 dB | Median rise | Part vs mix (momentary, median) | Per section (LU): part / chorus / violins |
 |---|---|---|---|---|
