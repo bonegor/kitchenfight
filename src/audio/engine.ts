@@ -6,8 +6,9 @@
  *   sfx voices → [gain] → [panner] → sfx volume ─────────────────────────────┤→ master → compressor → out
  *   speech → voice gain ─────────────────────────────────────────────────────┘
  *
- * Music is synthesized in JS (render.ts) — in a Web Worker when available, otherwise in
- * cooperative main-thread slices — into AudioBuffers that loop sample-exactly.
+ * Music is rendered in JS (render.ts) from the recorded instrument samples (sampled.ts, decoded by
+ * samplebank.ts; synthesized instruments stand in until they arrive) — in a Web Worker when available,
+ * otherwise in cooperative main-thread slices — into AudioBuffers that loop sample-exactly.
  * SFX are recorded MP3 variants (sfxsamples.ts, decoded before the first gesture; some ids add a synthesized layer);
  * the synthesized versions (sfx.ts, rendered after unlock) stand in until an id's recording is decoded, or if it fails.
  * Nothing here throws into the game; before unlock() everything is a silent no-op.

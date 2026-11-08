@@ -14,6 +14,7 @@
  *   non-gapless decoder leaves in front of the attack. Silent tails are cut too.
  */
 import type { SfxId } from './audio';
+import { readUrl } from './readurl';
 import manifestJson from './assets/sfx/manifest.json';
 
 interface ManifestId {
@@ -57,6 +58,8 @@ const MANIFEST = manifestJson as unknown as Manifest;
  * README). Required by the licenses of the material used (CC BY 4.0: Oculus Audio Pack; CC Sampling Plus 1.0: SSO).
  */
 export const SFX_CREDITS: readonly string[] = Array.isArray(MANIFEST.credits) ? MANIFEST.credits : [];
+/** assets that fail before any has loaded: after this many the rest are not tried */
+const FAIL_FAST = 2;
 const URLS = import.meta.glob('./assets/sfx/*.mp3', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 /** lead-in below this (re the buffer's peak) is considered silence (decoder delay / priming) */
 const LEAD_DB = -50;
@@ -217,22 +220,25 @@ export class SfxSamples {
     };
     const names = Object.keys(MANIFEST.assets).sort((a, b) => rank(a) - rank(b));
     let next = 0;
+    let loadedAny = false;
     const worker = async (): Promise<void> => {
       while (next < names.length) {
         const name = names[next++];
         try {
           const url = URLS['./assets/sfx/' + name + '.mp3'];
           if (!url) throw new Error('missing');
-          const res = await fetch(url);
-          if (!res.ok) throw new Error('http ' + res.status);
-          const decoded = await decode(ac, await res.arrayBuffer());
+          const decoded = await decode(ac, await readUrl(url));
           const al = alignBuffer(ac, decoded, MANIFEST.assets[name]?.a, MANIFEST.sr || 48000);
           if (!al) throw new Error('silent');
           bufs.set(name, al.buf);
           this.lead[name] = al.lead;
           for (const id of users.get(name) ?? []) enable(id);
+          loadedAny = true;
         } catch {
           this.failed.push(name);
+          // the first reads all refused (offline, a CSP without the source): stop instead of
+          // repeating the same refusal for every asset; the synthesized sounds keep playing
+          if (!loadedAny && this.failed.length >= FAIL_FAST) next = names.length;
         }
       }
     };

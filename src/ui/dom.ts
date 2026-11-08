@@ -42,6 +42,10 @@ export function img(src: string, cls = '', alt = ''): HTMLImageElement {
  * Arrow keys / d-pad move focus to the nearest element in that direction.
  */
 export class Nav {
+  /** keyboard / gamepad scrolling of a data-nav-scroll panel: where the last press is heading */
+  private scrollTo: number | null = null;
+  private scrollEl: HTMLElement | null = null;
+  private scrollAt = 0;
   root: HTMLElement | null = null;
   cur: HTMLElement | null = null;
   onBack: (() => void) | null = null;
@@ -137,9 +141,17 @@ export class Nav {
       const sc = this.root?.querySelector<HTMLElement>('[data-nav-scroll]');
       if (sc && sc.scrollHeight > sc.clientHeight + 2) {
         const max = sc.scrollHeight - sc.clientHeight;
-        if ((dy > 0 && sc.scrollTop < max - 1) || (dy < 0 && sc.scrollTop > 1)) {
+        // a held key repeats faster than the smooth scroll runs: continue from where the previous
+        // press was heading, not from where the animation has got to (or a hold would crawl)
+        const now = performance.now();
+        const base = this.scrollTo !== null && this.scrollEl === sc && now - this.scrollAt < 450 ? this.scrollTo : sc.scrollTop;
+        if ((dy > 0 && base < max - 1) || (dy < 0 && base > 1)) {
           const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-          sc.scrollBy({ top: dy * Math.max(80, sc.clientHeight * 0.6), behavior: reduced ? 'auto' : 'smooth' });
+          const top = Math.max(0, Math.min(max, base + dy * Math.max(80, sc.clientHeight * 0.6)));
+          this.scrollTo = top;
+          this.scrollEl = sc;
+          this.scrollAt = now;
+          sc.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
           return;
         }
       }

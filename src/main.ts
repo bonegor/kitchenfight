@@ -270,6 +270,9 @@ class App {
     this.persist();
     audio.setMusicMuffled(false);
     audio.playMusic(victory ? 'victory' : 'gameover', { fade: 0.3, restart: true });
+    // the run's tracks pushed the title out of the music cache: render it again while the results
+    // are on screen, so 'back to the title' does not wait (and the title is not silent after a game over)
+    audio.preload(['title']).catch(() => undefined);
     this.ui.showResults(run, victory, unlocks, newRecord && run.time > 30);
     this.mode = 'menu';
     this.run = null;

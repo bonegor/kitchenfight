@@ -11,6 +11,7 @@
  * Never throws: any failure resolves to null and the synthesized instruments keep playing.
  */
 import { SAMPLE_SETS } from './assets/inst/manifest';
+import { readUrl } from './readurl';
 import type { BankData, SampleSetDef, SetPcm } from './sampled';
 
 const URLS = import.meta.glob('./assets/inst/*/*.mp3', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
@@ -28,26 +29,6 @@ export interface BankLoadStats {
   rates: number[];
   /** why loading stopped early (e.g. every fetch refused by the page's CSP), if it did */
   error?: string;
-}
-
-/** The bytes behind a sample-set URL: data: URLs decoded in place, others fetched. */
-async function readUrl(url: string): Promise<ArrayBuffer> {
-  if (url.slice(0, 5).toLowerCase() === 'data:') {
-    const comma = url.indexOf(',');
-    if (comma < 0) throw new Error('malformed data: URL');
-    const meta = url.slice(5, comma);
-    const body = url.slice(comma + 1);
-    let bin: string;
-    if (/;base64$/i.test(meta)) bin = atob(body);
-    else bin = body.replace(/%([0-9a-f]{2})/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 255;
-    return out.buffer;
-  }
-  if (typeof fetch !== 'function') throw new Error('no fetch');
-  const res = await fetch(url);
-  if (!res.ok && res.status !== 0) throw new Error('http ' + res.status);
-  return res.arrayBuffer();
 }
 
 type DecodeCtx = OfflineAudioContext;

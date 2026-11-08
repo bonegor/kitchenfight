@@ -60,8 +60,8 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
   arranged in a small music DSL (`src/audio/songs/*`) and rendered in a Web Worker on recorded instrument samples
   (`src/audio/assets/inst`). Every melody is checked note by note against published transcriptions with
   `scripts/music/compare.py`; see [docs/MUSIC.md](docs/MUSIC.md) and `docs/music/<track>.md`.
-- **Sound effects** are recorded MP3 variants layered with synthesized sounds; every recorded instrument and
-  sound has a synthesized fallback (`src/audio/*`).
+- **Sound effects** are recorded MP3 variants (a few layered with a synthesized sound; the kamikaze's fuse is
+  still synthesized); every recorded instrument and sound has a synthesized fallback (`src/audio/*`).
 - TypeScript + Vite, no game framework. Custom engine: spatial hashing, pooled entities, y-sorted renderer with
   dynamic lighting, particles, decals, screen shake and hit-stop (`src/game/*`).
 - DOM/CSS user interface styled like a trattoria menu card (`src/ui/*`, `src/styles/main.css`).
@@ -70,10 +70,12 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
 src/
   core/      input (keyboard, gamepad, touch), math, saves, spatial hash
   gfx/       painter toolkit, sprite cache, art modules (chefs, crimes, bosses, items, stages)
-  audio/     synth instruments, sequencer, songs, sound effects
+  audio/     engine, recorded sample bank + synth fallbacks, sequencer, songs, sound effects
+             (assets/inst, assets/sfx)
   game/      run simulation, weapons, passives, enemies, AI, bosses, waves, renderer, effects
   ui/        menus, HUD, level-up, chests, shop, encyclopedia
-docs/        DESIGN.md (game design), RESEARCH.md (the food crimes), ART_GUIDE.md
+docs/        DESIGN.md (game design), RESEARCH.md (the food crimes), ART_GUIDE.md, MUSIC.md (music tools),
+             music/ (one file per track: sources, proofs, form), credits/ (sample and SFX sources)
 ```
 
 ### Scripts
@@ -132,8 +134,9 @@ this game; details per sound in [docs/credits/sfx.md](docs/credits/sfx.md):
 - *'O sole mio* (menu music) may still be under copyright in the EU (see above).
 - The mandolin recordings (Terkelsen's Mandolin) carry no stated license.
 - The Sonatina Symphonic Orchestra files (CC Sampling Plus 1.0, 26 of the 54 instrument sets: strings, winds,
-  brass, chorus, organ, harp, mallets, timpani, tam-tam) may be shared verbatim only noncommercially and may not
-  be used to advertise anything but this game: no paid or ad-supported builds with them.
+  brass, chorus, organ, harp, mallets, timpani, tam-tam) may be used in the game, commercially too, but the
+  sample files themselves may only be redistributed as they are noncommercially, and they may not be used to
+  advertise anything other than the game.
 - Files under CC BY-SA 3.0 (horn section, orchestra hit) must stay under that license when shared.
 - Some harmonisations (La Danza, the game-over intro) follow modern published arrangements rather than the
   composers' own scores; check them against a public-domain edition.
