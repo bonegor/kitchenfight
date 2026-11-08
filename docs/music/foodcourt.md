@@ -204,8 +204,8 @@ light jazz-waltz lilt on the off-beat eighths).
 - duration 94.89 s buffer = 88.89 s of music + the renderer's 6 s loop pad; loop 4.444 → 88.889 s
   (buffer window 10.444 → 94.889 s), body 84.444 s = bars 5–80 from section B;
   **seam mismatch −150.5 dBFS**, no event rings past the seam
-- **loop body −16.3 LUFS** (−16.31; whole file −16.5), short-term max −14.6 LUFS, RMS −19.5 dBFS,
-  **sample peak −1.99 dBFS**, soft clipper 10 samples (0.000 %), DC 0
+- **loop body −16.3 LUFS** (−16.28; whole file −16.4), short-term max −14.6 LUFS, RMS −19.4 dBFS,
+  **sample peak −1.99 dBFS**, soft clipper 11 samples (0.000 %), DC 0
 - spectral balance: < 250 Hz −10.0 dB, 250 Hz–4 kHz −0.5 dB, > 4 kHz −19.4 dB (darker than the
   street-band tracks, as muzak should be)
 - `gainDb` −1.1, **no warnings**
@@ -241,7 +241,7 @@ light jazz-waltz lilt on the off-beat eighths).
 | tuba | tuba | 26 | −7.1 | −26.5 | −10.2 | −12.3 |
 | pizz | pizz | 48 | −9.9 | −31.5 | −15.2 | −17.9 |
 | stab | strStab | 120 | −12.5 | −31.2 | −14.9 | −16.0 |
-| str | strings | 26 | −9.3 | −28.1 | −11.8 | −15.5 |
+| str | strings | 26 | −9.3 | −25.3 | −9.1 | −12.5 |
 | timp | timpani | 32 | −8 | −32.5 | −16.2 | −15.6 |
 | crash | crash | 4 | −7 | −30.1 | −13.7 | −14.7 |
 | snare | snare | 24 | −5 | −25.3 | −9.0 | −8.5 |
@@ -259,7 +259,7 @@ through the same renderer and bank):
 | C | −16.7 | −6.6 | vibes −1.0 (bars 1–3), warble on the held D6 −1.4 (bar 4), warble −1.1 (bars 5–8) |
 | A | −16.6 | −5.8 | warble −0.7 |
 | A1 | −16.1 | −5.8 | cello −0.7 |
-| D | −15.9 | −4.3 | violin −1.7 |
+| D | −15.7 | −4.1 | violin −2.0 |
 | chime | −20.6 | −11.8 | chime −0.7 |
 | B2 | −16.4 | −3.5 | steel guitar −1.5 |
 | C2 | −16.6 | −5.3 | e-piano −1.4 (bars 1–3), warble on the held D6 −2.0 (bar 4), warble −1.6 (bars 5–8) |
@@ -268,7 +268,7 @@ through the same renderer and bank):
 | chime2 | −20.6 | −12.3 | chime −0.6 |
 
 The groove sections sit within 1.9 LU of each other (muzak and sinister −16.1…−16.9, orchestra
-−15.9 in D and −15.0 in A2, the tutti −15.3), so the loop does not pump under gameplay; the two
+−15.7 in D and −15.0 in A2, the tutti −15.3), so the loop does not pump under gameplay; the two
 chimes are the 2-bar breathers.
 
 **Audibility of the small parts** (scratch script, measured when the review fixes went in: the
@@ -372,11 +372,21 @@ to × 1.3 (was 0.3 → 1), so it starts audible and crests into A1, where the tu
 |---|---|---|
 | A, the low swell (bars 5–8, 5 chords) | 1.4, 2.3, 0.7, 0.7, 5.7 | **7.1, 10.3, 4.3, 3.4, 12.4** |
 | A1, the swell (bars 7–8) | 1.4, 3.5, 2.0 | **4.1, 7.4, 4.7** |
-| D bars 1–4, the soft pad under the violins (not a featured part) | 1.1, 1.5, 0.5, 0.7 | 2.5, 4.0, 1.5, 2.2 |
+| D bars 1–4, the soft pad under the violins | 1.1, 1.5, 0.5, 0.7 | 2.5, 4.0, 1.5, 2.2 → **4.7, 8.7, 3.6, 5.1** (velocity 0.45 → 0.66, below) |
 
 The A swell stays 7.5–10.5 LU under the mix while the warble sings (cover ≤ 0.43 LU) and crests
 in its last two beats, where the tune rests (the strings 4.5 LU under the mix there, cover 1.9
-LU). Per section, the strings sit 11–12.5 LU under the mix, the lead 0.7–1.7 LU.
+LU).
+
+**The D pad, heard.** A second review found that the pad under the violins in D bars 1–4 was still
+under the 3 dB rule (3 of its 4 chords; per note, L and R third-octave bands over each note: 2.3,
+1.9, 3.7, 2.5, 1.3, 2.3, 1.4 dB), so it was neither heard nor dropped; it shares its register with
+the e-piano's waltz comping (E3–D4). Its velocity goes 0.45 → 0.66 (the channel gain, which sets
+A's and A1's swells, stays −9.3 dB): every chord rises 3.6–8.7 dB in its band, every note
+3.5–8.3 dB (per note: 4.4, 4.3, 8.3, 6.2, 3.8, 5.6, 3.5 dB), and the pad stays 5.0–7.1 LU under the
+violins (it adds 0.6–0.9 LU to the mix there). The violins keep the bars: all 13 of their notes in
+D bars 1–4 still rise 7.9 dB or more in their band (median 17.8 dB, 20.3 before). Per section, the
+strings sit 11–12.5 LU under the mix (7.5 in D, under the violins), the lead 0.7–2.0 LU.
 
 **Synth pad dropped.** The muzak's synth pad (`spad`, −17 dB) rose 0.1–2.4 dB in its band: none
 of its 30 notes reached 3 dB, masked by the e-piano and vibes comping in the same register. 6 dB
