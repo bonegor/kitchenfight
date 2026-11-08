@@ -10,11 +10,19 @@ export interface PieceCredit {
   piece: string;
   composer: string;
   year: number;
+  /** a caveat shown with the credit */
+  note?: string;
 }
 
 export const MUSIC_PIECES: readonly PieceCredit[] = [
   { where: 'Title', piece: 'Funiculì, Funiculà', composer: 'Luigi Denza', year: 1880 },
-  { where: 'Menus', piece: "'O sole mio", composer: 'Eduardo di Capua', year: 1898 },
+  {
+    where: 'Menus',
+    piece: "'O sole mio",
+    composer: 'Eduardo di Capua and Alfredo Mazzucchi',
+    year: 1898,
+    note: 'Mazzucchi (d. 1972) was recognised as co-composer in Italy, so the music may still be protected in the EU until 2042: a placeholder to replace before any release.',
+  },
   { where: 'La Cucina', piece: 'Anvil Chorus (Il trovatore)', composer: 'Giuseppe Verdi', year: 1853 },
   { where: 'La Trattoria', piece: "Brindisi “Libiamo ne' lieti calici” (La traviata)", composer: 'Giuseppe Verdi', year: 1853 },
   { where: 'I Vicoli di Napoli', piece: 'La Danza, with the traditional Tarantella Napoletana', composer: 'Gioachino Rossini', year: 1835 },

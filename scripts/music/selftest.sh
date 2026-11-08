@@ -156,20 +156,20 @@ check() { # name expected_exit cmd... ; also greps $GREP in the output when set
   GREP=
 }
 
-echo "== 1. song vs an ABC export of itself, and mutated copies (title / acc / section A)"
-node scripts/music/export-song.mjs title --channel acc --section A --abc --out "$T/self.abc"
-GREP='PITCH  match: 100.0 %.*' check 'self: identical -> 100 %' 0 $PY scripts/music/compare.py --abc "$T/self.abc" --song title --channel acc --section A
+echo "== 1. song vs an ABC export of itself, and mutated copies (title / acc / section refrain)"
+node scripts/music/export-song.mjs title --channel acc --section refrain --abc --out "$T/self.abc"
+GREP='PITCH  match: 100.0 %.*' check 'self: identical -> 100 %' 0 $PY scripts/music/compare.py --abc "$T/self.abc" --song title --channel acc --section refrain
 $PY scripts/music/selftest/mutate.py "$T/self.abc" "$T/w10.abc" --wrong-notes 10 >/dev/null
-GREP='wrong note' check 'mutated: 10 wrong notes -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/w10.abc" --song title --channel acc --section A
+GREP='wrong note' check 'mutated: 10 wrong notes -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/w10.abc" --song title --channel acc --section refrain
 $PY scripts/music/selftest/mutate.py "$T/self.abc" "$T/w2.abc" --wrong-notes 2 --every 20 >/dev/null
-GREP='wrong note: ref F5 -> cand E5' check 'mutated: 2 wrong notes -> listed, within threshold' 0 $PY scripts/music/compare.py --abc "$T/w2.abc" --song title --channel acc --section A
-GREP='wrong note' check 'mutated: 2 wrong notes, --pitch-min 100 -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/w2.abc" --song title --channel acc --section A --pitch-min 100
+GREP='wrong note: ref B4 -> cand A4' check 'mutated: 2 wrong notes -> listed, within threshold' 0 $PY scripts/music/compare.py --abc "$T/w2.abc" --song title --channel acc --section refrain
+GREP='wrong note' check 'mutated: 2 wrong notes, --pitch-min 100 -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/w2.abc" --song title --channel acc --section refrain --pitch-min 100
 $PY scripts/music/selftest/mutate.py "$T/self.abc" "$T/r8.abc" --rhythm 8 >/dev/null
-GREP='rhythm:' check 'mutated: 8 rhythm swaps -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/r8.abc" --song title --channel acc --section A
+GREP='rhythm:' check 'mutated: 8 rhythm swaps -> FAIL' 1 $PY scripts/music/compare.py --abc "$T/r8.abc" --song title --channel acc --section refrain
 $PY scripts/music/selftest/mutate.py "$T/self.abc" "$T/oct.abc" --octave-up >/dev/null
-GREP='reference -12 semitones' check 'mutated: octave up -> PASS (transposition found)' 0 $PY scripts/music/compare.py --abc "$T/oct.abc" --song title --channel acc --section A
+GREP='reference -12 semitones' check 'mutated: octave up -> PASS (transposition found)' 0 $PY scripts/music/compare.py --abc "$T/oct.abc" --song title --channel acc --section refrain
 $PY scripts/music/selftest/mutate.py "$T/self.abc" "$T/half.abc" --halve >/dev/null
-GREP='= 3/4 reference' check 'mutated: halved note values -> PASS (time scale found)' 0 $PY scripts/music/compare.py --abc "$T/half.abc" --song title --channel acc --section A
+GREP='= 3/4 reference' check 'mutated: halved note values -> PASS (time scale found)' 0 $PY scripts/music/compare.py --abc "$T/half.abc" --song title --channel acc --section refrain
 
 echo "== 2. hand-transcribed Funiculi refrain (wf_funiculi.abc bars 38-45)"
 W="$REFS/wf_funiculi.abc"

@@ -89,7 +89,7 @@ SOURCES = {
                   'Sonatina Symphonic Orchestra by Mattias Westlund (https://github.com/peastman/sso), licensed under '
                   'CC Sampling Plus 1.0 (https://creativecommons.org/licenses/sampling+/1.0/). ' + MODIFIED),
     'mand': Source('git', '/home/user/sfzinstruments/terkelsen.mandolin', "Terkelsen's Mandolin (sfzinstruments)",
-                   ('license not stated (freely distributed)', 'https://github.com/sfzinstruments/terkelsen.mandolin'),
+                   ('license not stated (unknown)', 'https://github.com/sfzinstruments/terkelsen.mandolin'),
                    "Terkelsen's Mandolin: samples by Lars Terkelsen, SFZ conversion by S. Christian Collins "
                    '(https://github.com/sfzinstruments/terkelsen.mandolin). ' + MODIFIED),
     'vcsl': Source('git', '/home/user/sgossner/vcsl', 'Versilian Community Sample Library (VCSL)', CC0,

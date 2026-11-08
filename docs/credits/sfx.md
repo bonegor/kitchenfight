@@ -22,7 +22,7 @@ as `SFX_CREDITS`, for the in-game Credits screen and the README:
 |---|---|---|
 | Oculus Audio Pack 01 (Meta Open Sound) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 40 ids |
 | Sonatina Symphonic Orchestra | [CC Sampling Plus 1.0](https://creativecommons.org/licenses/sampling+/1.0/) | 3 ids |
-| Terkelsen's Mandolin (sfzinstruments) | [license not stated (freely distributed)](https://github.com/sfzinstruments/terkelsen.mandolin) | 3 ids |
+| Terkelsen's Mandolin (sfzinstruments) | [license not stated (unknown)](https://github.com/sfzinstruments/terkelsen.mandolin) | 3 ids |
 | Versilian Community Sample Library (VCSL) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 38 ids |
 | FreePats World Percussion (2020-09-05) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 11 ids |
 | SFX Kit by Wyzowl (v1.0.0) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 3 ids |
@@ -188,7 +188,7 @@ Local clone: `/home/user/peastman/sso`
 - `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-sus-e5.wav` - used by `new_weapon`
 - `Sonatina Symphonic Orchestra/Samples/Trumpets/trumpets-sus-g5.wav` - used by `new_weapon`
 
-### Terkelsen's Mandolin (sfzinstruments) ([license not stated (freely distributed)](https://github.com/sfzinstruments/terkelsen.mandolin))
+### Terkelsen's Mandolin (sfzinstruments) ([license not stated (unknown)](https://github.com/sfzinstruments/terkelsen.mandolin))
 
 Local clone: `/home/user/sfzinstruments/terkelsen.mandolin`
 

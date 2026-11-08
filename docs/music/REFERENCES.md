@@ -58,7 +58,7 @@ figures). That is information about the editions, not a tool error.
 **Use:** `bb_funiculi.abc` voice 1. "34. A Merry Life", a songbook print in E♭ with a clean melody
 line. In the refrain the melody is the top note of printed thirds. It is complete with no repeats
 and no bar problems:
-verse 1–18 (pickup inside bar 1), middle section in the relative minor 19–37, and the refrain
+verse 1–18 (pickup inside bar 1), middle section in the mediant minor (G minor), turning to B♭ (V), 19–37, and the refrain
 ("Jammo, jammo… Funiculì, funiculà", English "Hark-en! Hark-en!… Tra la la") 38–53.
 
 ```bash

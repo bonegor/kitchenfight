@@ -239,7 +239,7 @@ renders: the recorded bank measures about 2 LU quieter than the synth versions o
 `bash scripts/music/selftest.sh` runs 53 checks:
 
 - a song against an ABC export of itself (100 %);
-- mutated copies of that export. 10 wrong notes and 8 rhythm swaps must FAIL; 2 wrong notes of 72
+- mutated copies of that export. 10 wrong notes and 8 rhythm swaps must FAIL; 2 wrong notes of 47
   are listed but pass, and FAIL with `--pitch-min 100`; an octave transposition and halved note
   values must PASS;
 - the hand-transcribed Funiculì refrain (a scratch song that `selftest.sh` writes into a temp dir, bars

@@ -93,9 +93,10 @@ balance simulation with a bot), `screens.mjs` (screenshots of every menu).
 Design, code, art, arrangements and research by Claude (Anthropic) for this repository.
 Fonts: Lobster, Lilita One, Playfair Display — SIL Open Font License.
 
-**Music**: public-domain pieces, arranged for this game:
+**Music**: Italian classics, public domain except where noted, arranged for this game:
 - Title: Funiculì, Funiculà, Luigi Denza (1880)
-- Menus: 'O sole mio, Eduardo di Capua (1898)
+- Menus: 'O sole mio, Eduardo di Capua and Alfredo Mazzucchi (1898). Mazzucchi (d. 1972) was recognised as
+  co-composer in Italy, so the music may still be protected in the EU until 2042: a placeholder (see below).
 - La Cucina: Anvil Chorus (Il trovatore), Giuseppe Verdi (1853)
 - La Trattoria: Brindisi “Libiamo ne' lieti calici” (La traviata), Giuseppe Verdi (1853)
 - I Vicoli di Napoli: La Danza, with the traditional Tarantella Napoletana, Gioachino Rossini (1835)
@@ -126,5 +127,15 @@ this game; details per sound in [docs/credits/sfx.md](docs/credits/sfx.md):
 - VCSL (Versilian Community Sample Library) by Versilian Studios (https://github.com/sgossner/VCSL), CC0 1.0.
 - FreePats World Percussion by Xavimart, Gonzalo and Roberto (http://freepats.zenvoid.org/), CC0 1.0.
 - SFX Kit by Wyzowl (https://huggingface.co/datasets/wyzowl/sfx-kit), CC0 1.0.
+
+**Before any release** (this build is a prototype; its audio is meant to be replaced):
+- *'O sole mio* (menu music) may still be under copyright in the EU (see above).
+- The mandolin recordings (Terkelsen's Mandolin) carry no stated license.
+- The Sonatina Symphonic Orchestra files (CC Sampling Plus 1.0, 26 of the 54 instrument sets: strings, winds,
+  brass, chorus, organ, harp, mallets, timpani, tam-tam) may be shared verbatim only noncommercially and may not
+  be used to advertise anything but this game: no paid or ad-supported builds with them.
+- Files under CC BY-SA 3.0 (horn section, orchestra hit) must stay under that license when shared.
+- Some harmonisations (La Danza, the game-over intro) follow modern published arrangements rather than the
+  composers' own scores; check them against a public-domain edition.
 
 No pineapples were harmed. Several were deeply offended.
