@@ -121,8 +121,8 @@ No bar is allowed in the first statements, and no `--resync` is used.
 
 - **Total**: 105 bars, 91.30 s of music (target 85–100 s).
 - **Loop**: `loopFrom: 1` (V1). In music time the loop runs from 3.478 to 91.304 s, a body of
-  87.826 s (bars 5–105). The rendered buffer is 95.30 s: the renderer appends the first 4 s of
-  the body after the loop end, and playback runs 0 → 95.304 s, then repeats 7.478 → 95.304 s of
+  87.826 s (bars 5–105). The rendered buffer is 97.30 s: the renderer appends the first 6 s of
+  the body after the loop end, and playback runs 0 → 97.304 s, then repeats 9.478 → 97.304 s of
   the buffer.
 - **Verse phrasing** (20 bars): a "Libiamo… infiora" (bars 1–10), a' "e la fuggevol ora… voluttà"
   (bars 11–19), and a V7 turnaround (bar 20).
@@ -133,7 +133,7 @@ No bar is allowed in the first statements, and no `--resync` is used.
   choruses start with "Ah!" on the second eighth, so they need none.
 - **Variety over a 15-minute session**: two keys and three melody colours (the accordion in B♭,
   the violin and mandolin in E♭, the duet in B♭), two tutti choruses, and a break. Section loudness
-  moves between −23.6 (break), −17.6 to −16.9 (verses) and −15.6 to −14.9 LUFS (choruses).
+  moves between −24.0 (break), −17.7 to −16.8 (verses) and −15.5 to −14.9 LUFS (choruses).
 
 ## Harmony
 
@@ -230,7 +230,8 @@ note has one clear leader.
 **Clarity, measured.** For each note of the tune, the energy at its own pitch (harmonics 1–3) is
 compared with the energy at the previous note's pitch, over 35–95 % of the written note. The
 table gives the share of notes whose own pitch wins by more than 3 dB, and the median margin.
-The measurement is the same as the review's, on sample renders of the full mix.
+The measurement is the same as the review's, on sample renders of the full mix (made when the
+review fixes went in, on the bank of that time).
 
 | Section (lead) | Turn notes (1–1.5 steps) | Eighths (2–3 steps) |
 |---|---|---|
@@ -249,10 +250,11 @@ The measurement is the same as the review's, on sample renders of the full mix.
   - in bars 4 and 14, the accordion's second voice holds C5, the previous melody note, a sixth
     under the E♭5;
   - in bar 3, the "pa" chord holds the previous pitch's harmonics.
-- **Melody against the band** (K-weighted energy per bar, median):
-  - V1 (the accordion): +6.1 dB;
-  - G: +4.7 dB (turn bars +3.9);
-  - duet: +2.3 dB, counting the second voice as band.
+- **Melody against the band** (K-weighted energy per bar, median; current render, the loop as it
+  repeats):
+  - V1 (the accordion): +5.3 dB;
+  - G: +4.9 dB (turn bars +4.1);
+  - duet: +3.5 dB, counting the second voice as band.
 - **The slides**: the grace pitch's partial against the target's, 50–200 ms after the target's
   onset, is −7.6 to −10.6 dB on the violin alone and −4.6 to −14.6 dB in the mix. The previous
   version's tripled slide into the climax G5 read +1.7 dB.
@@ -283,8 +285,8 @@ node scripts/music/render-song.mjs trattoria /tmp/trattoria.wav
 | Spectral balance | <250 Hz −6.8 dB, 250 Hz–4 kHz −1.2 dB, >4 kHz −15.9 dB |
 | Warnings | none |
 
-Octave bands over the loop body (share of energy, dB): 63 Hz −11.3, 125 −8.8, 250 −10.7,
-**500 −4.1**, 1k −7.4, 2k −11.3, 4k −12.9, 8k −18.9. The tune's fundamentals lead, and the 2–4 kHz
+Octave bands over the loop body (share of energy, dB): 63 Hz −11.5, 125 −8.7, 250 −10.7,
+**500 −4.1**, 1k −7.5, 2k −11.3, 4k −12.9, 8k −18.9. The tune's fundamentals lead, and the 2–4 kHz
 region stays open for the game's sound effects.
 
 | Channel | Solo LUFS | vs mix | Loudest 3 s | Peak dBFS |
@@ -312,29 +314,31 @@ renders.
 
 | Section | Mix LUFS | Lead | Lead vs mix | Bass | Tambourine |
 |---|---|---|---|---|---|
-| intro | −20.9 | clarinet / guitar | −3.2 / −5.9 | −4.6 | −18.3 |
-| V1 | −17.6 | accordion | **−0.8** | −8.6 | −19.9 |
-| G | −16.9 | violin + mandolin (violin +0.3, mandolin −6.4) | **−1.0** | −9.1 | −20.2 |
-| C1 | −15.6 | accordion (violin long notes −6.3) | **−2.2** | −8.6 | −16.1 |
-| brk | −23.6 | clarinet | **−2.1** | −4.9 | −14.1 |
+| intro | −20.6 | clarinet / guitar | −3.6 / −6.1 | −4.8 | −20.4 |
+| V1 | −17.7 | accordion | **−0.8** | −8.5 | −21.8 |
+| G | −17.0 | violin + mandolin (violin −2.1, mandolin −6.2) | **−1.1** | −8.9 | −19.1 |
+| C1 | −15.5 | accordion (violin long notes −7.2) | **−2.4** | −8.7 | −16.0 |
+| brk | −24.0 | clarinet | **−2.3** | −4.5 | −16.0 |
 | duet | −16.8 | violin + mandolin (accordion second voice −9.8) | **−1.3** | −9.0 | −17.7 |
 | C2 | −14.9 | accordion (octave line −6.0; together −1.5) | −3.3 | −9.7 | −17.5 |
 
-- **Build**: the verses sit at −17.6 to −16.9 LUFS and the choruses at −15.6 to −14.9, around a
-  −23.6 break. That is enough contrast for a 15-minute stage loop without pumping.
-- **Melody on top**: the tune is within about 2 LU of the mix in every section. In C2 the
+- **Build**: the verses sit at −17.7 to −16.8 LUFS and the choruses at −15.5 to −14.9, around a
+  −24.0 break. That is enough contrast for a 15-minute stage loop without pumping.
+- **Melody on top**: the tune is within about 2.5 LU of the mix in every section. In C2 the
   accordion and its octave doubling carry it together.
 - **Bass and percussion** are present but not dominant. In the verses and choruses the bass is
-  8.6–9.8 LU under the mix, the tambourine 16–20 and the clinks 18–19 (sparse accents). The break
-  features them: bass −4.9, tambourine −14.1, and the "cin cin!" double clink −8.2.
-- The sampler team is still fixing known bank issues: plucked samples start 10–47 ms late, and
-  several instruments' calibration is 2.5–5.7 dB off. The lead re-balances every track after
-  that fix. These levels are set against the current bank.
+  8.5–9.7 LU under the mix, the tambourine 16–22 and the clinks 18–19 (sparse accents). The break
+  features them: bass −4.5, tambourine −16.0, and the "cin cin!" double clink −7.9.
+- The bank issues known when this track was arranged (plucked samples starting 10–47 ms late,
+  several instruments' calibration 2.5–5.7 dB off) are fixed: the plucks sound on their beat, and
+  each channel's gain was offset for the recalibrated levels (commit bf24871), so the balance is
+  the one arranged here. The levels above are measured on the current bank.
 
-**In Chromium.** `audiotest.html` → `__at.samplerTrack('trattoria')` decodes the 53 MP3 sets with
+**In Chromium.** `audiotest.html` → `__at.samplerTrack('trattoria')` decodes the 54 MP3 sets with
 Chromium's decoder, with no bank warnings and no page errors. The game's music worker then renders
-the track in 1.1 s. The result matches the Node render sample for sample within −90 dB (RMS
-difference −111 dB): same length, same loop points, the same −3.24 dBFS peak.
+the track in 1.0 s. The result matches the Node render sample for sample within −90 dB, one 16-bit
+step (RMS difference −111 dB): same length (4 670 609 samples), same loop points, the same
+−3.05 dBFS peak.
 
 ## Changes from the previous version
 

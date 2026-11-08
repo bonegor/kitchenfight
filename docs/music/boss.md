@@ -77,13 +77,13 @@ its full-band downbeat played at 2 % gain and the call reached full level only i
 Now bar 1 is a crescendo roll that grows through the fade (the fade only deepens it), and the brass
 call (still two bars, the brief's "1–2 bar fanfare intro") starts on bar 2 at 0.79 s, when the fade
 is complete. The intro plays once; the loop still starts at A (`loopFrom: 1`). Measured on the
-sample render with that gain ramp applied (100 ms windows):
+sample render with that gain ramp applied (100 ms windows; the "now" column on the current render):
 
 | | before (2-bar intro) | now (3-bar intro) |
 |--|----------------------|-------------------|
-| the call's first (tutti) downbeat | t = 0, heard at 2 % gain; the call's next notes at 34 %, 51 % and 68 % | t = 0.79 s, with crash and bass drum (−5.0 dBFS, the intro's highest peak), at full gain |
-| first 0.1 s | that downbeat: peak −7.9 dBFS in the file, heard at −24.1 dBFS | the roll's first pp strokes: −28.9 dBFS, heard at −44.8 |
-| level heard (400 ms momentary) | −33.7 → −17.7 LUFS over 0–0.8 s, the call already under way | −54.7 → −19.0 LUFS over 0–0.8 s (the roll), −16.7 LUFS at 0.9 s with the call |
+| the call's first (tutti) downbeat | t = 0, heard at 2 % gain; the call's next notes at 34 %, 51 % and 68 % | t = 0.79 s, with crash and bass drum (−6.0 dBFS; the intro's highest peak, −5.7 dBFS, follows in the call at 1.22 s), at full gain |
+| first 0.1 s | that downbeat: peak −7.9 dBFS in the file, heard at −24.1 dBFS | the roll's first pp strokes: −26.7 dBFS, heard at −42.6 |
+| level heard (400 ms momentary) | −33.7 → −17.7 LUFS over 0–0.8 s, the call already under way | −59.3 → −18.3 LUFS over 0–0.8 s (the roll), −15.8 LUFS at 0.9 s with the call |
 
 Left out on purpose: Köhler's final bars 39–41 (stop chords E5 / E6 and the fermata E4: an ending,
 which a loop does not need). Everything else of the rondo is played once, in Köhler's order (theme
@@ -257,32 +257,33 @@ accordion −2.9, staccato strings (tune) −3.3, brass −8.9, horn −10.7, ti
 xylophone −11.8, guitar −12.9, tuba −13.0, galloping strings −13.7, suspended cymbal −14.5, horn
 section −14.5, snare −14.8, tambourine −16.6, orchestra hit −17.0, pizzicato −17.7, crash −17.8,
 bass drum −18.0, woodblock −20.2, whip −20.8, triangle −20.8; no channel's loudest 3 s is more than
-30 LU below the mix (render-song's audibility check passes). The section table below predates the
-current bank.
+30 LU below the mix (render-song's audibility check passes).
 
 Per section (solo stems rendered with the renderer's `solo` option, BS.1770 integrated loudness per
-section window; the lead is the combined unison line where several instruments share the tune;
-"percussion" = snare, bass drum, crash, suspended cymbal, tambourine, triangle, woodblock, whip,
-orchestra hit):
+section window, the loop sections as they repeat; the lead is the combined unison line where
+several instruments share the tune; "percussion" = snare, bass drum, crash, suspended cymbal,
+tambourine, triangle, woodblock, whip, orchestra hit):
 
 | Section | intro roll (bar 1) | intro call (2–3) | A | A2 | B | B2 | brk | C theme | C runs | coda |
 |---------|-------|------|---|----|---|----|-----|---------|--------|------|
-| mix (LUFS) | −23.4 | −16.4 | −16.8 | −16.0 | −18.2 | −15.3 | −19.8 | −15.0 | −15.5 | −15.4 |
-| lead vs mix (LU) | — (timpani + snare + cymbal roll only) | brass −2.7, brass + horns −1.7 | trumpet −1.0 | accordion −1.3 | strings −1.0 | strings + xylophone −1.8 (with the accordion 8vb −0.8) | brass (trumpet call, stabs) −2.6, horn call −3.6 | trumpet + accordion −0.8 | accordion + strings + xylophone −1.5 | accordion + strings + brass −1.5 |
-| tuba + timpani + bass drum (LU) | −2.6 | −6.8 | −9.3 | −10.1 | −11.1 | −12.6 | −6.8 | −10.3 | −9.0 | −7.9 |
-| percussion (LU) | −3.3 | −9.4 | −14.0 | −13.3 | −13.9 | −14.0 | −9.6 | −16.1 | −14.1 | −14.2 |
+| mix (LUFS) | −22.6 | −16.0 | −17.1 | −15.9 | −18.1 | −15.6 | −19.7 | −15.0 | −15.3 | −15.5 |
+| lead vs mix (LU) | — (timpani + snare + cymbal roll only) | brass −2.7, brass + horns −1.6 | trumpet −1.1 | accordion −1.4 | strings −1.0 | strings + xylophone −1.7 (with the accordion 8vb −0.9) | brass (trumpet call, stabs) −2.7, horn call −3.8 | trumpet + accordion −0.9 | accordion + strings + xylophone −1.5 | accordion + strings + brass −1.5 |
+| tuba + timpani + bass drum (LU) | −3.1 | −7.3 | −9.0 | −10.2 | −11.3 | −12.2 | −6.8 | −10.3 | −9.3 | −7.8 |
+| percussion (LU) | −3.2 | −9.6 | −13.9 | −13.2 | −13.7 | −13.6 | −9.1 | −15.3 | −13.4 | −12.7 |
 
-The melody is on top in every section of the loop (within 0.8–2.6 LU of the mix; in the break the
-calls alternate between horns and trumpets), bass and percussion sit 7–16 LU below the mix. The
-intro's roll is the only all-percussion moment: a pp → f crescendo (−23.4 LUFS over its bar without
-the game's fade) into the call. The horn chords sit 12.3 (B) and 15.1 (B2) LU under the mix. The
-dynamic arc is A → A2 a little fuller → B lighter (−1.4 LU below A) → B2 → the break (quietest
-moment: short-term −22.3 LUFS at its start, building to the tutti stabs) → C and the coda as the
-climax (+1 to +2 LU over A). Over the loop the short-term (3 s) loudness stays between −18.3 and
-−15.2 LUFS 80 % of the time (median −16.2).
+The melody is on top in every section of the loop (within 0.9–2.7 LU of the mix; in the break the
+calls alternate between horns and trumpets), bass and percussion sit 7–15 LU below the mix. The
+intro's roll is the only all-percussion moment: a pp → f crescendo (−22.6 LUFS over its bar without
+the game's fade) into the call. The horn chords sit 12.3 (B) and 14.8 (B2) LU under the mix. The
+dynamic arc is A → A2 a little fuller → B lighter (−1.0 LU below A) → B2 → the break (quietest
+moment: short-term −22.7 LUFS over its first 3 s, building to the tutti stabs) → C and the coda as
+the climax (+1.6 to +2.1 LU over A). Over the loop the short-term (3 s) loudness stays between
+−18.2 and −15.1 LUFS 80 % of the time (median −16.1).
 
-The synth fallback (`--synth`) plays every channel (no skipped instrument) and measures −14.3 LUFS,
-2.0 LU louder, as expected for the synth set (see [`../MUSIC.md`](../MUSIC.md)).
+The synth fallback (`--synth`) plays every channel (no skipped instrument) and measures −16.5 LUFS
+over the loop body (whole file −16.7, peak −3.98 dBFS, no warnings): within 0.2 LU of the recorded
+bank, whose instruments the sampler calibrates against their synth versions
+(`scripts/audio/calibrate_instruments.mjs`).
 
 ## Polish: the cymbal rolls on the bright roll
 

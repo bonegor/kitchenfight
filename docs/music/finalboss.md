@@ -8,7 +8,7 @@
 | Public domain | Yes: Verdi died in 1901 and the score was published by Ricordi in 1874, out of copyright everywhere. The arrangement is new; only Verdi's notes (as listed below) are taken from the reference. |
 | Track | `src/audio/songs/finalboss.ts`, export `finalboss`, id `finalboss`: the final boss at 15:00, looping |
 | Key / meter / tempo | G minor (Verdi's key), 4/4, ♩ = 84 (`bpm: 84`, `stepsPerBeat: 8`, `barSteps: 32`: one step = a 32nd note, the note value of Verdi's runs and swirl). Verdi writes *Allegro agitato* ♩ = 80; 84 is a touch more relentless for gameplay. |
-| Length | 65.7 s of music (23 bars): intro 2.86 s (bar 1, played once), loop body 62.86 s (bars 2–23); rendered buffer 69.7 s including the 4 s seam pad |
+| Length | 65.7 s of music (23 bars): intro 2.86 s (bar 1, played once), loop body 62.86 s (bars 2–23); rendered buffer 71.7 s including the 6 s seam pad |
 
 ## Reference
 
@@ -284,43 +284,47 @@ Recorded samples (54 sets). 71.71 s @ 48 kHz (with the 6 s loop pad), 2523 event
 | Sample peak | **−1.62 dBFS** |
 | Soft clipper | 307 samples (0.004 %) |
 | Loop seam | −131.9 dBFS mismatch |
-| Spectral balance | < 250 Hz −6.7 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −18.8 dB (was −22.4: see "Polish" at the end) |
+| Spectral balance | < 250 Hz −6.7 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
 | Lead | `choir` −20.6 LUFS solo (−4.3 LU); the chorus as heard (`choir,trpC,clar`) −1.4 LU in A's chorus bars, with `tbn` −1.7 LU in A2's; bassoons −2.6 LU and xylophone + piccolo −2.0 LU in the break; `choir,clar,tbn` −1.6 LU in `gath` |
 | Other channels (loop body, vs mix) | strings `vln` −6.4 LU, brass −8.7, trumpets `trpC` −6.7, trombones −8.8, organ −8.1, clarinets −8.6, bass drum −10.0, timpani −11.9, tam-tam −10.9, glockenspiel −12.8, cymbal −14.8, triangle −16.1, crash −18.3 |
 | Warnings | none |
 | `gainDb` | −7.8 |
 
-Per section (LUFS over each section, solo renders of channel groups; this table and the per-bar
-table below predate the current bank and the polish, whose per-section balance is at the end):
+Per section (gated LUFS over each section, the loop sections as they repeat; solo renders of
+channel groups: strings = violins, violas, sustained strings, cellos, basses and pizzicato; brass +
+tuba = brass, trumpets, trombones, horns and tuba; percussion = timpani, bass drums, crash, cymbal,
+tam-tam, triangle, glockenspiel, pan, woodblock and slapstick):
 
 | | intro | A | A2 | B | brk | gath | bld |
 |---|---|---|---|---|---|---|---|
-| mix | −20.8 | −16.8 | −15.6 | −15.7 | −18.1 | −17.5 | −15.7 |
-| choir + choirO + trpC + clar | −24.6 | −17.9 | −18.7 | −19.3 | — | −19.7 | −22.0 |
-| strings | — | −20.5 | −19.7 | −22.7 | −26.9 | −25.0 | −19.9 |
-| brass + tuba | — | −23.6 | −22.2 | −25.5 | −27.5 | −27.1 | −23.4 |
-| bassoons + piccolo + xylophone | — | — | −22.6 | — | −20.2 | — | — |
-| organ | −28.3 | — | −26.9 | −23.9 | — | — | −24.4 |
-| percussion | −24.9 | −24.8 | −24.2 | −25.4 | −26.0 | −28.1 | −24.5 |
+| mix | −20.6 | −16.7 | −15.8 | −15.2 | −18.0 | −18.1 | −15.5 |
+| choir + choirO + trpC + clar | −24.3 | −18.2 | −19.3 | −18.0 | — | −20.4 | −21.5 |
+| strings | — | −20.4 | −19.9 | −23.5 | −26.7 | −25.0 | −20.2 |
+| brass + tuba | — | −23.8 | −22.7 | −25.7 | −27.4 | −27.0 | −23.1 |
+| bassoons + piccolo + xylophone | — | — | −22.1 | — | −20.3 | — | — |
+| organ | −29.2 | — | −27.3 | −23.3 | — | — | −24.3 |
+| percussion | −24.2 | −23.4 | −22.5 | −23.7 | −25.1 | −27.9 | −23.5 |
 
 — = the group does not play there (at most a reverb tail of the previous section).
 
-Per bar (K-weighted LUFS of the mix over each bar; loop body −16.4):
+Per bar (K-weighted LUFS of the mix over each bar, the loop as it repeats; loop body −16.3):
 
 | Bars | Section | LUFS per bar |
 |---|---|---|
-| 2–6 | A | −18.7, −16.3, −15.1, −16.8, −18.0 |
-| 7–11 | A2 | −17.6, −14.6, −13.7, −16.1, −17.5 |
-| 12–15 | B | −16.0, −15.3, −15.9, −15.5 |
-| 16–19 | brk | −18.0, −18.3, −18.1, −17.6 |
-| 20–21 | gath | −18.1, −17.0 |
-| 22–23 | bld | −17.8, −14.3 |
+| 2–6 | A | −18.7, −15.8, −15.5, −17.2, −16.6 |
+| 7–11 | A2 | −17.7, −14.5, −14.5, −16.7, −16.2 |
+| 12–15 | B | −15.2, −15.2, −15.2, −15.1 |
+| 16–19 | brk | −17.3, −18.7, −18.2, −17.6 |
+| 20–21 | gath | −19.0, −17.3 |
+| 22–23 | bld | −17.5, −14.3 |
 
-The break and the gathering are a breath, not a drop-out: at most 1.9 LU under the loop body
+The break and the gathering are a breath, not a drop-out: at most 1.8 LU under the loop body
 (before the review fixes they reached −22.4 LUFS, 6 LU under it, and the loop swung 8.5 LU; now
-the quietest bar outside the gappy hammer bar is −18.3 and the loudest −13.7).
+the quietest bar is −19.0, the gathering's first, and the loudest −14.3, the build's last).
 
-What the review asked to make audible (mix vs the mix without the channel, same bars):
+What the review asked to make audible (mix vs the mix without the channel, same bars; measured
+when the review fixes went in, on the bank of that time and before the polish below, whose own
+measurements of the crash, tam-tam, cymbal, triangle and glockenspiel are at the end):
 
 | Element | Contribution |
 |---|---|
@@ -332,8 +336,9 @@ What the review asked to make audible (mix vs the mix without the channel, same 
 | Organ | A2 chorus +1.6 dB at 150–600 Hz; B +1.2 dB at 30–120 Hz and +1.7 dB at 150–600 Hz; build +2.0 dB at 30–120 Hz; intro +2.0 dB at 30–120 Hz |
 | `gath` | lead (`choir,clar,tbn`) −19.0 LUFS against −22.9 for everything else; violas' swirl +1.2 dB at 1–6 kHz |
 
-In the hammer bars the envelope alternates chord (beat) and bass-drum stroke (off-beat); below
-120 Hz the off-beat thwacks stand about 5.5 dB above the chords (RMS over each 16th, A and A2).
+In the hammer bars the envelope alternates chord (beat) and bass-drum stroke (off-beat); at the
+review fixes, below 120 Hz the off-beat thwacks stood about 5.5 dB above the chords (RMS over each
+16th, A and A2).
 
 ## Changes after the review
 

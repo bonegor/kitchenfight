@@ -8,7 +8,7 @@
 | Public domain | Yes: Denza died in 1922, Turco in 1903; the 1880 publication is out of copyright everywhere. The arrangement is new; only the melody, its printed harmony and bass are taken from the sources below. |
 | Track | `src/audio/songs/title.ts`, export `title`, id `title`: title screen and attract mode, looping |
 | Key / meter / tempo | F major, 6/8, dotted quarter = 124 (`bpm: 124`, `stepsPerBeat: 3`, `barSteps: 6`, one step = an eighth) |
-| Length | 68.7 s of music (71 bars); intro 2.9 s, loop body 65.8 s (bars 4–71); rendered buffer 72.7 s including the 4 s seam pad |
+| Length | 68.7 s of music (71 bars); intro 2.9 s, loop body 65.8 s (bars 4–71); rendered buffer 74.7 s including the 6 s seam pad |
 
 ## Reference
 
@@ -93,8 +93,9 @@ No `--allow-bars` and no `--resync` are used. The remaining differences:
 | `middle` | 38–55 | 35.81–53.23 | 20–37 | Contrast: A minor, mandolin tremolo lead, guitar arpeggios, pizzicato off-beats, castanets, staccato bassoon answers. C-major half: accordion thirds under the mandolin, accordion chords, string-pad crescendo, clarinet answers. Bar 18: snare/timpani rolls, cymbal swell, trombone C7 swell, xylophone run up |
 | `refrain2` | 56–71 | 53.23–68.71 | 38–53 ornamented | As `refrain`, bigger: trumpet doubles the "Jammo, jammo" call, tuba joins the bass, string pad, louder bass drum, a third crash on the final button; the last bar carries the verse pickup |
 
-`loopFrom: 1` (the verse). The loop window is 2.903 → 68.710 s. The verse pickup is in the last
-bar of both the intro and `refrain2`, so the melody runs straight across the seam.
+`loopFrom: 1` (the verse). The loop window is 2.903 → 68.710 s of music; in the rendered buffer
+playback runs 0 → 74.710 s, then repeats 8.903 → 74.710 s (render-song). The verse pickup is in the
+last bar of both the intro and `refrain2`, so the melody runs straight across the seam.
 
 ## Harmony and bass
 
@@ -178,28 +179,28 @@ inside the sample range. G major would push the octave doubling and the mandolin
 | `gainDb` | −1.5 | |
 
 The lead channel against the mix over the loop body is `acc` −1.2 LU. Per section (scratch
-analysis: section LUFS of the mix, and the lead's solo loudness against it):
+analysis on the same render: gated section LUFS of the mix, the loop sections as they repeat, and
+the lead's solo loudness against it):
 
 | Section | Mix LUFS | Lead vs mix |
 |---|---|---|
-| intro | −18.1 | `acc` −1.0 LU |
-| verse | −17.7 | `acc` −1.4 LU |
-| refrain | −15.7 | `acc` −2.0 LU (`mand` −8.9, `accLo` −12.7) |
-| middle | −18.5 | `mand` −1.3 LU |
+| intro | −17.1 | `acc` −0.8 LU |
+| verse | −17.8 | `acc` −1.4 LU |
+| refrain | −15.5 | `acc` −2.0 LU (`mand` −9.1, `accLo` −13.0) |
+| middle | −18.3 | `mand` −1.3 LU |
 | refrain2 | −14.4 | `acc` −1.8 LU |
 
 **In the browser:** `window.__at.samplerTrack('title')` on `audiotest.html` (Chromium, Vite dev
 server) decodes the MP3 sprites with the browser's decoder, installs them in the music worker and
-renders the track there. The result has the same length as the Node render and nulls against it
-to −90.3 dBFS peak (−110.6 dBFS RMS). Peak −2.93 dBFS and −16.5 LUFS whole-file (ffmpeg
-`ebur128`) in both; the bank loads 53 sets with no failures.
+renders the track there. The result has the same length (3 586 065 samples) and loop window as the
+Node render and nulls against it to −90.3 dBFS peak, one 16-bit step (−110.4 dBFS RMS). Peak
+−2.63 dBFS and −16.5 LUFS whole-file in both; the bank loads 54 sets with no failures.
 
-Bass and percussion against the section mix: upright bass −8 to −14 LU, tambourine −16 to −22,
-castanets −17 to −24, bass drum −10 under the intro stab and about −16 in the refrains, timpani
-−12 to −14 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
-run, crash, cymbal swells) measure −10 to −30 LU while they play. Every channel is audible:
-render-song flags none as inaudible. (The per-section figures and the browser check above predate
-the current bank; the measurement table is the current render.)
+Bass and percussion against the section mix: upright bass −8 to −14 LU, tambourine −17 to −21,
+castanets −18 to −24, bass drum −11 under the intro stab and about −16 in the refrains, timpani
+−12 to −13 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
+run, crash, cymbal swells) measure −10 to −26 LU in the sections where they play. Every channel is
+audible: render-song flags none as inaudible.
 
 ## Review fixes
 

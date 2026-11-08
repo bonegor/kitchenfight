@@ -247,41 +247,48 @@ light jazz-waltz lilt on the off-beat eighths).
 | snare | snare | 24 | −5 | −25.3 | −9.0 | −8.5 |
 | tamb | tamb | 80 | −3.2 | −35.1 | −18.8 | −13.1 |
 
-Every lead channel (bold) is within 2 LU of the loop mix. Per section (integrated loudness and
-sample peak of the section in the render; each lead's solo loudness relative to the mix over the
-same bars, from mono stems that a scratch script renders through the same renderer and bank; this
-table predates the current bank and the polish below):
+Every lead channel (bold) is within 2 LU of the loop mix. Per section (gated integrated loudness
+and sample peak of the section in the render, the loop sections as they repeat; each lead's solo
+loudness relative to the mix over the same bars, from solo stems that a scratch script renders
+through the same renderer and bank):
 
 | Section | Mix LUFS | Mix peak dBFS | Lead (solo vs mix, same bars) |
 |---|--:|--:|---|
 | intro | −21.3 | −9.5 | chime −0.2 (bars 1–2) |
-| B | −16.4 | −6.0 | vibes −1.1 |
-| C | −16.5 | −6.3 | vibes −0.9 (bars 1–3), warble on the held D6 −1.5 (bar 4), warble −1.1 (bars 5–8) |
-| A | −16.7 | −6.4 | warble −0.7 |
-| A1 | −16.5 | −6.5 | cello −0.6 |
-| D | −15.7 | −4.7 | violin −1.7 |
-| chime | −20.8 | −11.8 | chime −0.6 |
-| B2 | −16.5 | −4.0 | steel guitar −1.6 |
-| C2 | −16.6 | −6.0 | e-piano −1.4 (bars 1–3), warble on the held D6 −1.8 (bar 4), warble −1.5 (bars 5–8) |
-| A2 | −15.9 | −4.8 | violin −2.0 |
-| D2 | −15.0 | −4.7 | violin −1.6 |
-| chime2 | −20.7 | −11.7 | chime −0.6 |
+| B | −16.9 | −6.2 | vibes −1.1 |
+| C | −16.7 | −6.6 | vibes −1.0 (bars 1–3), warble on the held D6 −1.4 (bar 4), warble −1.1 (bars 5–8) |
+| A | −16.6 | −5.8 | warble −0.7 |
+| A1 | −16.1 | −5.8 | cello −0.7 |
+| D | −15.9 | −4.3 | violin −1.7 |
+| chime | −20.6 | −11.8 | chime −0.7 |
+| B2 | −16.4 | −3.5 | steel guitar −1.5 |
+| C2 | −16.6 | −5.3 | e-piano −1.4 (bars 1–3), warble on the held D6 −2.0 (bar 4), warble −1.6 (bars 5–8) |
+| A2 | −15.0 | −4.1 | violin −1.5 |
+| D2 | −15.3 | −2.0 | violin −2.0 |
+| chime2 | −20.6 | −12.3 | chime −0.6 |
 
-The groove sections sit within 1.7 LU of each other (muzak and sinister −16.4…−16.7, orchestra
-−15.9/−15.7, the tutti −15.0), so the loop does not pump under gameplay; the two chimes are the
-2-bar breathers.
+The groove sections sit within 1.9 LU of each other (muzak and sinister −16.1…−16.9, orchestra
+−15.9 in D and −15.0 in A2, the tutti −15.3), so the loop does not pump under gameplay; the two
+chimes are the 2-bar breathers.
 
-**Audibility of the small parts** (scratch script: the channel's solo against the mix without
-it, in third-octave bands, 85 ms frames, over each burst; "unmasked" = frames in which the
-channel is louder than the rest of the mix in at least one band; momentary loudness = 400 ms
-window). For scale, the trombone counter-line, which is audible but not prominent, reads 83 %
-unmasked with a best band of −3 dB on the same scale.
+**Audibility of the small parts** (scratch script, measured when the review fixes went in: the
+channel's solo against the mix without it, in third-octave bands, 85 ms frames, over each burst;
+"unmasked" = frames in which the channel is louder than the rest of the mix in at least one band;
+momentary loudness = 400 ms window). For scale, the trombone counter-line, which is audible but
+not prominent, reads 83 % unmasked with a best band of −3 dB on the same scale.
 
 | Part | Bursts | Best band (dB) | Unmasked frames | Burst vs mix, momentary |
 |---|---|--:|--:|--:|
 | robot heckles, A1 bars 2 / 4 / 6 | 6 sixteenths from 2& | +0.7 / +10.6 / +4.3 | 87 % each | −12.2 / −11.5 / −10.9 LU |
 | robot heckles, A2 bars 4 / 6 | 6 from 2& / 4 from beat 3 | +3.2 / −1.4 | 81 % / 64 % | −13.7 / −11.8 LU |
 | snare rolls, A1 / C2 / A2 bar 8 | 8 sixteenths, crescendo | +2.0 / +0.3 / +1.2 | 91 % / 68 % / 82 % | −7.2 / −4.6 / −8.5 LU |
+
+Re-checked on the current render, with the louder low strings of the polish below (the loop as it
+repeats; frames as above, each burst's middle 400 ms against the mix): the robot heckles are
+unmasked in 83 / 100 / 100 % of their frames in A1 bars 2 / 4 / 6 and in 100 / 100 % in A2 bars
+4 / 6, at −11.4 / −10.7 / −10.2 and −11.4 / −10.6 LU; the snare rolls (A1 / C2 / A2 bar 8) in 90 %
+each, at −6.8 / −4.0 / −6.5 LU; the trombone counter-line in 81 %. None of them lost ground to the
+strings.
 
 A chroma check (scratch script: per-bar FFT chroma of the render against the pitch classes of the
 written notes) gives a median correlation of 0.85; every bar's strongest pitch classes are its
@@ -290,10 +297,15 @@ turnaround bars (12 and 54) the strongest bins are now the A9's (bar 54: B3 0 dB
 C♯4 −6, A3 −8), where the review measured D4 0 dB, F♯3 −3, C♯4 −3.
 
 **Chromium, real engine**: `audiotest.html` → `__at.samplerTrack('foodcourt')` (browser MP3
-decoding, fresh music worker, a private dev server with `scripts/vite.agent.config.ts`): 53 sets,
-no warnings, no page errors; decode 1.53 s, worker render 2.09 s, longest main-thread frame gap
-42 ms; the result equals the Node render (same length 4 458 667 samples and loop points, same
-−3.95 dBFS peak, difference 92.5 dB below the signal, zero lag).
+decoding, fresh music worker, a private dev server with `scripts/vite.agent.config.ts`): 54 sets,
+no warnings, no page errors; decode 0.51 s, worker render 1.45 s, longest main-thread frame gap
+21 ms. The result has the Node render's length (4 554 667 samples), loop points and −1.99 dBFS
+peak, and equals it within one 16-bit step everywhere except at the shaker's accented stroke on
+the downbeat of every other bar of the muzak sections (93 of its 10 ms blocks), where the two differ
+by up to 174 steps (−45.5 dBFS; −97.2 dBFS RMS over the whole render). The cause is in the bank:
+Chromium's decoder and ffmpeg disagree on the first take of the `shaker` sprite (zone r0) by
+−44.8 dB of its level, while its other three takes agree to −113 dB. That is the sampler's to
+fix; the song does not work around it.
 
 ## Review fixes
 

@@ -137,7 +137,7 @@ notes actually played (`node scripts/music/export-song.mjs streets --per-section
   night tune's D4, C C3G3C4E4 on E4, Am A3C4E4A4 on A4).
 - `xylo` xylophone A5–A6 (C2 only).
 - `str` strings pad F3–D4 (N, 2nd half: Dm F3A3D4, Gm G3B♭3D4, A7 G3A3C♯4), under the clarinet,
-  a gentle swell into A2 (velocity ×0.75 → ×1.15; measured −33.7 → −30.1 LUFS from bars 69–70 to
+  a gentle swell into A2 (velocity ×0.75 → ×1.15; measured −33.7 → −29.9 LUFS from bars 69–70 to
   75–76).
 - `tamb` tambourine (accent / hit / shake / roll variants), `cast` castanets, `kick` orchestral
   bass drum.
@@ -188,29 +188,29 @@ refrain's closing A major chord becomes its dominant.
 | cym | cymbal | 2 | −1.2 | −27.9 | −11.6 | −15.2 |
 | timp | timpani | 33 | −6.8 | −28.9 | −12.6 | −11.9 |
 
-Per section (integrated loudness of the section, and the solo loudness of its lead relative to the
-section mix; measured with a scratch script that renders each channel solo through the same
-renderer and sample bank; this table and the browser check below predate the current bank):
+Per section (gated integrated loudness of the section, the loop sections as they repeat, and the
+solo loudness of its lead relative to the section mix; measured with a scratch script that renders
+each channel solo through the same renderer and sample bank):
 
 | Section | Mix LUFS | Lead (solo vs section mix) | Bass | Tambourine | Castanets |
 |---------|---------:|----------------------------|-----:|-----------:|----------:|
-| intro | −22.9 | (build-up: guitar −4.3, brass hits −4.6) | −5.5 | −14.3 | −9.0 |
-| A | −17.4 | mandolin −2.2 (accordion −4.9 against the mix of bars 13–20, where it joins) | −11.1 | −19.7 | −22.9 |
-| B | −15.9 | accordion −1.4 (mandolin double stops −11.5) | −12.5 | −19.7 | −16.4 |
-| B2 | −16.1 | accordion −1.5 (brass −10.5) | −11.6 | −18.8 | −17.7 |
-| C | −16.0 | mandolin −4.4 + accordion −3.9 in unison | −11.7 | −18.5 | −17.7 |
-| N | −18.6 | clarinet −2.6 (mandolin −4.6 against the mix of bars 69–76; strings −13.0) | −9.9 | −21.9 | −21.2 |
-| A2 | −15.4 | accordion −2.2 | −12.2 | −19.5 | −19.3 |
-| C2 | −15.8 | accordion −2.6 (mandolin octave −7.4) | −11.3 | −18.1 | −17.1 |
+| intro | −22.8 | (build-up: guitar −4.6, brass hits −4.1) | −5.6 | −14.1 | −8.9 |
+| A | −17.4 | mandolin −2.3 (accordion −4.5 against the mix of bars 13–20, where it joins) | −11.1 | −19.4 | −22.7 |
+| B | −15.8 | accordion −1.4 (mandolin double stops −11.7) | −12.6 | −19.9 | −16.4 |
+| B2 | −16.0 | accordion −1.5 (brass −10.2) | −11.7 | −18.6 | −17.6 |
+| C | −16.1 | mandolin −4.4 + accordion −4.1 in unison | −11.6 | −18.4 | −17.4 |
+| N | −18.6 | clarinet −2.5 (mandolin −4.8 against the mix of bars 69–76; strings −12.9) | −9.9 | −21.2 | −21.0 |
+| A2 | −15.2 | accordion −1.9 | −12.4 | −19.8 | −19.3 |
+| C2 | −15.9 | accordion −2.8 (mandolin octave −7.2) | −11.2 | −18.0 | −16.9 |
 
-The night section sits about 2.7 LU under the tutti sections on purpose; the first verse is the
-light statement, A2/C2 the loudest.
+The night section sits about 2.8 LU under the tutti sections on purpose; the first verse is the
+light statement, A2 the loudest.
 
 **Chromium, real engine**: `audiotest.html` → `__at.samplerTrack('streets')` (browser MP3 decoding,
-fresh music worker, dev server `scripts/vite.agent.config.ts`): decode 1.2 s, worker render 1.62 s,
-longest main-thread frame gap 108 ms (measured while other renders loaded the machine), no page
-errors. The result equals the Node render: same length and loop points (4 512 000 samples, loop
-352 000 → 4 512 000), same −3.72 dBFS peak, difference 90.8 dB below the signal, zero lag.
+fresh music worker, dev server `scripts/vite.agent.config.ts`): 54 sets, decode 0.50 s, worker
+render 1.28 s, longest main-thread frame gap 21 ms, no page errors. The result equals the Node
+render: same length and loop points (4 608 000 samples, loop 448 000 → 4 608 000), same −2.96 dBFS
+peak, no sample more than one 16-bit step apart (difference −110.4 dBFS RMS).
 
 ## Review fixes (sample renders, before → after)
 
