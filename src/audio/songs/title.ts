@@ -221,7 +221,12 @@ export const title: SongDef = {
         // accordion flourish: bellows shake on C7, a run up the arpeggio, then the verse pickup
         mel('acc', `${SHAKE} | C4:0.5 E4 G4 Bb4 C5 E5 G5*:3 | ${VERSE_PICKUP}`, { vel: 0.9 }),
         hits('timp', [...roll(0, 6, 12, 'C2', 0.3, 0.75), [6, 'C2', 0.85], [12, 'F2', 0.95]]),
-        hits('cym', [[0, 60, 0.6, 12]], 1),
+        // the suspended-cymbal swell into the stab, velocity 0.6 → 0.63 (+0.7 dB; below 0.7, so the same roll
+        // recording). Over the mix without it, in its last 150 ms, it rose 11.4 dB at 0b3eb2e (third-octave at 3.2 kHz)
+        // and 9.2 dB at 0.6 now (at 500 Hz; 5.6 dB at 3.2 kHz, where the accordion's held G5 is 4 dB stronger in the
+        // mid since the sampler starts the accordion's two takes together); at 0.63 it rises 9.8 dB (500 Hz; 6.1 dB at
+        // 3.2 kHz), adds 0.36 LU there and stays 10.3 LU under the accordion
+        hits('cym', [[0, 60, 0.63, 12]], 1),
         drums('tamb', 'R..R..|X.xxXx|X.....', TAMB),
         drums('cast', '............|X.....x.xxxx|X...........', CAST, { stepDiv: 2 }),
         hits('crash', [[12, 60, 0.8]]),
