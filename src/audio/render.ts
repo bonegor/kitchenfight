@@ -11,6 +11,7 @@
 import { Biquad, clamp, dbToGain, Slicer } from './dsp';
 import { INSTRUMENTS, MAX_PRE_SEC, type InstDef, type Sample } from './instruments';
 import { applyReverb } from './reverb';
+import { releaseScratch } from './sampled';
 import { compileSong, type SongDef, type TimedEv } from './sequencer';
 
 export interface RenderStats {
@@ -363,6 +364,8 @@ export async function renderSong(song: SongDef, sr: number, opts: RenderOpts = {
     if (slicer.due()) await slicer.yield();
   }
   const synthMs = performance.now() - tSynth;
+  // (the sampler's analysis buffers are not kept between renders)
+  releaseScratch();
 
   slicer.phase = 'mix';
   const tMix = performance.now();

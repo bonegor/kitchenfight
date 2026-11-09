@@ -1049,11 +1049,20 @@ function alignTakes(a: Rendered, b: Rendered, d = 0): TakesAlign {
 
 /** Reusable buffers for the analysis of one note, by slot (it runs synchronously: what a slot holds is never kept
  *  past the call that took it, nor read before that call wrote it); one longer than SCRATCH_MAX elements is made for
- *  the call alone (what stays between renders: about 1 MB) */
+ *  the call alone. They grow to about 1.5 MB over a render and are let go once its samples are made (releaseScratch) */
 const SCRATCH_MAX = 1 << 15;
 const scratch64: Float64Array[] = [];
 const scratch32: Float32Array[] = [];
 const scratchI32: Int32Array[] = [];
+
+/** Let the analysis buffers go (render.ts, once a render's samples are made): between renders a worker keeps only the
+ *  note analyses (NoteAnalysis); the next render makes its buffers anew (2-3 MB of allocations, against the tens of
+ *  MB of samples it makes) */
+export function releaseScratch(): void {
+  scratch64.length = 0;
+  scratch32.length = 0;
+  scratchI32.length = 0;
+}
 function f64(slot: number, n: number): Float64Array {
   const b = scratch64[slot];
   if (b && b.length >= n) return b;
