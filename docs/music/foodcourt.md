@@ -381,12 +381,13 @@ LU).
 **The D pad, heard.** A second review found that the pad under the violins in D bars 1–4 was still
 under the 3 dB rule (3 of its 4 chords; per note, L and R third-octave bands over each note: 2.3,
 1.9, 3.7, 2.5, 1.3, 2.3, 1.4 dB), so it was neither heard nor dropped; it shares its register with
-the e-piano's waltz comping (E3–D4). Its velocity goes 0.45 → 0.69 (the channel gain, which sets
-A's and A1's swells, stays −9.3 dB): every chord rises 3.7–10.3 dB in its band, every note
-3.9–9.5 dB (per note: 5.8, 5.3, 9.5, 7.0, 3.9, 6.2, 4.0 dB), and the pad stays 3.8–6.9 LU under the
-violins (it adds 0.6–1.1 LU to the mix there). The violins keep the bars: all 13 of their notes in
-D bars 1–4 still rise 8.1 dB or more in their band (median 17.1 dB, 20.3 before). Per section, the
-strings sit 11–12.4 LU under the mix (6.9 in D, under the violins), the lead 0.6–2.2 LU.
+the e-piano's waltz comping (E3–D4). Its velocity goes 0.45 → 0.69 (the channel gain, which sets A's
+and A1's swells, stays −9.3 dB): every chord rises 3.7–10.3 dB in its band, every note 3.9–9.5 dB
+(per note: 5.8, 5.3, 9.5, 7.0, 3.9, 6.2, 4.0 dB), and the pad stays 3.8–6.9 LU under the violins (it
+adds 0.6–1.1 LU to the mix there). The violins keep the bars: all 12 of their notes in D bars 1–4
+still rise 11.0 dB or more in their band (median 17.3 dB, 20.9 before; the downbeat of bar 5, under
+the "Torna a Surriento" tutti, 8.1 dB). Per section, the strings sit 11–12.4 LU under the mix (6.9
+in D, under the violins), the lead 0.6–2.2 LU.
 
 **Synth pad dropped.** The muzak's synth pad (`spad`, −17 dB) rose 0.1–2.4 dB in its band: none
 of its 30 notes reached 3 dB, masked by the e-piano and vibes comping in the same register. 6 dB

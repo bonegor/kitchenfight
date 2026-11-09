@@ -253,7 +253,7 @@ loudness there; "cymbal" / "lead" = their own momentary loudness against the mix
 | verse fill, bar 21 (19.36 s, 0.97 s) | −29.8 → −29.8 dB | −29.7 → **−29.8 dB** | **+13.4 dB** at 4 kHz | 0.21 LU | −13.5 LU | −20.8 LU (the tune rests) |
 | middle fill, bar 55 (52.26 s, 0.97 s) | −27.3 → −27.3 dB | −27.2 → **−27.3 dB** | **+9.6 dB** at 4 kHz | 0.39 LU | −10.5 LU | −10.2 LU (the refrain's pickup) |
 
-The intro swell now grows steadily, about 9 dB/s, from −44.1 dB 0.15 s in to −26.6 dB on the
+The intro swell now grows steadily, about 10 dB/s, from −44.1 dB 0.15 s in to −26.6 dB on the
 downbeat; before, it grew from −36 to −28 dB over its first 0.9 s and then held. Every swell rises
 9.6–13.4 dB in its band in the last 150 ms before its downbeat, is at its loudest there, crests
 under the tune (in the intro the accordion stays 10.3 LU above it) and adds at most 0.39 LU to the

@@ -209,12 +209,14 @@ the song actually exports (`export-song.mjs`), at sounding pitch.
 The upright bass "oom" falls on the first eighth, and the "pa-pa" on the second and third (the
 second "pa" at 86 % velocity).
 
-**Violetta's line: violin and mandolin.** The recorded solo violin speaks slowly. In a probe
-render it takes 195–300 ms to reach half of its peak level on D5–B♭5 (60 ms on D6), while the
-mandolin takes 1 ms or less. A 97 ms triplet sixteenth or a 145 ms sixteenth therefore cannot
-speak on it, and it only smears into the tail of the note before. Two instruments at the same
-pitch and level also beat and can cancel each other: in one duet E♭5 the two partials summed
-12–13 dB below either alone. So each note has one clear leader.
+**Violetta's line: violin and mandolin.** The recorded solo violin speaks slowly. In a probe render
+a note longer than 0.3 s takes 195–300 ms to reach half of its peak level on D5–B♭5 (60 ms on D6),
+while the mandolin takes 1 ms or less. Shorter notes, such as the 97 ms triplet sixteenths and the
+145 ms sixteenths, play the violin's short articulation instead: the held tone entered with a short
+fade-in (half level after about 5 ms), without the bow's attack, so on them the violin would add
+tone but no articulation of its own. Two instruments at the same pitch and level also beat and can
+cancel each other: in one duet E♭5 the two partials summed 12–13 dB below either alone. So each note
+has one clear leader.
 
 - `bowed()`: the violin plays only the notes of two steps or more. The long notes are at full
   voice, with gate 0.9. The eighths are a soft détaché shadow (velocity × 0.6, gate 0.75), so

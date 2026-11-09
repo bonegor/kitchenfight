@@ -253,8 +253,8 @@ loudness there, and the cymbal's own momentary loudness against the mix.
 | now (on the downbeat) | **+25.1 dB** (6.3 kHz) | **+23.5 dB** | **0.82 LU** | **−7.8 LU** |
 
 At the end of the old gate the largest rise was at 400 Hz, the roll's low wash; on the downbeat it is
-the roll's bright crest, at 6.3 kHz and +23.5 dB over 4–12 kHz (the trumpet enters there, 2.5 LU
-above the cymbal).
+the roll's bright crest, at 6.3 kHz and +23.5 dB over 4–12 kHz (the trumpet enters there, 1.5 LU
+above the cymbal; 2.5 LU with the accordion).
 
 The tune rests in the break (the pots and pans have it), so the roll may lead into the tutti; it
 now crests over the pots without covering them. Melody channels are untouched; the nine compare.py

@@ -179,10 +179,12 @@ reach −3 dB.
 | now: −6 dB / −3 dB reached after | 5 / 8 ms | 6 / 9 ms | 2 / 4 ms | 2 / 8 ms |
 | now: level 30 ms after the onset, re the stroke's peak | −1.7 dB | −2.1 dB | −1.2 dB | −3.8 dB |
 
-In the track (cello + contrabass + upright bass stem, with the reverb and the game's fade), each
-of strokes 2–4 rises 8.3 / 8.5 / 8.9 dB above the end of the previous stroke within 40 ms, against
-−0.1 / 0.6 / 1.5 dB before. Below 300 Hz in the full mix the rises are 10.6 / 9.0 / 7.4 dB, against
-2.2 / 1.4 / 4.0 dB before.
+In the track (cello + contrabass + upright bass stem, with the reverb and the game's 0.3 s fade),
+each of strokes 2–4 rises 8.3 / 8.1 / 9.3 dB above the end of the previous stroke within 40 ms
+(10 ms RMS: the loudest point in the 40 ms from the stroke's onset, 0.690 / 0.985 / 1.282 s,
+against the mean over 25–5 ms before it), against 0.0 / 0.6 / 1.5 dB before (the same measure on
+the first draft). Below 300 Hz in the full mix the rises are 10.5 / 8.8 / 7.5 dB, against
+2.2 / 1.3 / 4.0 dB before.
 
 **Accordion, not violin.** The brief allows both. The recorded solo violin (SSO) has a slow bow
 swell: measured on isolated notes, it is −10 dB 35–90 ms after the onset, −6 dB after 150–230 ms

@@ -149,7 +149,8 @@ the chorus, the break, the organ) is the arrangement's, see below.
 The recorded choir (`choir`, `choirO`) releases with a 0.4 s time constant (`src/audio/sampled.ts`),
 longer than the motif's eighths (357 ms) and triplets (238 ms). Sung exactly as written by the
 choir alone it smears the triplet bar into clusters. Two changes fix it in every statement of the
-motif sung by the chorus (`A`, `A2`, `gath`):
+motif sung by the chorus (`A`, `A2`, `gath`) except on two notes of `gath`, which stay borderline
+(see the notes under the summaries):
 
 1. **An articulate doubling in unison and an octave below** (`MOTIF_A`, all notes of the motif):
    trumpets (`trpC`) and clarinets (`clar`) in unison in `A` and `A2`; in `A2` also the trombones an
@@ -206,11 +207,14 @@ Summaries (worst / median, dB):
 
 Notes:
 
-- A2's eighths F worst (−3.8, F♯5 at 23.57 s) is a window-position effect: Favg −8.0, H −8.7. The
-  positive F worsts are single windows too: over the five positions and over the partials the
-  previous pitch is under the new one (gath's F♯5 at 55.00 s, F +5.8: Favg −0.3, H −2.0; its first
-  triplet D5 at 57.14 s, F +4.1: Favg −1.6, H −2.6; A2's closing 32nd D5 at 28.48 s, F +0.3:
-  Favg −0.8, H −4.2).
+- A2's eighths F worst (−3.8, F♯5 at 23.57 s) is a window-position effect: Favg −8.0, H −8.7; so is
+  A2's closing 32nd D5 at 28.48 s (F +0.3: Favg −0.8, H −4.2).
+- In `gath` two notes are borderline: the F♯5 at 55.00 s (F +5.8, Favg −0.3, H −2.0) and the first
+  triplet D5 at 57.14 s (F +4.1, Favg −1.6, H −2.6). Over the five window positions the previous
+  pitch is only 0.3 and 1.6 dB under the new one there. Each part alone is clean on these notes
+  (Favg on the F♯5 / the D5: choir −8.4 / −7.0, clarinets −31.9 / −26.9, trombones −24.2 /
+  −18.3 dB); their sum cancels part of the new pitch, since the sampler now starts the doublings
+  together.
 - Unison and octave doublings can cancel one partial for a whole note when two samples happen to
   be in anti-phase. With the trombones at full level on the triplets, A2's first triplet D5
   (25.71 s) read F +4.4: the clarinets' D5 (36.3 dB, −148°) and the trombones' 2nd harmonic of D4
@@ -442,7 +446,8 @@ own accents and lines:
 
 - the **triangle** on the hammer blows 2–4 and the runs bar's chords (A, A2), on the off-beat
   accents of B, and on the brass stabs of the build (gain 0 dB); it stays off the crash's beats, so
-  the crashes keep their +16 to +22 dB;
+  the crashes keep their +16 to +22 dB (all but A2's last, at 28.57 s, which rises +4.8 dB under the
+  tutti on the unison scale's downbeat);
 - the **glockenspiel** an octave above the violins: the runs and the first half of the scale (A,
   A2), the top line of "teste David" (B) (gain −4 dB);
 - the **crash** restored on A2's downbeat and the **cymbal swells** into B's fff blows (above).
