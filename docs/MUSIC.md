@@ -43,7 +43,7 @@ REFS=/home/user/kitchenfight-refs/abc        # reference ABC files (reference on
 5. **Render and measure.** `node scripts/music/render-song.mjs <id> /tmp/<id>.wav` renders the
    song through the real renderer and reports loudness, peak, loop seam, per-channel levels and
    instruments the renderer does not know (those are skipped).
-6. **After changing the tools**, run `bash scripts/music/selftest.sh` (53 checks, about 35 s).
+6. **After changing the tools**, run `bash scripts/music/selftest.sh` (53 checks, about 40 s).
 
 ## Tools
 
@@ -212,7 +212,7 @@ It renders through the real `src/audio/render.ts` in Node and writes a 16-bit WA
 - RMS, sample peak and soft-clipper activity;
 - spectral balance: energy share below 250 Hz, 250 Hz–4 kHz and above 4 kHz;
 - the loop-seam check: the audio before the loop end must equal the audio before the loop start.
-  It measures −117 to −150 dB on the current tracks;
+  It measures −131 to −150.5 dB on the current tracks;
 - per-channel solo levels: LUFS, level against the mix, loudest 3 s and peak.
 
 Warnings cover:
@@ -228,7 +228,7 @@ Warnings cover:
 - channels whose loudest 3 s are more than 30 LU below the mix.
 
 Renders use the recorded instruments: render-song decodes the MP3 sprites in
-`src/audio/assets/inst/` with ffmpeg (about 6 s) and registers them through
+`src/audio/assets/inst/` with ffmpeg (about 4.5 s) and registers them through
 `src/audio/sampled.ts` (`installSampleBank`), exactly as the game's music worker does. The first
 report line says which bank was used. `--synth` renders the synth fallbacks instead (also the
 automatic fallback when the worktree has no sample bank). Measure levels and balance on sample

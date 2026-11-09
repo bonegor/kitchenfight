@@ -133,7 +133,7 @@ No bar is allowed in the first statements, and no `--resync` is used.
   choruses start with "Ah!" on the second eighth, so they need none.
 - **Variety over a 15-minute session**: two keys and three melody colours (the accordion in B♭,
   the violin and mandolin in E♭, the duet in B♭), two tutti choruses, and a break. Section loudness
-  moves between −24.0 (break), −17.7 to −16.8 (verses) and −15.5 to −14.9 LUFS (choruses).
+  moves between −23.9 (break), −17.7 to −16.8 (verses) and −15.4 to −14.8 LUFS (choruses).
 
 ## Harmony
 
@@ -210,11 +210,11 @@ The upright bass "oom" falls on the first eighth, and the "pa-pa" on the second 
 second "pa" at 86 % velocity).
 
 **Violetta's line: violin and mandolin.** The recorded solo violin speaks slowly. In a probe
-render it takes 107–418 ms to reach half of its peak level, while the mandolin takes 1–19 ms. A
-97 ms triplet sixteenth or a 145 ms sixteenth therefore cannot speak on it, and it only smears
-into the tail of the note before. Two instruments at the same pitch and level also beat and can
-cancel each other: in one duet E♭5 the two partials summed 12–13 dB below either alone. So each
-note has one clear leader.
+render it takes 195–300 ms to reach half of its peak level on D5–B♭5 (60 ms on D6), while the
+mandolin takes 1 ms or less. A 97 ms triplet sixteenth or a 145 ms sixteenth therefore cannot
+speak on it, and it only smears into the tail of the note before. Two instruments at the same
+pitch and level also beat and can cancel each other: in one duet E♭5 the two partials summed
+12–13 dB below either alone. So each note has one clear leader.
 
 - `bowed()`: the violin plays only the notes of two steps or more. The long notes are at full
   voice, with gate 0.9. The eighths are a soft détaché shadow (velocity × 0.6, gate 0.75), so
@@ -250,11 +250,11 @@ review fixes went in, on the bank of that time).
   - in bars 4 and 14, the accordion's second voice holds C5, the previous melody note, a sixth
     under the E♭5;
   - in bar 3, the "pa" chord holds the previous pitch's harmonics.
-- **Melody against the band** (K-weighted energy per bar, median; current render, the loop as it
-  repeats):
-  - V1 (the accordion): +5.3 dB;
-  - G: +4.9 dB (turn bars +4.1);
-  - duet: +3.5 dB, counting the second voice as band.
+- **Melody against the band** (K-weighted energy of the mono mix per bar, median; current render,
+  the loop as it repeats):
+  - V1 (the accordion): +5.7 dB;
+  - G: +4.9 dB (turn bars +4.0);
+  - duet: +3.6 dB, counting the second voice as band.
 - **The slides**: the grace pitch's partial against the target's, 50–200 ms after the target's
   onset, is −7.6 to −10.6 dB on the violin alone and −4.6 to −14.6 dB in the mix. The previous
   version's tripled slide into the climax G5 read +1.7 dB.
@@ -280,32 +280,32 @@ node scripts/music/render-song.mjs trattoria /tmp/trattoria.wav
 | Bank | instruments: recorded samples (54 sets) |
 | Duration | 97.30 s file (91.30 s of music plus the 6 s loop pad), 2580 events |
 | Loop | playback 0 → 97.304 s, then repeats 9.478 → 97.304 s of the buffer (music time 3.478 → 91.304 s), body 87.826 s = bars 5–105 from V1; **seam mismatch −150.5 dBFS** |
-| Loop body | **−16.5 LUFS** integrated (−16.47; whole file −16.6), short-term max −14.6 LUFS, RMS −19.5 dBFS |
-| Peak | **sample peak −3.05 dBFS**; soft clipper 29 samples (0.000 %, the knee at −4.2 dBFS); DC 0 |
-| Spectral balance | <250 Hz −6.8 dB, 250 Hz–4 kHz −1.2 dB, >4 kHz −15.9 dB |
+| Loop body | **−16.4 LUFS** integrated (−16.44; whole file −16.6), short-term max −14.5 LUFS, RMS −19.5 dBFS |
+| Peak | **sample peak −2.70 dBFS**; soft clipper 27 samples (0.000 %, the knee at −4.2 dBFS); DC 0 |
+| Spectral balance | <250 Hz −6.9 dB, 250 Hz–4 kHz −1.1 dB, >4 kHz −16.2 dB |
 | Warnings | none |
 
-Octave bands over the loop body (share of energy, dB): 63 Hz −11.5, 125 −8.7, 250 −10.7,
-**500 −4.1**, 1k −7.5, 2k −11.3, 4k −12.9, 8k −18.9. The tune's fundamentals lead, and the 2–4 kHz
+Octave bands over the loop body (share of energy, dB): 63 Hz −11.7, 125 −8.8, 250 −10.8,
+**500 −3.9**, 1k −7.6, 2k −11.5, 4k −13.2, 8k −19.1. The tune's fundamentals lead, and the 2–4 kHz
 region stays open for the game's sound effects.
 
 | Channel | Solo LUFS | vs mix | Loudest 3 s | Peak dBFS |
 |---|---|---|---|---|
-| acc | −18.2 | −1.7 | −17.5 | −8.8 |
-| vln | −20.6 | −4.1 | −17.0 | −7.1 |
-| accH | −26.6 | −10.1 | −25.8 | −16.4 |
+| acc | −18.2 | −1.8 | −17.5 | −8.9 |
+| vln | −20.6 | −4.1 | −17.0 | −7.0 |
+| accH | −26.6 | −10.2 | −25.9 | −17.1 |
 | clar | −27.3 | −10.8 | −25.7 | −15.9 |
-| accC | −31.6 | −15.1 | −31.0 | −14.0 |
+| accC | −31.5 | −15.1 | −31.0 | −12.9 |
 | gtr | −29.6 | −13.1 | −27.8 | −11.5 |
 | pizz | −34.8 | −18.3 | −34.1 | −16.7 |
-| bass | −25.3 | −8.8 | −23.5 | −10.1 |
-| horn | −32.3 | −15.9 | −30.5 | −20.9 |
+| bass | −25.3 | −8.9 | −23.5 | −10.1 |
+| horn | −32.3 | −15.9 | −30.5 | −20.8 |
 | mand | −23.4 | −7.0 | −21.0 | −8.5 |
 | tri | −34.7 | −18.2 | −33.5 | −15.8 |
 | glock | −37.5 | −21.1 | −42.2 | −22.8 |
 | tamb | −33.9 | −17.5 | −31.0 | −11.5 |
 | timp | −32.4 | −15.9 | −33.8 | −15.3 |
-| cym | −30.2 | −13.7 | −30.6 | −13.9 |
+| cym | −30.3 | −13.8 | −30.7 | −13.9 |
 
 The whole-loop "vs mix" figures understate the channels that play in only part of the loop, so
 here they are per section. The section's mix loudness comes first. Each channel's solo loudness
@@ -314,21 +314,21 @@ renders.
 
 | Section | Mix LUFS | Lead | Lead vs mix | Bass | Tambourine |
 |---|---|---|---|---|---|
-| intro | −20.6 | clarinet / guitar | −3.6 / −6.1 | −4.8 | −20.4 |
+| intro | −20.7 | clarinet / guitar | −3.5 / −6.0 | −4.8 | −20.3 |
 | V1 | −17.7 | accordion | **−0.8** | −8.5 | −21.8 |
-| G | −17.0 | violin + mandolin (violin −2.1, mandolin −6.2) | **−1.1** | −8.9 | −19.1 |
-| C1 | −15.5 | accordion (violin long notes −7.2) | **−2.4** | −8.7 | −16.0 |
-| brk | −24.0 | clarinet | **−2.3** | −4.5 | −16.0 |
+| G | −17.1 | violin + mandolin (violin −2.1, mandolin −6.2) | **−1.0** | −8.9 | −19.1 |
+| C1 | −15.4 | accordion (violin long notes −7.3) | **−2.5** | −8.8 | −16.1 |
+| brk | −23.9 | clarinet | **−2.5** | −4.6 | −16.0 |
 | duet | −16.8 | violin + mandolin (accordion second voice −9.8) | **−1.3** | −9.0 | −17.7 |
-| C2 | −14.9 | accordion (octave line −6.0; together −1.5) | −3.3 | −9.7 | −17.5 |
+| C2 | −14.8 | accordion (octave line −6.1; together −1.5) | −3.3 | −9.8 | −17.5 |
 
-- **Build**: the verses sit at −17.7 to −16.8 LUFS and the choruses at −15.5 to −14.9, around a
-  −24.0 break. That is enough contrast for a 15-minute stage loop without pumping.
+- **Build**: the verses sit at −17.7 to −16.8 LUFS and the choruses at −15.4 to −14.8, around a
+  −23.9 break. That is enough contrast for a 15-minute stage loop without pumping.
 - **Melody on top**: the tune is within about 2.5 LU of the mix in every section. In C2 the
   accordion and its octave doubling carry it together.
 - **Bass and percussion** are present but not dominant. In the verses and choruses the bass is
-  8.5–9.7 LU under the mix, the tambourine 16–22 and the clinks 18–19 (sparse accents). The break
-  features them: bass −4.5, tambourine −16.0, and the "cin cin!" double clink −7.9.
+  8.5–9.8 LU under the mix, the tambourine 16–22 and the clinks 18–19 (sparse accents). The break
+  features them: bass −4.6, tambourine −16.0, and the "cin cin!" double clink −8.0.
 - The bank issues known when this track was arranged (plucked samples starting 10–47 ms late,
   several instruments' calibration 2.5–5.7 dB off) are fixed: the plucks sound on their beat, and
   each channel's gain was offset for the recalibrated levels (commit bf24871), so the balance is
@@ -336,9 +336,9 @@ renders.
 
 **In Chromium.** `audiotest.html` → `__at.samplerTrack('trattoria')` decodes the 54 MP3 sets with
 Chromium's decoder, with no bank warnings and no page errors. The game's music worker then renders
-the track in 1.0 s. The result matches the Node render sample for sample within −90 dB, one 16-bit
+the track in 1.1 s. The result matches the Node render sample for sample within −90 dB, one 16-bit
 step (RMS difference −111 dB): same length (4 670 609 samples), same loop points, the same
-−3.05 dBFS peak.
+−2.70 dBFS peak.
 
 ## Changes from the previous version
 
@@ -379,9 +379,9 @@ there), and the roll's crescendo was 0.76 s long, so the 1.74 s roll grew for 0.
 flat. Both are fixed in the sampler (see `docs/credits/music-samples.md`): the cymbal plays its
 written length, and the roll grows evenly over its whole length (by about 16 dB) into its peak on
 the downbeat. The held roll also plays at the stereo loudness of the old VCSL roll now, 1.5 dB under
-the bright roll's first build: `cym` −8.7 → −6.6 dB puts the roll's crest where it was (−30.7 dB,
-the cymbal's own K-weighted level over the 150 ms up to it), now on the downbeat, and the hit's
-velocity 1.25 → 1.08 keeps the hit's level (within 0.1 dB).
+the bright roll's first build: `cym` −8.7 → −6.6 dB puts the roll's crest about where it was
+(−30.7 dB before, −30.9 dB now: the cymbal's own K-weighted level over the 150 ms up to it), now on
+the downbeat, and the hit's velocity 1.25 → 1.08 keeps the hit's level (within 0.1 dB).
 
 Measure (scratch scripts on the full render, same method as the review): the largest third-octave
 rise of the mix over the mix without `cym` (63 Hz–12.5 kHz, bands within 40 dB of the window's
@@ -391,8 +391,8 @@ momentary (400 ms, K-weighted) loudness there.
 
 | Cymbal | Before | First re-balance | Now | Cover before → first → now | Cymbal vs mix before → first → now |
 |---|---|---|---|---|---|
-| roll into C2 (duet bars 19–20, 73.91 s, 1.74 s; the melody rests) | +24.6 dB at 3.2 kHz | +18.2 dB at 3.2 kHz | **+23.4 dB** at 5 kHz | 3.01 → 0.88 → **0.86 LU** | −3.0 → −7.4 → **−7.4 LU** |
-| hit on "Ah!" (C2, 75.94 s) | +7.1 dB at 400 Hz (+8.8) | +5.8 dB at 400 Hz (+7.8) | **+6.1 dB** at 400 Hz (+7.8) | 0.65 → 0.45 → 0.54 LU | −9.3 → −11.6 → −10.5 LU |
+| roll into C2 (duet bars 19–20, 73.91 s, 1.74 s; the melody rests) | +24.6 dB at 3.2 kHz | +18.2 dB at 3.2 kHz | **+23.3 dB** at 5 kHz | 3.01 → 0.88 → **0.80 LU** | −3.0 → −7.4 → **−7.8 LU** |
+| hit on "Ah!" (C2, 75.94 s) | +7.1 dB at 400 Hz (+8.8) | +5.8 dB at 400 Hz (+7.8) | **+4.5 dB** at 400 Hz (+7.0) | 0.65 → 0.45 → 0.51 LU | −9.3 → −11.6 → −10.5 LU |
 
 The roll leads clearly into the grand chorus as a crest, now on its downbeat, rather than the
 loudest thing in the bar. (The hit's figures include the roll's release, which now starts on the

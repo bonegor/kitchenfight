@@ -122,8 +122,8 @@ ah@0.00 s, ridi@1.58 s, wah@7.89 s, 8 bars = 12.63 s of grid, plus a 1.16 s tail
 | `ridi` | 2–5 | 1.58–7.89 s on the grid; sounds 1.58–8.81 s | ref. bars 26–29 | "Ridi, Pagliaccio, sul tuo amore infranto!" (accordion, rubato as above). Fermata G5 7.49–8.78 s. |
 | `wah` | 6–8 | 7.89–12.63 s (+1.16 s tail) | original comic coda | A 0.30 s breath after the fermata, then the trombone from step 18: G3 – F#3 – F3 in triplet quarters (9.08 / 9.61 / 10.13 s), E3 "waaah" 10.66–11.96 s with the flexatone wobble. **BONK** at 12.11 s (bar 8, a triplet eighth after beat 2): timpani E2 + slapstick + upright bass E1 + pizzicato E2/B2/E3, which then ring out. |
 
-Total 13.79 s. In the 100 ms before the renderer's final 80 ms fade the mix is at −59.2 dBFS RMS
-(−50.1 dBFS peak), so the ring-out has decayed and the ending is clean.
+Total 13.79 s. In the 100 ms before the renderer's final 80 ms fade the mix is at −59.3 dBFS RMS
+(−50.0 dBFS peak), so the ring-out has decayed and the ending is clean.
 
 ### Harmony (from `bb_vesti.abc` V:2–V:4)
 
@@ -166,21 +166,22 @@ strokes (dry, 10 ms RMS) the old eighths peaked 166–309 ms after their onsets 
 their peak only after 98–153 ms, just before the next stroke. So the four accents sounded as four
 swells. Now the strokes are detached (gate 0.6, 0.18 s each) and the upright bass plucks the lower
 octave with them. Its velocities (0.62 / 0.78 / 0.72 / 0.70) even out the sample zones, so the four
-plucks peak within 2.3 dB of each other. Each pluck sits 0.5–2.1 dB under the bowed peak of its
-stroke (RMS over the stroke −3.1 to +1.8 dB): the bow is still the body and the pluck is the
-attack. A quieter pluck was tried first (velocities 0.6 / 0.54 / 0.54 / 0.58, 5–7 dB under the
-bowed peak on strokes 2–4), but strokes 2–4 then still needed 54–73 ms to reach −3 dB.
+plucks peak within 1.3 dB of each other. Each pluck sits between 4.6 dB under and 2.6 dB over the
+bowed peak of its stroke (RMS over the stroke −4.5 to +2.4 dB): the pluck is the attack, and on the
+F# and B strokes it outweighs the bow. A quieter pluck was tried first (velocities 0.6 / 0.54 / 0.54
+/ 0.58, 5–7 dB under the bowed peak on strokes 2–4), but strokes 2–4 then still needed 54–73 ms to
+reach −3 dB.
 
 | Stroke (isolated, dry) | A | F# | D# | B |
 |---|---|---|---|---|
 | before: −3 dB reached after | 153 ms | 98 ms | 106 ms | 130 ms |
 | before: level 30 ms after the onset, re the stroke's peak | −13.5 dB | −9.8 dB | −13.4 dB | −12.9 dB |
-| now: −6 dB / −3 dB reached after | 6 / 13 ms | 22 / 50 ms | 15 / 28 ms | 25 / 49 ms |
-| now: level 30 ms after the onset, re the stroke's peak | −1.0 dB | −5.7 dB | −3.0 dB | −4.7 dB |
+| now: −6 dB / −3 dB reached after | 5 / 8 ms | 6 / 9 ms | 2 / 4 ms | 2 / 8 ms |
+| now: level 30 ms after the onset, re the stroke's peak | −1.7 dB | −2.1 dB | −1.2 dB | −3.8 dB |
 
 In the track (cello + contrabass + upright bass stem, with the reverb and the game's fade), each
-of strokes 2–4 rises 5.7 / 3.9 / 4.2 dB above the end of the previous stroke within 40 ms, against
-−0.1 / 0.6 / 1.5 dB before. Below 300 Hz in the full mix the rises are 12.9 / 3.9 / 4.3 dB, against
+of strokes 2–4 rises 8.3 / 8.5 / 8.9 dB above the end of the previous stroke within 40 ms, against
+−0.1 / 0.6 / 1.5 dB before. Below 300 Hz in the full mix the rises are 10.6 / 9.0 / 7.4 dB, against
 2.2 / 1.4 / 4.0 dB before.
 
 **Accordion, not violin.** The brief allows both. The recorded solo violin (SSO) has a slow bow
@@ -204,39 +205,39 @@ trombone a quarter-tone flat was also tried for a beating "wobble" on the last n
 gameover: 13.79 s @ 48000 Hz, 70 events
   one-shot (no loop)
   form: ah@0.00s ridi@1.58s wah@7.89s
-  whole: integrated -16.3 LUFS (whole file -16.3), short-term max -14.3 LUFS, RMS -19.6 dBFS, sample peak -1.54 dBFS
-  soft clipper: 22 samples (0.002 %), DC 0.00000, first sound at 0.001 s
-  spectral balance: <250 Hz -10.3 dB, 250 Hz-4 kHz -0.5 dB, >4 kHz -19.2 dB (share of total energy)
+  whole: integrated -16.3 LUFS (whole file -16.3), short-term max -14.3 LUFS, RMS -19.6 dBFS, sample peak -1.43 dBFS
+  soft clipper: 20 samples (0.002 %), DC 0.00000, first sound at 0.001 s
+  spectral balance: <250 Hz -10.4 dB, 250 Hz-4 kHz -0.5 dB, >4 kHz -19.4 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
-  acc          accordion          13    0.9      -16.6    -0.3       -14.8       -5.7
-  str          strings            11   -4.2      -27.4   -11.1       -26.3      -15.7
+  acc          accordion          13    0.9      -16.6    -0.3       -14.8       -5.6
+  str          strings            11   -4.2      -27.4   -11.0       -26.4      -16.6
   vc           cello               7   -3.5      -29.6   -13.2       -27.8      -13.3
   cb           contrabass          4   -8.5      -30.5   -14.2       -33.5      -20.0
   pz           pizz               15     -4      -30.8   -14.5       -33.2      -13.7
   db           uprightBass         9     -1      -28.3   -12.0       -28.9      -13.0
   tbn          trombone            4      2      -18.3    -2.0       -17.9       -5.5
   flex         flexatone           1     -3      -26.1    -9.7       -30.0      -12.8
-  timp         timpani             1      1      -21.1    -4.7       -26.3       -7.4
+  timp         timpani             1      1      -21.1    -4.8       -26.3       -7.4
   slap         slapstick           1      0      -27.8   -11.5       -36.6       -6.7
   warnings: none
 ```
 
-- `gainDb` −3.8 gives −16.35 LUFS over the whole file (one-shot target −16.4 ± 0.5). The peak is
-  −1.54 dBFS, on the BONK (12.109 s): there the slapstick's crack and the timpani stroke's attack
+- `gainDb` −3.8 gives −16.34 LUFS over the whole file (one-shot target −16.4 ± 0.5). The peak is
+  −1.43 dBFS, on the BONK (12.109 s): there the slapstick's crack and the timpani stroke's attack
   add up in phase (each alone peaks at −6.7 dBFS), over the soft clipper's knee (0.62 =
-  −4.15 dBFS). The clipper rounds 22 samples (0.002 %), all in the BONK, and takes 0.2 dB off its
-  peak (−1.37 dBFS before it).
+  −4.15 dBFS). The clipper rounds 20 samples (0.002 %), all in the BONK, and takes 1.0 dB off its
+  peak (−0.40 dBFS before it, after the master's gain and DC high-pass).
 - The accordion leads the lament (0.3 LU under the mix) and the trombone leads the coda (2.0 LU
   under the mix).
 - Momentary loudness (BS.1770 momentary, as `ffmpeg -af ebur128` reports it: 400 ms windows every
   100 ms, time = window end): the lament (from the cry to the end of the fermata, windows ending
-  0.8–8.9 s) runs from −21.3 LUFS (5.2 s: the catch-breath rest before "sul") to −12.3 LUFS
+  0.8–8.9 s) runs from −22.1 LUFS (5.1 s: the catch-breath rest before "sul") to −12.3 LUFS
   (7.3–7.4 s: the high A5 of "in-FRAN-to" going into the fermata), and the held G5 swells back to
-  −12.8 (8.8 s). The breath before the trombone dips to −22.7 LUFS (9.2 s). The trombone runs from
-  −19.4 LUFS (11.0 s: the soft start of the "waaah") to −15.6 LUFS (11.5 s: "waaah" + flexatone);
-  the BONK reads −15.5 (12.2 s).
-- Sample peaks: the lament (0–9.0 s) −4.31 dBFS at 6.64 s (the accordion's high A5 of
-  "in-FRAN-to" over the strings' chord); the trombone −5.51 dBFS at 9.52 s; the BONK −1.54 dBFS at
+  −12.9 (8.8 s). The breath before the trombone dips to −23.0 LUFS (9.2 s). The trombone runs from
+  −19.8 LUFS (11.0 s: the soft start of the "waaah") to −15.6 LUFS (11.5 s: "waaah" + flexatone);
+  the BONK reads −15.8 (12.2 s).
+- Sample peaks: the lament (0–9.0 s) −5.03 dBFS at 6.65 s (the accordion's high A5 of
+  "in-FRAN-to" over the strings' chord); the trombone −5.49 dBFS at 9.48 s; the BONK −1.43 dBFS at
   12.109 s, the track's peak.
 - Accompaniment: strings, cello, contrabass, pizzicato and upright bass sit 11–15 LU under the mix:
   soft, but present on every beat.
@@ -246,7 +247,7 @@ gameover: 13.79 s @ 48000 Hz, 70 events
 - **Chromium:** `audiotest.html` `__at.samplerTrack('gameover')` decodes the MP3 sprites with
   Chromium's decoder and renders in the real worker (no console errors, bank report ok, 54 sets).
   Its output equals the Node render within 16-bit quantization (no sample more than one 16-bit
-  step apart, −90.3 dBFS), at the same −16.3 LUFS / −1.54 dBFS.
+  step apart, −90.3 dBFS), at the same −16.3 LUFS / −1.43 dBFS.
 
 Other checks: `node scripts/music/export-song.mjs gameover --form` reports no sequencer warnings,
 and `node scripts/music/selftest/formcheck.mjs` says "ok gameover 70 events, 3 form entries,

@@ -176,43 +176,47 @@ same notes at −2.8, +3.5, −0.8, −2.3, −3.7, −4.5 and +10 dB); "after" 
 
 | Note (time) | F before | F after | H after |
 |---|---|---|---|
-| F♯5 (9.29 s) | −11.5 | −10.6 | −15.8 |
-| F5 (9.64 s) | −3.8 | −8.9 | −11.1 |
-| E5 (10.00 s) | −5.3 | −12.1 | −12.9 |
-| E♭5 (10.36 s) | −4.4 | −8.0 | −11.6 |
-| D5 (10.71 s) | −8.2 | −7.2 | −13.4 |
-| C5 (11.07 s) | −16.5 | −21.2 | −15.3 |
-| triplets: D5 (11.43 s) | −2.9 | −12.7 | −14.2 |
-| C5 (11.67 s) | −4.5 | −4.9 | −9.4 |
-| B♭4 (11.90 s) | −7.0 | −7.9 | −11.3 |
-| C5 (12.14 s) | −10.9 | −18.7 | −15.9 |
-| D5 (12.38 s) | **+2.9** | −15.1 | −16.0 |
-| E♭5 (12.62 s) | −13.1 | −17.5 | −12.6 |
-| D5 (12.86 s) | −0.5 | −12.0 | −12.5 |
-| C5 (13.10 s) | −6.4 | −14.6 | −14.1 |
-| B♭4 (13.33 s) | −2.0 | −4.2 | −14.9 |
-| C5 (13.57 s) | −16.0 | −20.4 | −22.8 |
-| closing 32nd D5 (14.20 s) | **+9.6** | −7.9 | −6.4 |
+| F♯5 (9.29 s) | −11.5 | −12.5 | −15.3 |
+| F5 (9.64 s) | −3.8 | −20.8 | −20.1 |
+| E5 (10.00 s) | −5.3 | −11.3 | −17.8 |
+| E♭5 (10.36 s) | −4.4 | −4.9 | −11.4 |
+| D5 (10.71 s) | −8.2 | −12.0 | −13.4 |
+| C5 (11.07 s) | −16.5 | −17.0 | −12.5 |
+| triplets: D5 (11.43 s) | −2.9 | −3.2 | −10.5 |
+| C5 (11.67 s) | −4.5 | −3.6 | −8.6 |
+| B♭4 (11.90 s) | −7.0 | −4.4 | −11.0 |
+| C5 (12.14 s) | −10.9 | −9.4 | −12.0 |
+| D5 (12.38 s) | **+2.9** | −10.0 | −10.5 |
+| E♭5 (12.62 s) | −13.1 | −5.9 | −10.0 |
+| D5 (12.86 s) | −0.5 | −2.8 | −8.8 |
+| C5 (13.10 s) | −6.4 | −6.4 | −8.3 |
+| B♭4 (13.33 s) | −2.0 | −5.6 | −11.1 |
+| C5 (13.57 s) | −16.0 | −20.3 | −21.9 |
+| closing 32nd D5 (14.20 s) | **+9.6** | −15.2 | −12.3 |
 
 Summaries (worst / median, dB):
 
 | Passage | Lead channels | Triplets F | Triplets Favg | Triplets H | Eighths F | Eighths H | 32nd D: F / H |
 |---|---|---|---|---|---|---|---|
 | A, before (aeb18e2) | `choir` | +2.9 / −4.5 | — | — | −3.8 / −5.3 | — | +9.6 / — |
-| A, choir alone after shaping | `choir` | +0.1 / −6.2 | −2.1 / −6.1 | −2.7 / −5.5 | −4.7 / −7.3 | −5.2 / −7.9 | +3.9 / −2.8 |
-| A | `choir,trpC,clar` | −4.2 / −12.7 | −3.4 / −12.7 | −9.4 / −14.1 | −7.2 / −8.9 | −11.1 / −12.9 | −7.9 / −6.4 |
-| A2 (song bars 9–10) | `choir,trpC,clar,tbn` | −4.5 / −12.3 | −3.6 / −10.8 | −7.3 / −12.3 | −3.7 / −11.1 | −7.4 / −13.3 | −14.2 / −9.5 |
-| gath (song bars 20–21) | `choir,clar,tbn` | −6.0 / −9.5 | −6.6 / −9.4 | −5.9 / −9.3 | −7.3 / −10.1 | −7.5 / −13.6 | −9.6 / −7.6 |
+| A, choir alone after shaping | `choir` | +8.6 / −1.9 | +7.9 / −2.2 | +0.2 / −3.5 | −6.0 / −9.4 | −6.0 / −7.4 | −7.5 / −11.6 |
+| A | `choir,trpC,clar` | −2.8 / −5.6 | −3.6 / −5.9 | −8.3 / −10.5 | −4.9 / −12.0 | −11.4 / −13.4 | −15.2 / −12.3 |
+| A2 (song bars 9–10) | `choir,trpC,clar,tbn` | −1.2 / −8.2 | −0.8 / −7.4 | −7.0 / −11.1 | −3.8 / −16.0 | −8.7 / −15.3 | +0.3 / −4.2 |
+| gath (song bars 20–21) | `choir,clar,tbn` | +4.1 / −6.9 | −1.6 / −7.4 | −2.6 / −9.1 | +5.8 / −10.5 | −2.0 / −10.6 | −8.1 / −7.8 |
 
 Notes:
 
-- A2's eighths F worst (−3.7, E♭5 at 24.64 s) is a window-position effect: Favg −10.7, H −7.4.
+- A2's eighths F worst (−3.8, F♯5 at 23.57 s) is a window-position effect: Favg −8.0, H −8.7. The
+  positive F worsts are single windows too: over the five positions and over the partials the
+  previous pitch is under the new one (gath's F♯5 at 55.00 s, F +5.8: Favg −0.3, H −2.0; its first
+  triplet D5 at 57.14 s, F +4.1: Favg −1.6, H −2.6; A2's closing 32nd D5 at 28.48 s, F +0.3:
+  Favg −0.8, H −4.2).
 - Unison and octave doublings can cancel one partial for a whole note when two samples happen to
   be in anti-phase. With the trombones at full level on the triplets, A2's first triplet D5
   (25.71 s) read F +4.4: the clarinets' D5 (36.3 dB, −148°) and the trombones' 2nd harmonic of D4
   (32.6 dB, +35°) cancelled, leaving the D5 fundamental at 16.7 dB, while H stayed at −11.2 dB.
   The trombones therefore play the triplet bar lighter (0.68 against 1.0 in bar 3), which keeps
-  any such cancellation partial: that note now reads F −6.1, Favg −3.6, H −9.8.
+  any such cancellation partial: that note now reads F −5.0, Favg −7.4, H −7.8.
 
 ## Form
 
@@ -280,13 +284,13 @@ Recorded samples (54 sets). 71.71 s @ 48 kHz (with the 6 s loop pad), 2523 event
 
 | Measure | Value |
 |---|---|
-| Loop body (bars 2–23, 62.86 s) | **−16.3 LUFS** integrated (−16.32; whole file −16.5), short-term max −14.3 LUFS, RMS −19.2 dBFS |
-| Sample peak | **−1.54 dBFS** |
-| Soft clipper | 312 samples (0.005 %) |
-| Loop seam | −131.9 dBFS mismatch |
-| Spectral balance | < 250 Hz −6.7 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
-| Lead | `choir` −20.6 LUFS solo (−4.3 LU); the chorus as heard (`choir,trpC,clar`) −1.4 LU in A's chorus bars, with `tbn` −1.7 LU in A2's; bassoons −2.6 LU and xylophone + piccolo −2.0 LU in the break; `choir,clar,tbn` −1.6 LU in `gath` |
-| Other channels (loop body, vs mix) | strings `vln` −6.4 LU, brass −8.7, trumpets `trpC` −6.6, trombones −8.8, organ −8.0, clarinets −8.6, bass drum −10.0, timpani −11.9, tam-tam −10.9, glockenspiel −12.8, cymbal −15.4, triangle −16.1, crash −18.3 |
+| Loop body (bars 2–23, 62.86 s) | **−16.3 LUFS** integrated (−16.26; whole file −16.4), short-term max −14.2 LUFS, RMS −19.1 dBFS |
+| Sample peak | **−1.56 dBFS** |
+| Soft clipper | 480 samples (0.007 %) |
+| Loop seam | −131.4 dBFS mismatch |
+| Spectral balance | < 250 Hz −6.4 dB, 250 Hz–4 kHz −1.2 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
+| Lead | `choir` −20.5 LUFS solo (−4.3 LU); the chorus as heard (`choir,trpC,clar`) −1.4 LU in A's chorus bars, with `tbn` −1.9 LU in A2's; bassoons −2.5 LU and xylophone + piccolo −2.0 LU in the break; `choir,clar,tbn` −1.7 LU in `gath` |
+| Other channels (loop body, vs mix) | strings `vln` −6.5 LU, brass −8.8, trumpets `trpC` −6.7, trombones −8.9, organ −8.1, clarinets −8.6, bass drum −10.1, timpani −12.0, tam-tam −11.0, glockenspiel −12.8, cymbal −15.5, triangle −16.2, crash −18.3 |
 | Warnings | none |
 | `gainDb` | −7.8 |
 
@@ -297,11 +301,11 @@ tam-tam, triangle, glockenspiel, pan, woodblock and slapstick):
 
 | | intro | A | A2 | B | brk | gath | bld |
 |---|---|---|---|---|---|---|---|
-| mix | −20.7 | −16.7 | −15.8 | −15.2 | −18.0 | −18.1 | −15.6 |
-| choir + choirO + trpC + clar | −24.3 | −18.2 | −19.3 | −18.0 | — | −20.4 | −21.5 |
-| strings | — | −20.4 | −19.9 | −23.5 | −26.7 | −25.0 | −20.2 |
-| brass + tuba | — | −23.8 | −22.7 | −25.7 | −27.4 | −27.0 | −23.1 |
-| bassoons + piccolo + xylophone | — | — | −22.1 | — | −20.3 | — | — |
+| mix | −20.6 | −16.7 | −15.7 | −14.9 | −18.0 | −18.3 | −15.6 |
+| choir + choirO + trpC + clar | −24.3 | −18.2 | −19.2 | −18.1 | — | −20.5 | −21.5 |
+| strings | — | −20.5 | −20.0 | −23.5 | −26.7 | −25.0 | −20.2 |
+| brass + tuba | — | −24.0 | −22.7 | −25.6 | −27.4 | −27.0 | −23.5 |
+| bassoons + piccolo + xylophone | — | — | −22.1 | — | −20.2 | — | — |
 | organ | −29.2 | — | −27.3 | −23.3 | — | — | −24.3 |
 | percussion | −24.3 | −23.4 | −22.6 | −23.8 | −25.1 | −28.2 | −23.5 |
 
@@ -311,16 +315,16 @@ Per bar (K-weighted LUFS of the mix over each bar, the loop as it repeats; loop 
 
 | Bars | Section | LUFS per bar |
 |---|---|---|
-| 2–6 | A | −18.8, −15.8, −15.5, −17.2, −16.6 |
-| 7–11 | A2 | −17.7, −14.5, −14.5, −16.7, −16.2 |
-| 12–15 | B | −15.2, −15.2, −15.2, −15.1 |
-| 16–19 | brk | −17.3, −18.7, −18.2, −17.6 |
-| 20–21 | gath | −19.0, −17.3 |
-| 22–23 | bld | −17.5, −14.3 |
+| 2–6 | A | −18.6, −15.9, −15.5, −17.3, −16.8 |
+| 7–11 | A2 | −17.4, −14.5, −14.5, −16.7, −16.3 |
+| 12–15 | B | −15.1, −14.8, −15.2, −14.6 |
+| 16–19 | brk | −17.4, −18.5, −18.3, −17.6 |
+| 20–21 | gath | −19.1, −17.5 |
+| 22–23 | bld | −17.6, −14.3 |
 
-The break and the gathering are a breath, not a drop-out: at most 1.8 LU under the loop body
+The break and the gathering are a breath, not a drop-out: at most 2.0 LU under the loop body
 (before the review fixes they reached −22.4 LUFS, 6 LU under it, and the loop swung 8.5 LU; now
-the quietest bar is −19.0, the gathering's first, and the loudest −14.3, the build's last).
+the quietest bar is −19.1, the gathering's first, and the loudest −14.3, the build's last).
 
 What the review asked to make audible (mix vs the mix without the channel, same bars; measured
 when the review fixes went in, on the bank of that time and before the polish below, whose own
@@ -393,12 +397,12 @@ loudest:
 
 | Swell (velocities) | Rise on the downbeat (each roll note) | Cover | Cymbal vs mix / lead vs mix |
 |---|---|---|---|
-| intro (0.3 → 0.62) | +13.7, +24.3, **+28.5 dB** | 0.55 LU | −9.4 LU / (doom pad only) |
-| A, into A2's hammer (0.28 → 0.55) | +8.7, +12.0, +17.9, **+19.8 dB** | 0.26 LU | −12.0 / −3.6 LU |
-| A2, into B (0.28 → 0.55) | +8.0, +12.1, +19.9, **+18.0 dB** | 0.27 LU | −12.6 / −3.3 LU |
-| B, into each fff blow (0.55 / 0.67) | **+11.5 / +13.8 dB** | 0.17 / 0.30 LU | −14.4 / −11.9 LU against −3.0 / −3.2 LU |
-| gath (0.3 → 0.45) | +7.7, **+13.0 dB** | 0.12 LU | −16.1 / −4.4 LU |
-| bld, into the loop (0.3 → 0.66) | +2.8, +6.3, +8.8, **+25.7 dB** | 0.47 LU | −10.0 / −5.1 LU |
+| intro (0.3 → 0.62) | +9.9, +24.4, **+28.4 dB** | 0.55 LU | −9.5 LU / (doom pad only) |
+| A, into A2's hammer (0.28 → 0.55) | +8.7, +12.1, +17.8, **+19.8 dB** | 0.26 LU | −12.0 / −3.7 LU |
+| A2, into B (0.28 → 0.55) | +8.0, +12.1, +20.0, **+18.0 dB** | 0.27 LU | −12.5 / −3.2 LU |
+| B, into each fff blow (0.55 / 0.67) | **+11.5 / +13.7 dB** | 0.15 / 0.29 LU | −14.8 / −12.0 LU against −3.7 / −3.5 LU |
+| gath (0.3 → 0.45) | +7.4, **+12.9 dB** | 0.12 LU | −16.3 / −5.0 LU |
+| bld, into the loop (0.3 → 0.66) | +2.8, +6.3, +9.0, **+25.8 dB** | 0.47 LU | −10.1 / −5.3 LU |
 
 (The build's roll is a crescendo out of the texture: its first quarter-beat is under the band, its
 end rises 26 dB where the sustained parts cut off on beat 4½.)
@@ -407,17 +411,17 @@ end rises 26 dB where the sustained parts cut off on beat 4½.)
 a dull thud (its first 100 ms sit at 250 Hz, 30 dB under its bloom), and its roar blooms over the
 next second; under the tutti's downbeat no level makes the thud itself heard. So: the **crash is
 restored on A2's downbeat** (it had been left out for the pan clangs, which stay clear: their rises
-are +10.1, +17.3, +16.5, +24.3 dB), and both strokes are louder (velocity 0.8 → 1.3 and
+are +10.2, +19.6, +17.2, +24.2 dB), and both strokes are louder (velocity 0.8 → 1.3 and
 0.75 → 1.2) so the roar is heard:
 
 | Stroke | First 100 ms | 0.1–0.6 s | 0–1 s | 0.3–1.5 s | Cover (0.1–0.6 s) |
 |---|---|---|---|---|---|
 | A2 downbeat, before (v 0.8) | +0.7 dB | — | +0.7 dB | +1.4 dB | — |
-| A2 downbeat, after (v 1.3) + crash | +1.5 dB; **crash +20.6 dB** | **+5.0 dB** | +2.7 dB | **+4.2 dB** | 1.5 LU |
+| A2 downbeat, after (v 1.3) + crash | +1.1 dB; **crash +18.6 dB** | **+7.0 dB** | +2.8 dB | **+4.8 dB** | 1.6 LU |
 | end of B, before (v 0.75) | +1.0 dB | — | +1.5 dB | +5.3 dB | — |
-| end of B, after (v 1.2) | +2.3 dB | **+4.7 dB** | **+3.6 dB** | **+10.8 dB** | 0.8 LU |
+| end of B, after (v 1.2) | +2.9 dB | **+3.9 dB** | **+3.7 dB** | **+10.5 dB** | 0.8 LU |
 
-Per section the tam-tam sits 11.9 LU under the mix in A2 and 12.9 in B (the chorus 3.5 and 2.9).
+Per section the tam-tam sits 11.9 LU under the mix in A2 and 13.1 in B (the chorus 3.5 and 3.2).
 
 **High-frequency life.** The track was much darker than the other nine: render-song's > 4 kHz
 share −22.2 dB (the review measured −22.6 on the old bank) against −14.7 (menu) … −19.4
@@ -430,7 +434,7 @@ own accents and lines:
 
 - the **triangle** on the hammer blows 2–4 and the runs bar's chords (A, A2), on the off-beat
   accents of B, and on the brass stabs of the build (gain 0 dB); it stays off the crash's beats, so
-  the crashes keep their +16 to +24 dB;
+  the crashes keep their +16 to +22 dB;
 - the **glockenspiel** an octave above the violins: the runs and the first half of the scale (A,
   A2), the top line of "teste David" (B) (gain −4 dB);
 - the **crash** restored on A2's downbeat and the **cymbal swells** into B's fff blows (above).
@@ -438,27 +442,27 @@ own accents and lines:
 | > 4 kHz share | intro | A | A2 | B | brk | gath | bld | loop (render-song) |
 |---|---|---|---|---|---|---|---|---|
 | before | −22.0 | −23.1 | −23.0 | −26.5 | −17.1 | −26.0 | −23.1 | **−22.2 dB** |
-| after | −21.8 | −18.0 | −18.5 | −19.8 | −17.0 | −25.9 | −20.1 | **−18.8 dB** |
+| after | −21.9 | −18.0 | −18.6 | −19.9 | −17.0 | −25.8 | −20.0 | **−18.8 dB** |
 
 (The "after" row is the current render, with the cymbal rolls on their downbeats.)
-The loop's > 4 kHz share is now −18.8 dB, inside the other tracks' range, between `boss` (−18.5)
-and `gameover` (−19.2): the air above 4 kHz that the orchestra lacked is the brightness this polish
+The loop's > 4 kHz share is now −18.8 dB, inside the other tracks' range, between `boss` (−18.7)
+and `gameover` (−19.4): the air above 4 kHz that the orchestra lacked is the brightness this polish
 set out to give it, and the goal is met on that measure. By its spectral centroid the track is still
-the darkest of the ten: 791 Hz over the loop body, against 839 Hz (`victory`) to 1077 Hz (`menu`)
+the darkest of the ten: 785 Hz over the loop body, against 826 Hz (`victory`) to 1078 Hz (`menu`)
 for the others (scratch Welch spectrum of the mono loop body, master output). That is its low-mid
-weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.4 dB of the
-total, the others −9.3 to −12.5 dB: trombones, tuba, organ pedal, timpani, cellos and basses, the
-bass drum), which pulls a full-band centroid down. Above 250 Hz its centroid is 1041 Hz, inside the
-others' 947–1403 Hz; its 2–5 kHz presence and its > 4 kHz share, each against its own 250 Hz–2 kHz
-band (−10.8 and −15.9 dB), are inside theirs (−6.0 to −14.4 and −11.0 to −18.3 dB). Moving the
-full-band centroid into the others' range would take about +1.5 dB over all of 2–5 kHz, or 2 dB less
+weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.6 dB of the
+total, the others −9.2 to −12.8 dB: trombones, tuba, organ pedal, timpani, cellos and basses, the
+bass drum), which pulls a full-band centroid down. Above 250 Hz its centroid is 1048 Hz, inside the
+others' 942–1408 Hz; its 2–5 kHz presence and its > 4 kHz share, each against its own 250 Hz–2 kHz
+band (−10.7 and −15.8 dB), are inside theirs (−6.0 to −14.6 and −11.0 to −18.4 dB). Moving the
+full-band centroid into the others' range would take about +1.3 dB over all of 2–5 kHz, or 2 dB less
 at 125–250 Hz: a different balance from the Dies irae's, which keeps its weight. The new parts are
 heard without leading:
 
 | Part | Notes rising ≥ 3 dB | Median rise | Part vs mix (momentary, median) | Per section (LU): part / chorus / violins |
 |---|---|---|---|---|
-| triangle | 35 of 35 | +13.6 dB | −16.7 LU | A −14.8 / −1.5 / −5.9; A2 −15.6 / −3.5 / −6.0; B −20.1 / −2.9 / −11.3 |
-| glockenspiel | 132 of 132 | +16.8 dB | −12.6 LU | A −10.5; A2 −11.5; B −16.6 |
+| triangle | 35 of 35 | +13.6 dB | −16.7 LU | A −14.8 / −1.5 / −5.9; A2 −15.6 / −3.5 / −6.0; B −20.4 / −3.2 / −11.5 |
+| glockenspiel | 132 of 132 | +16.9 dB | −13.0 LU | A −10.5; A2 −11.5; B −16.9 |
 
-Loop body −16.3 LUFS, peak −1.54 dBFS, soft clipper 0.005 %, no warnings (table above). Melody
+Loop body −16.3 LUFS, peak −1.56 dBFS, soft clipper 0.007 %, no warnings (table above). Melody
 channels are untouched; all compare.py commands above give the same results.

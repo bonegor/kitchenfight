@@ -137,7 +137,7 @@ notes actually played (`node scripts/music/export-song.mjs streets --per-section
   night tune's D4, C C3G3C4E4 on E4, Am A3C4E4A4 on A4).
 - `xylo` xylophone A5–A6 (C2 only).
 - `str` strings pad F3–D4 (N, 2nd half: Dm F3A3D4, Gm G3B♭3D4, A7 G3A3C♯4), under the clarinet,
-  a gentle swell into A2 (velocity ×0.75 → ×1.15; measured −33.7 → −29.9 LUFS from bars 69–70 to
+  a gentle swell into A2 (velocity ×0.75 → ×1.15; measured −33.8 → −29.9 LUFS from bars 69–70 to
   75–76).
 - `tamb` tambourine (accent / hit / shake / roll variants), `cast` castanets, `kick` orchestral
   bass drum.
@@ -162,25 +162,25 @@ refrain's closing A major chord becomes its dominant.
 - duration 96.00 s buffer = 90.0 s of music + the renderer's 6 s loop pad; loop 3.333 → 90.0 s
   (buffer window 9.333 → 96.000 s), body 86.667 s = bars 5–108 from section A;
   **seam mismatch −150.5 dBFS**, no event rings past the seam
-- **loop body −16.3 LUFS** (−16.30; whole file −16.5), short-term max −14.8 LUFS, RMS −19.4 dBFS,
-  **sample peak −2.96 dBFS**, soft clipper 32 samples (0.000 %), DC 0
-- spectral balance: < 250 Hz −7.9 dB, 250 Hz–4 kHz −0.9 dB, > 4 kHz −14.9 dB
+- **loop body −16.3 LUFS** (−16.29; whole file −16.5), short-term max −14.7 LUFS, RMS −19.4 dBFS,
+  **sample peak −2.64 dBFS**, soft clipper 33 samples (0.000 %), DC 0
+- spectral balance: < 250 Hz −7.9 dB, 250 Hz–4 kHz −0.9 dB, > 4 kHz −15.0 dB
 - `gainDb` −2.3, no warnings
 
 | Channel | Instrument | Notes | Gain dB | Solo LUFS | vs mix (LU) | Peak dBFS |
 |---------|------------|------:|--------:|----------:|------------:|----------:|
 | mand | mandolin | 421 | −1.7 | −22.1 | −5.8 | −7.4 |
-| acc | accordion | 312 | −2.4 | −18.2 | **−1.9** | −8.0 |
-| clar | clarinet | 241 | −7.7 | −30.8 | −14.5 | −18.2 |
-| clarN | clarinet | 84 | −1.6 | −21.0 | −4.7 | −12.2 |
+| acc | accordion | 312 | −2.4 | −18.2 | **−1.9** | −7.8 |
+| clar | clarinet | 241 | −7.7 | −30.8 | −14.6 | −18.2 |
+| clarN | clarinet | 84 | −1.6 | −21.0 | −4.8 | −12.8 |
 | cello | cello | 42 | −9.6 | −30.2 | −13.9 | −17.8 |
-| accC | accChord | 876 | −12.7 | −35.8 | −19.5 | −20.7 |
+| accC | accChord | 876 | −12.7 | −35.8 | −19.5 | −20.3 |
 | gtr | guitar | 652 | −9 | −27.7 | −11.4 | −10.0 |
 | bass | uprightBass | 215 | −5 | −27.9 | −11.6 | −14.4 |
-| tuba | tuba | 32 | −12.1 | −33.8 | −17.5 | −20.8 |
-| brass | brass | 164 | −13.2 | −27.3 | −11.0 | −10.2 |
-| xylo | xylophone | 16 | −7 | −29.8 | −13.5 | −17.8 |
-| str | strings | 25 | −7.7 | −31.6 | −15.3 | −20.1 |
+| tuba | tuba | 32 | −12.1 | −33.8 | −17.6 | −20.8 |
+| brass | brass | 164 | −13.2 | −27.2 | −10.9 | −11.9 |
+| xylo | xylophone | 16 | −7 | −29.8 | −13.6 | −17.8 |
+| str | strings | 25 | −7.7 | −31.7 | −15.4 | −20.4 |
 | tamb | tamb | 516 | −5.3 | −35.2 | −18.9 | −15.9 |
 | cast | castanets | 519 | −6 | −34.4 | −18.1 | −6.8 |
 | kick | kick | 105 | −16 | −33.7 | −17.4 | −18.5 |
@@ -194,23 +194,23 @@ each channel solo through the same renderer and sample bank):
 
 | Section | Mix LUFS | Lead (solo vs section mix) | Bass | Tambourine | Castanets |
 |---------|---------:|----------------------------|-----:|-----------:|----------:|
-| intro | −22.8 | (build-up: guitar −4.6, brass hits −4.1) | −5.6 | −14.1 | −8.9 |
-| A | −17.4 | mandolin −2.3 (accordion −4.5 against the mix of bars 13–20, where it joins) | −11.1 | −19.4 | −22.7 |
-| B | −15.8 | accordion −1.4 (mandolin double stops −11.7) | −12.6 | −19.9 | −16.4 |
-| B2 | −16.0 | accordion −1.5 (brass −10.2) | −11.7 | −18.6 | −17.6 |
-| C | −16.1 | mandolin −4.4 + accordion −4.1 in unison | −11.6 | −18.4 | −17.4 |
-| N | −18.6 | clarinet −2.5 (mandolin −4.8 against the mix of bars 69–76; strings −12.9) | −9.9 | −21.2 | −21.0 |
-| A2 | −15.2 | accordion −1.9 | −12.4 | −19.8 | −19.3 |
-| C2 | −15.9 | accordion −2.8 (mandolin octave −7.2) | −11.2 | −18.0 | −16.9 |
+| intro | −22.8 | (build-up: guitar −4.6, brass hits −4.0) | −5.5 | −14.1 | −8.9 |
+| A | −17.4 | mandolin −2.2 (accordion −4.4 against the mix of bars 13–20, where it joins) | −11.0 | −19.4 | −22.6 |
+| B | −15.9 | accordion −1.4 (mandolin double stops −11.6) | −12.5 | −19.8 | −16.3 |
+| B2 | −16.0 | accordion −1.4 (brass −10.3) | −11.6 | −18.5 | −17.6 |
+| C | −16.0 | mandolin −4.5 + accordion −4.1 in unison | −11.7 | −18.5 | −17.6 |
+| N | −18.5 | clarinet −2.5 (mandolin −4.8 against the mix of bars 69–76; strings −13.1) | −9.9 | −21.3 | −21.0 |
+| A2 | −15.1 | accordion −2.0 | −12.4 | −19.8 | −19.3 |
+| C2 | −15.8 | accordion −2.7 (mandolin octave −7.2) | −11.3 | −18.1 | −17.0 |
 
 The night section sits about 2.8 LU under the tutti sections on purpose; the first verse is the
 light statement, A2 the loudest.
 
 **Chromium, real engine**: `audiotest.html` → `__at.samplerTrack('streets')` (browser MP3 decoding,
-fresh music worker, dev server `scripts/vite.agent.config.ts`): 54 sets, decode 0.50 s, worker
-render 1.28 s, longest main-thread frame gap 21 ms, no page errors. The result equals the Node
-render: same length and loop points (4 608 000 samples, loop 448 000 → 4 608 000), same −2.96 dBFS
-peak, no sample more than one 16-bit step apart (difference −110.4 dBFS RMS).
+fresh music worker, dev server `scripts/vite.agent.config.ts`): 54 sets, decode 0.48 s, worker
+render 1.42 s, longest main-thread frame gap 22 ms, no page errors. The result equals the Node
+render: same length and loop points (4 608 000 samples, loop 448 000 → 4 608 000), same −2.64 dBFS
+peak, no sample more than one 16-bit step apart (difference −110.5 dBFS RMS).
 
 ## Review fixes (sample renders, before → after)
 
@@ -273,8 +273,8 @@ loudness of the old VCSL roll now, 1.5 dB under the bright roll's first build. W
 velocities unchanged, these two 0.83 s rolls crest where they did (−24.7 → −24.6 and −20.8 → −20.7 dB,
 the cymbal's own K-weighted level over the 150 ms up to it, now on the downbeat): at their old gate
 end the old roll was still about 2 dB under its plateau, as far as the new roll's crest is under it.
-They now swell by about 7 dB over their whole length. In the
-last 150 ms before the downbeat they rise **+9.6 dB** at 6.3 kHz (cover 0.16 LU, cymbal −13.8 LU
-vs mix, lead −1.9 LU) and **+10.4 dB** at 4 kHz (cover 0.37 LU, cymbal −9.8 LU, lead −2.1 LU): both
-crest 7.7 LU or more under the tune. Melody channels are untouched; the five compare.py proofs above
+They now swell by about 6.5 dB over their whole length. In the
+last 150 ms before the downbeat they rise **+9.5 dB** at 6.3 kHz (cover 0.14 LU, cymbal −13.9 LU
+vs mix, lead −2.0 LU) and **+10.2 dB** at 4 kHz (cover 0.48 LU, cymbal −9.7 LU, lead −2.3 LU): both
+crest 7.4 LU or more under the tune. Melody channels are untouched; the five compare.py proofs above
 give the same results. Render after the change: "Render" above.

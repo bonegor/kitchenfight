@@ -81,9 +81,9 @@ sample render with that gain ramp applied (100 ms windows; the "now" column on t
 
 | | before (2-bar intro) | now (3-bar intro) |
 |--|----------------------|-------------------|
-| the call's first (tutti) downbeat | t = 0, heard at 2 % gain; the call's next notes at 34 %, 51 % and 68 % | t = 0.79 s, with crash, bass drum and the cymbal roll's crest (−5.8 dBFS; the intro's highest peak, −5.7 dBFS, follows in the call at 1.22 s), at full gain |
+| the call's first (tutti) downbeat | t = 0, heard at 2 % gain; the call's next notes at 34 %, 51 % and 68 % | t = 0.79 s, with crash, bass drum and the cymbal roll's crest (−5.4 dBFS, the intro's highest peak), at full gain |
 | first 0.1 s | that downbeat: peak −7.9 dBFS in the file, heard at −24.1 dBFS | the roll's first pp strokes: −26.7 dBFS, heard at −43.6 |
-| level heard (400 ms momentary) | −33.7 → −17.7 LUFS over 0–0.8 s, the call already under way | −59.6 → −18.3 LUFS over 0–0.8 s (the roll), −15.8 LUFS at 0.9 s with the call |
+| level heard (400 ms momentary) | −33.7 → −17.7 LUFS over 0–0.8 s, the call already under way | −59.6 → −18.3 LUFS over 0–0.8 s (the roll), −16.0 LUFS at 0.9 s with the call |
 
 Left out on purpose: Köhler's final bars 39–41 (stop chords E5 / E6 and the fermata E4: an ending,
 which a loop does not need). Everything else of the rondo is played once, in Köhler's order (theme
@@ -204,18 +204,21 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
   staccato strings sounded 14–29 ms ahead of the snare and timpani, the horn section 15 ms behind:
   first column below). The bank now aligns sustained attacks itself (see
   `docs/credits/music-samples.md`, "Timing"): every bowed / blown / sung / accordion zone has its beat
-  on the perceptual onset of what it plays — the 5 ms RMS reaching −10 dB of the note's peak, or for
-  a note that dwells on a plateau below that, its attack — notes keep their sounding length, a note
-  shorter than its attack goes on its own onset, and two takes played together on the onset of their
-  sum. So the table is gone, and nothing in the song is shifted any more.
+  on the perceptual onset of what it plays — the RMS over max(5 ms, one period) coming within 10 dB of
+  the note's peak, at most 15 ms after it comes within 15 dB, or, for a note that dwells below −10 dB
+  after a real attack, that attack (7.5 ms after it crosses −15 dB) — notes keep their sounding
+  length, a note gated before its attack peaks goes on the same rule relative to its own peak, and
+  two takes played together start on their beats, on the onset of their sum. So the table is gone,
+  and nothing in the song is shifted any more.
 
-  **In-song check** (each channel rendered solo, dry, through the game renderer with the recorded
-  bank; a note's onset is the 5 ms RMS reaching −10 dB of its peak after the valley before it,
-  measured on the articulated notes (15 dB or more above what precedes them); the reference is the
-  cleanest percussion attack on the same grid step — timpani, bass drum, crash, tambourine, snare;
-  median offset in ms, negative = ahead of the percussion; notes measured in brackets):
+  **In-song check** (measured when the table was removed, on the aligned bank of that time; each
+  channel rendered solo, dry, through the game renderer with the recorded bank; a note's onset is
+  the 5 ms RMS reaching −10 dB of its peak after the valley before it, measured on the articulated
+  notes (15 dB or more above what precedes them); the reference is the cleanest percussion attack on
+  the same grid step — timpani, bass drum, crash, tambourine, snare; median offset in ms, negative =
+  ahead of the percussion; notes measured in brackets):
 
-  | Channel | With `SPEAK`, previous bank | Now |
+  | Channel | With `SPEAK`, previous bank | Without, aligned bank |
   |---------|-----------------------------|-----|
   | accordion | −16.1 (7) | +1.5 (5) |
   | staccato strings, tune / chords | −28.5 / −29.3 (19 / 5) | −0.4 / +0.7 (21 / 5) |
@@ -226,16 +229,17 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
   | tuba | −21.0 (65) | +5.1 (65) |
 
   (The trumpet's notes all join the line legato, with no articulated note on a percussion step.)
-  80–100 % of each channel's articulated notes are now within 10 ms of the percussion (the horn
-  section: one of its two), against 0–75 % before. The tuba's oom speaks with the snare and timpani on
+  80–100 % of each channel's articulated notes were then within 10 ms of the percussion (the horn
+  section: one of its two), against 0–75 % before. The tuba's oom spoke with the snare and timpani on
   both beats (p10–p90 +2.2…+8.7 ms, before −34…−4), and the accordion's sixteenth lines no longer
-  drift by pitch. The channel gains are those the song was balanced with: on the aligned bank a note
+  drifted by pitch. The channel gains are those the song was balanced with: on the aligned bank a note
   keeps its sounding length and loudness, only its placement moved.
 - **Accordion left hand.** The accordion's chord voice (`accChord`) is not used: on the bank the song
   was arranged with, its low zones' beats sat early in a ~100 ms build-up, too slow for off-beat stabs
-  at this tempo, so the street band's off-beats went to the guitar. (On the aligned bank the build-up
-  sounds before the beat and the chord voice reaches −6 dB of its sustain within 8 ms of it; the
-  off-beats stay with the guitar's plucked attack.)
+  at this tempo, so the street band's off-beats went to the guitar. (On the current bank part of the
+  build-up sounds before the beat, and the chord voice reaches −6 dB of its sustain 18–23 ms after
+  it in its low zones (E♭3–A3) and within 9 ms from B3 up; the off-beats stay with the guitar's
+  plucked attack.)
 
 ## Levels (recorded samples)
 
@@ -245,17 +249,17 @@ recorded zone (G5), inside the sampler's pitch-shift limit.
 |---------|-------|
 | duration | 48.95 s of music; rendered buffer 54.95 s (with the 6 s loop pad) |
 | loop window | music 2.368 → 48.947 s (buffer 8.368 → 54.947 s), body 46.58 s = bars 4–62 from section A; seam mismatch −150.5 dBFS |
-| loudness | loop body **−16.35 LUFS** integrated (target −16.4 ± 0.5; whole file −16.43), short-term max −14.7 LUFS |
+| loudness | loop body **−16.36 LUFS** integrated (target −16.4 ± 0.5; whole file −16.44), short-term max −14.8 LUFS |
 | peak / RMS | sample peak **−2.80 dBFS**, RMS −19.6 dBFS |
-| soft clipper | 25 samples (0.000 %) |
-| spectral balance | < 250 Hz −8.4 dB, 250 Hz–4 kHz −0.8 dB, > 4 kHz −18.5 dB of the energy |
+| soft clipper | 21 samples (0.000 %) |
+| spectral balance | < 250 Hz −8.4 dB, 250 Hz–4 kHz −0.7 dB, > 4 kHz −18.7 dB of the energy |
 | warnings | none (no skipped instrument, no note ringing past the seam) |
 | master | `gainDb: -0.3`; reverb rt60 1.5 s, size 1.15, wet 1.25 (a hall, kept short for the fast tempo) |
 
 Per-channel solo levels over the loop body (from the same report): trumpet −2.6 LU against the mix,
-accordion −2.9, staccato strings (tune) −3.3, brass −8.9, horn −10.7, timpani −11.1, clarinet −11.2,
-xylophone −11.8, guitar −12.9, tuba −13.0, galloping strings −13.7, horn section −14.4, snare −14.8,
-suspended cymbal −16.1, tambourine −16.6, orchestra hit −17.0, pizzicato −17.7, crash −17.8,
+accordion −2.9, staccato strings (tune) −3.3, brass −8.9, horn −10.6, timpani −11.1, clarinet −11.2,
+xylophone −11.8, guitar −12.9, tuba −13.0, galloping strings −13.7, horn section −14.5, snare −14.8,
+suspended cymbal −16.2, tambourine −16.6, orchestra hit −17.0, pizzicato −17.7, crash −17.8,
 bass drum −18.0, woodblock −20.2, whip −20.8, triangle −20.8; no channel's loudest 3 s is more than
 30 LU below the mix (render-song's audibility check passes).
 
@@ -266,19 +270,19 @@ tambourine, triangle, woodblock, whip, orchestra hit):
 
 | Section | intro roll (bar 1) | intro call (2–3) | A | A2 | B | B2 | brk | C theme | C runs | coda |
 |---------|-------|------|---|----|---|----|-----|---------|--------|------|
-| mix (LUFS) | −22.7 | −16.0 | −17.1 | −15.9 | −18.1 | −15.6 | −19.8 | −15.0 | −15.3 | −15.6 |
-| lead vs mix (LU) | — (timpani + snare + cymbal roll only) | brass −2.7, brass + horns −1.6 | trumpet −1.1 | accordion −1.4 | strings −1.0 | strings + xylophone −1.7 (with the accordion 8vb −0.9) | brass (trumpet call, stabs) −2.7, horn call −3.8 | trumpet + accordion −0.9 | accordion + strings + xylophone −1.5 | accordion + strings + brass −1.5 |
-| tuba + timpani + bass drum (LU) | −3.0 | −7.3 | −9.0 | −10.2 | −11.3 | −12.2 | −6.7 | −10.3 | −9.2 | −7.8 |
-| percussion (LU) | −3.3 | −9.7 | −13.7 | −13.2 | −13.7 | −13.6 | −9.2 | −15.5 | −14.1 | −13.1 |
+| mix (LUFS) | −22.7 | −15.8 | −17.1 | −15.9 | −18.1 | −15.5 | −19.7 | −15.1 | −15.4 | −15.6 |
+| lead vs mix (LU) | — (timpani + snare + cymbal roll only) | brass −2.7, brass + horns −1.4 | trumpet −1.1 | accordion −1.4 | strings −1.0 | strings + xylophone −1.8 (with the accordion 8vb −0.9) | brass (trumpet call, stabs) −2.7, horn call −3.6 | trumpet + accordion −0.9 | accordion + strings + xylophone −1.5 | accordion + strings + brass −1.3 |
+| tuba + timpani + bass drum (LU) | −3.0 | −7.5 | −9.0 | −10.2 | −11.3 | −12.3 | −6.8 | −10.3 | −9.1 | −7.8 |
+| percussion (LU) | −3.3 | −9.8 | −13.7 | −13.2 | −13.7 | −13.6 | −9.2 | −15.4 | −14.0 | −13.1 |
 
 The melody is on top in every section of the loop (within 0.9–2.7 LU of the mix; in the break the
-calls alternate between horns and trumpets), bass and percussion sit 7–15.5 LU below the mix. The
+calls alternate between horns and trumpets), bass and percussion sit 7–15.4 LU below the mix. The
 intro's roll is the only all-percussion moment: a pp → f crescendo (−22.7 LUFS over its bar without
 the game's fade) into the call. The horn chords sit 12.3 (B) and 14.8 (B2) LU under the mix. The
 dynamic arc is A → A2 a little fuller → B lighter (−1.0 LU below A) → B2 → the break (quietest
 moment: short-term −22.7 LUFS over its first 3 s, building to the tutti stabs) → C and the coda as
-the climax (+1.5 to +2.1 LU over A). Over the loop the short-term (3 s) loudness stays between
-−18.2 and −15.1 LUFS 80 % of the time (median −16.1).
+the climax (+1.6 to +2.1 LU over A). Over the loop the short-term (3 s) loudness stays between
+−18.2 and −15.2 LUFS 80 % of the time (median −16.1).
 
 The synth fallback (`--synth`) plays every channel (no skipped instrument) and measures −16.5 LUFS
 over the loop body (whole file −16.7, peak −3.98 dBFS, no warnings): within 0.2 LU of the recorded
@@ -315,13 +319,13 @@ accordion, strings, brass and horns, whichever plays).
 | Roll | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Lead vs mix |
 |---|---|---|---|---|---|---|
 | intro, bar 1 (0.00 s, 0.79 s) | −34.5 → −34.7 dB | −34.4 → **−34.7 dB** | **+7.5 dB** at 6.3 kHz | 0.07 LU | −17.6 LU | (timpani, snare and cymbal only) |
-| break, last beat (33.35 s, 0.59 s) | −27.0 → −26.9 dB | −26.2 → **−26.9 dB** | **+11.0 dB** at 6.3 kHz | 0.27 LU | −12.7 LU | −2.8 LU |
-| into the coda (44.21 s, 1.58 s) | −26.1 → −26.0 dB | −27.8 → **−26.0 dB** | **+9.9 dB** at 10 kHz | 0.25 LU | −12.5 LU | −1.3 LU |
-| coda, into A (47.37 s, 1.58 s) | −28.7 → −28.7 dB | −30.4 → **−28.7 dB** | **+18.8 dB** at 6.3 kHz | 0.22 LU | −13.1 LU | −1.3 LU |
+| break, last beat (33.35 s, 0.59 s) | −27.0 → −26.9 dB | −26.2 → **−26.9 dB** | **+10.6 dB** at 6.3 kHz | 0.23 LU | −12.9 LU | −2.7 LU |
+| into the coda (44.21 s, 1.58 s) | −26.1 → −25.9 dB | −27.8 → **−25.9 dB** | **+4.6 dB** at 6.3 kHz | 0.23 LU | −12.6 LU | −1.4 LU |
+| coda, into A (47.37 s, 1.58 s) | −28.7 → −28.6 dB | −30.4 → **−28.6 dB** | **+20.5 dB** at 6.3 kHz | 0.23 LU | −12.8 LU | −1.4 LU |
 
 The 1.58 s rolls now grow by about 15 dB over their whole length; before, they gained 3 dB after
 their first 0.75 s and lost 1.7 dB again before the downbeat.
-Every roll rises 7.5–18.8 dB in its band in the last 150 ms before its downbeat, is at its loudest
-there, and stays 9.9–11.8 LU under the tune, adding at most 0.27 LU to the mix. Melody channels are
+Every roll rises 4.6–20.5 dB in its band in the last 150 ms before its downbeat, is at its loudest
+there, and stays 10.2–11.3 LU under the tune, adding at most 0.23 LU to the mix. Melody channels are
 untouched; the seven compare.py proofs above give the same results. Render after the change: the
 "Levels" table above.

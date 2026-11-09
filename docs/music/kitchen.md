@@ -152,11 +152,12 @@ turnaround is the tuba's D alone). A scan of all simultaneous pitched notes find
 | Pots and pans | `anv`, `anv2` (anvil) · `pans` (panClang) · `anvS`, `pansS` (the same, intro and hammer call) · `wood` (woodblock) · `slap` (slapstick) · `cast` (castanets) | — |
 | Band percussion | `tamb` (tambourine: accents, hits, shakes, a roll) · `bd` (bassDrum, hit variant) · `timp` (timpani C2 D2 E2 G2 A2) · `crash` · `cym` (suspended cymbal roll) | timpani within the recorded B1–C3 |
 
-The strings carry no tune: the recorded `violin` and `strings` samples take about 350 ms to reach half
-their level (measured), too slow for this melody's dotted eighths, so the brief's alternative
-(accordion + clarinet for the tune) is used, with brass for the big statements. Winds breathe at
-every phrase end (rests at the theme's cadences and in the close). The mandolin plays tremolo on
-the notes of a dotted quarter or longer and single picks otherwise.
+The strings carry no tune: the recorded `violin` and `strings` samples take 160–310 ms to reach half
+their level on most notes of the tune's range (measured on isolated notes, B3–G5), too slow for this
+melody's dotted eighths, so the brief's alternative (accordion + clarinet for the tune) is used,
+with brass for the big statements. Winds breathe at every phrase end (rests at the theme's cadences
+and in the close). The mandolin plays tremolo on the notes of a dotted quarter or longer and single
+picks otherwise.
 
 ## Measurements (sample render)
 
@@ -166,10 +167,10 @@ the notes of a dotted quarter or longer and single picks otherwise.
 |---|---|
 | Duration | 97.88 s rendered buffer (91.875 s of music + the renderer's 6 s loop pad), 1684 events, rendered in about 1.2 s |
 | Loop | plays 0 → 97.875 s, then repeats 13.5 → 97.875 s (body 84.375 s = bars 5–49 from `V`); seam mismatch −150.5 dBFS |
-| Loudness | loop body **−16.25 LUFS** (target −16.4 ± 0.5), whole file −16.6 LUFS, short-term max −12.8 LUFS |
-| Loudness range | loop body **5.3 LU** (ffmpeg `ebur128`; the stage peers: trattoria 3.6, streets 3.5, foodcourt 2.4) |
-| Peak / clipping | sample peak **−2.57 dBFS**; soft clipper 16 samples (0.000 %); RMS −19.6 dBFS; DC 0 |
-| Spectral balance | < 250 Hz −9.6 dB, 250 Hz–4 kHz −0.6 dB, > 4 kHz −16.0 dB |
+| Loudness | loop body **−16.27 LUFS** (target −16.4 ± 0.5), whole file −16.6 LUFS, short-term max −12.9 LUFS |
+| Loudness range | loop body **5.4 LU** (ffmpeg `ebur128`; the stage peers: trattoria 3.6, streets 3.5, foodcourt 2.5) |
+| Peak / clipping | sample peak **−2.52 dBFS**; soft clipper 33 samples (0.000 %); RMS −19.7 dBFS; DC 0 |
+| Spectral balance | < 250 Hz −9.7 dB, 250 Hz–4 kHz −0.6 dB, > 4 kHz −16.1 dB |
 | Warnings | none (`gainDb` −0.6) |
 
 Per-section loudness and balance (each channel's solo loudness against the section's mix, LU; solo
@@ -179,17 +180,17 @@ sections as they repeat; the lead is in bold):
 | Section | Mix LUFS | Peak dBFS | Lead | Others |
 |---|---|---|---|---|
 | intro | −22.6 | −3.4 | anvil −0.7 | pan −2.1, slapstick −7.6, woodblock −10.9 |
-| V | −17.8 | −4.3 | **accordion −0.1** (phrase 2), **clarinet −1.7** | hammer-bar timpani −4.6 and brass stab −5.7, upright bass −7.4, hammer-call anvil −7.8, guitar −10.0, pans −10.1, pizz −16.7, tambourine −22.0, bass drum −22.5 |
-| T1 | −16.3 | −6.1 | **accordion −2.0** | clarinet −7.5, tuba −9.6, accordion chords −12.4, anvil −16.0, timpani −16.4, slapstick −19.4, tambourine −23.7 |
-| C1 | −17.7 | −6.0 | **mandolin −2.2** | clarinet −6.8, tuba −7.0, timpani −10.2, pizz −14.9, slapstick −16.5, anvil −19.5, woodblock −20.2 |
-| brk | −21.9 | −4.1 | pan −3.9, anvil −4.8 | tuba −3.1, guitar −5.6, slapstick −11.5, timpani −12.8, bass drum −13.2, tambourine −15.3, second anvil −16.4, woodblock −16.9, castanets −19.7, cymbal −24.0 (its swell starts 14 dB under its crest) |
-| T2 | −14.5 | −2.6 | **trumpet −1.9** | accordion −8.5, tuba −11.8, brass −12.3, horns −12.7, anvil −14.5, pan −14.9, timpani −18.0, slapstick −20.0 |
-| C2 | −14.5 | −3.7 | **trumpet −1.9** | accordion −9.1, turnaround accordion chords −9.7, tuba −10.0, mandolin −10.4, brass −11.5, horns −12.3, timpani −12.6, anvil −15.1, pan −15.4, xylophone −19.3, slapstick −19.7 |
+| V | −17.8 | −4.4 | **accordion −0.2** (phrase 2), **clarinet −1.6** | hammer-bar timpani −4.6 and brass stab −6.0, upright bass −7.3, hammer-call anvil −7.7, guitar −9.9, pans −10.1, pizz −16.6, tambourine −22.0, bass drum −22.5 |
+| T1 | −16.5 | −6.5 | **accordion −1.8** | clarinet −7.4, tuba −9.4, accordion chords −12.2, anvil −15.8, timpani −16.2, slapstick −19.2, tambourine −23.5 |
+| C1 | −17.6 | −6.0 | **mandolin −2.2** | clarinet −6.9, tuba −7.0, timpani −10.2, pizz −15.0, slapstick −16.5, anvil −19.5, woodblock −20.3 |
+| brk | −21.9 | −4.2 | pan −3.9, anvil −4.8 | tuba −3.1, guitar −5.6, slapstick −11.5, timpani −12.8, bass drum −13.2, tambourine −15.3, second anvil −16.4, woodblock −16.9, castanets −19.7, cymbal −24.0 (its swell starts 14 dB under its crest) |
+| T2 | −14.5 | −3.6 | **trumpet −1.9** | accordion −8.5, tuba −11.8, brass −12.1, horns −12.7, anvil −14.5, pan −14.9, timpani −18.0, slapstick −20.0 |
+| C2 | −14.5 | −2.5 | **trumpet −1.9** | accordion −9.1, turnaround accordion chords −9.8, tuba −10.0, mandolin −10.5, brass −11.4, horns −12.1, timpani −12.6, anvil −15.1, pan −15.5, xylophone −19.3, slapstick −19.7 |
 
-The loop's dynamics are a little wider than the peers': the verse sits 3.3 LU under the tutti
-(trattoria's verse 2.8 LU under its grand chorus, streets' first verse 2.2 LU under its second),
+The loop's dynamics are a little wider than the peers': the verse sits 3.4 LU under the tutti
+(trattoria's verse 2.8 LU under its grand chorus, streets' first verse 2.3 LU under its second),
 the theme and the close between them, the break and the intro lower (the break is the pots'
-feature: its hits peak at −4.1 dBFS, close to the tutti's −3.7 / −2.6).
+feature: its hits peak at −4.2 dBFS, close to the tutti's −3.6 / −2.5).
 
 ### Review fixes: levels across the loop
 
@@ -216,10 +217,10 @@ chords; `gainDb` −0.5 → −0.6. The T2 slapstick now gets beat 4 of bars 37 
 the stab and the tambourine stop there), and the turnaround's beat 4 likewise.
 
 **Browser check.** `window.__at.samplerTrack('kitchen')` on `audiotest.html` in headless Chromium
-(Playwright, private dev server) decodes the MP3 sprites with the browser's decoder (0.57 s), installs
-all 54 sets without warnings and renders the track in the music worker in 1.10 s, with no page errors.
+(Playwright, private dev server) decodes the MP3 sprites with the browser's decoder (0.48 s), installs
+all 54 sets without warnings and renders the track in the music worker in 1.23 s, with no page errors.
 That render matches the Node render: the same length and loop window (648 000 → 4 698 000 samples),
-loop body −16.25 LUFS and peak −2.57 dBFS in both, no sample more than one 16-bit step apart
+loop body −16.27 LUFS and peak −2.52 dBFS in both, no sample more than one 16-bit step apart
 (difference −111.3 dBFS RMS).
 
 ## Polish: the cymbal roll on the bright roll
@@ -249,10 +250,10 @@ loudness there, and the cymbal's own momentary loudness against the mix.
 |---|---|---|---|---|
 | brk → T2, bars 32–33 (60.47 s, 1.41 s), before | +16.3 dB (400 Hz) | +9.1 dB | 1.40 LU | −5.7 LU |
 | first re-balance (gate end) | +12.9 dB (400 Hz) | +6.1 dB | 0.69 LU | −8.5 LU |
-| now (on the downbeat) | **+24.8 dB** (4 kHz) | **+23.2 dB** | **0.77 LU** | **−8.0 LU** |
+| now (on the downbeat) | **+25.1 dB** (6.3 kHz) | **+23.5 dB** | **0.82 LU** | **−7.8 LU** |
 
 At the end of the old gate the largest rise was at 400 Hz, the roll's low wash; on the downbeat it is
-the roll's bright crest, at 4 kHz and +23.2 dB over 4–12 kHz (the trumpet enters there, 3.3 LU
+the roll's bright crest, at 6.3 kHz and +23.5 dB over 4–12 kHz (the trumpet enters there, 2.5 LU
 above the cymbal).
 
 The tune rests in the break (the pots and pans have it), so the roll may lead into the tutti; it

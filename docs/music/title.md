@@ -132,8 +132,8 @@ last bar of both the intro and `refrain2`, so the melody runs straight across th
   pizzicato, strings) above the lead's top note. Counting the natural ring of the timpani (3.2 s),
   glockenspiel (2.2 s) and xylophone (about 1 s) instead of the written lengths adds only decaying tails,
   measured on solo renders against the mix in the same window: the xylophone run's last notes at
-  the `refrain2` downbeat (24 dB below the mix), the intro's last timpani stroke (F2) in verse
-  bar 2 (46 dB below), the glockenspiel's F6 in refrain bar 13 (51 dB below).
+  the `refrain2` downbeat (23 dB below the mix), the intro's last timpani stroke (F2) in verse
+  bar 2 (59 dB below), the glockenspiel's F6 in refrain bar 13 (61 dB below).
 
 ## Instrumentation
 
@@ -169,12 +169,12 @@ inside the sample range. G major would push the octave doubling and the mandolin
 
 | Measure | Value | Target |
 |---|---|---|
-| Loop body integrated loudness | **−16.3 LUFS** (−16.32; whole file −16.5) | −16.4 ± 0.5 |
-| Short-term max | −13.5 LUFS | |
-| Sample peak | **−2.63 dBFS** | < −1 dBFS |
-| Soft clipper | 76 samples (0.001 %) | ~0 % |
+| Loop body integrated loudness | **−16.4 LUFS** (−16.36; whole file −16.5) | −16.4 ± 0.5 |
+| Short-term max | −13.4 LUFS | |
+| Sample peak | **−2.50 dBFS** | < −1 dBFS |
+| Soft clipper | 95 samples (0.001 %) | ~0 % |
 | Loop seam mismatch | **−150.5 dBFS** (no jump) | seamless |
-| Spectral balance | < 250 Hz −7.1 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −15.6 dB | in line with the other tracks |
+| Spectral balance | < 250 Hz −7.1 dB, 250 Hz–4 kHz −1.1 dB, > 4 kHz −15.9 dB | in line with the other tracks |
 | Warnings | none (no skipped channels, no sequencer warnings) | |
 | `gainDb` | −1.5 | |
 
@@ -185,19 +185,19 @@ the lead's solo loudness against it):
 | Section | Mix LUFS | Lead vs mix |
 |---|---|---|
 | intro | −17.2 | `acc` −0.8 LU |
-| verse | −17.8 | `acc` −1.4 LU |
-| refrain | −15.5 | `acc` −2.0 LU (`mand` −9.1, `accLo` −13.0) |
+| verse | −17.8 | `acc` −1.5 LU |
+| refrain | −15.6 | `acc` −1.9 LU (`mand` −9.0, `accLo` −13.0) |
 | middle | −18.3 | `mand` −1.3 LU |
 | refrain2 | −14.4 | `acc` −1.8 LU |
 
 **In the browser:** `window.__at.samplerTrack('title')` on `audiotest.html` (Chromium, Vite dev
 server) decodes the MP3 sprites with the browser's decoder, installs them in the music worker and
 renders the track there. The result has the same length (3 586 065 samples) and loop window as the
-Node render and nulls against it to −90.3 dBFS peak, one 16-bit step (−110.4 dBFS RMS). Peak
-−2.63 dBFS and −16.5 LUFS whole-file in both; the bank loads 54 sets with no failures.
+Node render and nulls against it to −90.3 dBFS peak, one 16-bit step (−110.5 dBFS RMS). Peak
+−2.50 dBFS and −16.5 LUFS whole-file in both; the bank loads 54 sets with no failures.
 
 Bass and percussion against the section mix: upright bass −8 to −14 LU, tambourine −17 to −21,
-castanets −18 to −24, bass drum −11 under the intro stab and about −16 in the refrains, timpani
+castanets −18 to −23, bass drum −11 under the intro stab and about −16 in the refrains, timpani
 −12 to −13 where it rolls (intro, verse and middle fills). Sparse accents (glockenspiel, xylophone
 run, crash, cymbal swells) measure −10 to −26 LU in the sections where they play. Every channel is
 audible: render-song flags none as inaudible.
@@ -232,6 +232,14 @@ the 0.97 s fills). The held roll also plays at the stereo loudness of the old VC
 1.5 dB under the bright roll's first build, so the channel is `cym` −4.2 → −2.5 dB and the intro
 swell 0.55 → 0.6: every swell crests where it crested before, now on its downbeat.
 
+Two later sampler changes weigh on the intro swell. The accordion's two takes now start together,
+so its held G5 under the crest is about 4 dB stronger at its 4th harmonic (3.2 kHz) in the mono
+mix; and a roll longer than the recorded crescendo (1.53 s) ends in the crescendo's own last 0.2 s,
+as every shorter roll does, which carry less at 3.2 kHz and more at 500 Hz than the held peak it
+ended on before. The intro swell's velocity is 0.6 → 0.63 (+0.7 dB; the roll is one recording at
+every velocity): it crests 0.7 dB above where it crested before, and its largest rise is now at
+500 Hz.
+
 Measure (scratch scripts on the full render, recorded bank, the review's method): "crest" and "on
 the downbeat" = the cymbal's own level (`cym` solo, K-weighted, over the 150 ms up to that point) at
 the end of its gate and at the written downbeat; "rise" = the largest third-octave rise of the mix
@@ -241,14 +249,14 @@ loudness there; "cymbal" / "lead" = their own momentary loudness against the mix
 
 | Swell | Crest, before → now | On the downbeat, before → now | Rise | Cover | Cymbal vs mix | Lead vs mix |
 |---|---|---|---|---|---|---|
-| intro, bars 1–2 (0.00 s, 1.94 s) | −27.3 → −27.3 dB | −29.5 → **−27.3 dB** | **+11.4 dB** at 3.2 kHz | 0.34 LU | −11.1 LU | `acc` −0.8 LU |
-| verse fill, bar 21 (19.36 s, 0.97 s) | −29.8 → −29.8 dB | −29.7 → **−29.8 dB** | **+13.3 dB** at 4 kHz | 0.21 LU | −13.5 LU | −19.8 LU (the tune rests) |
-| middle fill, bar 55 (52.26 s, 0.97 s) | −27.3 → −27.3 dB | −27.2 → **−27.3 dB** | **+9.0 dB** at 4 kHz | 0.40 LU | −10.7 LU | −9.8 LU (the refrain's pickup) |
+| intro, bars 1–2 (0.00 s, 1.94 s) | −27.3 → −26.6 dB | −29.5 → **−26.6 dB** | **+9.8 dB** at 500 Hz | 0.36 LU | −11.1 LU | `acc` −0.8 LU |
+| verse fill, bar 21 (19.36 s, 0.97 s) | −29.8 → −29.8 dB | −29.7 → **−29.8 dB** | **+13.4 dB** at 4 kHz | 0.21 LU | −13.5 LU | −20.8 LU (the tune rests) |
+| middle fill, bar 55 (52.26 s, 0.97 s) | −27.3 → −27.3 dB | −27.2 → **−27.3 dB** | **+9.6 dB** at 4 kHz | 0.39 LU | −10.5 LU | −10.2 LU (the refrain's pickup) |
 
-The intro swell now grows steadily, about 9 dB/s, from −44.7 dB 0.15 s in to −27.3 dB on the
+The intro swell now grows steadily, about 9 dB/s, from −44.1 dB 0.15 s in to −26.6 dB on the
 downbeat; before, it grew from −36 to −28 dB over its first 0.9 s and then held. Every swell rises
-9.0–13.3 dB in its band in the last 150 ms before its downbeat, is at its loudest there, crests
-under the tune (in the intro the accordion stays 10.3 LU above it) and adds at most 0.40 LU to the
+9.6–13.4 dB in its band in the last 150 ms before its downbeat, is at its loudest there, crests
+under the tune (in the intro the accordion stays 10.3 LU above it) and adds at most 0.39 LU to the
 mix. Melody channels are untouched; the nine compare.py proofs above give the same results. Render
 after the change: the measurement table above.
 

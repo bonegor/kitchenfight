@@ -137,11 +137,11 @@ Loudness bar by bar across the seam (K-weighted, the audio as it plays):
 
 | Bar | Loudness |
 |---|---|
-| Last bar (coda G) | −15.5 LUFS |
-| D7 turnaround | −22.6 LUFS |
+| Last bar (coda G) | −15.4 LUFS |
+| D7 turnaround | −22.7 LUFS |
 | First verse bar | −19.0 LUFS |
 
-The loudest bar of the loop is −15.0 LUFS (song bar 27, in the refrain). The turnaround is a
+The loudest bar of the loop is −15.1 LUFS (song bar 27, in the refrain). The turnaround is a
 breath between strophes, where the old loop dropped straight from the cadence into the verse.
 
 Seam mismatch: −150.5 dBFS. No event outlasts the loop end.
@@ -241,42 +241,42 @@ warm evening room).
 menu: 79.50 s @ 48000 Hz, 1253 events
   loop: plays 0 → 79.500 s, then repeats 6.000 → 79.500 s (body 73.500 s = bars 1-49 from section "intro"; seam mismatch -150.5 dBFS)
   form: intro@0.00s verse@1.50s chorus@25.50s chorus2@49.50s
-  loop body: integrated -17.4 LUFS (whole file -17.5), short-term max -16.0 LUFS, RMS -20.7 dBFS, sample peak -3.79 dBFS
-  soft clipper: 2 samples (0.000 %), DC -0.00000, first sound at 0.001 s
+  loop body: integrated -17.4 LUFS (whole file -17.5), short-term max -16.0 LUFS, RMS -20.7 dBFS, sample peak -4.83 dBFS
+  soft clipper: 0 samples (0.000 %), DC -0.00000, first sound at 0.001 s
   spectral balance: <250 Hz -6.7 dB, 250 Hz-4 kHz -1.2 dB, >4 kHz -14.7 dB (share of total energy)
   channel      instrument      notes  gain   solo LUFS  vs mix  loudest 3s  peak dBFS
   mand         mandolin           80   -2.4      -18.9    -1.6       -17.0       -5.7
-  vln          violin             34   -4.9      -18.0    -0.6       -17.2       -7.7
+  vln          violin             34   -4.9      -18.0    -0.6       -17.2       -8.2
   mandH        mandolin           30   -8.2      -29.4   -12.1       -28.7      -15.2
   gtr          guitar            208     -8      -26.9    -9.6       -26.3      -12.1
   harp         harp              166     -8      -26.6    -9.2       -25.2      -10.5
   bass         uprightBass       101   -4.5      -27.0    -9.7       -26.2      -10.6
-  acc          accordionDry       11  -14.2      -31.6   -14.2       -31.3      -20.7
-  accC         accChord           96  -11.9      -33.0   -15.6       -33.8      -18.0
-  str          strings            38    -14      -33.2   -15.8       -31.2      -21.1
+  acc          accordionDry       11  -14.2      -31.6   -14.2       -31.3      -21.0
+  accC         accChord           96  -11.9      -32.9   -15.5       -33.8      -17.8
+  str          strings            38    -14      -33.2   -15.8       -31.2      -21.6
   warnings: none
 ```
 
 - **Loudness**: −17.4 LUFS over the loop body (−17.36 at `gainDb` 1.3), the menu target
   (−17.4 ± 0.5).
-- **Peak** −3.79 dBFS: a mandolin stroke over the bass in the refrain (35.26 s), just above the soft
-  clipper's knee (0.62 = −4.2 dBFS), so the clipper rounds 2 samples (0.000 %). Humanize velocity
+- **Peak** −4.83 dBFS: a mandolin stroke over the bass in the refrain (35.26 s), 0.7 dB under the
+  soft clipper's knee (0.62 = −4.2 dBFS), so the clipper rounds no sample. Humanize velocity
   jitter, the left pan and a stroke's attack add up there; the mandolin's humanize scale is 0.6 (a
-  steadier player), which keeps it to that one stroke.
+  steadier player).
 - **Lead on top**: the mandolin is −1.6 LU and the violin −0.6 LU against the whole mix. Per
-  section (K-weighted, gated), the lead is −1.4 / −1.2 / −1.2 LU below the section mix.
+  section (K-weighted, gated), the lead is −1.4 / −1.1 / −1.2 LU below the section mix.
 - **Arc** (section loudness):
 
   | Section | Loudness |
   |---|---|
-  | D7 intro / turnaround | −22.9 LUFS |
-  | verse | −18.4 LUFS |
+  | D7 intro / turnaround | −23.0 LUFS |
+  | verse | −18.3 LUFS |
   | refrain | −17.0 LUFS |
   | varied refrain | −16.7 LUFS |
 
   It builds gently, and the turnaround is a breath before the next strophe.
 - **Chromium**: `audiotest.html` `__at.samplerTrack('menu')` (MP3s decoded by Chromium, real
-  render worker, 54 sets) renders in 1.02 s with no errors. Its output is the same as the Node
+  render worker, 54 sets) renders in 1.13 s with no errors. Its output is the same as the Node
   render, with the same length and the same loop window (288000 → 3816000 samples). The difference
   is −111.6 dBFS RMS, at most one 16-bit step.
 - `npx tsc --noEmit` clean; `node scripts/music/selftest/formcheck.mjs`: `ok menu`.
