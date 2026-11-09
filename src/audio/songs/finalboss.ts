@@ -207,10 +207,11 @@ export const finalboss: SongDef = {
     tbn: { inst: 'trombone', gain: 4, pan: 0.3, send: 0.22, hum: 0.2 },
     horn: { inst: 'brassSoft', gain: -0.6, pan: -0.3, send: 0.3, hum: 0 },
     tuba: { inst: 'tuba', gain: -3.1, pan: 0.1, send: 0.1, hum: 0.2 },
-    // voices and organ
-    choir: { inst: 'choir', gain: -1.6, pan: 0, send: 0.35, hum: 0 },
+    // voices and organ (choir +0.5 / organ +0.45 dB with the sampler timing fix: their octave-doubled chord tones,
+    // phase-locked, now sum 0.47 dB quieter; the trim keeps the balance the arrangement was measured with)
+    choir: { inst: 'choir', gain: -1.1, pan: 0, send: 0.35, hum: 0 },
     choirO: { inst: 'choirO', gain: -3.6, pan: 0, send: 0.4, hum: 0 },
-    organ: { inst: 'organ', gain: -1.2, pan: 0, send: 0.35, hum: 0 },
+    organ: { inst: 'organ', gain: -0.75, pan: 0, send: 0.35, hum: 0 },
     // the cartoon section
     bsn: { inst: 'bassoon', gain: 1.5, pan: -0.18, send: 0.2, hum: 0.2 },
     picc: { inst: 'piccolo', gain: 1, pan: -0.2, send: 0.25, hum: 0.2 },
