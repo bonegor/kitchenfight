@@ -281,7 +281,9 @@ export const boss: SongDef = {
         hits('crash', [[0, 60, 0.8], [56, 60, 0.7], [88, 60, 0.7]]),
         hits('hit', [[0, 'E4', 0.7]]),
         hits('bd', [[0, 60, 0.85], [32, 60, 0.6], ...Array.from({ length: 8 }, (_, i): [number, number, number] => [56 + i * 8, 60, i % 4 === 0 ? 0.8 : 0.6])]),
-        hits('cym', [[104, 60, 0.75, 16]], 1),
+        // (0.84: a roll longer than the recorded crescendo ends in its own last 0.2 s, darker than the held peak it
+        // ended on before; 0.75 rose only 4.6 dB over the tutti's runs, 0.84 rises 5.8 dB and adds 0.33 LU)
+        hits('cym', [[104, 60, 0.84, 16]], 1),
       ],
     },
     coda: {
