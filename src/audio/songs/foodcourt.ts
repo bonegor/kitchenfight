@@ -297,9 +297,10 @@ export const foodcourt: SongDef = {
         comp('ep', EP_WALTZ, { ...COMP, vel: 0.45, to: 4 }),
         mel('sb', SB_D, { vel: 0.75 }),
         drums('hat', RIDE, HAT, { to: 4 }),
-        // the soft string pad under the violins (bars 1-4): at 0.66 every chord rises 3.5 dB or more in
-        // its band over the e-piano's comping, 5-7 LU under the violins
-        pad('str', { lo: 'E3', hi: 'E4', n: 3, vel: 0.66, to: 4 }),
+        // the soft string pad under the violins (bars 1-4): at 0.69 its chords rise 6.3, 10.3, 3.7 and 4.4 dB in
+        // their band over the e-piano's comping (at 0.66, with the sampler's two takes started together, the third
+        // rose only 3.3 dB), 4-6 LU under the violins, whose notes still rise 10.2 dB or more in the mix
+        pad('str', { lo: 'E3', hi: 'E4', n: 3, vel: 0.69, to: 4 }),
         mel('tpt', D_MEL_2, { vel: 0.72, at: 24 }),
         mel('hrn', HRN_D_2, { vel: 0.62, at: 24 }),
         mel('tbn', TBN_D_2, { vel: 0.7, at: 24 }),
