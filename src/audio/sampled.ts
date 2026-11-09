@@ -21,7 +21,9 @@
  * onset of their sum, for a tone-filtered voicing the rule applied to what it plays — and for a
  * short note its own on the same rule (`preAt`, continuous in the note's length, never ending a
  * longer note earlier). Two takes summed also carry the gains that keep each note's stereo and mid
- * (reverb send) energy as with the takes on their gate anchors (`gainAt`, `sendAt`).
+ * (reverb send) energy as with the takes on their gate anchors (`gainAt`, `sendAt`). What a sustained note's
+ * analysis works out besides its audio (that shift, the beat, the short notes' onsets, those gains) is kept
+ * across renders (NoteAnalysis): only its audio is made again.
  */
 import { Biquad, clamp } from './dsp';
 import { MAX_PRE_SEC, type InstDef, type Sample } from './instruments';
@@ -268,6 +270,8 @@ interface StoredSet {
   ch: Int16Array[];
   /** int16 → float scale */
   k: number;
+  /** which storing of a set this is (the analyses kept of its notes are of this PCM: analysisKey) */
+  gen: number;
 }
 
 const bank = new Map<string, StoredSet>();
@@ -335,7 +339,10 @@ export function addSampleSet(def: SampleSetDef, pcm: SetPcm): boolean {
     // material before ls (equal in the source after the build's loop crossfade, so this only
     // removes codec noise)
     for (const z of def.zones) if (z.ls !== undefined && z.le !== undefined) for (const c of chs) seamFix(c, z.o + z.ls, z.o + z.le);
-    bank.set(def.name, { def, sr: def.sr, ch: chs, k });
+    // (a set stored again: what was kept of the notes of its earlier PCM goes)
+    const before = bank.get(def.name);
+    if (before) clearAnalysisCache(before.gen);
+    bank.set(def.name, { def, sr: def.sr, ch: chs, k, gen: ++setGen });
     return true;
   } catch (e) {
     pendingWarnings.push(`set ${def.name}: ${String(e)}`);
@@ -1040,6 +1047,38 @@ function alignTakes(a: Rendered, b: Rendered, d = 0): TakesAlign {
   return { offA, offB, pre: Math.round((offA + a.pre + offB + b.pre) / 2), ga: Math.round((offA + a.ga + offB + b.ga) / 2) };
 }
 
+/** Reusable buffers for the analysis of one note, by slot (it runs synchronously: what a slot holds is never kept
+ *  past the call that took it, nor read before that call wrote it); one longer than SCRATCH_MAX elements is made for
+ *  the call alone (what stays between renders: about 1 MB) */
+const SCRATCH_MAX = 1 << 15;
+const scratch64: Float64Array[] = [];
+const scratch32: Float32Array[] = [];
+const scratchI32: Int32Array[] = [];
+function f64(slot: number, n: number): Float64Array {
+  const b = scratch64[slot];
+  if (b && b.length >= n) return b;
+  if (n > SCRATCH_MAX) return new Float64Array(n);
+  const c = new Float64Array(Math.min(SCRATCH_MAX, Math.max(n, b ? Math.ceil(b.length * 1.25) : 0)));
+  scratch64[slot] = c;
+  return c;
+}
+function f32(slot: number, n: number): Float32Array {
+  const b = scratch32[slot];
+  if (b && b.length >= n) return b;
+  if (n > SCRATCH_MAX) return new Float32Array(n);
+  const c = new Float32Array(Math.min(SCRATCH_MAX, Math.max(n, b ? Math.ceil(b.length * 1.25) : 0)));
+  scratch32[slot] = c;
+  return c;
+}
+function i32(slot: number, n: number): Int32Array {
+  const b = scratchI32[slot];
+  if (b && b.length >= n) return b;
+  if (n > SCRATCH_MAX) return new Int32Array(n);
+  const c = new Int32Array(Math.min(SCRATCH_MAX, Math.max(n, b ? Math.ceil(b.length * 1.25) : 0)));
+  scratchI32[slot] = c;
+  return c;
+}
+
 /** furthest two takes of a sustained `width` note are moved apart from their beats (s; and at most half a period) */
 const TAKES_SHIFT_MAX = 0.003;
 /** the stretch around the beat (s before, s after) over which the takes' sum must rise with their power sum, and the
@@ -1084,10 +1123,10 @@ function takesShift(a: Rendered, b: Rendered, period: number, sr: number): numbe
   const n = nb * blk;
   // b matched to a's power over the frame (as measuredTakes matches them)
   const nbx = Math.min(xb.length, n);
-  const cb = new Float64Array(nbx + 1);
+  const cb = f64(0, nbx + 1);
+  cb[0] = 0;
   for (let i = 0; i < nbx; i++) cb[i + 1] = cb[i] + xb[i] * xb[i];
-  const eb = (i0: number, i1: number): number => cb[Math.max(0, Math.min(nbx, i1))] - cb[Math.max(0, Math.min(nbx, i0))];
-  const pa = new Float64Array(nb);
+  const pa = f64(1, nb);
   let sa = 0;
   for (let q = 0; q < nb; q++) {
     let acc = 0;
@@ -1095,7 +1134,7 @@ function takesShift(a: Rendered, b: Rendered, period: number, sr: number): numbe
     pa[q] = acc;
     sa += acc;
   }
-  const sb = eb(-FB, n - FB);
+  const sb = cb[Math.max(0, Math.min(nbx, n - FB))] - cb[Math.max(0, Math.min(nbx, -FB))];
   if (!(sa > 0) || !(sb > 0)) return 0;
   const k = Math.sqrt(sa / sb);
   const k2 = k * k;
@@ -1103,30 +1142,68 @@ function takesShift(a: Rendered, b: Rendered, period: number, sr: number): numbe
   const to = Math.min(nb - 1, qBeat + Math.round((TAKES_ATTACK * sr) / blk));
   const to2 = Math.min(nb - 1, qBeat + Math.round((TAKES_BODY * sr) / blk));
   const floor = Math.pow(10, TAKES_FLOOR_DB / 10);
-  const coh = new Float64Array(nb);
-  const pow = new Float64Array(nb);
-  const cq = new Float64Array(nb);
-  const pq = new Float64Array(nb);
+  // the shifts in the order 0, +s, -s, +2s, ..: a larger one only where it is better by more than 0.05 dB
+  const nc = 2 * nd + 1;
+  const obs = new Int32Array(nc); // b's start in the frame, per shift
+  for (let j = 0; j < nc; j++) obs[j] = FB + (j & 1 ? (j + 1) >> 1 : -(j >> 1)) * step;
+  // the cross term of a and b per 1 ms block and shift: X[j * nb + q] = the sum of a·b over the block (past the body
+  // window, of which only the maximum is read, every 4th product, times 4) — four shifts per pass over a block, each
+  // summed in the same order as alone
+  const X = f64(2, nc * nb);
+  const aEnd = FA + xa.length;
+  for (let q = 0; q < nb; q++) {
+    const q0 = q * blk;
+    const q1 = q0 + blk;
+    const dec = q > to2 ? 4 : 1;
+    let j = 0;
+    if (q0 >= FA && q1 <= aEnd)
+      for (; j + 3 < nc; j += 4) {
+        const o0 = obs[j];
+        const o1 = obs[j + 1];
+        const o2 = obs[j + 2];
+        const o3 = obs[j + 3];
+        // (the four shifts read b over the whole block: else each alone below)
+        if (q0 < Math.max(o0, o1, o2, o3) || q1 > Math.min(o0, o1, o2, o3) + xb.length) break;
+        let s0 = 0;
+        let s1 = 0;
+        let s2 = 0;
+        let s3 = 0;
+        for (let i = q0; i < q1; i += dec) {
+          const v = xa[i - FA];
+          s0 += v * xb[i - o0];
+          s1 += v * xb[i - o1];
+          s2 += v * xb[i - o2];
+          s3 += v * xb[i - o3];
+        }
+        X[j * nb + q] = s0 * dec;
+        X[(j + 1) * nb + q] = s1 * dec;
+        X[(j + 2) * nb + q] = s2 * dec;
+        X[(j + 3) * nb + q] = s3 * dec;
+      }
+    for (; j < nc; j++) {
+      const ob = obs[j];
+      let x = 0;
+      for (let i = Math.max(q0, FA, ob), e = Math.min(q1, aEnd, ob + xb.length); i < e; i += dec) x += xa[i - FA] * xb[i - ob];
+      X[j * nb + q] = x * dec;
+    }
+  }
+  const coh = f64(3, nb);
+  const pow = f64(4, nb);
+  const cq = f64(5, nb);
+  const pq = f64(6, nb);
   let best = 0;
   let bestDev = Infinity;
-  // shifts in the order 0, +s, -s, +2s, ..: a larger one only where it is better by more than 0.05 dB
-  for (let j = 0; j <= 2 * nd; j++) {
-    const d = (j & 1 ? (j + 1) >> 1 : -(j >> 1)) * step;
-    const ob = FB + d; // b's start in the frame
+  for (let j = 0; j < nc; j++) {
+    const ob = obs[j];
+    const xj = j * nb;
     // per 1 ms block: the power sum and the coherent sum (a + k b)^2, then their trailing windows
     let cw = 0;
     let pw = 0;
     for (let q = 0; q < nb; q++) {
       const q0 = q * blk;
-      const q1 = q0 + blk;
-      // (past the body window only the maximum is read from it: every 4th product)
-      const dec = q > to2 ? 4 : 1;
-      let x = 0;
-      for (let i = Math.max(q0, FA, ob), e = Math.min(q1, FA + xa.length, ob + xb.length); i < e; i += dec) x += xa[i - FA] * xb[i - ob];
-      x *= dec;
-      const p = pa[q] + k2 * eb(q0 - ob, q1 - ob);
+      const p = pa[q] + k2 * (cb[Math.max(0, Math.min(nbx, q0 + blk - ob))] - cb[Math.max(0, Math.min(nbx, q0 - ob))]);
       pq[q] = p;
-      cq[q] = p + 2 * k * x;
+      cq[q] = p + 2 * k * X[xj + q];
       pw += p;
       cw += cq[q];
       if (q >= wb) {
@@ -1144,13 +1221,27 @@ function takesShift(a: Rendered, b: Rendered, period: number, sr: number): numbe
     }
     if (!(mc > 0) || !(mp > 0)) continue;
     let dev = 0;
+    // (the ratio of a block whose difference cannot reach dev — well inside the band it gives, by a margin far above
+    // the rounding of log10 and pow — needs no log10: the band, for either weight, is renewed as dev grows)
+    let r1lo = 1;
+    let r1hi = 1;
+    let r2lo = 1;
+    let r2hi = 1;
     for (let q = from; q <= Math.max(to, to2); q++) {
       if (pow[q] < mp * floor) continue;
-      const x = Math.abs(10 * Math.log10((Math.max(coh[q], mc * 1e-6) * mp) / (pow[q] * mc))) * (q > to ? TAKES_BODY_W : 1);
-      if (x > dev) dev = x;
+      const r = (Math.max(coh[q], mc * 1e-6) * mp) / (pow[q] * mc);
+      if (q > to ? r > r2lo && r < r2hi : r > r1lo && r < r1hi) continue;
+      const x = Math.abs(10 * Math.log10(r)) * (q > to ? TAKES_BODY_W : 1);
+      if (x > dev) {
+        dev = x;
+        r1hi = Math.pow(10, dev / 10) * (1 - 1e-9);
+        r1lo = 1 / r1hi;
+        r2hi = Math.pow(10, dev / (10 * TAKES_BODY_W)) * (1 - 1e-9);
+        r2lo = 1 / r2hi;
+      }
     }
     if (dev < bestDev - 0.05) {
-      best = d;
+      best = ob - FB;
       bestDev = dev;
     }
   }
@@ -1164,10 +1255,14 @@ function takesShift(a: Rendered, b: Rendered, period: number, sr: number): numbe
  */
 function widen(a: Rendered, b: Rendered, width: number, al: TakesAlign): Rendered {
   const n = Math.max(a.chans[0].length + al.offA, b.chans[0].length + al.offB);
-  const xl = new Float32Array(n);
-  const xr = new Float32Array(n);
+  const xl = f32(1, n);
+  const xr = f32(2, n);
+  xl.fill(0, 0, al.offA);
   xl.set(a.chans[0], al.offA);
+  xl.fill(0, al.offA + a.chans[0].length, n);
+  xr.fill(0, 0, al.offB);
   xr.set(b.chans[0], al.offB);
+  xr.fill(0, al.offB + b.chans[0].length, n);
   const th = Math.asin(clamp(width, 0, 1)) / 2;
   const c = Math.cos(th);
   const s = Math.sin(th);
@@ -1204,28 +1299,11 @@ const GAIN_GRID = 64;
 
 /**
  * The energy of a note cut at t (everything before it, then the release decay: power factor k2 per sample) for t on
- * a grid of GAIN_GRID samples up to the end `n` (the last point at n: the whole note), from its power p[0..n).
+ * a grid of GAIN_GRID samples up to the end n (the last point at n: the whole note), from its power p[0..n): E[q] =
+ * the release tail from qG on (k2·(p[i] + the tail after it), summed back from the end) plus everything before qG
+ * (summed from the start), E[Q] = the whole note's. takesEnergies makes four at once.
  */
-function cutEnergies(p: Float32Array, k2: number): Float64Array {
-  const G = GAIN_GRID;
-  const n = p.length;
-  const Q = Math.ceil(n / G);
-  const E = new Float64Array(Q + 1);
-  let tail = 0;
-  for (let i = n - 1; i >= 0; i--) {
-    tail = k2 * (p[i] + tail);
-    if (i % G === 0) E[i / G] = tail;
-  }
-  let head = 0;
-  for (let i = 0; i < n; i++) {
-    if (i % G === 0) E[i / G] += head;
-    head += p[i];
-  }
-  E[Q] = head;
-  return E;
-}
-
-/** cutEnergies() read at `cut` (linear between its grid points) */
+/** A grid of note energies (takesEnergies) read at `cut` (linear between its grid points) */
 function energyAt(E: Float64Array, n: number, cut: number): number {
   const j = Math.max(0, Math.min(n, cut));
   const q = Math.min(E.length - 2, Math.floor(j / GAIN_GRID));
@@ -1236,7 +1314,9 @@ function energyAt(E: Float64Array, n: number, cut: number): number {
 
 /** The energies of a note cut anywhere: the pair as widen() plays it, and the reference — the takes aligned on their
  *  gate anchors, normalised as widen() normalises them (takesLoudness) — each as its stereo power (what the dry mix
- *  carries) and as its mid ((L + R) / 2: what the reverb send carries) */
+ *  carries) and as its mid ((L + R) / 2: what the reverb send carries). The four powers are made sample by sample as a
+ *  Float32Array would hold them (rounded to float32), each summed on its own exactly as alone, the four side by side;
+ *  past the end of the shorter of the two notes its powers are 0 (its sums unchanged there) */
 function takesEnergies(a: Rendered, b: Rendered, w: Rendered, width: number, k2: number): { En: Float64Array; Mn: Float64Array; n: number; Ea: Float64Array; Ma: Float64Array; m: number; A0: number } {
   const th = Math.asin(clamp(width, 0, 1)) / 2;
   const c = Math.cos(th);
@@ -1244,48 +1324,148 @@ function takesEnergies(a: Rendered, b: Rendered, w: Rendered, width: number, k2:
   const L = w.chans[0];
   const R = w.chans[1];
   const n = L.length;
-  // (one power buffer, reused: stereo, then mid)
-  const pw = new Float32Array(n);
-  for (let i = 0; i < n; i++) pw[i] = L[i] * L[i] + R[i] * R[i];
-  const En = cutEnergies(pw, k2);
-  for (let i = 0; i < n; i++) pw[i] = 0.25 * (L[i] + R[i]) * (L[i] + R[i]);
-  const Mn = cutEnergies(pw, k2);
   const A0 = Math.max(a.ga, b.ga);
   const oA = A0 - a.ga;
   const oB = A0 - b.ga;
   const xa = a.chans[0];
   const xb = b.chans[0];
-  const m = Math.max(xa.length + oA, xb.length + oB);
-  const xl = new Float32Array(m);
-  const xr = new Float32Array(m);
-  xl.set(xa, oA);
-  xr.set(xb, oB);
+  const aEnd = oA + xa.length;
+  const bEnd = oB + xb.length;
+  const m = Math.max(aEnd, bEnd);
+  // the takes on their gate anchors: a from oA, b from oB (zero outside)
   let pl = 0;
   let pr = 0;
   let plr = 0;
   for (let i = 0; i < m; i += 4) {
-    pl += xl[i] * xl[i];
-    pr += xr[i] * xr[i];
-    plr += xl[i] * xr[i];
+    const u = i >= oA && i < aEnd ? xa[i - oA] : 0;
+    const v = i >= oB && i < bEnd ? xb[i - oB] : 0;
+    pl += u * u;
+    pr += v * v;
+    plr += u * v;
   }
   const kr = pr > 0 ? Math.sqrt(pl / pr) : 0;
   const rho = pl > 0 && pr > 0 ? plr / Math.sqrt(pl * pr) : 0;
   const nn = 1 / Math.max(1e-6, c * c + s * s + 2 * c * s * rho);
   const cs2 = c * c + s * s;
   const cs4 = 4 * c * s;
-  const pa = new Float32Array(m);
-  for (let i = 0; i < m; i++) {
-    const u = xl[i];
-    const v = xr[i] * kr;
-    pa[i] = nn * (cs2 * (u * u + v * v) + cs4 * u * v);
-  }
-  const Ea = cutEnergies(pa, k2);
   const hm = 0.25 * (c + s) * (c + s) * nn;
-  for (let i = 0; i < m; i++) {
-    const v = xl[i] + xr[i] * kr;
-    pa[i] = hm * v * v;
+  const G = GAIN_GRID;
+  const N = Math.max(n, m);
+  const Qn = Math.ceil(n / G);
+  const Qm = Math.ceil(m / G);
+  const QN = Math.ceil(N / G);
+  const En = new Float64Array(Qn + 1);
+  const Mn = new Float64Array(Qn + 1);
+  const Ea = new Float64Array(Qm + 1);
+  const Ma = new Float64Array(Qm + 1);
+  const fr = Math.fround;
+  // (where both notes and both takes are there: blocks wholly inside need no checks)
+  const lo = Math.max(oA, oB);
+  const hi = Math.min(n, m, aEnd, bEnd);
+  // the release tails, summed back from the end
+  let t1 = 0;
+  let t2 = 0;
+  let t3 = 0;
+  let t4 = 0;
+  for (let q = QN - 1; q >= 0; q--) {
+    const e = q * G;
+    const top = Math.min(N, e + G);
+    if (e >= lo && top <= hi) {
+      for (let i = top - 1; i >= e; i--) {
+        const l = L[i];
+        const r = R[i];
+        const u = xa[i - oA];
+        const v = xb[i - oB] * kr;
+        const t = u + v;
+        t1 = k2 * (fr(l * l + r * r) + t1);
+        t2 = k2 * (fr(0.25 * (l + r) * (l + r)) + t2);
+        t3 = k2 * (fr(nn * (cs2 * (u * u + v * v) + cs4 * u * v)) + t3);
+        t4 = k2 * (fr(hm * t * t) + t4);
+      }
+    } else {
+      for (let i = top - 1; i >= e; i--) {
+        let p1 = 0;
+        let p2 = 0;
+        let p3 = 0;
+        let p4 = 0;
+        if (i < n) {
+          const l = L[i];
+          const r = R[i];
+          p1 = fr(l * l + r * r);
+          p2 = fr(0.25 * (l + r) * (l + r));
+        }
+        if (i < m) {
+          const u = i >= oA && i < aEnd ? xa[i - oA] : 0;
+          const v = (i >= oB && i < bEnd ? xb[i - oB] : 0) * kr;
+          p3 = fr(nn * (cs2 * (u * u + v * v) + cs4 * u * v));
+          const t = u + v;
+          p4 = fr(hm * t * t);
+        }
+        t1 = k2 * (p1 + t1);
+        t2 = k2 * (p2 + t2);
+        t3 = k2 * (p3 + t3);
+        t4 = k2 * (p4 + t4);
+      }
+    }
+    if (q < Qn) {
+      En[q] = t1;
+      Mn[q] = t2;
+    }
+    if (q < Qm) {
+      Ea[q] = t3;
+      Ma[q] = t4;
+    }
   }
-  const Ma = cutEnergies(pa, k2);
+  // everything before each grid point, summed from the start
+  let h1 = 0;
+  let h2 = 0;
+  let h3 = 0;
+  let h4 = 0;
+  for (let q = 0; q < QN; q++) {
+    if (q < Qn) {
+      En[q] += h1;
+      Mn[q] += h2;
+    }
+    if (q < Qm) {
+      Ea[q] += h3;
+      Ma[q] += h4;
+    }
+    const b0 = q * G;
+    const top = Math.min(N, b0 + G);
+    if (b0 >= lo && top <= hi) {
+      for (let i = b0; i < top; i++) {
+        const l = L[i];
+        const r = R[i];
+        const u = xa[i - oA];
+        const v = xb[i - oB] * kr;
+        const t = u + v;
+        h1 += fr(l * l + r * r);
+        h2 += fr(0.25 * (l + r) * (l + r));
+        h3 += fr(nn * (cs2 * (u * u + v * v) + cs4 * u * v));
+        h4 += fr(hm * t * t);
+      }
+      continue;
+    }
+    for (let i = b0; i < top; i++) {
+      if (i < n) {
+        const l = L[i];
+        const r = R[i];
+        h1 += fr(l * l + r * r);
+        h2 += fr(0.25 * (l + r) * (l + r));
+      }
+      if (i < m) {
+        const u = i >= oA && i < aEnd ? xa[i - oA] : 0;
+        const v = (i >= oB && i < bEnd ? xb[i - oB] : 0) * kr;
+        h3 += fr(nn * (cs2 * (u * u + v * v) + cs4 * u * v));
+        const t = u + v;
+        h4 += fr(hm * t * t);
+      }
+    }
+  }
+  En[Qn] = h1;
+  Mn[Qn] = h2;
+  Ea[Qm] = h3;
+  Ma[Qm] = h4;
   return { En, Mn, n, Ea, Ma, m, A0 };
 }
 
@@ -1296,27 +1476,23 @@ function takesEnergies(a: Rendered, b: Rendered, w: Rendered, width: number, k2:
  * Returns gate (output samples) → the gains that give a note gated there (then released, time constant `release`)
  * the energy it has with the takes aligned on their anchors, both counted from their gate anchors: `dry` its stereo
  * energy, `send` (the reverb send: the mid) its mid's — one gain each per note, so the envelope — the attack where
- * the takes now start together — is kept. Keeps only the energies on their grid (cutEnergies); memoised.
+ * the takes now start together — is kept. Keeps only the energies on their grid (takesEnergies).
  */
-function takesLoudness(a: Rendered, b: Rendered, w: Rendered, width: number, release: number, sr: number): { dry: (gate: number) => number; send: (gate: number) => number } {
+function takesLoudness(a: Rendered, b: Rendered, w: Rendered, width: number, release: number, sr: number): Gains {
   const k2 = Math.exp(-2 / (Math.max(0.001, release) * sr));
   const { En, Mn, n, Ea, Ma, m, A0 } = takesEnergies(a, b, w, width, k2);
-  return { dry: gainOfEnergies(En, n, Ea, m, w.ga, A0), send: gainOfEnergies(Mn, n, Ma, m, w.ga, A0) };
+  return { dry: gainOfEnergies(En, n, Ea, m, w.ga, A0), send: gainOfEnergies(Mn, n, Ma, m, w.ga, A0), bytes: En.byteLength + Mn.byteLength + Ea.byteLength + Ma.byteLength + 512 };
 }
 
 function gainOfEnergies(En: Float64Array, n: number, Ea: Float64Array, m: number, wga: number, A0: number): (gate: number) => number {
   const gmax = Math.pow(10, TAKES_GAIN_MAX / 20);
-  const memo = new Map<number, number>();
+  // (two readings of the grids per note: nothing to keep per gate — kept across renders with the note's analysis, the
+  // function holds the grids alone)
   return (gate: number): number => {
     const g0 = Math.max(1, Math.round(gate));
-    let g = memo.get(g0);
-    if (g === undefined) {
-      const e1 = energyAt(En, n, wga + g0);
-      const e0 = energyAt(Ea, m, A0 + g0);
-      g = e1 > 0 && e0 > 0 ? Math.min(gmax, Math.max(1 / gmax, Math.sqrt(e0 / e1))) : 1;
-      memo.set(g0, g);
-    }
-    return g;
+    const e1 = energyAt(En, n, wga + g0);
+    const e0 = energyAt(Ea, m, A0 + g0);
+    return e1 > 0 && e0 > 0 ? Math.min(gmax, Math.max(1 / gmax, Math.sqrt(e0 / e1))) : 1;
   };
 }
 
@@ -1393,14 +1569,26 @@ const ATTACK_LEAD = RISE_MAX / 2;
 export function onsetPower(chans: Float32Array[], sr: number, n: number, period: number): Float64Array {
   const w5 = Math.max(1, Math.round(0.005 * sr));
   const w = Math.max(w5, Math.round(period));
-  const cs = new Float64Array(n + 1);
+  const cs = f64(7, n + 1);
+  cs[0] = 0;
   const inv = 1 / chans.length;
-  for (let i = 0; i < n; i++) {
-    let v = 0;
-    for (const c of chans) if (i < c.length) v += c[i];
-    v *= inv;
-    cs[i + 1] = cs[i] + v * v;
-  }
+  if (chans.length === 2) {
+    // (what follows, for the two takes summed: each sample as the general loop sums it)
+    const [c0, c1] = chans;
+    for (let i = 0; i < n; i++) {
+      let v = 0;
+      if (i < c0.length) v += c0[i];
+      if (i < c1.length) v += c1[i];
+      v *= inv;
+      cs[i + 1] = cs[i] + v * v;
+    }
+  } else
+    for (let i = 0; i < n; i++) {
+      let v = 0;
+      for (const c of chans) if (i < c.length) v += c[i];
+      v *= inv;
+      cs[i + 1] = cs[i] + v * v;
+    }
   const e = new Float64Array(n);
   const off = (w5 + w) >> 1;
   for (let t = 1; t <= n; t++) {
@@ -1523,6 +1711,8 @@ interface LevelTable {
   C: Float64Array;
   lo: number;
   top: number;
+  /** the samples of the envelope it covers */
+  n: number;
 }
 
 function levelTable(e: Float64Array, n: number): LevelTable {
@@ -1544,7 +1734,7 @@ function levelTable(e: Float64Array, n: number): LevelTable {
   while (k <= K) T[k++] = n;
   const C = new Float64Array(K + 1);
   for (let j = 1; j <= K; j++) C[j] = C[j - 1] + 0.5 * (T[j - 1] + T[j]);
-  return { T, C, lo, top };
+  return { T, C, lo, top, n };
 }
 
 /** The first index at which the envelope reaches `level` (dB; levelTable, linear between its levels) */
@@ -1582,42 +1772,65 @@ function bandMean(t: LevelTable, a: number, b: number): number {
 function gatedPeaks(e: Float64Array, n: number, k2: number, tail: number, top: number): Float32Array {
   // (linear: f[t] = e[t]·k2^t, renormalised every RENORM samples so the decay never underflows)
   const RENORM = 4096;
-  const f = new Float64Array(n); // in block j = t / RENORM: e[t]·k2^(t - RENORM·j)
-  let g = 1;
-  for (let t = 0; t < n; t++) {
-    if (t % RENORM === 0) g = 1;
-    f[t] = e[t] * g;
-    g *= k2;
+  const f = f64(0, n); // in block j = t / RENORM: e[t]·k2^(t - RENORM·j)
+  for (let t0 = 0; t0 < n; t0 += RENORM) {
+    let g = 1;
+    for (let t = t0, t1 = Math.min(n, t0 + RENORM); t < t1; t++) {
+      f[t] = e[t] * g;
+      g *= k2;
+    }
   }
   const kb = Math.pow(k2, RENORM);
-  // value of f[t] re block jr: f[t]·k2^(RENORM·(jt - jr)) (t in block jt >= jr)
-  const at = (t: number, jr: number): number => f[t] * Math.pow(kb, ((t / RENORM) | 0) - jr);
-  const qu = new Int32Array(n);
+  // value of f[t] re block jr: f[t]·kb^(jt - jr) (t in block jt) — the powers of kb it needs, made once
+  const nB = Math.ceil(n / RENORM);
+  const kbp = new Float64Array(2 * nB + 1);
+  for (let x = -nB; x <= nB; x++) kbp[x + nB] = Math.pow(kb, x);
+  // (the monotone queue of the sliding maximum: index, value f and block of each entry)
+  const qu = i32(0, n);
+  const qj = i32(1, n);
+  const qf = f64(1, n);
   let h = 0;
   let qt = 0;
   let right = 0;
   let run = 0;
   const topLin = Math.pow(10, top / 10);
-  const out: number[] = [];
-  for (let cut = 0; cut < n; cut++) {
-    if (cut % PEAK_GRID === 0) {
-      const end = Math.min(n, cut + tail);
-      while (right < end) {
-        const jr = (right / RENORM) | 0;
-        while (qt > h && at(qu[qt - 1], jr) <= f[right]) qt--;
-        qu[qt++] = right++;
-      }
-      while (h < qt && qu[h] < cut) h++;
-      // the decayed peak after the cut: f[t] re the cut's own block, then divided by k2^(cut - block start)
-      const jc = (cut / RENORM) | 0;
-      const q = h < qt ? at(qu[h], jc) / Math.pow(k2, cut - jc * RENORM) : 0;
-      const mg = Math.max(run, q);
-      out.push(mg > 0 ? 10 * Math.log10(mg) : -300);
-      if (mg >= topLin * (1 - 1e-9)) break;
+  const out = f32(1, Math.ceil(n / PEAK_GRID) + 1);
+  let no = 0;
+  for (let cut = 0; cut < n; cut += PEAK_GRID) {
+    const end = Math.min(n, cut + tail);
+    while (right < end) {
+      const jr = (right / RENORM) | 0;
+      const fr = f[right];
+      while (qt > h && qf[qt - 1] * kbp[qj[qt - 1] - jr + nB] <= fr) qt--;
+      qu[qt] = right;
+      qj[qt] = jr;
+      qf[qt++] = fr;
+      right++;
     }
-    if (e[cut] > run) run = e[cut];
+    while (h < qt && qu[h] < cut) h++;
+    // the decayed peak after the cut: f[t] re the cut's own block, then divided by k2^(cut - block start)
+    const jc = (cut / RENORM) | 0;
+    const q = h < qt ? (qf[h] * kbp[qj[h] - jc + nB]) / k2Pow(k2, cut - jc * RENORM) : 0;
+    const mg = Math.max(run, q);
+    out[no++] = mg > 0 ? 10 * Math.log10(mg) : -300;
+    if (mg >= topLin * (1 - 1e-9)) break;
+    for (let t = cut, t1 = Math.min(n, cut + PEAK_GRID); t < t1; t++) if (e[t] > run) run = e[t];
   }
-  return Float32Array.from(out);
+  return out.slice(0, no);
+}
+
+/** Math.pow(k2, x) for x on the PEAK_GRID grid below gatedPeaks' RENORM, kept per release decay k2 */
+const k2Pows = new Map<number, Float64Array>();
+function k2Pow(k2: number, x: number): number {
+  let t = k2Pows.get(k2);
+  if (!t) {
+    if (k2Pows.size > 64) k2Pows.clear();
+    k2Pows.set(k2, (t = new Float64Array(4096 / PEAK_GRID).fill(NaN)));
+  }
+  const j = x / PEAK_GRID;
+  let v = t[j];
+  if (v !== v) v = t[j] = Math.pow(k2, x);
+  return v;
 }
 
 /**
@@ -1636,10 +1849,11 @@ function gatedPeaks(e: Float64Array, n: number, k2: number, tail: number, top: n
  * gate, never later than `pre` (a short note does not start later in the sample than a long one); it does not depend
  * on how long the sample is rendered. Kept as a table of gates (GATE_GRID apart, linear in between: a few kB).
  */
-function sustainedOnsets(e: Float64Array, sr: number, pre: number, anchor: number, release: number, balanced = false): (gate: number) => number {
+function sustainedOnsets(e: Float64Array, sr: number, pre: number, anchor: number, release: number, balanced = false, made: LevelTable | null = null): GateFn {
   const n = Math.min(e.length, pre + Math.round(ONSET_LOOK * sr));
   if (n < 2) return () => pre;
-  const lt = levelTable(e, n);
+  // (`made`: the table renderZone already made of this envelope, if over the same samples)
+  const lt = made && made.n === n ? made : levelTable(e, n);
   if (!Number.isFinite(lt.top)) return () => pre;
   const rel = Math.max(0.001, release);
   const k2 = Math.exp(-2 / (rel * sr));
@@ -1650,7 +1864,7 @@ function sustainedOnsets(e: Float64Array, sr: number, pre: number, anchor: numbe
 /** a short note's onset is kept every this many output samples of its gate (linear in between) */
 const GATE_GRID = 48;
 
-function shortOnsetsOf(lt: LevelTable, peaks: Float32Array, n: number, pre: number, anchor: number, rise: number, balanced: boolean): (gate: number) => number {
+function shortOnsetsOf(lt: LevelTable, peaks: Float32Array, n: number, pre: number, anchor: number, rise: number, balanced: boolean): GateFn {
   const mlDb = lt.top;
   const last = peaks.length - 1;
   // the grid ends where a cut note reaches the whole peak, or at n (every later cut: the whole note)
@@ -1681,15 +1895,17 @@ function shortOnsetsOf(lt: LevelTable, peaks: Float32Array, n: number, pre: numb
 }
 
 /** Sample.preAt of a short-note table (shortOnsetsOf; its own scope: the tables it was made from are not kept) */
-function onsetOfGate(P: Float32Array, pre: number): (gate: number) => number {
+function onsetOfGate(P: Float32Array, pre: number): GateFn {
   const K = P.length - 1;
-  return (gate: number): number => {
+  const f: GateFn = (gate: number): number => {
     const g = Math.max(1, gate);
     const x = g / GATE_GRID;
     if (x >= K) return Math.round(Math.min(pre, P[K] + (g - K * GATE_GRID)));
     const k = Math.floor(x);
     return Math.round(P[k] + (x - k) * (P[k + 1] - P[k]));
   };
+  f.bytes = P.byteLength;
+  return f;
 }
 
 /**
@@ -1811,6 +2027,122 @@ function widenParts(a: Rendered, b: Rendered, width: number, al: TakesAlign, w: 
   return [xl, xr];
 }
 
+// ---------------------------------------------------------------------------------------------
+// The analysis of a sustained note, kept across renders
+// ---------------------------------------------------------------------------------------------
+
+/** a gate → value function of a Sample (preAt), with the bytes of the table it reads */
+type GateFn = ((gate: number) => number) & { bytes?: number };
+
+/** What renderZone works out about a sustained note besides its audio: the shift of its second take (takesShift), the
+ *  beat it places it on, its short notes' onsets (Sample.preAt) and, for two takes summed, their loudness gains
+ *  (Sample.gainAt / sendAt). The same every time the note is made — and render.ts makes sustained samples anew for
+ *  every render (the title after every run, a track again once the whole bank is in) — so kept, keyed by everything
+ *  they depend on (analysisKey), least recently used dropped first. The gains' energy grids, the larger part (a few
+ *  songs' worth would not fit), are kept only while they fit, and those kept last make way first for the rest: a
+ *  track rendered again finds the ones kept when it was first made (the title, after every run), instead of each
+ *  note's pushing out the next one's (the others are made again from the takes, as before). */
+interface NoteAnalysis {
+  shift: number;
+  pre: number;
+  preAt: GateFn | undefined;
+  gains: Gains | null;
+  /** bytes without the gains */
+  bytes: number;
+}
+type Gains = { dry: GateFn; send: GateFn; bytes: number };
+/** what the kept analyses may take (bytes: tables, grids, keys; all ten songs' analyses without their gains take about
+ *  1.2 MB) */
+const ANALYSIS_MAX_BYTES = 2 * 1024 * 1024;
+const analyses = new Map<string, NoteAnalysis>();
+/** the keys given gains, in that order (some no longer hold them: skipped, compacted now and then) */
+let gainsOrder: string[] = [];
+let analysisBytes = 0;
+let setGen = 0;
+
+/** The key of a note's analysis: the set's PCM (its storing), the instrument (its spec: zones, takes, filters, gain), the
+ *  note as asked for (key, variant, layer: the zones and takes it plays), the output rate, the rendered length (the
+ *  takes' normalisation spans it) and the articulation */
+const analysisKey = (set: StoredSet, spec: SampledSpec, sr: number, midi: number, variant: number, lenSec: number, layer: number, short: boolean): string =>
+  `${set.gen}|${spec.id}|${midi}|${variant}|${layer}|${sr}|${lenSec}|${short ? 1 : 0}`;
+
+function analysisGet(key: string): NoteAnalysis | undefined {
+  const a = analyses.get(key);
+  if (a) {
+    analyses.delete(key);
+    analyses.set(key, a);
+  }
+  return a;
+}
+
+function analysisPut(key: string, a: NoteAnalysis): void {
+  const old = analyses.get(key);
+  if (old) analysisDrop(key, old);
+  const g = a.gains;
+  a.gains = null;
+  analyses.set(key, a);
+  analysisBytes += a.bytes;
+  analysisTrim();
+  if (g) analysisGains(key, a, g);
+}
+
+/** gains kept with an analysis, if they fit (those kept first stay: a track rendered again finds its own) */
+function analysisGains(key: string, a: NoteAnalysis, g: Gains): void {
+  if (a.gains || analyses.get(key) !== a || analysisBytes + g.bytes > ANALYSIS_MAX_BYTES) return;
+  a.gains = g;
+  analysisBytes += g.bytes;
+  gainsOrder.push(key);
+  if (gainsOrder.length > 2 * analyses.size + 64) {
+    // (each key once, where it last got its gains, if it still holds them)
+    const seen = new Set<string>();
+    const kept: string[] = [];
+    for (let i = gainsOrder.length - 1; i >= 0; i--) {
+      const k = gainsOrder[i];
+      if (!seen.has(k) && analyses.get(k)?.gains) kept.push(k);
+      seen.add(k);
+    }
+    gainsOrder = kept.reverse();
+  }
+}
+
+function analysisDrop(key: string, a: NoteAnalysis): void {
+  analyses.delete(key);
+  analysisBytes -= a.bytes + (a.gains ? a.gains.bytes : 0);
+  a.gains = null;
+}
+
+/** over the bytes: the gains kept last make way for the analyses, then the least recently used analyses go */
+function analysisTrim(): void {
+  while (analysisBytes > ANALYSIS_MAX_BYTES && gainsOrder.length) {
+    const a = analyses.get(gainsOrder.pop() as string);
+    if (a && a.gains) {
+      analysisBytes -= a.gains.bytes;
+      a.gains = null;
+    }
+  }
+  while (analysisBytes > ANALYSIS_MAX_BYTES && analyses.size > 1) {
+    const [k, a] = analyses.entries().next().value as [string, NoteAnalysis];
+    analysisDrop(k, a);
+  }
+}
+
+/** Drop the kept note analyses: all, or those of one storing of a set (StoredSet.gen) */
+export function clearAnalysisCache(gen?: number): void {
+  if (gen === undefined) {
+    analyses.clear();
+    gainsOrder = [];
+    analysisBytes = 0;
+    return;
+  }
+  const pre = `${gen}|`;
+  for (const [k, a] of [...analyses]) if (k.startsWith(pre)) analysisDrop(k, a);
+}
+
+/** bytes the kept note analyses take (and how many) */
+export function analysisCacheBytes(): { bytes: number; notes: number } {
+  return { bytes: analysisBytes, notes: analyses.size };
+}
+
 function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false, gateSec = 0): Sample {
   const ch = chooseZone(spec, set, midi, variant, layer);
   if (!ch) return { l: new Float32Array(1), r: null };
@@ -1818,6 +2150,11 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   gain *= lpCompensation(spec.lp, ch.midi);
   let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short, gateSec);
   const sustain = spec.kind === 'sustain';
+  // a sustained note made before (this set's PCM, the same note, rate and length): its analysis as kept (NoteAnalysis)
+  // — the takes' shift, the beat, the short notes' onsets — so only its audio is made again (not with the test hook,
+  // which reports what the analysis measures)
+  const ak = sustain && !takesProbe && !(gateSec > 0) ? analysisKey(set, spec, sr, midi, variant, lenSec, layer, short) : '';
+  const kept = ak ? analysisGet(ak) : undefined;
   // spread attacks (strStab) summed from two takes: the beat on the onset of their sum
   let summed = false;
   // sustained notes: the takes as the note plays them (two for `width` sets, aligned on their beats) — what its
@@ -1827,6 +2164,8 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   let takesDw = 0;
   let gainAt: ((gate: number) => number) | undefined;
   let sendAt: ((gate: number) => number) | undefined;
+  // (gains made here, to keep)
+  let gains: Gains | null = null;
   const period = spec.unpitched ? 0 : sr / (440 * Math.pow(2, (ch.midi + ch.cents / 100 - 69) / 12));
   // (test hook: the two takes' parts of the mid, processed as the output channels are)
   let parts: Float32Array[] = [];
@@ -1841,24 +2180,27 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
     // of a period apart where their sum would otherwise cancel (takesShift); the detuned copy of the same recording
     // starts in phase with it by construction (no other recording: its sum is the take doubled, then beating)
     const coherent = sustain && !spec.sumOnset;
-    shift = coherent && pz ? takesShift(r, b, period, sr) : 0;
+    shift = coherent && pz ? (kept ? kept.shift : takesShift(r, b, period, sr)) : 0;
     const al = alignTakes(r, b, shift);
     offs = [al.offA, al.offB, al.pre];
-    if (coherent) {
+    if (coherent && !kept) {
       meas = measuredTakes(r, b, sr, al);
       takesDw = ((z.dw ?? 0) + ((pz ?? z).dw ?? 0)) / 2;
     }
     const primary = r;
     r = widen(r, b, spec.width, al);
     if (takesProbe) parts = widenParts(primary, b, spec.width, al, r);
-    if (coherent) ({ dry: gainAt, send: sendAt } = takesLoudness(primary, b, r, spec.width, spec.release, sr));
+    if (coherent) {
+      if (kept && kept.gains) ({ dry: gainAt, send: sendAt } = kept.gains);
+      else ({ dry: gainAt, send: sendAt } = gains = takesLoudness(primary, b, r, spec.width, spec.release, sr));
+    }
     if (spec.sumOnset) {
       // the beat on the onset of the takes' sum (what is heard), at most SUM_ONSET_MAX from theirs
       const lim = Math.round(SUM_ONSET_MAX * sr);
       r.pre = Math.max(r.pre - lim, Math.min(r.pre + lim, heardOnset(r.chans, sr, r.pre)));
       summed = true;
     }
-  } else if (sustain) meas = measuredTakes(r, null, sr);
+  } else if (sustain && !kept) meas = measuredTakes(r, null, sr);
   const outs = r.chans;
   // the pre-roll before the attack starts from silence: fade in its first <= 1.5 ms (only ever the
   // pre-roll, never the attack), so MP3 pre-echo of an attack right after the zone start cannot step in
@@ -1880,7 +2222,9 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   //   interference and plateau levels).
   const maxPre = Math.round(MAX_PRE_SEC * sr);
   let e: Float64Array | null = null;
-  let preOut = r.pre;
+  // (the level table of e as it ends up, over its whole length, once made)
+  let et: LevelTable | null = null;
+  let preOut = kept ? kept.pre : r.pre;
   if (meas) {
     const n = meas[0].length;
     e = onsetPower(meas, sr, n, period);
@@ -1891,7 +2235,8 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
         if (spec.hp) Biquad.hp(sr, spec.hp, 0.7071).run(o);
       }
       e = onsetPower(meas, sr, n, period);
-      const b1 = bandOnset(levelTable(e, n), sr, !!spec.balance && meas.length === 1);
+      et = levelTable(e, n);
+      const b1 = bandOnset(et, sr, !!spec.balance && meas.length === 1);
       // one take: on the rule applied to what it plays (band-smoothed: neighbouring notes' filtered attacks differ a
       // little, their beats too); a beat on the attack of a dwell kept by its weight. Two takes: moved by what the
       // filters move the rule, then placed as a sum below
@@ -1903,7 +2248,7 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
       // the sum on the band-smoothed rule (bandOnset: a plateau of the sum near -10 dB, its dwell, cannot flip it
       // between neighbouring notes), earlier never below its -15 dB point
       const lim = Math.round(SUM_ONSET_MAX * sr);
-      const lt = levelTable(e, n);
+      const lt = et ?? (et = levelTable(e, n));
       const on = bandOnset(lt, sr);
       const p15 = crossingOf(lt, lt.top + FLOOR_DB);
       if (Number.isFinite(on)) {
@@ -1931,7 +2276,10 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   // sustained instruments on the same criterion as a whole note, relative to their own peak (sustainedOnsets)
   // (sustained notes keep the gate anchor of their audio wherever their beat is placed)
   const ga = sustain ? Math.max(0, r.ga) : undefined;
-  const preAt = summed && !spec.ring ? shortOnsets(outs, sr, preOut, spec.release) : e && ga !== undefined ? sustainedOnsets(e, sr, preOut, ga, spec.release, !!spec.balance) : undefined;
+  const preAt = summed && !spec.ring ? shortOnsets(outs, sr, preOut, spec.release) : kept ? kept.preAt : e && ga !== undefined ? sustainedOnsets(e, sr, preOut, ga, spec.release, !!spec.balance, et) : undefined;
+  // (what it takes: the onset table, the key, the record)
+  if (ak && !kept) analysisPut(ak, { shift, pre: preOut, preAt, gains, bytes: 256 + 2 * ak.length + ((preAt as GateFn | undefined)?.bytes ?? 0) });
+  else if (kept && gains) analysisGains(ak, kept, gains);
   return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut, preAt, ga, take0: r.take0 ?? 0, gainAt, sendAt };
 }
 

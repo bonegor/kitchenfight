@@ -79,7 +79,8 @@ let CLIP_FADE_MAX = 480;
 let CLIP_FADE_PAST = 240;
 
 // ---------------------------------------------------------------------------------------------
-// Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render.
+// Sample cache: plucked/percussive samples are global (LRU by bytes), sustained ones per render (the
+// sampler keeps what it works out about each sustained note beyond its audio: sampled.ts NoteAnalysis).
 // ---------------------------------------------------------------------------------------------
 
 const globalCache = new Map<string, Sample>();
@@ -552,10 +553,20 @@ function mixInto(L: Float32Array, R: Float32Array, S: Float32Array, s: Sample, e
     const gL = ev.bl * lg;
     const gR = ev.br * lg;
     const gs2 = gs * 0.5;
-    for (let i = i0; i < a; i++) {
-      const f = i - i0 < nIn ? fin(i) : 1;
+    // (the fade-in, then the plain copy)
+    const aIn = Math.min(a, i0 + nIn);
+    for (let i = i0; i < aIn; i++) {
+      const f = fin(i);
       const vl = sl[i] * f;
       const vr = sr2[i] * f;
+      const j = st + i;
+      L[j] += vl * gL;
+      R[j] += vr * gR;
+      S[j >> 1] += (vl + vr) * gs2;
+    }
+    for (let i = aIn; i < a; i++) {
+      const vl = sl[i];
+      const vr = sr2[i];
       const j = st + i;
       L[j] += vl * gL;
       R[j] += vr * gR;
