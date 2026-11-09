@@ -23,6 +23,7 @@
  *       brk(4, comic break) gath(2, crescendo) bld(2, D7 build) → loop to A.  Loop 22 bars = 62.9 s.
  */
 import { cresc, hits, mel, type Part, type SongDef } from '../sequencer';
+import { noteToMidi } from '../theory';
 
 /** n copies of a token string */
 const rep = (s: string, n: number): string => Array.from({ length: n }, () => s).join(' ');
@@ -34,6 +35,63 @@ const roll = (start: number, n: number, note: string, v0: number, v1: number): A
 /** shift a hit list by whole bars */
 const at = (bar: number, list: Array<[number, number | string, number?, number?]>): Array<[number, number | string, number?, number?]> =>
   list.map(([s, m, v, d]) => [s + bar * 32, m, v, d]);
+
+// ---------------------------------------------------------------------------------------------
+// Organ and choir levels, chord by chord, as this arrangement was balanced (build 0b3eb2e)
+// ---------------------------------------------------------------------------------------------
+// The sampler now starts every tone of a chord, and both takes of each tone, together on the beat (0b3eb2e staggered
+// them). Tones an octave apart that sound together (the organ's bass in octaves, the choir's line with its octave
+// below) therefore add in phase or out of phase, by voicing and note length: single organ chords came out up to
+// 2.2 dB, the choir's notes in B up to 1.5 dB louder or softer than in the build the arrangement was balanced on
+// (channel solo, each chord or note over its length in the song, against the same chord at 0b3eb2e at the same
+// channel gain). The offsets below (dB) put each one back; per section the organ, choir and choirO solos are then
+// within 0.15 dB of 0b3eb2e, their loop-body levels within 0.05 dB. They are applied as velocity: the organ, choir and
+// choirO have one velocity layer and no round robins, so velocity × 10^(dB/32) (the note gain is velocity^1.6)
+// changes the level and never the recording that plays. Not undone by them: in B the organ's bass and the basses
+// (cb) play the same notes, and in its 2nd and 4th bars these unisons now add up (0b3eb2e: partly cancelling), so the
+// B mix is 0.3 LU louder than at 0b3eb2e with every part at its 0b3eb2e level.
+
+/** velocity factor of a level change of `db` dB */
+const dbVel = (db: number): number => Math.pow(10, db / 32);
+/**
+ * Organ chords (notes low to high : length in steps, a step = a 32nd) → dB. Without them, in the song: intro
+ * G1+G2+D3+G3 +2.0 dB; A2 G2+D3+G3 +1.5 (whole bar) / +1.6, +1.9 (quarters); B D2+D3+A3 −2.2 (dotted quarters) /
+ * −1.0 (eighths), D2+D3+G3 −1.3, E2+E3+G3 −1.6, C2+C3+A3 +0.4 (eighths); bld D2+A2+D3 −1.5 dB re 0b3eb2e.
+ * A1+A2+E3, C3+E♭3+G3 and D2+A2+C3+F♯3 were within 0.2 dB and stay as written. (An eighth's offset also covers the
+ * tail of the chord before it, which rings into it.)
+ */
+const ORGAN_DB: Record<string, number> = {
+  'G1+G2+D3+G3:32': -2.0,
+  'G2+D3+G3:32': -1.5,
+  'G2+D3+G3:8': -1.75,
+  'D2+D3+A3:12': 2.2,
+  'D2+D3+A3:4': 1.2,
+  'D2+D3+G3:4': 1.4,
+  'E2+E3+G3:4': 1.65,
+  'C2+C3+A3:4': -0.45,
+  'D2+A2+D3:32': 1.5,
+};
+const chordKey = (ms: number[], steps: number): string => `${ms.slice().sort((a, b) => a - b).join('+')}:${steps}`;
+const ORGAN_TRIM = new Map(
+  Object.entries(ORGAN_DB).map(([k, db]): [string, number] => {
+    const [notes, steps] = k.split(':');
+    return [chordKey(notes.split('+').map(noteToMidi), Number(steps)), db];
+  }),
+);
+/** the organ playing `notes` at velocity `vel`, each chord at its ORGAN_DB level */
+const organ =
+  (notes: string, vel: number): Part =>
+  (ctx) => {
+    const evs = mel('organ', notes, { vel })(ctx);
+    const chord = new Map<number, number[]>();
+    for (const e of evs) chord.set(e.s, [...(chord.get(e.s) ?? []), e.m]);
+    return evs.map((e) => ({ ...e, v: e.v * dbVel(ORGAN_TRIM.get(chordKey(chord.get(e.s) ?? [], e.d)) ?? 0) }));
+  };
+/** a part with its i-th note at db[i] dB (the two octaves of a choir line have their notes in the same order) */
+const noteDb =
+  (p: Part, db: number[]): Part =>
+  (ctx) =>
+    p(ctx).map((e, i) => ({ ...e, v: e.v * dbVel(db[i] ?? 0) }));
 
 // ---------------------------------------------------------------------------------------------
 // A — Verdi bars 1-5 (and 6-10)
@@ -133,6 +191,15 @@ const T2_CH = 'Dm:4 Am/C:4 Gm/D:4 Em7b5:4 A:16';
 /** chorus: the sighs F-E off the beat, then "cum Si-byl-la" */
 const T1_CHOIR = 'r:4 F5:6 r:2 E5:4 r:4 F5:6 r:2 E5:4';
 const T2_CHOIR = 'r:8 D5:4 E5:4 E5:12 A5:4';
+/** their levels as sung at 0b3eb2e (dB, note by note): these notes are long enough for the choir's sustained
+ *  articulation, and each with the octave below it (the second choir part) came out under its 0b3eb2e level, T1 F5
+ *  −0.6 and E5 −1.4, T2 D5 −0.4, E5 −0.9, the held E5 −0.7 and A5 −0.7 dB over their own lengths, and the section
+ *  −1.0 dB (gated). The offsets give the notes back their levels relative to one another and the section its gated
+ *  loudness, which also counts the releases and reverb between the notes: 0.15 dB more than the notes' shortfall.
+ *  (The short notes of A, A2 and gath play the short articulation: within 0.15 dB per section, left as written.) */
+const T1_CHOIR_DB = [0.7, 1.6, 0.7, 1.6];
+const T2_CHOIR_DB = [0.6, 1.1, 0.85, 0.85];
+const CHOIR_B_DB = [...T1_CHOIR_DB, ...T2_CHOIR_DB, ...T1_CHOIR_DB, ...T2_CHOIR_DB];
 /** violins: rising 32nds to the accented high A, falling arpeggio; the B♭-A shake, A major */
 const T1_VLN = rep('A4:1 D5:1 F5:1 G5:1 A5:4 r:1 F5:1 D5:1 A4:1 E5+A5:4', 2);
 const T2_VLN = `${rep('Bb5:1 A5:1', 4)} Bb5:4 G5:4 A5:12 E5+A5:4`;
@@ -207,11 +274,11 @@ export const finalboss: SongDef = {
     tbn: { inst: 'trombone', gain: 4, pan: 0.3, send: 0.22, hum: 0.2 },
     horn: { inst: 'brassSoft', gain: -0.6, pan: -0.3, send: 0.3, hum: 0 },
     tuba: { inst: 'tuba', gain: -3.1, pan: 0.1, send: 0.1, hum: 0.2 },
-    // voices and organ (choir +0.5 / organ +0.45 dB with the sampler timing fix: their octave-doubled chord tones,
-    // phase-locked, now sum 0.47 dB quieter; the trim keeps the balance the arrangement was measured with)
-    choir: { inst: 'choir', gain: -1.1, pan: 0, send: 0.35, hum: 0 },
+    // voices and organ (the gains of 0b3eb2e; the chords and notes whose level the sampler's phase-locked octaves
+    // moved are set back where they are played: ORGAN_DB, CHOIR_B_DB, the choirO hum in gath)
+    choir: { inst: 'choir', gain: -1.6, pan: 0, send: 0.35, hum: 0 },
     choirO: { inst: 'choirO', gain: -3.6, pan: 0, send: 0.4, hum: 0 },
-    organ: { inst: 'organ', gain: -0.75, pan: 0, send: 0.35, hum: 0 },
+    organ: { inst: 'organ', gain: -1.2, pan: 0, send: 0.35, hum: 0 },
     // the cartoon section
     bsn: { inst: 'bassoon', gain: 1.5, pan: -0.18, send: 0.2, hum: 0.2 },
     picc: { inst: 'piccolo', gain: 1, pan: -0.2, send: 0.25, hum: 0.2 },
@@ -238,7 +305,7 @@ export const finalboss: SongDef = {
       chords: 'Gm:32',
       parts: [
         hits('tam', [[0, 60, 0.9]]),
-        mel('organ', 'G1+G2+D3+G3:32', { vel: 0.45 }),
+        organ('G1+G2+D3+G3:32', 0.45),
         mel('choirO', 'G3+D4+G4:32', { vel: 0.7 }),
         hits('timp', [[0, 'G2', 0.9], ...roll(8, 24, 'D2', 0.25, 0.95)]),
         hits('cym', [[8, 60, 0.3, 8], [16, 60, 0.45, 8], [24, 60, 0.62, 8]], 1),
@@ -291,7 +358,7 @@ export const finalboss: SongDef = {
         mel('clar', MOTIF_A, { vel: 0.9, gate: 0.85 }),
         mel('tbn', `r:32 | r:32 | ${MOTIF_1} | r:32 | r:32 |`, { vel: 1.0, oct: -1, gate: 0.85 }),
         mel('tbn', `r:32 | r:32 | r:32 | ${MOTIF_2} | r:32 |`, { vel: 0.68, oct: -1, gate: 0.85 }), // lighter on the triplets
-        mel('organ', 'r:32 | r:32 | G2+D3+G3:32 | G2+D3+G3:8 C3+Eb3+G3:8 G2+D3+G3:8 C3+Eb3+G3:8 | r:32 |', { vel: 0.55 }),
+        organ('r:32 | r:32 | G2+D3+G3:32 | G2+D3+G3:8 C3+Eb3+G3:8 G2+D3+G3:8 C3+Eb3+G3:8 | r:32 |', 0.55),
         mel('brass', BRS_A, { vel: 1.05 }),
         mel('trp', TRP_A, { vel: 1.0 }),
         mel('cb', CB_A, { vel: 0.88 }),
@@ -314,14 +381,14 @@ export const finalboss: SongDef = {
       bars: 4,
       chords: B_CH,
       parts: [
-        mel('choir', `${T1_CHOIR} | ${T2_CHOIR} | ${T1_CHOIR} | ${T2_CHOIR} |`, { vel: 1.08 }),
-        mel('choir', `${T1_CHOIR} | ${T2_CHOIR} | ${T1_CHOIR} | ${T2_CHOIR} |`, { vel: 0.92, oct: -1 }),
+        noteDb(mel('choir', `${T1_CHOIR} | ${T2_CHOIR} | ${T1_CHOIR} | ${T2_CHOIR} |`, { vel: 1.08 }), CHOIR_B_DB),
+        noteDb(mel('choir', `${T1_CHOIR} | ${T2_CHOIR} | ${T1_CHOIR} | ${T2_CHOIR} |`, { vel: 0.92, oct: -1 }), CHOIR_B_DB),
         mel('vln', `${T1_VLN} | ${T2_VLN} | ${T1_VLN} | ${T2_VLN} |`, { vel: 0.66 }),
         mel('strS', 'r:32 | r:16 A4+C#5+E5:12 r:4 | r:32 | r:16 A4+C#5+E5:12 r:4 |', { vel: 0.7 }),
         mel('brass', `${T1_BRS} | ${T2_BRS} | ${T1_BRS} | ${T2_BRS} |`, { vel: 0.85 }),
         mel('cb', `${T1_CB} | ${T2_CB} | ${T1_CB} | ${T2_CB} |`, { vel: 0.75 }),
         mel('vc', `${T1_VC} | ${T2_VC} | ${T1_VC} | ${T2_VC} |`, { vel: 0.62 }),
-        mel('organ', `${T1_ORG} | ${T2_ORG} | ${T1_ORG} | ${T2_ORG} |`, { vel: 0.68 }),
+        organ(`${T1_ORG} | ${T2_ORG} | ${T1_ORG} | ${T2_ORG} |`, 0.68),
         hits('timp', [...TIMP_T, ...at(2, TIMP_T)]),
         hits('bd', [...BD_T, ...at(2, BD_T)]),
         hits('crash', [[60, 60, 0.9], [124, 60, 1.0]]),
@@ -360,8 +427,9 @@ export const finalboss: SongDef = {
         cresc(mel('clar', MOTIF, { vel: 0.9, gate: 0.85 }), 0.8, 1.1),
         cresc(mel('tbn', MOTIF, { vel: 0.7, oct: -1, gate: 0.85 }), 0.75, 1.1),
         cresc(mel('vla', SWIRL, { vel: 1.1, oct: -1 }), 0.55, 1.1),
-        // the basses and tenors hum the G underneath ("oh"), released before the build's D
-        cresc(mel('choirO', 'G2+G3:32 | G2+G3:28 r:4 |', { vel: 0.6 }), 0.7, 1.1),
+        // the basses and tenors hum the G underneath ("oh"), released before the build's D (−0.18 dB: its two takes,
+        // started together, add 0.18 dB louder than at 0b3eb2e)
+        cresc(mel('choirO', 'G2+G3:32 | G2+G3:28 r:4 |', { vel: 0.6 * dbVel(-0.18) }), 0.7, 1.1),
         mel('cb', C_CB, { vel: 0.55 }),
         mel('vc', C_VC, { vel: 0.5 }),
         // the roll stays on G (G minor and C minor both contain it); the build turns it to D
@@ -379,7 +447,7 @@ export const finalboss: SongDef = {
         cresc(mel('brass', `r:8 D4+F#4+A4+C5:2 r:14 D4+F#4+A4+C5:2 r:6 | ${rep('D4+F#4+A4+C5:2 r:2', 7)} r:4 |`, { vel: 0.95 }), 0.6, 0.85),
         cresc(mel('choir', `${rep('D4+A4+C5+F#5:8', 4)} | ${rep('D4+A4+C5+F#5:8', 3)} D4+A4+C5+F#5:4 r:4 |`, { vel: 0.95 }), 0.5, 0.8),
         cresc(mel('horn', `${rep('D3+A3+C4+F#4:16', 2)} | D3+A3+C4+F#4:16 D3+A3+C4+F#4:12 r:4 |`, { vel: 0.85 }), 0.5, 0.8),
-        mel('organ', 'D2+A2+D3:32 | D2+A2+C3+F#3:28 r:4 |', { vel: 0.6 }),
+        organ('D2+A2+D3:32 | D2+A2+C3+F#3:28 r:4 |', 0.6),
         mel('cb', `${rep('D2:4', 8)} | ${rep('D2:2', 14)} r:4 |`, { vel: 0.85 }),
         mel('tuba', 'D2:2 r:22 D2:2 r:6 | D2:2 r:30 |', { vel: 0.9 }),
         hits('timp', [[0, 'D2', 0.9], [24, 'D2', 0.85], ...roll(32, 32, 'D2', 0.35, 1.0)]),
