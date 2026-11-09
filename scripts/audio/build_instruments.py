@@ -405,8 +405,9 @@ def gleitz_cands(inst: str, notes: list[str], font: str = 'MusyngKite') -> Calla
 # recording: instrument_dsp.even_crescendo with `end`), looped there. The swell keeps the recording's
 # timbre: dark at its soft start, bright (centroid 4 kHz) on the peak. The manifest stores its length
 # (ZoneDef.sw, beat to loop start) and depth (sd): the runtime enters a roll note that much before the
-# peak that it ends on it, a longer note than the swell grows at the slower rate its length gives
-# (sampled.ts renderOne), so every roll is at its loudest at its downbeat. CYM_ROLL_LEVEL (dB re the
+# peak that it ends on it; a longer note than the swell grows at the slower rate its length gives and
+# ends in the zone's own last 0.2 s before the peak (sampled.ts renderOne, swellLong), so every roll
+# ends alike, at its loudest on its downbeat. CYM_ROLL_LEVEL (dB re the
 # set's loudness target): the held roll at the stereo loudness (K-weighted power of both channels, as the
 # songs' mixes are measured) of the VCSL roll it replaced: -20.7 dB over its loop at its zone gain.
 CYM_ROLL_ENTRY = round(0.25 * 44100)
@@ -616,7 +617,8 @@ SETS: list[SetSpec] = [
                  'peak) and evened out to grow from 18 dB under the peak into it over 1.53 s, keeping the recording\'s '
                  'timbre (dark at the soft start, bright on the peak), then looped on the peak (the 0.4 s the player '
                  'holds it before the cymbal rings out). A roll note is entered that much before the peak that it ends '
-                 'on it (a longer note grows at the slower rate its length gives): every roll is at its loudest on the '
+                 'on it (a longer note grows at the slower rate its length gives, its last 0.2 s those of every roll): '
+                 'every roll is at its loudest on the '
                  'downbeat it swells into. The held roll plays at the stereo loudness (K-weighted, both channels) of '
                  'the VCSL roll it replaces. Stereo recordings (one take per articulation)'),
     SetSpec('bassdrum', 'vcsl', fixed([
@@ -1558,13 +1560,13 @@ def write_credits(sets: list[dict]) -> None:
           '  right channel; `cymbal` is a stereo recording.',
           '- Variants keep the synth meaning: `timpani` variant 1 is the soft stroke (-4.5 dB); `tamb` accents (4, 5)',
           '  are +2 dB, shakes (2, 3) -3.5 dB; `cymbal` / `bassDrum` variant 1 is the roll at any velocity.',
-          '- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly over its whole length and reaches the',
-          '  roll\'s peak as it ends — about 12 dB/s, so a 0.36 s note grows 4 dB and a note of 1.53 s or longer 18 dB (a',
-          '  longer one more slowly); its soft start is dark, its end bright (centroid about 4 kHz). The cymbal\'s gate is',
-          '  the written length, so every roll is at its loudest on the downbeat it swells into and its 0.6 s release',
-          '  starts there; a roll\'s velocity sets that crest. The held roll plays at the stereo loudness of the earlier',
-          '  (VCSL) roll (K-weighted, both channels); on a mono downmix it is 1.3 dB softer than that roll (its two',
-          '  channels are less alike: L/R correlation 0.35, the VCSL roll\'s 0.9).',
+          '- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly and reaches the roll\'s peak as it ends —',
+          '  about 12 dB/s, so a 0.36 s note grows 4 dB and a note of 1.53 s or longer 18 dB (a longer one more slowly,',
+          '  its last 0.2 s those of every roll); its soft start is dark, its end bright (centroid about 4 kHz). The',
+          '  cymbal\'s gate is the written length, so every roll is at its loudest on the downbeat it swells into and its',
+          '  0.6 s release starts there; a roll\'s velocity sets that crest. The held roll plays at the stereo loudness of',
+          '  the earlier (VCSL) roll (K-weighted, both channels); on a mono downmix it is 1.3 dB softer than that roll (its',
+          '  two channels are less alike: L/R correlation 0.35, the VCSL roll\'s 0.9).',
           '- Notes written without a variant cycle the takes only, never an articulation: `bassDrum` / `cymbal` / `ratchet`',
           '  / `toyWhistle` stay on variant 0, `timpani` alternates its two takes at the same level (variant 2 = the',
           '  second take at full level), `tamb` and `flexatone` alternate their two plain takes; ask for a roll, a shake or',

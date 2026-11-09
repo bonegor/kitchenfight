@@ -148,13 +148,13 @@ Notes for arrangers:
   right channel; `cymbal` is a stereo recording.
 - Variants keep the synth meaning: `timpani` variant 1 is the soft stroke (-4.5 dB); `tamb` accents (4, 5)
   are +2 dB, shakes (2, 3) -3.5 dB; `cymbal` / `bassDrum` variant 1 is the roll at any velocity.
-- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly over its whole length and reaches the
-  roll's peak as it ends — about 12 dB/s, so a 0.36 s note grows 4 dB and a note of 1.53 s or longer 18 dB (a
-  longer one more slowly); its soft start is dark, its end bright (centroid about 4 kHz). The cymbal's gate is
-  the written length, so every roll is at its loudest on the downbeat it swells into and its 0.6 s release
-  starts there; a roll's velocity sets that crest. The held roll plays at the stereo loudness of the earlier
-  (VCSL) roll (K-weighted, both channels); on a mono downmix it is 1.3 dB softer than that roll (its two
-  channels are less alike: L/R correlation 0.35, the VCSL roll's 0.9).
+- `cymbal` variant 1 is a crescendo roll (SSO): a note grows evenly and reaches the roll's peak as it ends —
+  about 12 dB/s, so a 0.36 s note grows 4 dB and a note of 1.53 s or longer 18 dB (a longer one more slowly,
+  its last 0.2 s those of every roll); its soft start is dark, its end bright (centroid about 4 kHz). The
+  cymbal's gate is the written length, so every roll is at its loudest on the downbeat it swells into and its
+  0.6 s release starts there; a roll's velocity sets that crest. The held roll plays at the stereo loudness of
+  the earlier (VCSL) roll (K-weighted, both channels); on a mono downmix it is 1.3 dB softer than that roll (its
+  two channels are less alike: L/R correlation 0.35, the VCSL roll's 0.9).
 - Notes written without a variant cycle the takes only, never an articulation: `bassDrum` / `cymbal` / `ratchet`
   / `toyWhistle` stay on variant 0, `timpani` alternates its two takes at the same level (variant 2 = the
   second take at full level), `tamb` and `flexatone` alternate their two plain takes; ask for a roll, a shake or
@@ -434,7 +434,7 @@ the files derived from Sonatina Symphonic Orchestra are under CC Sampling Plus 1
 - source: https://github.com/sgossner/VCSL, license: CC0 1.0
 - source: https://github.com/peastman/sso, license: CC Sampling Plus 1.0
   - Suspended-cymbal crescendo roll from Sonatina Symphonic Orchestra, whose README names "davidjwoll cymbal rolls" (freesound.org pack 5577) among its sources (CC Sampling Plus 1.0)
-- VCSL suspended cymbal hits (variant 0, 2 dynamics) + the SSO crescendo roll (variant 1, one take; VCSL's roll is dark: 4-8 kHz at -38 dB): entered 0.25 s into the recorded crescendo (30 dB under its peak) and evened out to grow from 18 dB under the peak into it over 1.53 s, keeping the recording's timbre (dark at the soft start, bright on the peak), then looped on the peak (the 0.4 s the player holds it before the cymbal rings out). A roll note is entered that much before the peak that it ends on it (a longer note grows at the slower rate its length gives): every roll is at its loudest on the downbeat it swells into. The held roll plays at the stereo loudness (K-weighted, both channels) of the VCSL roll it replaces. Stereo recordings (one take per articulation)
+- VCSL suspended cymbal hits (variant 0, 2 dynamics) + the SSO crescendo roll (variant 1, one take; VCSL's roll is dark: 4-8 kHz at -38 dB): entered 0.25 s into the recorded crescendo (30 dB under its peak) and evened out to grow from 18 dB under the peak into it over 1.53 s, keeping the recording's timbre (dark at the soft start, bright on the peak), then looped on the peak (the 0.4 s the player holds it before the cymbal rings out). A roll note is entered that much before the peak that it ends on it (a longer note grows at the slower rate its length gives, its last 0.2 s those of every roll): every roll is at its loudest on the downbeat it swells into. The held roll plays at the stereo loudness (K-weighted, both channels) of the VCSL roll it replaces. Stereo recordings (one take per articulation)
 - files (vcsl): `Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_f1.wav`; `Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_mp1.wav`
 - files (sso): `Sonatina Symphonic Orchestra/Samples/Percussion/cymbal_roll-a-f.wav`
 

@@ -78,7 +78,8 @@ def placement_lag(rendered: np.ndarray, s: int, n: dict, out_sr: int) -> float |
     ratio = 2 ** ((n['folded'] - z['p']) / 12 + n.get('cents', 0) / 1200) if not n.get('unpitched') else 2 ** (n.get('cents', 0) / 1200)
     inc = ratio * zsr / out_sr
     # a crescendo roll (ZoneDef sw / sd) shorter than its swell is read from sw - its gate on, behind a
-    # 30 ms raised-cosine fade-in, its beat the zone's pre-roll into the read (sampled.ts swellEntry)
+    # 30 ms raised-cosine fade-in, its beat the zone's pre-roll into the read (sampled.ts renderOne; a longer
+    # one is read from the zone's start, its ramp and splice come later: swellLong)
     frm = 0
     if z.get('sw') and z.get('sd') is not None and n.get('dur'):
         g_src = round(n['dur'] * out_sr) * inc

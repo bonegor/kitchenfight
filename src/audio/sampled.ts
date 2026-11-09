@@ -66,9 +66,10 @@ export interface ZoneDef {
   dw?: number;
   /** crescendo roll: swell length (samples from the beat to the peak the roll holds, its loop start) and
    *  depth (dB at the beat re that peak). A roll note is made for its length (InstDef.swellOf): a note
-   *  shorter than the swell is entered that much before the peak that its gate ends on it, a longer one
-   *  plays the whole swell under a gain ramp, so it grows at depth / its length (renderOne). Either way
-   *  the roll is at its loudest when its gate ends, on the downbeat it swells into */
+   *  shorter than the swell is entered that much before the peak that its gate ends on it (renderOne), a
+   *  longer one plays the whole swell under a gain ramp, growing more slowly, and ends in the zone's own
+   *  last 0.2 s before the peak (swellLong). Either way the roll ends as every roll does, at its loudest
+   *  when its gate ends, on the downbeat it swells into */
   sw?: number;
   sd?: number;
 }
@@ -796,22 +797,137 @@ const isSwell = (z: ZoneDef): boolean =>
 
 /** fade-in of a roll note entered mid-swell (s): the zone's own entry fade (the build's Cand.fade_in) */
 const SWELL_FADE = 0.03;
+/** a roll note longer than the swell ends as a shorter one does: its last SWELL_END (s) before the gate end are the
+ *  zone's own last SWELL_END before its peak, crossfaded in over the SWELL_XF (s) before them (swellLong) */
+const SWELL_END = 0.2;
+const SWELL_XF = 0.05;
+/** the window (s, centred) the two parts of a longer roll note are matched in loudness over (the build's even_crescendo
+ *  measures its swell so) */
+const SWELL_WIN = 0.15;
+
+/** The mean K-weighted power (BS.1770: the high shelf, then the RLB high-pass, at `fs`) of `chans` summed over [a, b),
+ *  filtered from 0.05 s before a */
+function kPower(chans: Float32Array[], a: number, b: number, fs: number): number {
+  let K = Math.tan((Math.PI * 1681.974450955533) / fs);
+  const Q1 = 0.7071752369554196;
+  const vh = Math.pow(10, 3.999843853973347 / 20);
+  const vb = Math.pow(vh, 0.4996667741545416);
+  let a0 = 1 + K / Q1 + K * K;
+  const s0 = (vh + (vb * K) / Q1 + K * K) / a0;
+  const s1 = (2 * (K * K - vh)) / a0;
+  const s2 = (vh - (vb * K) / Q1 + K * K) / a0;
+  const p1 = (2 * (K * K - 1)) / a0;
+  const p2 = (1 - K / Q1 + K * K) / a0;
+  K = Math.tan((Math.PI * 38.13547087602444) / fs);
+  const Q2 = 0.5003270373238773;
+  a0 = 1 + K / Q2 + K * K;
+  const q1 = (2 * (K * K - 1)) / a0;
+  const q2 = (1 - K / Q2 + K * K) / a0;
+  const i0 = Math.max(0, a - Math.round(0.05 * fs));
+  let acc = 0;
+  for (const x of chans) {
+    let x1 = 0;
+    let x2 = 0;
+    let y1 = 0;
+    let y2 = 0;
+    let u1 = 0;
+    let u2 = 0;
+    let v1 = 0;
+    let v2 = 0;
+    for (let i = i0; i < b && i < x.length; i++) {
+      const x0 = x[i];
+      const u = s0 * x0 + s1 * x1 + s2 * x2 - p1 * y1 - p2 * y2;
+      x2 = x1;
+      x1 = x0;
+      y2 = y1;
+      y1 = u;
+      const v = u - 2 * u1 + u2 - q1 * v1 - q2 * v2;
+      u2 = u1;
+      u1 = u;
+      v2 = v1;
+      v1 = v;
+      if (i >= a) acc += v * v;
+    }
+  }
+  return b > a ? acc / (b - a) : 0;
+}
 
 /**
- * A crescendo roll made for a note gated after `gSrc` zone samples (renderOne): where to enter the zone
- * and the gain ramp to play it under. A note shorter than the swell enters it sw - gSrc after its start
- * (so its gate ends on the peak; the zone's pre-roll and a SWELL_FADE fade-in in front of its beat, as at
- * the zone's own start); a longer note plays the whole swell, slowed by a gain ramp (dB, by zone sample
- * after the beat t: sd·t·(1/sw - 1/gSrc) up to the peak, then sd·(1 - t/gSrc) up to the gate end) so it
- * grows evenly at sd / its length and reaches the peak as its gate ends.
+ * A roll note longer than the swell (`gSrc` zone samples from its beat to its gate end; `tmps`: the zone unrolled from
+ * its start, per channel, changed in place). Played on from its start, the zone would reach its peak (the loop start)
+ * gSrc - sw before the gate end and then hold it, its level swinging by about 1.5 dB over the loop: wherever the gate
+ * ended in that loop, a note would end louder or softer than a shorter one, and be louder before its end. So the zone
+ * delayed by d = gSrc - sw, whose peak lands on the gate end, takes over, crossfaded in over the SWELL_XF that end
+ * SWELL_END before the gate end (at constant power for the two parts' correlation there): the note's last SWELL_END,
+ * its peak and the release after it are those of every shorter note. In front of them a gain ramp slows the swell, and
+ * the held peak it goes on into: the line (dB) from sd at the beat to the later part's level at the middle of the
+ * crossfade, less the zone's own even growth (sd·(1 - t/sw) up to the peak, 0 dB in the held peak), the earlier part
+ * there at the later one's loudness (K-weighted over SWELL_WIN, centred), then held through the crossfade.
  */
-function swellEntry(z: ZoneDef, gSrc: number): { from: number; ramp: ((t: number) => number) | null; until: number } {
+function swellLong(set: StoredSet, z: ZoneDef, tmps: Float32Array[], gSrc: number, pitchRatio: number): void {
   const sw = z.sw as number;
   const sd = z.sd as number;
-  if (!(gSrc > 0)) return { from: 0, ramp: null, until: 0 };
-  if (gSrc < sw) return { from: Math.round(sw - gSrc), ramp: null, until: 0 };
-  const k1 = sd * (1 / sw - 1 / gSrc);
-  return { from: 0, ramp: (t: number) => (t <= 0 ? 0 : t <= sw ? k1 * t : t < gSrc ? sd * (1 - t / gSrc) : 0), until: z.pre + Math.ceil(gSrc) };
+  const ls = z.ls as number;
+  const pre = z.pre;
+  const d = Math.round(gSrc - sw);
+  const fs = set.sr * pitchRatio; // zone samples per second as played
+  let s = Math.round(SWELL_END * fs);
+  let xf = Math.max(8, Math.round(SWELL_XF * fs));
+  // (a swell too short for them: both shortened alike)
+  const room = ls - pre - 1;
+  if (s + xf > room) {
+    const f = room / (s + xf);
+    s = Math.floor(s * f);
+    xf = Math.max(1, Math.floor(xf * f));
+  }
+  const b0 = ls - s - xf; // zone position the later part's crossfade starts at
+  const c0 = b0 + d; // ... and its read index
+  const n = tmps[0].length;
+  if (d < 1 || b0 <= pre || c0 >= n) return;
+  // the two parts' loudness where the crossfade is half way (K-weighted, over SWELL_WIN centred there), before anything
+  // changes: up to the peak the later part is the zone itself (from b0 on)
+  const h = Math.max(1, Math.round((SWELL_WIN / 2) * fs));
+  const xh = xf >> 1;
+  const cm = c0 + xh;
+  const bm = b0 + xh;
+  const m = Math.min(c0 + xf, n);
+  const ea = kPower(tmps, cm - h, cm + h, fs);
+  const eb = kPower(tmps, bm - h, bm + h, fs);
+  // the ramp (dB by zone sample after the beat t): the line from sd at the beat to where the later part is at the
+  // crossfade's middle, less the zone's own even growth (sd·(1 - t/sw) up to the peak, 0 dB in the held peak) — the two
+  // parts there at the same loudness (K-weighted over SWELL_WIN, centred) — then held through the crossfade
+  const own = (t: number): number => (t < sw ? sd * (1 - t / sw) : 0);
+  const end = ea > 0 && eb > 0 ? 10 * Math.log10(eb / ea) : 0;
+  const um = cm - pre;
+  const top = own(um) + end;
+  for (let i = pre + 1; i < m; i++) {
+    const g = Math.pow(10, (i < cm ? sd + ((top - sd) * (i - pre)) / um - own(i - pre) : end) / 20);
+    for (const a of tmps) a[i] *= g;
+  }
+  const bs = tmps.map((_, c) => unroll(set, z, c, n - c0, b0));
+  const nx = m - c0;
+  let pa = 0;
+  let pb = 0;
+  let pab = 0;
+  for (let c = 0; c < tmps.length; c++)
+    for (let j = 0; j < nx; j++) {
+      const x = tmps[c][c0 + j];
+      const y = bs[c][j];
+      pa += x * x;
+      pb += y * y;
+      pab += x * y;
+    }
+  const rho = pa > 0 && pb > 0 ? clamp(pab / Math.sqrt(pa * pb), -1, 1) : 0;
+  for (let c = 0; c < tmps.length; c++) {
+    const a = tmps[c];
+    const b = bs[c];
+    for (let j = 0; j < nx; j++) {
+      const gi = Math.sin((0.5 * Math.PI * (j + 0.5)) / xf);
+      const go = -rho * gi + Math.sqrt(Math.max(0, 1 - gi * gi * (1 - rho * rho)));
+      a[c0 + j] = go * a[c0 + j] + gi * b[j];
+    }
+    if (nx === xf) a.set(b.subarray(xf), c0 + xf);
+  }
 }
 
 interface Rendered {
@@ -828,8 +944,10 @@ interface Rendered {
 
 /** Resample one zone to the output rate/pitch: unroll (loop/decay), band-limit, sinc-resample.
  *  short: the short articulation (sustained zones): enter at the loop start with a fast fade-in.
- *  gateSec: a crescendo roll (ZoneDef.sw) made for a note of that gate: entered / ramped so its gate
- *  ends on the roll's peak (swellEntry; 0 = the whole zone as built). */
+ *  gateSec: a crescendo roll (ZoneDef.sw) made for a note of that gate, so that its gate ends on the roll's peak: a
+ *  note no longer than the swell entered sw - gate after the zone's start (the zone's pre-roll and a SWELL_FADE fade-in
+ *  in front of its beat, as at the zone's own start), a longer one played from the start and spliced (swellLong);
+ *  0 = the whole zone as built. */
 function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, cents: number, sr: number, lenSec: number, g: number, short = false, gateSec = 0): Rendered {
   const shift = (spec.unpitched ? 0 : midi - z.p) + cents / 100;
   const pitchRatio = Math.pow(2, shift / 12);
@@ -837,8 +955,9 @@ function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, 
   const looped = z.ls !== undefined && z.le !== undefined && z.le - z.ls > 16;
   if (short && looped) return renderShort(set, z, midi, pitchRatio, inc, sr, lenSec, g);
   // (the gate in zone samples: output samples × inc)
-  const se = gateSec > 0 && isSwell(z) ? swellEntry(z, gateSec * sr * inc) : null;
-  const from = se ? se.from : 0;
+  const gSrc = gateSec > 0 && isSwell(z) ? gateSec * sr * inc : 0;
+  const long = gSrc > 0 && gSrc >= (z.sw as number) + 0.5;
+  const from = gSrc > 0 && !long ? Math.max(0, Math.round((z.sw as number) - gSrc)) : 0;
   const nFin = from > 0 ? Math.max(8, Math.round(SWELL_FADE * set.sr * pitchRatio)) : 0;
   const preOut = Math.round(z.pre / inc);
   // output length: requested (plus the pre-roll), or the natural ring capped by maxLen
@@ -853,14 +972,15 @@ function renderOne(spec: SampledSpec, set: StoredSet, z: ZoneDef, midi: number, 
   const nOut = Math.max(16, preOut + Math.round(sec * sr));
   const nSrc = Math.ceil(nOut * inc) + TAPS + 2;
   const chans: Float32Array[] = [];
+  // a roll note longer than the swell: every channel at once (its splice matches their power together)
+  const spliced = long ? set.ch.map((_, c) => unroll(set, z, c, nSrc, 0)) : null;
+  if (spliced) swellLong(set, z, spliced, gSrc, pitchRatio);
   for (let c = 0; c < set.ch.length; c++) {
-    const tmp = unroll(set, z, c, nSrc, from);
+    const tmp = spliced ? spliced[c] : unroll(set, z, c, nSrc, from);
     // a slow swell entered late (sustained pre-roll cap): its kept build-up fades in
     if (z.fi && !from) for (let i = 0; i < z.fi && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / z.fi);
     // a roll note entered mid-swell: fades in like the zone's own start (its beat z.pre into the read)
     for (let i = 0; i < nFin && i < tmp.length; i++) tmp[i] *= 0.5 - 0.5 * Math.cos((Math.PI * (i + 0.5)) / nFin);
-    // a roll note longer than the swell: grows at the slower rate its length gives
-    if (se && se.ramp) for (let i = z.pre + 1; i < se.until && i < tmp.length; i++) tmp[i] *= Math.pow(10, se.ramp(i - z.pre) / 20);
     // shifting up so far that source content would land above the output Nyquist: band-limit first
     if (inc > 0.98) firLowpassInPlace(tmp, 0.46 / inc);
     // margin of HALF-1 zeros before the data so tap 0 can reach index -3
