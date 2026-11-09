@@ -16,8 +16,12 @@
  *   3. zone gain (even loudness) × instrument gain, optional tone filter, attack ramp
  * The returned Sample carries `pre` (output samples before the onset) so the mixer can start
  * the note early and the attack lands on the beat: the zone's beat (the build puts it on the
- * perceptual onset), mapped through the playback ratio — for two takes summed (`width`) the
- * perceptual onset of their sum — and for a short note its own (`preAt`).
+ * perceptual onset), mapped through the playback ratio — for two takes summed (`width`, started on
+ * their beats, a fraction of a period apart where their coherent sum would stall) the perceptual
+ * onset of their sum, for a tone-filtered voicing the rule applied to what it plays — and for a
+ * short note its own on the same rule (`preAt`, continuous in the note's length, never ending a
+ * longer note earlier). Two takes summed also carry the gains that keep each note's stereo and mid
+ * (reverb send) energy as with the takes on their gate anchors (`gainAt`, `sendAt`).
  */
 import { Biquad, clamp } from './dsp';
 import { MAX_PRE_SEC, type InstDef, type Sample } from './instruments';
@@ -49,14 +53,16 @@ export interface ZoneDef {
   /** decay after the loop start (dB/s, negative), decaying loops */
   dec?: number;
   /** fade-in from the zone start (samples, raised cosine): a slow swell entered late — sustained
-   *  zones keep at most 80 ms of their build-up before the beat (the build's SUS_MAX_PRE) */
+   *  zones keep at most 80 ms of a quiet build-up before the beat (the build's SUS_MAX_PRE; a louder one
+   *  keeps the recording's start) */
   fi?: number;
   /** gate anchor (sustained zones whose beat `pre` is not their attack model's beat): a note's gate
    *  counts from here — the point the songs' note lengths and the loudness calibration were made
    *  against — while `pre`, its perceptual onset, is what goes on the beat (default `pre`) */
   ga?: number;
-  /** dwell weight (sustained zones): how far the beat moved from the -10 dB point onto the attack of
-   *  an envelope that dwells below it (the build's perceptual_onset `w`, 0..1; default 0) */
+  /** dwell weight (sustained zones): how far the beat moved onto the real attack of an envelope that
+   *  dwells below -10 dB (the build's perceptual_onset `w`, 0..1; default 0) — two takes summed with such a
+   *  take keep their aligned beats (renderZone) */
   dw?: number;
   /** crescendo roll: swell length (samples from the beat to the peak the roll holds, its loop start) and
    *  depth (dB at the beat re that peak). A roll note is made for its length (InstDef.swellOf): a note
@@ -149,6 +155,12 @@ export interface SampledSpec {
    *  is heard — reaches -10 dB of its peak (5 ms RMS), not where each take alone does: two spread
    *  attacks of different shapes sum to an attack whose -10 dB point can sit 13 ms off either one */
   sumOnset?: boolean;
+  /** chord voicings (sustained, tone-filtered: their beat is the rule applied to what they play): a climb from -15 to
+   *  -10 dB slower than RISE_MAX goes on the beat RISE_MAX / 2 after the mean time it crosses those levels — halfway
+   *  between its -10 dB point and RISE_MAX after its -15 dB point on a steady climb — so a chord's slow and fast tones
+   *  are staggered evenly at -15, -10 and -6 dB (the dry accordion's low reeds climb 25-35 ms, its high ones 6-15 ms:
+   *  with their -15 dB points kept together, the low tones reach -10 / -6 dB 13-15 / 20-25 ms after the others) */
+  balance?: boolean;
   /** sustained instruments with a slow recorded attack: notes whose gate is at most this many
    *  seconds play the short articulation (the recording entered in its sustain, at the loop start,
    *  with a fast fade-in — the way SSO builds its solo staccatos from the sustains) */
@@ -166,8 +178,8 @@ export const SAMPLED_SPECS: SampledSpec[] = [
   // beating), the dry and chord voicings its lower reed alone ('accdry', derived by the build)
   S('accordion', 'accordion', 'sustain', 0.06, { gate: 0.92, width: 0.65, gainDb: 6.7 }),
   // (mono: a second recording on the right channel would beat against the first)
-  S('accordionDry', 'accdry', 'sustain', 0.05, { gate: 0.92, lp: 4200, gainDb: 5.4 }),
-  S('accChord', 'accdry', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, gainDb: 6.7 }),
+  S('accordionDry', 'accdry', 'sustain', 0.05, { gate: 0.92, lp: 4200, balance: true, gainDb: 5.4 }),
+  S('accChord', 'accdry', 'sustain', 0.035, { gate: 0.92, lp: 5200, hp: 160, balance: true, gainDb: 6.7 }),
   // plucked
   S('mandolin', 'mandolin', 'pluck', 0.05, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.5], gainDb: 2.7 }),
   S('guitar', 'guitar', 'pluck', 0.12, { gate: 1, choke: true, variants: 2, rr: 'neighbor', layers: [0.7], gainDb: 3.4 }),
@@ -886,34 +898,151 @@ function renderShort(set: StoredSet, z: ZoneDef, midi: number, pitchRatio: numbe
   return { chans, pre: preOut, ga: preOut, truncated: false };
 }
 
-/** furthest apart two summed takes' beats may be (s): further, the second is moved towards the first */
-const TAKES_ALIGN_MAX = 0.015;
+/** Where two takes summed for `width` start (output samples) and the beat and gate anchor of their sum. */
+interface TakesAlign {
+  offA: number;
+  offB: number;
+  pre: number;
+  ga: number;
+}
 
 /**
- * Where two takes summed for `width` start (output samples) and the beat and gate anchor of their sum.
- * They are aligned on their gate anchors (Rendered.ga), as the songs' balance was set with (two
- * coherent takes realigned by a few ms sum louder or softer), unless their beats — their perceptual
- * onsets — would then be more than TAKES_ALIGN_MAX apart: the second take is moved that close (an
- * ensemble attack, not two). The sum's beat and gate anchor are the means of the takes'.
+ * Two takes summed for `width`, aligned on their beats — each take's perceptual onset (one ensemble attack: two takes
+ * of one note started 15 ms apart are a flam) — and take b then moved `d` output samples later (takesShift: a fraction
+ * of a period, so their attacks do not cancel). The sum's beat is the mean of the takes' (renderZone places it on the
+ * sum's onset), its gate anchor the mean of theirs (a note keeps the length the songs were written against; sustained
+ * notes keep the loudness they were balanced with, takesLoudness).
  */
-function alignTakes(a: Rendered, b: Rendered, sr: number): { offA: number; offB: number; pre: number; ga: number } {
-  const lim = Math.round(TAKES_ALIGN_MAX * sr);
-  const da = a.pre - a.ga;
-  const db = b.pre - b.ga;
-  // b's anchor goes `sh` after a's
-  const sh = da - db > lim ? da - db - lim : db - da > lim ? da - db + lim : 0;
-  const A0 = Math.max(a.ga, b.ga - sh);
-  return { offA: A0 - a.ga, offB: A0 + sh - b.ga, pre: A0 + Math.round((da + sh + db) / 2), ga: A0 + Math.round(sh / 2) };
+function alignTakes(a: Rendered, b: Rendered, d = 0): TakesAlign {
+  const rel = a.pre - b.pre + d; // where b starts re a
+  const offA = Math.max(0, -rel);
+  const offB = Math.max(0, rel);
+  return { offA, offB, pre: Math.round((offA + a.pre + offB + b.pre) / 2), ga: Math.round((offA + a.ga + offB + b.ga) / 2) };
+}
+
+/** furthest two takes of a sustained `width` note are moved apart from their beats (s; and at most half a period) */
+const TAKES_SHIFT_MAX = 0.003;
+/** the stretch around the beat (s before, s after) over which the takes' sum must rise with their power sum, and the
+ *  body after it (to s after the beat) where a hole counts this much (a notch 80 ms into a swell is heard too) */
+const TAKES_FROM = 0.01;
+const TAKES_ATTACK = 0.05;
+const TAKES_BODY = 0.15;
+const TAKES_BODY_W = 0.5;
+/** (only where the power sum is within this of its maximum, dB) */
+const TAKES_FLOOR_DB = -25;
+
+/**
+ * Two recordings of one note played at one pitch are coherent through their attack: what a centred note plays — their
+ * sum — rises with their power sum (the takes' own envelopes added) only where their partials meet near quadrature; in
+ * phase it overshoots by up to 3 dB, in anti-phase it stalls up to 10 dB under it for tens of ms (a note heard 20-30 ms
+ * late, a notch in its attack). The relative phase is set by how far apart the takes start: within half a period every
+ * relation of the partials occurs once. Returns the shift d of take b (output samples, |d| <= min(half a period,
+ * TAKES_SHIFT_MAX); 0 = on their beats) at which the sum's envelope (trailing max(5 ms, one period), 1 ms steps) from
+ * TAKES_FROM before the beat to TAKES_ATTACK after it — and, at half weight, on to TAKES_BODY — stays closest to their
+ * power sum's, each in dB re its own maximum over the onset rule's window (the first 0.5 s after the beat): the
+ * largest difference, where the power sum is within TAKES_FLOOR_DB of its maximum; the smaller shift where two are
+ * within 0.05 dB.
+ */
+function takesShift(a: Rendered, b: Rendered, period: number, sr: number): number {
+  if (!(period > 0)) return 0;
+  const D = Math.min(Math.round(TAKES_SHIFT_MAX * sr), Math.floor(period / 2));
+  if (D < 1) return 0;
+  const step = Math.max(1, Math.floor(period / 64));
+  const nd = Math.floor(D / step);
+  const xa = a.chans[0];
+  const xb = b.chans[0];
+  const al = alignTakes(a, b, 0);
+  const blk = Math.max(1, Math.round(0.001 * sr));
+  const wb = Math.max(1, Math.round(Math.max(0.005 * sr, period) / blk));
+  // the frame: a starts at FA, b (on the beats) at FB, both D samples into it (b moves by -D..D)
+  const FA = al.offA + D;
+  const FB = al.offB + D;
+  const beat = al.pre + D;
+  const lookB = Math.round((ONSET_LOOK * sr) / blk);
+  const qBeat = Math.floor(beat / blk);
+  const nb = qBeat + lookB + 1;
+  const n = nb * blk;
+  // b matched to a's power over the frame (as measuredTakes matches them)
+  const nbx = Math.min(xb.length, n);
+  const cb = new Float64Array(nbx + 1);
+  for (let i = 0; i < nbx; i++) cb[i + 1] = cb[i] + xb[i] * xb[i];
+  const eb = (i0: number, i1: number): number => cb[Math.max(0, Math.min(nbx, i1))] - cb[Math.max(0, Math.min(nbx, i0))];
+  const pa = new Float64Array(nb);
+  let sa = 0;
+  for (let q = 0; q < nb; q++) {
+    let acc = 0;
+    for (let i = Math.max(q * blk, FA), e = Math.min((q + 1) * blk, FA + xa.length); i < e; i++) acc += xa[i - FA] * xa[i - FA];
+    pa[q] = acc;
+    sa += acc;
+  }
+  const sb = eb(-FB, n - FB);
+  if (!(sa > 0) || !(sb > 0)) return 0;
+  const k = Math.sqrt(sa / sb);
+  const k2 = k * k;
+  const from = Math.max(0, qBeat - Math.round((TAKES_FROM * sr) / blk));
+  const to = Math.min(nb - 1, qBeat + Math.round((TAKES_ATTACK * sr) / blk));
+  const to2 = Math.min(nb - 1, qBeat + Math.round((TAKES_BODY * sr) / blk));
+  const floor = Math.pow(10, TAKES_FLOOR_DB / 10);
+  const coh = new Float64Array(nb);
+  const pow = new Float64Array(nb);
+  const cq = new Float64Array(nb);
+  const pq = new Float64Array(nb);
+  let best = 0;
+  let bestDev = Infinity;
+  // shifts in the order 0, +s, -s, +2s, ..: a larger one only where it is better by more than 0.05 dB
+  for (let j = 0; j <= 2 * nd; j++) {
+    const d = (j & 1 ? (j + 1) >> 1 : -(j >> 1)) * step;
+    const ob = FB + d; // b's start in the frame
+    // per 1 ms block: the power sum and the coherent sum (a + k b)^2, then their trailing windows
+    let cw = 0;
+    let pw = 0;
+    for (let q = 0; q < nb; q++) {
+      const q0 = q * blk;
+      const q1 = q0 + blk;
+      // (past the body window only the maximum is read from it: every 4th product)
+      const dec = q > to2 ? 4 : 1;
+      let x = 0;
+      for (let i = Math.max(q0, FA, ob), e = Math.min(q1, FA + xa.length, ob + xb.length); i < e; i += dec) x += xa[i - FA] * xb[i - ob];
+      x *= dec;
+      const p = pa[q] + k2 * eb(q0 - ob, q1 - ob);
+      pq[q] = p;
+      cq[q] = p + 2 * k * x;
+      pw += p;
+      cw += cq[q];
+      if (q >= wb) {
+        pw -= pq[q - wb];
+        cw -= cq[q - wb];
+      }
+      pow[q] = pw;
+      coh[q] = cw;
+    }
+    let mc = 0;
+    let mp = 0;
+    for (let q = qBeat; q < nb; q++) {
+      if (coh[q] > mc) mc = coh[q];
+      if (pow[q] > mp) mp = pow[q];
+    }
+    if (!(mc > 0) || !(mp > 0)) continue;
+    let dev = 0;
+    for (let q = from; q <= Math.max(to, to2); q++) {
+      if (pow[q] < mp * floor) continue;
+      const x = Math.abs(10 * Math.log10((Math.max(coh[q], mc * 1e-6) * mp) / (pow[q] * mc))) * (q > to ? TAKES_BODY_W : 1);
+      if (x > dev) dev = x;
+    }
+    if (dev < bestDev - 0.05) {
+      best = d;
+      bestDev = dev;
+    }
+  }
+  return best;
 }
 
 /**
  * Mono sets with `width`: the left channel plays the chosen recording, the right one another take
- * or the neighbouring recording at the same pitch (aligned by alignTakes); rotated to the target
- * correlation and normalised to the power of one channel (a centred note keeps its loudness). The
- * sum's beat is the mean of the takes' (renderZone then places it on the sum's onset).
+ * or the neighbouring recording at the same pitch (where alignTakes puts them); rotated to the target
+ * correlation and normalised to the power of one channel (a centred note keeps its loudness).
  */
-function widen(a: Rendered, b: Rendered, width: number, sr: number): Rendered {
-  const al = alignTakes(a, b, sr);
+function widen(a: Rendered, b: Rendered, width: number, al: TakesAlign): Rendered {
   const n = Math.max(a.chans[0].length + al.offA, b.chans[0].length + al.offB);
   const xl = new Float32Array(n);
   const xr = new Float32Array(n);
@@ -947,7 +1076,131 @@ function widen(a: Rendered, b: Rendered, width: number, sr: number): Rendered {
   return { chans: [L, R], pre: al.pre, ga: al.ga, take0: al.offA, truncated: a.truncated || b.truncated };
 }
 
-/** furthest the summed takes' onset may move the beat from the takes' own (s) */
+/** furthest the loudness of two takes summed is corrected (dB) */
+const TAKES_GAIN_MAX = 6;
+/** the note energies takesLoudness keeps: every this many output samples (linear in between — the energy of a note
+ *  cut at t changes by about the local power per sample, so the gain is exact to far below 0.01 dB) */
+const GAIN_GRID = 64;
+
+/**
+ * The energy of a note cut at t (everything before it, then the release decay: power factor k2 per sample) for t on
+ * a grid of GAIN_GRID samples up to the end `n` (the last point at n: the whole note), from its power p[0..n).
+ */
+function cutEnergies(p: Float32Array, k2: number): Float64Array {
+  const G = GAIN_GRID;
+  const n = p.length;
+  const Q = Math.ceil(n / G);
+  const E = new Float64Array(Q + 1);
+  let tail = 0;
+  for (let i = n - 1; i >= 0; i--) {
+    tail = k2 * (p[i] + tail);
+    if (i % G === 0) E[i / G] = tail;
+  }
+  let head = 0;
+  for (let i = 0; i < n; i++) {
+    if (i % G === 0) E[i / G] += head;
+    head += p[i];
+  }
+  E[Q] = head;
+  return E;
+}
+
+/** cutEnergies() read at `cut` (linear between its grid points) */
+function energyAt(E: Float64Array, n: number, cut: number): number {
+  const j = Math.max(0, Math.min(n, cut));
+  const q = Math.min(E.length - 2, Math.floor(j / GAIN_GRID));
+  const x0 = q * GAIN_GRID;
+  const x1 = Math.min(n, x0 + GAIN_GRID);
+  return x1 > x0 ? E[q] + ((j - x0) / (x1 - x0)) * (E[q + 1] - E[q]) : E[q];
+}
+
+/** The energies of a note cut anywhere: the pair as widen() plays it, and the reference — the takes aligned on their
+ *  gate anchors, normalised as widen() normalises them (takesLoudness) — each as its stereo power (what the dry mix
+ *  carries) and as its mid ((L + R) / 2: what the reverb send carries) */
+function takesEnergies(a: Rendered, b: Rendered, w: Rendered, width: number, k2: number): { En: Float64Array; Mn: Float64Array; n: number; Ea: Float64Array; Ma: Float64Array; m: number; A0: number } {
+  const th = Math.asin(clamp(width, 0, 1)) / 2;
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  const L = w.chans[0];
+  const R = w.chans[1];
+  const n = L.length;
+  // (one power buffer, reused: stereo, then mid)
+  const pw = new Float32Array(n);
+  for (let i = 0; i < n; i++) pw[i] = L[i] * L[i] + R[i] * R[i];
+  const En = cutEnergies(pw, k2);
+  for (let i = 0; i < n; i++) pw[i] = 0.25 * (L[i] + R[i]) * (L[i] + R[i]);
+  const Mn = cutEnergies(pw, k2);
+  const A0 = Math.max(a.ga, b.ga);
+  const oA = A0 - a.ga;
+  const oB = A0 - b.ga;
+  const xa = a.chans[0];
+  const xb = b.chans[0];
+  const m = Math.max(xa.length + oA, xb.length + oB);
+  const xl = new Float32Array(m);
+  const xr = new Float32Array(m);
+  xl.set(xa, oA);
+  xr.set(xb, oB);
+  let pl = 0;
+  let pr = 0;
+  let plr = 0;
+  for (let i = 0; i < m; i += 4) {
+    pl += xl[i] * xl[i];
+    pr += xr[i] * xr[i];
+    plr += xl[i] * xr[i];
+  }
+  const kr = pr > 0 ? Math.sqrt(pl / pr) : 0;
+  const rho = pl > 0 && pr > 0 ? plr / Math.sqrt(pl * pr) : 0;
+  const nn = 1 / Math.max(1e-6, c * c + s * s + 2 * c * s * rho);
+  const cs2 = c * c + s * s;
+  const cs4 = 4 * c * s;
+  const pa = new Float32Array(m);
+  for (let i = 0; i < m; i++) {
+    const u = xl[i];
+    const v = xr[i] * kr;
+    pa[i] = nn * (cs2 * (u * u + v * v) + cs4 * u * v);
+  }
+  const Ea = cutEnergies(pa, k2);
+  const hm = 0.25 * (c + s) * (c + s) * nn;
+  for (let i = 0; i < m; i++) {
+    const v = xl[i] + xr[i] * kr;
+    pa[i] = hm * v * v;
+  }
+  const Ma = cutEnergies(pa, k2);
+  return { En, Mn, n, Ea, Ma, m, A0 };
+}
+
+/**
+ * Two takes summed for a sustained `width` set (widen(): on their beats, takesShift apart): the loudness the songs were
+ * balanced with is that of the takes aligned on their gate anchors — two coherent recordings sum louder or softer by
+ * up to ~3 dB with their relative offset (the attack's partial cancellation or reinforcement), note by note.
+ * Returns gate (output samples) → the gains that give a note gated there (then released, time constant `release`)
+ * the energy it has with the takes aligned on their anchors, both counted from their gate anchors: `dry` its stereo
+ * energy, `send` (the reverb send: the mid) its mid's — one gain each per note, so the envelope — the attack where
+ * the takes now start together — is kept. Keeps only the energies on their grid (cutEnergies); memoised.
+ */
+function takesLoudness(a: Rendered, b: Rendered, w: Rendered, width: number, release: number, sr: number): { dry: (gate: number) => number; send: (gate: number) => number } {
+  const k2 = Math.exp(-2 / (Math.max(0.001, release) * sr));
+  const { En, Mn, n, Ea, Ma, m, A0 } = takesEnergies(a, b, w, width, k2);
+  return { dry: gainOfEnergies(En, n, Ea, m, w.ga, A0), send: gainOfEnergies(Mn, n, Ma, m, w.ga, A0) };
+}
+
+function gainOfEnergies(En: Float64Array, n: number, Ea: Float64Array, m: number, wga: number, A0: number): (gate: number) => number {
+  const gmax = Math.pow(10, TAKES_GAIN_MAX / 20);
+  const memo = new Map<number, number>();
+  return (gate: number): number => {
+    const g0 = Math.max(1, Math.round(gate));
+    let g = memo.get(g0);
+    if (g === undefined) {
+      const e1 = energyAt(En, n, wga + g0);
+      const e0 = energyAt(Ea, m, A0 + g0);
+      g = e1 > 0 && e0 > 0 ? Math.min(gmax, Math.max(1 / gmax, Math.sqrt(e0 / e1))) : 1;
+      memo.set(g0, g);
+    }
+    return g;
+  };
+}
+
+/** furthest the summed takes' onset may move the beat from the takes' own (s): spread attacks (strStab) */
 const SUM_ONSET_MAX = 0.025;
 /** furthest a short note's own onset may sit from the whole note's (s): a take whose bow noise
  *  builds up for 30-40 ms before its main rise sounds, cut short, mostly that build-up */
@@ -960,7 +1213,7 @@ const MIX_TAIL_TAU = 3.6;
  * plays it: full level up to `cut` (the gate end; Infinity = the whole sample), then the release
  * decay (factor k per sample) for `tail` samples. The onset is the first point where the RMS over
  * the preceding 5 ms comes within 10 dB of its maximum over the note (at most 0.5 s after `pre`):
- * the perceptual onset the build places each take's beat on, measured on what is heard.
+ * the perceptual onset of a spread attack (strStab), measured on what is heard.
  */
 function heardOnset(chans: Float32Array[], sr: number, pre: number, cut = Infinity, k = 1, tail = 0): number {
   const n = Math.min(chans[0].length, pre + Math.round(0.5 * sr), cut + tail);
@@ -985,17 +1238,31 @@ function heardOnset(chans: Float32Array[], sr: number, pre: number, cut = Infini
   return t;
 }
 
-// Perceptual onset of a sustained note: the same criterion as the bank build
-// (scripts/audio/instrument_dsp.py perceptual_onset, build_instruments.sustain_beat), here for what a
-// note of a `width` set plays — two takes summed, whose attacks can partly cancel or smear.
+// Perceptual onset of a sustained note: the same criterion as the bank build (scripts/audio/instrument_dsp.py
+// perceptual_onset, build_instruments.sustain_beat), here for what a note plays where that differs from the bank's
+// single take — two takes summed for `width`, a voicing's tone filters, a short note — and for the checks.
 const ONSET_DB = -10;
 const ONSET_LOOK = 0.5;
+/** a beat never sits lower than this (dB re the note's maximum) on a climb */
+const FLOOR_DB = -15;
+/** the beat at most this long (s) after the -15 dB point (a slow climb, a creep below -10 dB) */
+const RISE_MAX = 0.015;
 /** dB per ms: an envelope that climbs its last X dB below the threshold slower than this dwells */
 const DWELL_SLOPE = 0.1;
 const DWELL_X = [1.5, 2, 3, 4, 5, 6, 8, 10];
 const DWELL_BLEND0 = 0.75;
 const DWELL_BLEND1 = 1.5;
-const DWELL_PLATEAU = 0.1;
+/** a real attack onto a plateau: looked for from where the envelope first gets within this of its maximum
+ *  (dB), it climbed ATTACK_RISE0..1 dB over the ATTACK_WIN (s) before its climb stalls (less than
+ *  ATTACK_SETTLE dB over the next ATTACK_WIN); it crosses -15 dB — or, stalling lower, ATTACK_TOP below where
+ *  it stalls — ATTACK_LEAD (s) before the beat */
+const ATTACK_FROM = -20;
+const ATTACK_WIN = 0.015;
+const ATTACK_SETTLE = 3;
+const ATTACK_RISE0 = 6;
+const ATTACK_RISE1 = 10;
+const ATTACK_TOP = 1.5;
+const ATTACK_LEAD = RISE_MAX / 2;
 
 /**
  * Power envelope for the perceptual onset of what a centred note plays (the mono sum of `chans`, first
@@ -1025,17 +1292,20 @@ export function onsetPower(chans: Float32Array[], sr: number, n: number, period:
 }
 
 /**
- * The perceptual onset (sample index: the end of the trailing 5 ms window that reaches it) on the
- * power envelope `e` (onsetPower), from a first guess `pre`: the first point within 10 dB of the
- * maximum over the next 0.5 s (the attack suite's att10 = 0; `top` = a fixed end of the window for the
- * maximum instead, so the result does not depend on how long the sample is) — or, for a note that dwells
- * below that threshold (its last X dB, X = 1.5..10, climbed slower than DWELL_SLOPE: an attack onto a
- * plateau, then a slow crescendo), its attack: the -10 dB point relative to that plateau, blended in over
- * the dwell ratios DWELL_BLEND0..1 (instrument_dsp.perceptual_onset documents the criterion).
+ * The perceptual onset (sample index: the end of the trailing 5 ms window that reaches it) on the power
+ * envelope `e` (onsetPower), from a first guess `pre`: the first point within 10 dB of the maximum over the
+ * next 0.5 s (the attack suite's att10 = 0; `top` = a fixed end of the window for the maximum instead, so the
+ * result does not depend on how long the sample is), at most RISE_MAX after the -15 dB point — or, for a note
+ * that dwells below -10 dB after a real attack (its last X dB, X = 1.5..10, climbed slower than DWELL_SLOPE;
+ * the climb out of the build-up rose ATTACK_RISE dB within ATTACK_WIN before it stalled), that attack:
+ * ATTACK_LEAD after its -15 dB point (or its top, for an attack that stalls lower), blended in over the dwell
+ * ratios DWELL_BLEND0..1 and the rises ATTACK_RISE0..1 (instrument_dsp.perceptual_onset documents the
+ * criterion). `w`: how far the beat moved onto the attack (the bank's ZoneDef.dw). `balanced` (SampledSpec.balance):
+ * a slow climb's beat at most RISE_MAX / 2 after the mean time it crosses -15..-10 dB instead of RISE_MAX after -15 dB.
  */
-export function perceptualOnset(e: Float64Array, sr: number, pre: number, top = 0): { p: number; p10: number; dwell: number; w: number } {
+export function perceptualOnset(e: Float64Array, sr: number, pre: number, top = 0, balanced = false): { p: number; p10: number; p15: number; dwell: number; w: number } {
   const N = e.length;
-  if (N < 2) return { p: pre, p10: pre, dwell: 0, w: 0 };
+  if (N < 2) return { p: pre, p10: pre, p15: pre, dwell: 0, w: 0 };
   const look = Math.round(ONSET_LOOK * sr);
   const firstGe = (thr: number, end: number): number => {
     for (let i = 0; i < end; i++) if (e[i] >= thr) return i + 1;
@@ -1053,7 +1323,7 @@ export function perceptualOnset(e: Float64Array, sr: number, pre: number, top = 
   for (let it = 0; it < 32; it++) {
     const n = top > 0 ? Math.min(N, top) : Math.min(N, p + look);
     M = top > 0 ? fixedM : maxTo(n);
-    if (M <= 0) return { p: pre, p10: pre, dwell: 0, w: 0 };
+    if (M <= 0) return { p: pre, p10: pre, p15: pre, dwell: 0, w: 0 };
     const q = firstGe(M * Math.pow(10, ONSET_DB / 10), n);
     if (q === p || top > 0) {
       p = q;
@@ -1062,93 +1332,271 @@ export function perceptualOnset(e: Float64Array, sr: number, pre: number, top = 
     p = q;
   }
   M = top > 0 ? fixedM : maxTo(Math.min(N, p + look));
-  const dB = new Float64Array(p);
-  for (let i = 0; i < p; i++) dB[i] = 10 * Math.log10(e[i] / M + 1e-20);
-  let ratio = 0;
-  let td = 0;
-  for (const X of DWELL_X) {
-    let tx = p;
+  const k = Math.round(ATTACK_WIN * sr);
+  const nd = Math.min(N, p + k);
+  const dB = new Float64Array(nd);
+  for (let i = 0; i < nd; i++) dB[i] = 10 * Math.log10(e[i] / M + 1e-20);
+  const firstDb = (thr: number): number => {
+    for (let i = 0; i < p; i++) if (dB[i] >= thr) return i + 1;
+    return p;
+  };
+  const p15 = Math.min(p, firstDb(FLOOR_DB));
+  let base = Math.min(p, p15 + Math.round(RISE_MAX * sr));
+  if (balanced) {
+    // (SampledSpec.balance) at most RISE_MAX / 2 after the mean time the climb first reaches the levels -15..-10 dB
+    let acc = 0;
+    let rmx = -Infinity;
     for (let i = 0; i < p; i++)
-      if (dB[i] >= ONSET_DB - X) {
-        tx = i + 1;
-        break;
+      if (dB[i] > rmx) {
+        acc += (Math.max(FLOOR_DB, Math.min(ONSET_DB, dB[i])) - Math.max(FLOOR_DB, Math.min(ONSET_DB, rmx))) * (i + 1);
+        rmx = dB[i];
       }
-    if (tx < p) {
-      const r = (p - tx) / (((X / DWELL_SLOPE) * sr) / 1000);
-      if (r > ratio) {
-        ratio = r;
-        td = tx;
-      }
-    }
+    base = Math.min(p, Math.round(acc / (ONSET_DB - FLOOR_DB) + (RISE_MAX / 2) * sr));
+  }
+  let ratio = 0;
+  for (const X of DWELL_X) {
+    const tx = firstDb(ONSET_DB - X);
+    if (tx < p) ratio = Math.max(ratio, (p - tx) / (((X / DWELL_SLOPE) * sr) / 1000));
   }
   const w = Math.min(1, Math.max(0, (ratio - DWELL_BLEND0) / (DWELL_BLEND1 - DWELL_BLEND0)));
-  if (w <= 0) return { p, p10: p, dwell: ratio, w: 0 };
-  const hi = Math.min(p, td + Math.round(DWELL_PLATEAU * sr));
-  const lv: number[] = [];
-  for (let i = td - 1; i < Math.max(td, hi); i++) lv.push(dB[i]);
-  lv.sort((x, y) => x - y);
-  // the median as numpy takes it (mean of the two middle values of an even count)
-  const lp = lv.length % 2 ? lv[lv.length >> 1] : 0.5 * (lv[lv.length / 2 - 1] + lv[lv.length / 2]);
-  let q = p;
-  for (let i = 0; i < p; i++)
-    if (dB[i] >= lp + ONSET_DB) {
-      q = i + 1;
+  const out = { p: base, p10: p, p15, dwell: ratio, w: 0 };
+  if (w <= 0) return out;
+  // the attack: from where the envelope first gets within 20 dB of its maximum, the first point after which
+  // it climbs less than ATTACK_SETTLE dB over ATTACK_WIN; how much it climbed over the ATTACK_WIN before it
+  const i0 = firstDb(ATTACK_FROM) - 1;
+  if (i0 >= p - 1) return out;
+  let i1 = p - 1;
+  for (let i = i0; i < p; i++)
+    if (dB[Math.min(i + k, nd - 1)] - dB[i] < ATTACK_SETTLE) {
+      i1 = i;
       break;
     }
-  return { p: Math.round(p - w * (p - q)), p10: p, dwell: ratio, w };
+  const at = dB[i1];
+  const rise = at - dB[Math.max(0, i1 - k)];
+  const a = at < ONSET_DB ? Math.min(1, Math.max(0, (rise - ATTACK_RISE0) / (ATTACK_RISE1 - ATTACK_RISE0))) : 0;
+  const q = Math.min(base, firstDb(Math.min(FLOOR_DB, at - ATTACK_TOP)) + Math.round(ATTACK_LEAD * sr));
+  if (w * a <= 0 || q >= base) return out;
+  out.w = w * a;
+  out.p = Math.round(base - w * a * (base - q));
+  return out;
 }
 
-/** perceptualOnset of a note as the mixer plays it when gated short: `x` (its mono sum) at full level
- *  up to `cut`, then the release decay (factor k per sample), first n samples */
-function gatedOnset(x: Float32Array, sr: number, pre: number, cut: number, k: number, n: number, period: number): number {
-  const y = x.slice(0, n);
-  let env = 1;
-  for (let i = Math.max(0, cut); i < n; i++) {
-    env *= k;
-    y[i] *= env;
-  }
-  return perceptualOnset(onsetPower([y], sr, n, period), sr, pre, n).p;
+/** a short sustained note's onset blends into the whole note's beat over the last this many dB below the whole
+ *  note's peak */
+const SHORT_BLEND_DB = 1;
+/** half width (dB) of the level bands a short note's onset is the mean crossing time of */
+const SHORT_BAND_DB = 2;
+
+/** the first-crossing table a short note's onset is read from: its level step (dB) and how far below the whole note's
+ *  peak it reaches (dB) */
+const LEVEL_STEP = 0.02;
+const LEVEL_SPAN = 60;
+/** a short note's gated peak is kept every this many output samples (linear in between: it changes by far less than
+ *  0.1 dB over that) */
+const PEAK_GRID = 8;
+
+/** First crossings of an onset envelope's levels (its first `n` samples) as a table: T[k] = the first index (the end
+ *  of the window, as perceptualOnset counts) at which it reaches lo + k·LEVEL_STEP dB, lo = its maximum - LEVEL_SPAN */
+interface LevelTable {
+  T: Float32Array;
+  /** its integral over the levels: C[k] = the integral of T (linear between its levels) from level 0 to level k */
+  C: Float64Array;
+  lo: number;
+  top: number;
+}
+
+function levelTable(e: Float64Array, n: number): LevelTable {
+  let m = 0;
+  for (let i = 0; i < n; i++) if (e[i] > m) m = e[i];
+  const top = m > 0 ? 10 * Math.log10(m) : -Infinity;
+  const K = Math.round(LEVEL_SPAN / LEVEL_STEP);
+  const T = new Float32Array(K + 1);
+  const lo = top - LEVEL_SPAN;
+  // the running maximum: every level up to it not reached before is first reached here
+  let k = 0;
+  let rm = 0;
+  for (let i = 0; i < n && k <= K; i++)
+    if (e[i] > rm) {
+      rm = e[i];
+      const d = 10 * Math.log10(rm) + 1e-9;
+      while (k <= K && lo + k * LEVEL_STEP <= d) T[k++] = i + 1;
+    }
+  while (k <= K) T[k++] = n;
+  const C = new Float64Array(K + 1);
+  for (let j = 1; j <= K; j++) C[j] = C[j - 1] + 0.5 * (T[j - 1] + T[j]);
+  return { T, C, lo, top };
+}
+
+/** The first index at which the envelope reaches `level` (dB; levelTable, linear between its levels) */
+function crossingOf(t: LevelTable, level: number): number {
+  const K = t.T.length - 1;
+  const x = (level - t.lo) / LEVEL_STEP;
+  if (x <= 0) return t.T[0];
+  if (x >= K) return t.T[K];
+  const k = Math.floor(x);
+  return Math.round(t.T[k] + (x - k) * (t.T[k + 1] - t.T[k]));
+}
+
+/** The mean first-crossing index over the levels [a, b] (dB; the table linear between its levels): a band, not a
+ *  level, so it slides over a plateau as the band moves instead of jumping across it (continuous in a and b) */
+function bandMean(t: LevelTable, a: number, b: number): number {
+  const K = t.T.length - 1;
+  // the integral of the interpolated table from level 0 to x (constant outside the table)
+  const I = (x: number): number => {
+    if (x <= 0) return x * t.T[0];
+    if (x >= K) return t.C[K] + (x - K) * t.T[K];
+    const k = Math.floor(x);
+    const f = x - k;
+    return t.C[k] + f * t.T[k] + 0.5 * f * f * (t.T[k + 1] - t.T[k]);
+  };
+  const xa = (a - t.lo) / LEVEL_STEP;
+  const xb = (b - t.lo) / LEVEL_STEP;
+  return (I(xb) - I(xa)) / (xb - xa);
 }
 
 /**
- * Short notes of spread / slow attacks: a note gated while its attack is still rising peaks lower,
- * so its own onset sits earlier in the sample than the whole note's. Returns gate (output samples) →
- * onset index (memoised; within [lo, hi]: SHORT_ONSET_MAX around `pre` by default).
- * sumOnset sets: the note is cut `gate` samples after the onset it starts on — the fixed point
- * p = onset(the note cut at p + gate), on the 5 ms RMS -10 dB point. Sustained notes (`anchor`: their
- * gate counts from Sample.ga): the note cut at anchor + gate is what plays, measured with
- * perceptualOnset (`period`: its envelope window).
+ * The peak of a note cut at `cut` (e at full level before it, then times the release decay — power factor k2 per
+ * sample — for `tail` samples, within the first n samples) for cut = 0, PEAK_GRID, 2·PEAK_GRID, .., in dB, up to the
+ * first cut whose note reaches the whole peak (sliding maximum of dB(e[t]) + t·dB(k2): O(n)).
  */
-function shortOnsets(chans: Float32Array[], sr: number, pre: number, release: number, lo = pre - Math.round(SHORT_ONSET_MAX * sr), hi = pre + Math.round(SHORT_ONSET_MAX * sr), period = 0, anchor = -1): (gate: number) => number {
+function gatedPeaks(e: Float64Array, n: number, k2: number, tail: number, top: number): Float32Array {
+  // (linear: f[t] = e[t]·k2^t, renormalised every RENORM samples so the decay never underflows)
+  const RENORM = 4096;
+  const f = new Float64Array(n); // in block j = t / RENORM: e[t]·k2^(t - RENORM·j)
+  let g = 1;
+  for (let t = 0; t < n; t++) {
+    if (t % RENORM === 0) g = 1;
+    f[t] = e[t] * g;
+    g *= k2;
+  }
+  const kb = Math.pow(k2, RENORM);
+  // value of f[t] re block jr: f[t]·k2^(RENORM·(jt - jr)) (t in block jt >= jr)
+  const at = (t: number, jr: number): number => f[t] * Math.pow(kb, ((t / RENORM) | 0) - jr);
+  const qu = new Int32Array(n);
+  let h = 0;
+  let qt = 0;
+  let right = 0;
+  let run = 0;
+  const topLin = Math.pow(10, top / 10);
+  const out: number[] = [];
+  for (let cut = 0; cut < n; cut++) {
+    if (cut % PEAK_GRID === 0) {
+      const end = Math.min(n, cut + tail);
+      while (right < end) {
+        const jr = (right / RENORM) | 0;
+        while (qt > h && at(qu[qt - 1], jr) <= f[right]) qt--;
+        qu[qt++] = right++;
+      }
+      while (h < qt && qu[h] < cut) h++;
+      // the decayed peak after the cut: f[t] re the cut's own block, then divided by k2^(cut - block start)
+      const jc = (cut / RENORM) | 0;
+      const q = h < qt ? at(qu[h], jc) / Math.pow(k2, cut - jc * RENORM) : 0;
+      const mg = Math.max(run, q);
+      out.push(mg > 0 ? 10 * Math.log10(mg) : -300);
+      if (mg >= topLin * (1 - 1e-9)) break;
+    }
+    if (e[cut] > run) run = e[cut];
+  }
+  return Float32Array.from(out);
+}
+
+/**
+ * Short notes of sustained instruments (Sample.preAt; `anchor`: their gate counts from Sample.ga): a note
+ * gated while its attack still rises peaks lower, so it is heard earlier in the sample than a whole note —
+ * on the same criterion, relative to its own peak. `e`: the power envelope of what the note plays (ungated);
+ * a gate g (output samples) cuts it at anchor + g, then the release decays it (time constant `release`):
+ *   M(g)    the gated note's peak: the maximum of e up to the cut, then of e times the release decay, within
+ *           the whole note's window (its first 0.5 s after `pre`; gatedPeaks)
+ *   s(g)    the mean time at which e first reaches the levels of a 4 dB band around -10 dB re M(g) — and at
+ *           most RISE_MAX after the same band around -15 dB (the whole note's rule; bandMean)
+ *   preAt   pre - u * max(0, pre - s), u = (dB the gated peak is under the whole note's) / SHORT_BLEND_DB,
+ *           at most 1 — `pre` itself from the gate whose note reaches the whole note's peak on
+ * then at most as much later in the sample as the gate is longer (a longer note never ends earlier: its sample starts
+ * that much earlier; a slow attack's band climbs faster than its gated peak). Continuous and non-decreasing in the
+ * gate, never later than `pre` (a short note does not start later in the sample than a long one); it does not depend
+ * on how long the sample is rendered. Kept as a table of gates (GATE_GRID apart, linear in between: a few kB).
+ */
+function sustainedOnsets(e: Float64Array, sr: number, pre: number, anchor: number, release: number, balanced = false): (gate: number) => number {
+  const n = Math.min(e.length, pre + Math.round(ONSET_LOOK * sr));
+  if (n < 2) return () => pre;
+  const lt = levelTable(e, n);
+  if (!Number.isFinite(lt.top)) return () => pre;
+  const rel = Math.max(0.001, release);
+  const k2 = Math.exp(-2 / (rel * sr));
+  const peaks = gatedPeaks(e, n, k2, Math.round(MIX_TAIL_TAU * rel * sr), lt.top);
+  return shortOnsetsOf(lt, peaks, n, pre, anchor, Math.round(RISE_MAX * sr), balanced);
+}
+
+/** a short note's onset is kept every this many output samples of its gate (linear in between) */
+const GATE_GRID = 48;
+
+function shortOnsetsOf(lt: LevelTable, peaks: Float32Array, n: number, pre: number, anchor: number, rise: number, balanced: boolean): (gate: number) => number {
+  const mlDb = lt.top;
+  const last = peaks.length - 1;
+  // the grid ends where a cut note reaches the whole peak, or at n (every later cut: the whole note)
+  const xEnd = peaks[last] >= mlDb - 1e-4 ? last * PEAK_GRID : n;
+  const peakAt = (cut: number): number => {
+    if (cut >= xEnd) return mlDb;
+    const q = Math.floor(cut / PEAK_GRID);
+    const x0 = q * PEAK_GRID;
+    if (q < last) return peaks[q] + ((cut - x0) / PEAK_GRID) * (peaks[q + 1] - peaks[q]);
+    return peaks[last] + ((cut - x0) / Math.max(1, xEnd - x0)) * (mlDb - peaks[last]);
+  };
+  const ruleAt = (g: number): number => {
+    const gDb = peakAt(Math.max(0, anchor + g));
+    if (!(gDb > mlDb - 300) || gDb >= mlDb - 1e-4) return pre;
+    const u = Math.min(1, (mlDb - gDb) / SHORT_BLEND_DB);
+    const s10 = bandMean(lt, gDb + ONSET_DB - SHORT_BAND_DB, gDb + ONSET_DB + SHORT_BAND_DB);
+    const s15 = balanced ? bandMean(lt, gDb + FLOOR_DB, gDb + ONSET_DB) + rise / 2 : bandMean(lt, gDb + FLOOR_DB - SHORT_BAND_DB, gDb + FLOOR_DB + SHORT_BAND_DB) + rise;
+    return Math.max(0, Math.min(pre, pre - u * Math.max(0, pre - Math.min(s10, s15))));
+  };
+  // on a grid of gates up to the one whose note reaches the whole peak, a note GATE_GRID longer at most GATE_GRID later
+  // in the sample (the sample then starts that much earlier: a longer note never ends earlier)
+  const gEnd = Math.max(1, xEnd - anchor);
+  const K = Math.ceil(gEnd / GATE_GRID);
+  const P = new Float32Array(K + 1);
+  P[0] = ruleAt(1);
+  for (let k = 1; k <= K; k++) P[k] = Math.min(ruleAt(k * GATE_GRID), P[k - 1] + GATE_GRID);
+  return onsetOfGate(P, pre);
+}
+
+/** Sample.preAt of a short-note table (shortOnsetsOf; its own scope: the tables it was made from are not kept) */
+function onsetOfGate(P: Float32Array, pre: number): (gate: number) => number {
+  const K = P.length - 1;
+  return (gate: number): number => {
+    const g = Math.max(1, gate);
+    const x = g / GATE_GRID;
+    if (x >= K) return Math.round(Math.min(pre, P[K] + (g - K * GATE_GRID)));
+    const k = Math.floor(x);
+    return Math.round(P[k] + (x - k) * (P[k + 1] - P[k]));
+  };
+}
+
+/**
+ * Short notes of spread attacks (strStab, two takes summed): a note gated while its attack is still rising
+ * peaks lower, so its own onset sits earlier in the sample than the whole note's. Returns gate (output
+ * samples) → onset index (memoised; within [lo, hi]: SHORT_ONSET_MAX around `pre`): the note is cut `gate`
+ * samples after the onset it starts on — the fixed point p = onset(the note cut at p + gate), on the 5 ms RMS
+ * -10 dB point.
+ */
+function shortOnsets(chans: Float32Array[], sr: number, pre: number, release: number): (gate: number) => number {
+  const lo = pre - Math.round(SHORT_ONSET_MAX * sr);
+  const hi = pre + Math.round(SHORT_ONSET_MAX * sr);
   const rel = Math.max(0.001, release);
   const k = Math.exp(-1 / (rel * sr));
   const tail = Math.round(MIX_TAIL_TAU * rel * sr);
   const whole = Math.round(0.5 * sr);
   const memo = new Map<number, number>();
-  // sustained (anchor): the note's mono sum, shared by every gate
-  let x: Float32Array | null = null;
   return (gate: number): number => {
     const g = Math.max(1, Math.round(gate));
     if (!(g < whole)) return pre;
     let p = memo.get(g);
     if (p === undefined) {
-      if (anchor >= 0) {
-        if (!x) {
-          const len = Math.min(chans[0].length, Math.max(pre, anchor + whole) + whole + tail);
-          x = new Float32Array(len);
-          const inv = 1 / chans.length;
-          for (const c of chans) for (let i = 0; i < len; i++) x[i] += c[i] * inv;
-        }
-        const cut = anchor + g;
-        const n = Math.min(x.length, cut + tail, Math.max(pre, cut) + whole);
-        p = Math.max(lo, Math.min(hi, gatedOnset(x, sr, pre, cut, k, n, period)));
-      } else {
-        p = pre;
-        for (let it = 0; it < 12; it++) {
-          const q = Math.max(lo, Math.min(hi, heardOnset(chans, sr, p, p + g, k, tail)));
-          if (q === p) break;
-          p = q;
-        }
+      p = pre;
+      for (let it = 0; it < 12; it++) {
+        const q = Math.max(lo, Math.min(hi, heardOnset(chans, sr, p, p + g, k, tail)));
+        if (q === p) break;
+        p = q;
       }
       memo.set(g, p);
     }
@@ -1164,21 +1612,41 @@ function lpCompensation(lp: number | undefined, midi: number): number {
   return Math.min(2, Math.sqrt(1 + r * r * r * r));
 }
 
+/** furthest a voicing's tone filters may move a sustained note's beat (s) */
+const FILTER_ONSET_MAX = 0.035;
+
+/** Where the whole-note rule puts the beat on an envelope's crossings, smoothed over level bands (as a short note's
+ *  onset is, sustainedOnsets): the mean crossing of the 4 dB around -10 dB re its maximum, at most RISE_MAX after
+ *  that of the 4 dB around -15 dB — continuous in the envelope, so a plateau near either level cannot flip it;
+ *  `balanced` (SampledSpec.balance): at most RISE_MAX / 2 after the mean crossing of -15..-10 dB */
+function bandOnset(t: LevelTable, sr: number, balanced = false): number {
+  const m = t.top;
+  const at10 = bandMean(t, m + ONSET_DB - SHORT_BAND_DB, m + ONSET_DB + SHORT_BAND_DB);
+  if (balanced) return Math.min(at10, bandMean(t, m + FLOOR_DB, m + ONSET_DB) + Math.round((RISE_MAX / 2) * sr));
+  return Math.min(at10, bandMean(t, m + FLOOR_DB - SHORT_BAND_DB, m + FLOOR_DB + SHORT_BAND_DB) + Math.round(RISE_MAX * sr));
+}
+
 /**
- * Two takes as a centred note plays them, for measuring its beat: aligned as widen() aligns them and
- * summed, the second matched to the first's power over the pre-roll and the first 0.5 s after their
- * beat — a fixed window every rendering of the note holds, so the beat does not depend on the
- * rendered length (widen() matches them over the whole rendering, as it always has: the loudness).
- * Returns that window only.
+ * The takes of a sustained note as it plays them, for measuring its onset: the primary take alone, or two takes
+ * summed for `width` where widen() puts them (`al`), the second matched to the first's power over the pre-roll
+ * and the first 0.5 s after their beat — a fixed window every rendering of the note holds, so its onset does not
+ * depend on the rendered length (widen() matches them over the whole rendering, as it always has: the
+ * loudness). Returns that window only.
  */
-function sumForOnset(a: Rendered, b: Rendered, sr: number): Float32Array {
-  const al = alignTakes(a, b, sr);
-  // (every rendering holds each take up to its beat + 0.5 s)
-  const n = Math.min(al.offA + a.pre, al.offB + b.pre) + Math.round(ONSET_LOOK * sr);
+function measuredTakes(a: Rendered, b: Rendered | null, sr: number, al: TakesAlign | null = null): Float32Array[] {
+  if (!b || !al) {
+    const n = Math.min(a.chans[0].length, a.pre + Math.round(ONSET_LOOK * sr));
+    if (a.chans.length === 1) return [a.chans[0].slice(0, n)];
+    const x = new Float32Array(n);
+    const inv = 1 / a.chans.length;
+    for (const c of a.chans) for (let i = 0; i < n; i++) x[i] += c[i] * inv;
+    return [x];
+  }
+  const n = al.pre + Math.round(ONSET_LOOK * sr);
   const xa = new Float32Array(n);
   const xb = new Float32Array(n);
-  xa.set(a.chans[0].subarray(0, Math.max(0, n - al.offA)), al.offA);
-  xb.set(b.chans[0].subarray(0, Math.max(0, n - al.offB)), al.offB);
+  xa.set(a.chans[0].subarray(0, Math.max(0, Math.min(a.chans[0].length, n - al.offA))), al.offA);
+  xb.set(b.chans[0].subarray(0, Math.max(0, Math.min(b.chans[0].length, n - al.offB))), al.offB);
   let pa = 0;
   let pb = 0;
   for (let i = 0; i < n; i += 4) {
@@ -1186,8 +1654,41 @@ function sumForOnset(a: Rendered, b: Rendered, sr: number): Float32Array {
     pb += xb[i] * xb[i];
   }
   const kb = pb > 0 ? Math.sqrt(pa / pb) : 0;
-  for (let i = 0; i < n; i++) xa[i] += kb * xb[i];
-  return xa;
+  for (let i = 0; i < n; i++) xb[i] *= kb;
+  return [xa, xb];
+}
+
+/** test hook (debugTakes): the two takes of a sustained `width` note as its centred note plays them — A + B = the
+ *  mid (L + R) / 2 of the finished sample — and the shift takesShift chose */
+let takesProbe: ((t: { A: Float32Array; B: Float32Array; shift: number; offA: number; offB: number; beat: number; meas: Float32Array[] | null }) => void) | null = null;
+
+/** widen()'s mid, split into the two takes' parts (A + B = (L + R) / 2) */
+function widenParts(a: Rendered, b: Rendered, width: number, al: TakesAlign, w: Rendered): Float32Array[] {
+  const n = w.chans[0].length;
+  const xl = new Float32Array(n);
+  const xr = new Float32Array(n);
+  xl.set(a.chans[0], al.offA);
+  xr.set(b.chans[0], al.offB);
+  const th = Math.asin(clamp(width, 0, 1)) / 2;
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  let pl = 0;
+  let pr = 0;
+  let plr = 0;
+  for (let i = 0; i < n; i += 4) {
+    pl += xl[i] * xl[i];
+    pr += xr[i] * xr[i];
+    plr += xl[i] * xr[i];
+  }
+  const kr = pr > 0 ? Math.sqrt(pl / pr) : 0;
+  const rho = pl > 0 && pr > 0 ? plr / Math.sqrt(pl * pr) : 0;
+  const norm = 1 / Math.sqrt(Math.max(1e-6, c * c + s * s + 2 * c * s * rho));
+  const h = 0.5 * (c + s) * norm;
+  for (let i = 0; i < n; i++) {
+    xl[i] *= h;
+    xr[i] *= h * kr;
+  }
+  return [xl, xr];
 }
 
 function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number, variant: number, lenSec: number, layer: number, gain: number, short = false, gateSec = 0): Sample {
@@ -1196,74 +1697,122 @@ function renderZone(spec: SampledSpec, set: StoredSet, sr: number, midi: number,
   const z = ch.zone;
   gain *= lpCompensation(spec.lp, ch.midi);
   let r = renderOne(spec, set, z, ch.midi, ch.cents, sr, lenSec, z.g * gain * ch.gain, short, gateSec);
+  const sustain = spec.kind === 'sustain';
   // spread attacks (strStab) summed from two takes: the beat on the onset of their sum
   let summed = false;
-  // sustained notes of `width` sets: the takes' dwell weight and what the beat is measured on — their
-  // centred sum with the second take matched to the first over a fixed window (sumForOnset: the played
-  // sample matches them over its whole length, as it always has, for its loudness; the beat must not
-  // depend on how long the note is rendered)
-  let an: Float32Array[] | null = null;
-  let takesDwell = 0;
+  // sustained notes: the takes as the note plays them (two for `width` sets, aligned on their beats) — what its
+  // onset is measured on: its short notes' (Sample.preAt), the beat of two takes summed and of a tone-filtered
+  // voicing; `takesDw`: how far the takes' beats sit on the attack of a dwell (ZoneDef.dw, their mean)
+  let meas: Float32Array[] | null = null;
+  let takesDw = 0;
+  let gainAt: ((gate: number) => number) | undefined;
+  let sendAt: ((gate: number) => number) | undefined;
+  const period = spec.unpitched ? 0 : sr / (440 * Math.pow(2, (ch.midi + ch.cents / 100 - 69) / 12));
+  // (test hook: the two takes' parts of the mid, processed as the output channels are)
+  let parts: Float32Array[] = [];
+  let shift = 0;
+  let offs = [0, 0, 0];
   if (spec.width !== undefined && set.ch.length === 1) {
     const pz = partnerZone(spec, set, ch, layer);
     const b = pz
       ? renderOne(spec, set, pz, ch.midi, ch.cents, sr, lenSec, pz.g * gain * ch.gain, short)
       : renderOne(spec, set, z, ch.midi, ch.cents + 6, sr, lenSec, z.g * gain * ch.gain, short);
-    if (spec.kind === 'sustain' && !short && !spec.sumOnset) {
-      takesDwell = Math.max(z.dw ?? 0, (pz ?? z).dw ?? 0);
-      an = [sumForOnset(r, b, sr)];
+    // sustained: two recordings of one note, coherent in their attack — started together on their beats, a fraction
+    // of a period apart where their sum would otherwise cancel (takesShift); the detuned copy of the same recording
+    // starts in phase with it by construction (no other recording: its sum is the take doubled, then beating)
+    const coherent = sustain && !spec.sumOnset;
+    shift = coherent && pz ? takesShift(r, b, period, sr) : 0;
+    const al = alignTakes(r, b, shift);
+    offs = [al.offA, al.offB, al.pre];
+    if (coherent) {
+      meas = measuredTakes(r, b, sr, al);
+      takesDw = ((z.dw ?? 0) + ((pz ?? z).dw ?? 0)) / 2;
     }
-    r = widen(r, b, spec.width, sr);
+    const primary = r;
+    r = widen(r, b, spec.width, al);
+    if (takesProbe) parts = widenParts(primary, b, spec.width, al, r);
+    if (coherent) ({ dry: gainAt, send: sendAt } = takesLoudness(primary, b, r, spec.width, spec.release, sr));
     if (spec.sumOnset) {
       // the beat on the onset of the takes' sum (what is heard), at most SUM_ONSET_MAX from theirs
       const lim = Math.round(SUM_ONSET_MAX * sr);
       r.pre = Math.max(r.pre - lim, Math.min(r.pre + lim, heardOnset(r.chans, sr, r.pre)));
       summed = true;
     }
-  }
+  } else if (sustain) meas = measuredTakes(r, null, sr);
   const outs = r.chans;
-  const shaped = an ? [...outs, ...an] : outs;
   // the pre-roll before the attack starts from silence: fade in its first <= 1.5 ms (only ever the
   // pre-roll, never the attack), so MP3 pre-echo of an attack right after the zone start cannot step in
   const nPre = Math.min(r.pre, Math.round(0.0015 * sr));
+  const shaped = [...outs, ...(meas ?? []), ...parts];
   for (const o of shaped) for (let i = 0; i < nPre && i < o.length; i++) o[i] *= (i + 0.5) / nPre;
-  // tone shaping
-  if (spec.lp) for (const o of shaped) Biquad.lp(sr, spec.lp, 0.7071).run(o);
-  if (spec.hp) for (const o of shaped) Biquad.hp(sr, spec.hp, 0.7071).run(o);
-  // A single take keeps the bank's beat (its perceptual onset, mapped through the playback ratio: a
-  // note shifted from its recording plays the same attack faster or slower). Two takes summed (aligned
-  // by widen(): their beat is the mean of the takes') are heard together and can interfere in the
-  // attack (a partial cancellation, two reeds beating): the beat goes on the perceptual onset of what a
-  // centred note plays — their sum, after the tone filters — within SUM_ONSET_MAX and the pre-roll a
-  // Sample may carry. Takes whose beats sit on the attack of a dwell keep them (by that weight, ZoneDef
-  // dw): bow attacks onto plateaus sum to an envelope whose -10 dB point is not where they are heard.
+  // A sustained note's beat: the bank's (its perceptual onset, mapped through the playback ratio: a note shifted
+  // from its recording plays the same attack faster or slower); two takes summed are aligned on theirs.
+  // - A tone-filtered voicing (accChord's high-pass takes the fundamental out of its low notes' attack) is heard
+  //   where its filtered attack is: one take on the whole-note rule applied to what it plays (its filtered
+  //   envelope, band-smoothed; the dry accordion's chord voicings balanced across -15..-10 dB, SampledSpec.balance);
+  //   two takes summed moved by what the filters move the band-smoothed rule (bandOnset: a plateau cannot flip it;
+  //   the same window before and after them) before their sum is placed — at most FILTER_ONSET_MAX.
+  // - Two takes summed are heard together and interfere in the attack (two reeds beating): the beat goes on the
+  //   perceptual onset of what a centred note plays — their sum, after the tone filters — within SUM_ONSET_MAX and
+  //   the pre-roll a Sample may carry, earlier never below where the sum comes within 15 dB of its maximum; less, by
+  //   their mean dwell weight, for takes whose beats sit on the attack of a dwell: a sum with such a take is heard
+  //   where that attack is, not where its level crossings fall (they swing by tens of ms with the takes'
+  //   interference and plateau levels).
   const maxPre = Math.round(MAX_PRE_SEC * sr);
-  const period = spec.unpitched ? 0 : sr / (440 * Math.pow(2, (ch.midi + ch.cents / 100 - 69) / 12));
+  let e: Float64Array | null = null;
   let preOut = r.pre;
-  if (an && takesDwell < 1) {
-    const lim = Math.round(SUM_ONSET_MAX * sr);
-    const x = an[0];
-    const on = perceptualOnset(onsetPower(an, sr, x.length, period), sr, r.pre, x.length).p;
-    const move = Math.round((1 - takesDwell) * Math.max(-lim, Math.min(lim, on - r.pre)));
-    preOut = Math.max(0, Math.min(Math.max(r.pre, maxPre), r.pre + move));
+  if (meas) {
+    const n = meas[0].length;
+    e = onsetPower(meas, sr, n, period);
+    if (spec.lp || spec.hp) {
+      const t0 = levelTable(e, n);
+      for (const o of meas) {
+        if (spec.lp) Biquad.lp(sr, spec.lp, 0.7071).run(o);
+        if (spec.hp) Biquad.hp(sr, spec.hp, 0.7071).run(o);
+      }
+      e = onsetPower(meas, sr, n, period);
+      const b1 = bandOnset(levelTable(e, n), sr, !!spec.balance && meas.length === 1);
+      // one take: on the rule applied to what it plays (band-smoothed: neighbouring notes' filtered attacks differ a
+      // little, their beats too); a beat on the attack of a dwell kept by its weight. Two takes: moved by what the
+      // filters move the rule, then placed as a sum below
+      const to = meas.length > 1 ? r.pre + b1 - bandOnset(t0, sr) : r.pre + (1 - (z.dw ?? 0)) * (b1 - r.pre);
+      const lim = Math.round(FILTER_ONSET_MAX * sr);
+      if (Number.isFinite(to)) preOut = Math.max(0, Math.min(Math.max(r.pre, maxPre), Math.round(Math.max(r.pre - lim, Math.min(r.pre + lim, to)))));
+    }
+    if (meas.length > 1 && takesDw < 1) {
+      // the sum on the band-smoothed rule (bandOnset: a plateau of the sum near -10 dB, its dwell, cannot flip it
+      // between neighbouring notes), earlier never below its -15 dB point
+      const lim = Math.round(SUM_ONSET_MAX * sr);
+      const lt = levelTable(e, n);
+      const on = bandOnset(lt, sr);
+      const p15 = crossingOf(lt, lt.top + FLOOR_DB);
+      if (Number.isFinite(on)) {
+        let move = Math.round((1 - takesDw) * Math.max(-lim, Math.min(lim, on - preOut)));
+        if (move < 0) move = Math.max(move, Math.min(0, p15 - preOut));
+        preOut = Math.max(0, Math.min(Math.max(preOut, maxPre), preOut + move));
+      }
+    }
   }
+  // tone shaping
+  const toned = [...outs, ...parts];
+  if (spec.lp) for (const o of toned) Biquad.lp(sr, spec.lp, 0.7071).run(o);
+  if (spec.hp) for (const o of toned) Biquad.hp(sr, spec.hp, 0.7071).run(o);
   // optional extra attack ramp (after the onset) and a click-free end; a ringing recording cut at
   // maxLen fades out over its last 0.3 s (a 6 ms cut of a bell still at -20 dB is a click)
   const nA = spec.attack ? Math.round(spec.attack * sr) : 0;
-  for (const o of outs) {
+  for (const o of toned) {
     for (let i = 0; i < nA && preOut + i < o.length; i++) o[preOut + i] *= i / nA;
     const nf = r.truncated ? Math.min(o.length >> 2, Math.round(0.3 * sr)) : Math.min(o.length >> 2, Math.round(0.006 * sr));
     if (r.truncated) for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / nf);
     else for (let i = 0; i < nf; i++) o[o.length - 1 - i] *= i / nf;
   }
-  // short notes of summed spread attacks: their own onsets (read from the finished channels); short
-  // notes of sustained instruments the same (on what the beat is measured on), anywhere in their
-  // pre-roll (a slow attack cut short is all build-up: its own onset can be where it emerges), never
-  // later than the whole note's
+  if (takesProbe && parts.length === 2) takesProbe({ A: parts[0], B: parts[1], shift, offA: offs[0], offB: offs[1], beat: offs[2], meas });
+  // short notes of summed spread attacks: their own onsets (read from the finished channels); short notes of
+  // sustained instruments on the same criterion as a whole note, relative to their own peak (sustainedOnsets)
   // (sustained notes keep the gate anchor of their audio wherever their beat is placed)
-  const ga = spec.kind === 'sustain' ? Math.max(0, r.ga) : undefined;
-  const preAt = summed && !spec.ring ? shortOnsets(outs, sr, preOut, spec.release) : ga !== undefined ? shortOnsets(an ?? outs, sr, preOut, spec.release, 0, preOut, period, ga) : undefined;
-  return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut, preAt, ga, take0: r.take0 ?? 0 };
+  const ga = sustain ? Math.max(0, r.ga) : undefined;
+  const preAt = summed && !spec.ring ? shortOnsets(outs, sr, preOut, spec.release) : e && ga !== undefined ? sustainedOnsets(e, sr, preOut, ga, spec.release, !!spec.balance) : undefined;
+  return { l: outs[0], r: outs.length > 1 ? outs[1] : null, pre: preOut, preAt, ga, take0: r.take0 ?? 0, gainAt, sendAt };
 }
 
 /** test hook: the zone a note would use (measurement scripts) */
@@ -1282,6 +1831,36 @@ export function debugChoice(
   if (!c) return null;
   const partner = spec.width !== undefined && set.ch.length === 1 ? partnerZone(spec, set, c, layer) : null;
   return { set: spec.set, zone: c.zone, midi: c.midi, cents: c.cents, gain: c.gain, fold: c.fold, partner };
+}
+
+/** test hook: a two-take note (sustained `width` sets) as Sample + the parts of its mid each take plays (A + B =
+ *  (L + R) / 2, tone filters and fades included), the shift takesShift chose and the takes' beat before the sum is
+ *  placed (output samples), or null */
+export function debugTakes(
+  id: string,
+  sr: number,
+  midi: number,
+  variant: number,
+  lenSec: number,
+  layer = 0,
+  art = 0,
+): { sample: Sample; A: Float32Array; B: Float32Array; shift: number; offA: number; offB: number; beat: number; meas: Float32Array[] | null } | null {
+  const real = INSTRUMENT_ALIASES[id] ?? id;
+  const spec = SAMPLED_SPECS.find((s) => s.id === real);
+  if (!spec) return null;
+  const set = bank.get(spec.set);
+  if (!set) return null;
+  let got: { A: Float32Array; B: Float32Array; shift: number; offA: number; offB: number; beat: number; meas: Float32Array[] | null } | null = null;
+  takesProbe = (t) => {
+    got = t;
+  };
+  try {
+    const sample = renderZone(spec, set, sr, midi, variant, lenSec, layer, Math.pow(10, (spec.gainDb ?? 0) / 20), art === 1 && !!spec.short);
+    const g = got as { A: Float32Array; B: Float32Array; shift: number; offA: number; offB: number; beat: number; meas: Float32Array[] | null } | null;
+    return g ? { sample, ...g } : null;
+  } finally {
+    takesProbe = null;
+  }
 }
 
 export const SAMPLED_IDS = (): string[] => SAMPLED_SPECS.map((s) => s.id);
