@@ -284,13 +284,13 @@ Recorded samples (54 sets). 71.71 s @ 48 kHz (with the 6 s loop pad), 2523 event
 
 | Measure | Value |
 |---|---|
-| Loop body (bars 2–23, 62.86 s) | **−16.3 LUFS** integrated (−16.26; whole file −16.4), short-term max −14.2 LUFS, RMS −19.1 dBFS |
-| Sample peak | **−1.56 dBFS** |
-| Soft clipper | 480 samples (0.007 %) |
+| Loop body (bars 2–23, 62.86 s) | **−16.3 LUFS** integrated (−16.29; whole file −16.4), short-term max −14.2 LUFS, RMS −19.2 dBFS |
+| Sample peak | **−1.63 dBFS** |
+| Soft clipper | 454 samples (0.007 %) |
 | Loop seam | −131.4 dBFS mismatch |
-| Spectral balance | < 250 Hz −6.4 dB, 250 Hz–4 kHz −1.2 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
+| Spectral balance | < 250 Hz −6.5 dB, 250 Hz–4 kHz −1.2 dB, > 4 kHz −18.8 dB (−22.2 before the polish: see "Polish" at the end) |
 | Lead | `choir` −20.5 LUFS solo (−4.3 LU); the chorus as heard (`choir,trpC,clar`) −1.4 LU in A's chorus bars, with `tbn` −1.9 LU in A2's; bassoons −2.5 LU and xylophone + piccolo −2.0 LU in the break; `choir,clar,tbn` −1.7 LU in `gath` |
-| Other channels (loop body, vs mix) | strings `vln` −6.5 LU, brass −8.8, trumpets `trpC` −6.7, trombones −8.9, organ −8.1, clarinets −8.6, bass drum −10.1, timpani −12.0, tam-tam −11.0, glockenspiel −12.8, cymbal −15.5, triangle −16.2, crash −18.3 |
+| Other channels (loop body, vs mix) | strings `vln` −6.4 LU, brass −8.8, trumpets `trpC` −6.7, trombones −8.8, organ −8.1, clarinets −8.6, bass drum −10.1, timpani −12.0, tam-tam −10.9, glockenspiel −12.8, cymbal −15.4, triangle −16.1, crash −18.3 |
 | Warnings | none |
 | `gainDb` | −7.8 |
 
@@ -301,9 +301,9 @@ tam-tam, triangle, glockenspiel, pan, woodblock and slapstick):
 
 | | intro | A | A2 | B | brk | gath | bld |
 |---|---|---|---|---|---|---|---|
-| mix | −20.6 | −16.7 | −15.7 | −14.9 | −18.0 | −18.3 | −15.6 |
+| mix | −20.6 | −16.7 | −15.7 | −15.0 | −18.0 | −18.3 | −15.6 |
 | choir + choirO + trpC + clar | −24.3 | −18.2 | −19.2 | −18.1 | — | −20.5 | −21.5 |
-| strings | — | −20.5 | −20.0 | −23.5 | −26.7 | −25.0 | −20.2 |
+| strings | — | −20.5 | −20.0 | −24.2 | −26.7 | −25.0 | −20.2 |
 | brass + tuba | — | −24.0 | −22.7 | −25.6 | −27.4 | −27.0 | −23.5 |
 | bassoons + piccolo + xylophone | — | — | −22.1 | — | −20.2 | — | — |
 | organ | −29.2 | — | −27.3 | −23.3 | — | — | −24.3 |
@@ -311,13 +311,21 @@ tam-tam, triangle, glockenspiel, pan, woodblock and slapstick):
 
 — = the group does not play there (at most a reverb tail of the previous section).
 
+The sampler starts the tones of a chord, and the two takes of each tone, together on the beat, so
+tones an octave or a unison apart add in or out of phase by voicing. The organ's chords, the choir's
+notes in B and the low hum in `gath` therefore carry level offsets (`ORGAN_DB`, `CHOIR_B_DB` and the
+`choirO` velocity in `finalboss.ts`) that keep each at the level the arrangement was balanced with;
+in B the organ's bass also doubles the basses note for note, and those unisons add up in its 2nd and
+4th bars, so the basses play B 3 dB softer (B's mix within 0.2 LU of that balance, the chorus 3.1 LU
+under it).
+
 Per bar (K-weighted LUFS of the mix over each bar, the loop as it repeats; loop body −16.3):
 
 | Bars | Section | LUFS per bar |
 |---|---|---|
 | 2–6 | A | −18.6, −15.9, −15.5, −17.3, −16.8 |
 | 7–11 | A2 | −17.4, −14.5, −14.5, −16.7, −16.3 |
-| 12–15 | B | −15.1, −14.8, −15.2, −14.6 |
+| 12–15 | B | −15.2, −14.9, −15.2, −14.8 |
 | 16–19 | brk | −17.4, −18.5, −18.3, −17.6 |
 | 20–21 | gath | −19.1, −17.5 |
 | 22–23 | bld | −17.6, −14.3 |
@@ -400,7 +408,7 @@ loudest:
 | intro (0.3 → 0.62) | +9.9, +24.4, **+28.4 dB** | 0.55 LU | −9.5 LU / (doom pad only) |
 | A, into A2's hammer (0.28 → 0.55) | +8.7, +12.1, +17.8, **+19.8 dB** | 0.26 LU | −12.0 / −3.7 LU |
 | A2, into B (0.28 → 0.55) | +8.0, +12.1, +20.0, **+18.0 dB** | 0.27 LU | −12.5 / −3.2 LU |
-| B, into each fff blow (0.55 / 0.67) | **+11.5 / +13.7 dB** | 0.15 / 0.29 LU | −14.8 / −12.0 LU against −3.7 / −3.5 LU |
+| B, into each fff blow (0.55 / 0.67) | **+11.6 / +13.7 dB** | 0.16 / 0.30 LU | −14.6 / −11.8 LU against −3.5 / −3.4 LU |
 | gath (0.3 → 0.45) | +7.4, **+12.9 dB** | 0.12 LU | −16.3 / −5.0 LU |
 | bld, into the loop (0.3 → 0.66) | +2.8, +6.3, +9.0, **+25.8 dB** | 0.47 LU | −10.1 / −5.3 LU |
 
@@ -419,9 +427,9 @@ are +10.2, +19.6, +17.2, +24.2 dB), and both strokes are louder (velocity 0.8 �
 | A2 downbeat, before (v 0.8) | +0.7 dB | — | +0.7 dB | +1.4 dB | — |
 | A2 downbeat, after (v 1.3) + crash | +1.1 dB; **crash +18.6 dB** | **+7.0 dB** | +2.8 dB | **+4.8 dB** | 1.6 LU |
 | end of B, before (v 0.75) | +1.0 dB | — | +1.5 dB | +5.3 dB | — |
-| end of B, after (v 1.2) | +2.9 dB | **+3.9 dB** | **+3.7 dB** | **+10.5 dB** | 0.8 LU |
+| end of B, after (v 1.2) | +3.0 dB | **+3.9 dB** | **+3.7 dB** | **+10.6 dB** | 0.8 LU |
 
-Per section the tam-tam sits 11.9 LU under the mix in A2 and 13.1 in B (the chorus 3.5 and 3.2).
+Per section the tam-tam sits 11.9 LU under the mix in A2 and 13.0 in B (the chorus 3.5 and 3.1).
 
 **High-frequency life.** The track was much darker than the other nine: render-song's > 4 kHz
 share −22.2 dB (the review measured −22.6 on the old bank) against −14.7 (menu) … −19.4
@@ -442,27 +450,27 @@ own accents and lines:
 | > 4 kHz share | intro | A | A2 | B | brk | gath | bld | loop (render-song) |
 |---|---|---|---|---|---|---|---|---|
 | before | −22.0 | −23.1 | −23.0 | −26.5 | −17.1 | −26.0 | −23.1 | **−22.2 dB** |
-| after | −21.9 | −18.0 | −18.6 | −19.9 | −17.0 | −25.8 | −20.0 | **−18.8 dB** |
+| after | −21.9 | −18.0 | −18.6 | −19.8 | −17.0 | −25.8 | −20.0 | **−18.8 dB** |
 
 (The "after" row is the current render, with the cymbal rolls on their downbeats.)
 The loop's > 4 kHz share is now −18.8 dB, inside the other tracks' range, between `boss` (−18.7)
 and `gameover` (−19.4): the air above 4 kHz that the orchestra lacked is the brightness this polish
 set out to give it, and the goal is met on that measure. By its spectral centroid the track is still
-the darkest of the ten: 785 Hz over the loop body, against 826 Hz (`victory`) to 1078 Hz (`menu`)
+the darkest of the ten: 791 Hz over the loop body, against 826 Hz (`victory`) to 1078 Hz (`menu`)
 for the others (scratch Welch spectrum of the mono loop body, master output). That is its low-mid
-weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.6 dB of the
+weight, not a lack of highs: it has the most energy at 125–250 Hz of any track (−7.7 dB of the
 total, the others −9.2 to −12.8 dB: trombones, tuba, organ pedal, timpani, cellos and basses, the
 bass drum), which pulls a full-band centroid down. Above 250 Hz its centroid is 1048 Hz, inside the
 others' 942–1408 Hz; its 2–5 kHz presence and its > 4 kHz share, each against its own 250 Hz–2 kHz
 band (−10.7 and −15.8 dB), are inside theirs (−6.0 to −14.6 and −11.0 to −18.4 dB). Moving the
-full-band centroid into the others' range would take about +1.3 dB over all of 2–5 kHz, or 2 dB less
+full-band centroid into the others' range would take about +1.1 dB over all of 2–5 kHz, or 1.7 dB less
 at 125–250 Hz: a different balance from the Dies irae's, which keeps its weight. The new parts are
 heard without leading:
 
 | Part | Notes rising ≥ 3 dB | Median rise | Part vs mix (momentary, median) | Per section (LU): part / chorus / violins |
 |---|---|---|---|---|
-| triangle | 35 of 35 | +13.6 dB | −16.7 LU | A −14.8 / −1.5 / −5.9; A2 −15.6 / −3.5 / −6.0; B −20.4 / −3.2 / −11.5 |
-| glockenspiel | 132 of 132 | +16.9 dB | −13.0 LU | A −10.5; A2 −11.5; B −16.9 |
+| triangle | 35 of 35 | +13.6 dB | −16.7 LU | A −14.8 / −1.5 / −5.9; A2 −15.6 / −3.5 / −6.0; B −20.2 / −3.1 / −11.4 |
+| glockenspiel | 132 of 132 | +16.9 dB | −13.0 LU | A −10.5; A2 −11.5; B −16.7 |
 
-Loop body −16.3 LUFS, peak −1.56 dBFS, soft clipper 0.007 %, no warnings (table above). Melody
+Loop body −16.3 LUFS, peak −1.63 dBFS, soft clipper 0.007 %, no warnings (table above). Melody
 channels are untouched; all compare.py commands above give the same results.

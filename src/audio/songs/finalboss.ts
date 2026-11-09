@@ -47,9 +47,11 @@ const at = (bar: number, list: Array<[number, number | string, number?, number?]
 // channel gain). The offsets below (dB) put each one back; per section the organ, choir and choirO solos are then
 // within 0.15 dB of 0b3eb2e, their loop-body levels within 0.05 dB. They are applied as velocity: the organ, choir and
 // choirO have one velocity layer and no round robins, so velocity × 10^(dB/32) (the note gain is velocity^1.6)
-// changes the level and never the recording that plays. Not undone by them: in B the organ's bass and the basses
-// (cb) play the same notes, and in its 2nd and 4th bars these unisons now add up (0b3eb2e: partly cancelling), so the
-// B mix is 0.3 LU louder than at 0b3eb2e with every part at its 0b3eb2e level.
+// changes the level and never the recording that plays. In B the organ's bass and the basses (cb) play the same
+// notes, and in its 2nd and 4th bars these unisons now add up (0b3eb2e: partly cancelling): with every part at its
+// 0b3eb2e level the low parts (cb, organ, tuba, cellos) came out 0.9 dB louder there, the B mix 0.3 LU, and the chorus
+// sat 3.2 LU under it (0b3eb2e 2.9). So the basses play B 3 dB under their 0b3eb2e level (the contrabass too has one
+// velocity layer and no round robins): the B mix is then within 0.2 LU of 0b3eb2e, the chorus 3.1 LU under it.
 
 /** velocity factor of a level change of `db` dB */
 const dbVel = (db: number): number => Math.pow(10, db / 32);
@@ -386,7 +388,8 @@ export const finalboss: SongDef = {
         mel('vln', `${T1_VLN} | ${T2_VLN} | ${T1_VLN} | ${T2_VLN} |`, { vel: 0.66 }),
         mel('strS', 'r:32 | r:16 A4+C#5+E5:12 r:4 | r:32 | r:16 A4+C#5+E5:12 r:4 |', { vel: 0.7 }),
         mel('brass', `${T1_BRS} | ${T2_BRS} | ${T1_BRS} | ${T2_BRS} |`, { vel: 0.85 }),
-        mel('cb', `${T1_CB} | ${T2_CB} | ${T1_CB} | ${T2_CB} |`, { vel: 0.75 }),
+        // 3 dB under 0b3eb2e's 0.75: their unisons with the organ's bass add up (see the top of the file)
+        mel('cb', `${T1_CB} | ${T2_CB} | ${T1_CB} | ${T2_CB} |`, { vel: 0.75 * dbVel(-3) }),
         mel('vc', `${T1_VC} | ${T2_VC} | ${T1_VC} | ${T2_VC} |`, { vel: 0.62 }),
         organ(`${T1_ORG} | ${T2_ORG} | ${T1_ORG} | ${T2_ORG} |`, 0.68),
         hits('timp', [...TIMP_T, ...at(2, TIMP_T)]),
