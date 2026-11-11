@@ -39,6 +39,7 @@ export interface BossDef {
   title: string;
   /** what it shouts on arrival */
   taunt: string;
+  /** informational: whether a stage's final boss is decided by StageDef.finalBoss */
   final?: boolean;
   /** AI pattern id (ai.ts) */
   pattern: string;
@@ -99,7 +100,7 @@ E({
   id: 'panna', name: 'Panna Invasora', en: 'Invading Cream', sprite: 'enemy.panna',
   radius: 15, hp: 16, speed: 46, damage: 7, xp: 2, behavior: 'puddler', params: { puddle: 'cream', interval: 2.4, r: 26, life: 5, slow: 0.35 },
   color: 'cream', juice: '#fff4dc', chunk: 'plastic',
-  info: { crime: 'Cream in carbonara', why: 'Roman carbonara is pasta, guanciale, egg yolk, Pecorino Romano and black pepper. The creaminess comes from emulsifying egg and cheese with starchy pasta water — cream is a shortcut that mutes everything.', severity: 5, quote: '"Basta con la panna nella carbonara!" ("Enough with cream in carbonara!") — protest sign at the Trevi Fountain, 2023' },
+  info: { crime: 'Cream where it does not belong', why: 'Carbonara, cacio e pepe, Alfredo, pesto, vongole, ragù on tagliatelle: in each of them the creaminess comes from egg, cheese, oil, clam juice or starchy pasta water. A carton of cream is the shortcut Italians spot first, and it mutes everything.', severity: 5, quote: '"Basta con la panna nella carbonara!" ("Enough with cream in carbonara!") — protest sign at the Trevi Fountain, 2023' },
 });
 E({
   id: 'forbici', name: 'Forbici Furiose', en: 'Furious Scissors', sprite: 'enemy.forbici',
@@ -123,25 +124,25 @@ E({
   id: 'cipolla', name: 'Cipolla Clandestina', en: 'Stowaway Onion', sprite: 'enemy.cipolla',
   radius: 15, hp: 34, speed: 44, damage: 8, xp: 3, behavior: 'chase', layers: 3, knockResist: 0.3,
   color: 'pink', juice: '#e8c9e8', chunk: 'cheese',
-  info: { crime: 'Onion in carbonara (or gricia)', why: "Rome's pork-and-pecorino pastas are built on guanciale fat — no soffritto, no onion. The onions in a viral 2016 French \"carbonara\" were among its most mocked ingredients.", severity: 4 },
+  info: { crime: 'Onion in carbonara or amatriciana', why: "Roman carbonara is guanciale, egg, Pecorino and pepper, and the 2020 EU Amatriciana STG excludes onion too (though old Roman amatriciane often used it). The onions in a viral 2016 French \"carbonara\" were among its most mocked ingredients. In Bologna, mind you, onion belongs in the soffritto of a ragù.", severity: 4 },
 });
 E({
   id: 'aglio', name: 'Aglio in Camicia', en: 'Garlic in Its Shirt', sprite: 'enemy.aglio',
   radius: 14, hp: 22, speed: 40, damage: 6, xp: 3, behavior: 'support', params: { r: 110, every: 1.2 },
   color: 'cream', juice: '#f4ecd6', chunk: 'cheese',
-  info: { crime: 'Garlic in amatriciana', why: "Amatrice's recipe — EU-protected since 2020 — is guanciale, tomato, Pecorino, a splash of white wine, pepper or chilli. No garlic. No onion.", severity: 4, quote: 'In 2015 a star chef revealed his TV "secret": garlic in its skin. The town of Amatrice answered with the true recipe; the chef said it was only a joke.' },
+  info: { crime: 'Garlic where it does not belong', why: "Garlic is essential in pesto, vongole and the Marinara, but the EU's Amatriciana STG excludes it, Bologna's registered ragù forbids it, and Roman purists ban it from carbonara and Alfredo. Amatrice's recipe is guanciale, tomato, Pecorino, a splash of white wine, pepper or chilli.", severity: 4, quote: 'In 2015 a star chef revealed his TV "secret": garlic in its skin. The town of Amatrice answered with the true recipe; the chef said it was only a joke.' },
 });
 E({
   id: 'bacon', name: 'Bacon Abusivo', en: 'Unlicensed Bacon', sprite: 'enemy.bacon',
   radius: 13, hp: 14, speed: 66, damage: 6, xp: 2, behavior: 'slither', params: { amp: 1.0, freq: 5 },
   color: 'pink', juice: '#e57a7a', chunk: 'tomato',
-  info: { crime: 'Bacon or ham instead of guanciale', why: 'Guanciale — cured pork cheek — melts into sweet, clean fat. Smoky bacon changes the flavour; ham makes it another dish entirely.', severity: 3, quote: 'Told that ham would make a "British carbonara", Gino D\'Acampo famously shot back (as reported): "If my grandmother had wheels, she would have been a bike!"' },
+  info: { crime: 'Bacon (or smoked pancetta) instead of guanciale', why: 'Guanciale, cured pork cheek, melts into sweet, clean fat and is never smoked. Bacon is the swap Italians spot most often in foreign carbonara, the Amatriciana STG names pancetta among its excluded ingredients, and even Bologna\'s registered ragù, which uses fresh pancetta, forbids the smoked kind.', severity: 3, quote: 'Told that ham would make a "British carbonara", Gino D\'Acampo famously shot back (as reported): "If my grandmother had wheels, she would have been a bike!"' },
 });
 E({
   id: 'piselli', name: 'Piselli Ribelli', en: 'Rebel Peas', sprite: 'enemy.piselli',
   radius: 8, hp: 4, speed: 88, damage: 3, xp: 1, behavior: 'swarm', params: { wobble: 0.9 },
   color: 'green', juice: '#7cc443', chunk: 'tomato',
-  info: { crime: 'Peas (and ham, and mushrooms) in carbonara', why: 'The 1980s "restaurant carbonara" piled in peas, ham, mushrooms and cream. Rome has never quite forgiven it.', severity: 3 },
+  info: { crime: 'Peas in carbonara', why: 'Peas are not part of carbonara: Coldiretti lists frozen peas among the distortions found in restaurants abroad. They are fine in other Italian pastas (and even in a Bolognese ragù), just not here.', severity: 3 },
 });
 E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
@@ -159,7 +160,7 @@ E({
   id: 'pollo', name: 'Pollo Infiltrato', en: 'Undercover Chicken', sprite: 'enemy.pollo',
   radius: 13, hp: 16, speed: 92, damage: 7, xp: 2, behavior: 'leaper', params: { range: 210, time: 0.6, cd: 2.4, height: 40 },
   color: 'orange', juice: '#e9a54b', chunk: 'bread',
-  info: { crime: 'Chicken in pasta', why: 'In an Italian meal pasta is the primo and chicken is a secondo — separate courses. Chicken pasta sauces are rare in Italian cooking.', severity: 4, quote: '"Mettere il pollo sulla pasta è un crimine in Italia" ("Putting chicken on pasta is a crime in Italy") — Trevi Fountain sign, 2023' },
+  info: { crime: 'Chicken in pasta (and on pizza)', why: 'In an Italian meal pasta is the primo and chicken is a secondo: separate courses. "Chicken Alfredo" is unknown in Rome, and chicken is popular on pizza in many countries but almost never seen in Italian pizzerias.', severity: 4, quote: '"Mettere il pollo sulla pasta è un crimine in Italia" ("Putting chicken on pasta is a crime in Italy") — Trevi Fountain sign, 2023' },
 });
 E({
   id: 'pepperoni', name: 'Peperone Equivoco', en: 'The Misunderstood Pepper', sprite: 'enemy.pepperoni',
@@ -195,7 +196,7 @@ E({
   id: 'parmesan', name: 'Spargipolvere', en: 'The Dust-Sprinkler', sprite: 'enemy.parmesan',
   radius: 14, hp: 20, speed: 46, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 300, cd: 3, area: 'cheese', r: 34, slow: 0.3 },
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic',
-  info: { crime: 'Powdered "parmesan" in a shaker', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months. Some shelf-stable "parmesan" isn\'t even the same cheese — US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
+  info: { crime: 'Powdered "parmesan", or Parmigiano where it does not belong', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months, and it is the hero of Alfredo and pesto. But Rome\'s carbonara, amatriciana and cacio e pepe want Pecorino Romano, seafood pasta wants no cheese at all, and some shelf-stable "parmesan" isn\'t even the same cheese: US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
 });
 E({
   id: 'macchiata', name: 'Margherita Macchiata', en: 'Stained Margherita', sprite: 'enemy.macchiata',
@@ -225,7 +226,7 @@ E({
   id: 'vongola', name: 'Vongola Formaggiosa', en: 'The Cheesy Clam', sprite: 'enemy.vongola',
   radius: 13, hp: 18, speed: 70, damage: 7, xp: 2, behavior: 'strafe', params: { period: 0.9 },
   color: 'cream', juice: '#f5ecc8', chunk: 'cheese',
-  info: { crime: 'Grated cheese on seafood pasta', why: 'By unwritten rule, aged cheese drowns delicate seafood: spaghetti alle vongole is garlic, oil and parsley. (The Parmigiano consortium itself lists a few exceptions.) Italians rate it −39.', severity: 3 },
+  info: { crime: 'Grated cheese on seafood pasta (and seafood on the Marinara)', why: 'By unwritten rule, aged cheese drowns delicate seafood: spaghetti alle vongole is garlic, oil, parsley and the clams\' own juice. (The Parmigiano consortium itself lists a few exceptions.) Italians rate it −39. And the pizza marinara is named after sailors, not seafood: no clams on it.', severity: 3 },
 });
 E({
   id: 'surgelata', name: 'Lasagna Surgelata', en: 'Frozen Lasagna', sprite: 'enemy.surgelata',
@@ -262,6 +263,72 @@ E({
   radius: 15, hp: 26, speed: 58, damage: 8, xp: 3, behavior: 'ghost', params: { period: 1.6 }, flying: true,
   color: 'red', juice: '#c8421e', chunk: 'bread',
   info: { crime: 'Spaghetti bolognese', why: "Bologna's ragù goes on fresh egg tagliatelle or into lasagne, not on dried spaghetti. It flickers in and out of existence — hit it while it's solid. (Fun fact: most Italians in the YouGov poll actually shrugged.)", severity: 3, quote: '"Spaghetti bolognese doesn\'t actually exist, yet it\'s famous the world over." — the mayor of Bologna on Italian radio, 2019 (as reported)' },
+});
+
+// ---------------------------------------------------------------------------
+// Il Menù: intruders that do not belong in a dish (texts from the recipe research,
+// see src/game/recipes.ts and docs/RECIPES.md). Art: src/gfx/art/recipes_enemies_{a,b}.ts
+// ---------------------------------------------------------------------------
+
+E({
+  id: 'burro', name: 'Burro Furbetto', en: 'Sneaky Butter', sprite: 'enemy.burro',
+  radius: 14, hp: 16, speed: 48, damage: 7, xp: 2, behavior: 'puddler', params: { puddle: 'butter', interval: 2.8, r: 26, life: 5, slow: 0.3 },
+  color: 'yellow', juice: '#fbe58a', chunk: 'cheese',
+  info: { crime: 'Butter where it does not belong', why: 'Butter IS the sauce in Fettuccine Alfredo. But cacio e pepe is only Pecorino, pepper and pasta water, Neapolitan vongole use only olive oil, today\'s Genoese pesto has none, and carbonara\'s fat is rendered guanciale. In 2025 a British recipe for cacio e pepe with butter set off protests in Rome until it was rewritten.', severity: 4 },
+});
+E({
+  id: 'funghi', name: 'Funghi Abusivi', en: 'Bootleg Mushrooms', sprite: 'enemy.funghi',
+  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.4, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
+  color: 'brown', juice: '#d9c3a0', chunk: 'bread',
+  info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef\'s 2020 carbonara video with mushrooms, peas and crème fraîche.', severity: 2 },
+});
+E({
+  id: 'prosciutto', name: 'Prosciutto Impostore', en: 'Impostor Ham', sprite: 'enemy.prosciutto',
+  radius: 14, hp: 20, speed: 58, damage: 7, xp: 2, behavior: 'chase', knockResist: 0.3,
+  color: 'pink', juice: '#f2a8a8', chunk: 'tomato',
+  info: { crime: 'Cooked ham instead of guanciale', why: 'Cooked ham in place of guanciale is a British-style shortcut. Italian food media list ham carbonara among the common recipe "horrors", and an Italian TV chef rejected it on live British TV.', severity: 2 },
+});
+E({
+  id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
+  radius: 15, hp: 22, speed: 44, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 290, cd: 3.2, area: 'cream', r: 26, slow: 0.3 },
+  color: 'green', juice: '#4f9a3a', chunk: 'tomato',
+  info: { crime: 'Broccoli in Fettuccine Alfredo', why: 'Broccoli is a common American add-on to "Alfredo" and is unknown in the Roman dish, which is only egg fettuccine, butter and Parmigiano. Italians love pasta with broccoli, just in other dishes.', severity: 2 },
+});
+E({
+  id: 'gamberi', name: 'Gambero Saltatore', en: 'Hopping Shrimp', sprite: 'enemy.gamberi',
+  radius: 12, hp: 14, speed: 96, damage: 6, xp: 2, behavior: 'leaper', params: { range: 200, time: 0.5, cd: 2.1, height: 34 },
+  color: 'orange', juice: '#ff9a7a', chunk: 'tomato',
+  info: { crime: 'Shrimp in Alfredo (and seafood on the Marinara)', why: 'Fettuccine Alfredo has no protein at all: shrimp is a US restaurant add-on. And despite its name, the pizza marinara has no seafood: "marinara" refers to the sailors who carried its long-lasting ingredients on board.', severity: 2 },
+});
+E({
+  id: 'anacardo', name: 'Anacardo Abusivo', en: 'Bootleg Cashew', sprite: 'enemy.anacardo',
+  radius: 8, hp: 5, speed: 84, damage: 3, xp: 1, behavior: 'swarm', params: { wobble: 0.8 },
+  color: 'yellow', juice: '#e9d3a2', chunk: 'bread',
+  info: { crime: 'Cashews in pesto', why: 'Pesto genovese is made with pine nuts. Cheap industrial jars often replace them with cashews, and Italian food media treat that as the mark of an imitation "alla genovese" pesto.', severity: 3 },
+});
+E({
+  id: 'olio', name: 'Olio Sbagliato', en: 'Wrong Oil', sprite: 'enemy.olio',
+  radius: 13, hp: 18, speed: 50, damage: 6, xp: 2, behavior: 'puddler', params: { puddle: 'oil', interval: 2.2, r: 24, life: 4.5, slow: 0.25 },
+  color: 'yellow', juice: '#f3e27a', chunk: 'plastic',
+  info: { crime: 'The wrong oil', why: 'Pesto genovese wants extra-virgin olive oil, ideally Ligurian, yet many commercial pestos swap in sunflower or other seed oils. And in cacio e pepe the fat comes from the cheese: purists call any oil there a misstep (even if Rome is split).', severity: 3 },
+});
+E({
+  id: 'filante', name: 'La Filante Abusiva', en: 'Rogue Cheese Pull', sprite: 'enemy.filante',
+  radius: 14, hp: 18, speed: 62, damage: 7, xp: 2, behavior: 'slither', params: { amp: 1.1, freq: 4 },
+  color: 'cream', juice: '#fff6dc', chunk: 'cheese',
+  info: { crime: 'Cheese on a Marinara', why: 'The pizza marinara is defined with no cheese at all: tomato, garlic, oregano and olive oil, the oldest classic Neapolitan pizza. Adding mozzarella makes it a different pizza.', severity: 2 },
+});
+E({
+  id: 'cheddar', name: 'Cheddar Arancione', en: 'Orange Cheddar', sprite: 'enemy.cheddar',
+  radius: 13, hp: 18, speed: 68, damage: 7, xp: 2, behavior: 'strafe', params: { period: 1.0 },
+  color: 'orange', juice: '#ffa62b', chunk: 'cheese',
+  info: { crime: 'Cheddar on pizza', why: 'Italian pizza uses mozzarella or fior di latte (and the Marinara no cheese at all). Coldiretti, the Italian farmers\' association, singles out "Anglo-Saxon cheddar" among the wrong cheeses used on pizza abroad.', severity: 2 },
+});
+E({
+  id: 'bbq', name: 'Salsa Barbecue', en: 'BBQ Sauce', sprite: 'enemy.bbq',
+  radius: 14, hp: 14, speed: 50, damage: 6, xp: 2, behavior: 'ranged', params: { min: 150, max: 260, cd: 3.2, shot: 'proj.e_bbq', shotSpeed: 145, count: 1, spread: 0, muzzle: [4, -30] },
+  color: 'brown', juice: '#5a2a18', chunk: 'plastic',
+  info: { crime: 'BBQ sauce on pizza', why: 'Barbecue sauce, usually with chicken, is a foreign topping Italian pizzerias simply do not use. In early 2022 the only pizzeria chain in Italy offering barbecue chicken pizza was an American one, and it left Italy that August.', severity: 2 },
 });
 
 // ---------------------------------------------------------------------------
@@ -337,6 +404,43 @@ E({
   color: 'pink', juice: '#ff5a8a', chunk: 'pineapple', shadow: 1.25,
   boss: { title: 'Il Mostro della Fusione', taunt: 'Pineapple-ketchup-cream carbonara PIZZA!', final: true, pattern: 'fusione' },
   info: { crime: 'Every crime at once', why: 'Pineapple, ketchup, cream, chicken and a stuffed crust, served on snapped spaghetti. The final boss of bad cooking.', severity: 5 },
+});
+
+// Il Menù bosses (patterns in src/game/bosses/, art in src/gfx/art/recipes_bosses_{a,b}.ts)
+E({
+  id: 'b_aglio', name: "Il Re dell'Aglio", en: 'The Garlic King', sprite: 'boss.aglio',
+  radius: 56, hp: 5600, speed: 42, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'cream', juice: '#f4ecd6', chunk: 'cheese', shadow: 1.1,
+  boss: { title: "Il Re dell'Aglio", taunt: 'Solo uno spicchio… in camicia!', final: true, pattern: 'aglio' },
+  info: { crime: 'Garlic in amatriciana', why: 'The EU specification says Amatriciana Tradizionale, unlike similar sauces, uses no garlic, onion or pancetta. When a celebrity chef revealed on Italian TV in 2015 that he adds a clove "in its shirt", Amatrice\'s town council answered with a formal statement and the chef apologised.', severity: 5 },
+});
+E({
+  id: 'b_burro', name: 'Il Panetto Supremo', en: 'The Supreme Butter Block', sprite: 'boss.burro',
+  radius: 54, hp: 5200, speed: 44, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'yellow', juice: '#fbe58a', chunk: 'cheese', shadow: 1.15,
+  boss: { title: 'Il Panetto Supremo', taunt: 'Un pochino di burro, per la cremosità!', final: true, pattern: 'burro' },
+  info: { crime: 'Butter in cacio e pepe', why: 'Cacio e pepe is only Pecorino Romano, black pepper and pasta water whipped into a cream. In 2025 Rome\'s restaurateurs protested a British food website\'s recipe with butter and Parmesan, all the way to a complaint to an embassy, until it was rewritten.', severity: 5 },
+});
+E({
+  id: 'b_bolognese', name: "Lo Spaghettone alla Bolognese", en: 'The Great Spaghetti Bolognese', sprite: 'boss.bolognese',
+  radius: 62, hp: 8400, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'red', juice: '#c8421e', chunk: 'bread', shadow: 1.2,
+  boss: { title: "Lo Spaghettone alla Bolognese", taunt: 'Io esisto! I EXIST!', final: true, pattern: 'bolognese' },
+  info: { crime: 'Spaghetti bolognese', why: 'In Bologna, ragù goes on fresh egg tagliatelle, whose porous surface holds the sauce. In 2019 Bologna\'s mayor called spaghetti bolognese a dish that does not exist. (Most Italians in a 2022 YouGov poll actually shrugged and rated it acceptable.) It phases in and out of existence: hit it while it is solid.', severity: 4, quote: '"Spaghetti Bolognese doesn\'t actually exist; yet, it\'s famous the world over" — the mayor of Bologna, 2019 (via CBC)' },
+});
+E({
+  id: 'b_frullatore', name: 'Il Frullatore Rovente', en: 'The Red-Hot Blender', sprite: 'boss.frullatore',
+  radius: 56, hp: 8400, speed: 42, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'green', juice: '#4fa82e', chunk: 'glass', shadow: 1.1,
+  boss: { title: 'Il Frullatore Rovente', taunt: 'Pesto in trenta secondi! Con anacardi e panna!', final: true, pattern: 'frullatore' },
+  info: { crime: 'Instant pesto with cream and cashews', why: 'Genoese pesto is a raw sauce pounded in a marble mortar from basil, olive oil, pine nuts, garlic, salt, Parmigiano and Sardinian pecorino. Cream drowns the basil, cheap seed oil replaces the olive oil, and cashews are the mark of an imitation jar.', severity: 4 },
+});
+E({
+  id: 'b_grattugiato', name: 'Il Sacco del Grattugiato', en: 'The Bag of Pre-Grated Cheese', sprite: 'boss.grattugiato',
+  radius: 58, hp: 8400, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'cream', juice: '#f5ecc8', chunk: 'plastic', shadow: 1.15,
+  boss: { title: 'Il Sacco del Grattugiato', taunt: 'Formaggio sulle vongole? Abbondante!', final: true, pattern: 'grattugiato' },
+  info: { crime: 'Pre-grated cheese on clams', why: 'Italians widely follow an unwritten rule: no grated aged cheese on fish and shellfish pasta, because it covers the delicate taste of the clams. In a 2022 YouGov survey Italians gave cheese on seafood pasta a net −39. A bag of imitation "Parmesan" makes it worse still.', severity: 5 },
 });
 
 export const REGULAR_ENEMY_IDS = Object.values(ENEMIES)

@@ -354,6 +354,8 @@ export class Renderer {
     if (e.telegraph > 0) x += Math.sin(this.t * 80) * 1.5;
     const ghost = def.behavior === 'ghost' && e.state === 1;
     if (ghost) alpha *= 0.32 + Math.sin(this.t * 10) * 0.06;
+    // phased out of existence (invulnerable boss): translucent and shimmering
+    if (e.fade > 0) alpha *= 1 - e.fade * (0.74 + Math.sin(this.t * 9 + e.id) * 0.06);
     // elite glow
     if (e.elite) {
       const pulse = 0.55 + Math.sin(this.t * 5 + e.id) * 0.25;
@@ -463,6 +465,10 @@ export class Renderer {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
     }
+    if (p.kind === 'ingredient') {
+      this.drawIngredient(p);
+      return;
+    }
     const big = p.kind === 'xp' && p.value >= 25;
     if (big || p.kind === 'chest' || p.kind === 'bell' || p.kind === 'spumante' || p.kind === 'gelato') {
       ctx.globalCompositeOperation = 'lighter';
@@ -489,12 +495,58 @@ export class Renderer {
     }
   }
 
+  /** A real ingredient: golden glow, pulsing ground ring, gold-rimmed badge, bobbing sprite. */
+  private drawIngredient(p: Pickup) {
+    const ctx = this.ctx;
+    const bob = Math.sin(p.t * 3.2) * 3 - 6;
+    const y = p.y - p.z + bob - 8;
+    // pulsing ring on the ground
+    const k = (p.t * 0.8) % 1;
+    ctx.strokeStyle = `rgba(255,214,90,${0.7 * (1 - k)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 6, 14 + k * 26, (14 + k * 26) * 0.42, 0, 0, TAU);
+    ctx.stroke();
+    // golden glow
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.55 + Math.sin(p.t * 5) * 0.15;
+    const g = glowSprite('#ffd34d');
+    ctx.drawImage(g, p.x - 40, y - 40, 80, 80);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    // gold-rimmed badge
+    ctx.fillStyle = '#fff8e6';
+    ctx.strokeStyle = '#2b1712';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.arc(p.x, y, 17, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#e8b030';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(p.x, y, 15.2, 0, TAU);
+    ctx.stroke();
+    if (hasSprite(p.sprite)) drawSprite(ctx, p.sprite, 0, p.x, y, 1.1, 1.1);
+    // twinkle
+    const tw = (p.t * 1.3) % 1.6;
+    if (tw < 0.3) {
+      const s = Math.sin((tw / 0.3) * Math.PI) * 7;
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(p.x + 11, y - 12 - s); ctx.lineTo(p.x + 12.2, y - 13.2); ctx.lineTo(p.x + 11 + s, y - 12); ctx.lineTo(p.x + 12.2, y - 10.8);
+      ctx.lineTo(p.x + 11, y - 12 + s); ctx.lineTo(p.x + 9.8, y - 10.8); ctx.lineTo(p.x + 11 - s, y - 12); ctx.lineTo(p.x + 9.8, y - 13.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
   private drawArea(a: Area) {
     const ctx = this.ctx;
     const k = a.life / a.max;
     const fadeIn = clamp((a.max - a.life) / 0.2, 0, 1);
     const fade = Math.min(fadeIn, clamp(a.life / 0.5, 0, 1));
-    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle' };
+    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle', butter: 'fx.butter_puddle', seedoil: 'fx.seedoil_puddle' };
     if (a.kind === 'warning') {
       const col = a.enemy ? '#ff3b2f' : '#ff9b3d';
       ctx.strokeStyle = rgba(col, 0.85);
@@ -510,9 +562,10 @@ export class Renderer {
       ctx.fill();
       return;
     }
-    if (a.kind === 'cheese') {
-      ctx.globalAlpha = 0.55 * fade;
-      const gs = glowSprite('#f6ecc4');
+    if (a.kind === 'cheese' || a.kind === 'stink') {
+      // clouds: soft glow (cheese dust, garlic stink)
+      ctx.globalAlpha = (a.kind === 'stink' ? 0.6 + Math.sin(this.t * 4 + a.rot) * 0.08 : 0.55) * fade;
+      const gs = glowSprite(a.kind === 'stink' ? '#a8d84a' : '#f6ecc4');
       ctx.drawImage(gs, a.x - a.r * 1.3, a.y - a.r, a.r * 2.6, a.r * 2);
       ctx.globalAlpha = 1;
       return;
@@ -830,7 +883,7 @@ export class Renderer {
     for (const a of run.areas) if (a.alive && a.kind === 'fire') put(a.x, a.y, a.r * 2.2, 0.8);
     for (const pr of run.projectiles) if (pr.alive && pr.glow) put(pr.x, pr.y - pr.z, 70, 0.6);
     for (const e of run.enemies) if (e.alive && (e.elite || e.boss)) put(e.x, e.y, e.r * 2.5, 0.35);
-    for (const p of run.pickups) if (p.alive && p.kind === 'chest') put(p.x, p.y, 90, 0.7);
+    for (const p of run.pickups) if (p.alive && (p.kind === 'chest' || p.kind === 'ingredient')) put(p.x, p.y, p.kind === 'ingredient' ? 110 : 90, 0.75);
     lc.globalAlpha = 1;
     lc.globalCompositeOperation = 'source-over';
     const ctx = this.ctx;
@@ -854,15 +907,17 @@ export class Renderer {
     const ctx = this.ctx;
     const v = run.view;
     const cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2;
-    const targets: { x: number; y: number; c: string; big: boolean }[] = [];
+    const targets: { x: number; y: number; c: string; big: boolean; size?: number }[] = [];
     for (const b of run.bosses) if (b.alive && !run.onScreen(b.x, b.y, -10)) targets.push({ x: b.x, y: b.y, c: '#ff3b2f', big: true });
     for (const p of run.pickups) if (p.alive && p.kind === 'chest' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#ffd34d', big: false });
+    // real ingredients: the biggest arrow on screen
+    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#7cff8a', big: true, size: 16 });
     for (const t of targets) {
       const a = Math.atan2(t.y - cy, t.x - cx);
       const hw = (v.x1 - v.x0) / 2 - 26, hh = (v.y1 - v.y0) / 2 - 26;
       const k = Math.min(hw / Math.abs(Math.cos(a) || 1e-6), hh / Math.abs(Math.sin(a) || 1e-6));
       const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
-      const s = (t.big ? 13 : 10) * (1 + Math.sin(this.t * 6) * 0.1);
+      const s = (t.size ?? (t.big ? 13 : 10)) * (1 + Math.sin(this.t * 6) * 0.1);
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(a);

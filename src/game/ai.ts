@@ -5,14 +5,17 @@ import type { Run } from './run';
 import type { Enemy } from './entities';
 import { ENEMIES } from './enemies';
 import { TAU } from '../core/math';
+import { BOSS_PATTERNS } from './bosses';
 
 const tmp: Enemy[] = [];
+
+// The helpers below are exported for the boss patterns in ./bosses/ (one file per boss).
 
 // ---------------------------------------------------------------------------
 // movement helpers
 // ---------------------------------------------------------------------------
 
-function steer(e: Enemy, tvx: number, tvy: number, dt: number, rate = 7) {
+export function steer(e: Enemy, tvx: number, tvy: number, dt: number, rate = 7) {
   const k = 1 - Math.exp(-rate * dt);
   e.vx += (tvx - e.vx) * k;
   e.vy += (tvy - e.vy) * k;
@@ -22,14 +25,14 @@ function steer(e: Enemy, tvx: number, tvy: number, dt: number, rate = 7) {
   e.anim += dt * (2 + Math.hypot(e.vx, e.vy) / 22);
 }
 
-function toPlayer(run: Run, e: Enemy) {
+export function toPlayer(run: Run, e: Enemy) {
   const p = run.player;
   const dx = p.x - e.x, dy = p.y - e.y;
   const d = Math.hypot(dx, dy) || 1;
   return { dx: dx / d, dy: dy / d, d };
 }
 
-function chase(run: Run, e: Enemy, dt: number, mul = 1, wobble = 0) {
+export function chase(run: Run, e: Enemy, dt: number, mul = 1, wobble = 0) {
   const t = toPlayer(run, e);
   let a = Math.atan2(t.dy, t.dx);
   if (wobble) a += Math.sin(run.time * 3 + e.id * 1.7) * wobble;
@@ -37,7 +40,7 @@ function chase(run: Run, e: Enemy, dt: number, mul = 1, wobble = 0) {
   steer(e, Math.cos(a) * sp, Math.sin(a) * sp, dt);
 }
 
-function shoot(run: Run, e: Enemy, angle: number, speed: number, sprite: string, dmg: number, r = 6) {
+export function shoot(run: Run, e: Enemy, angle: number, speed: number, sprite: string, dmg: number, r = 6) {
   const s = run.spawnShot();
   s.x = e.x + Math.cos(angle) * e.r * 0.6;
   s.y = e.y - e.r * 0.5 + Math.sin(angle) * e.r * 0.6;
@@ -52,7 +55,7 @@ function shoot(run: Run, e: Enemy, angle: number, speed: number, sprite: string,
   return s;
 }
 
-function lobShot(run: Run, e: Enemy, tx: number, ty: number, time: number, sprite: string, dmg: number, onLand: (x: number, y: number) => void) {
+export function lobShot(run: Run, e: Enemy, tx: number, ty: number, time: number, sprite: string, dmg: number, onLand: (x: number, y: number) => void) {
   const s = run.spawnShot();
   s.x = e.x;
   s.y = e.y - e.r * 0.5;
@@ -70,12 +73,16 @@ function lobShot(run: Run, e: Enemy, tx: number, ty: number, time: number, sprit
   return s;
 }
 
-function hazard(run: Run, kind: 'cream' | 'ketchup' | 'cheese', x: number, y: number, r: number, life: number, slow: number, damage = 0) {
-  return run.addArea(kind, x, y, r, life, { enemy: true, slow, damage, tick: 0.6 });
+/** Enemy hazard kinds. 'oil' is the seed-oil slick (area kind 'seedoil'; the chef's own oil is 'oil'). */
+export type HazardKind = 'cream' | 'ketchup' | 'cheese' | 'butter' | 'oil' | 'stink' | 'fire';
+
+/** Ground hazard that slows (and optionally hurts) the player. */
+export function hazard(run: Run, kind: HazardKind, x: number, y: number, r: number, life: number, slow: number, damage = 0) {
+  return run.addArea(kind === 'oil' ? 'seedoil' : kind, x, y, r, life, { enemy: true, slow, damage, tick: 0.6 });
 }
 
 /** Telegraphed danger circle that damages the player when it ends. */
-function danger(run: Run, x: number, y: number, r: number, delay: number, dmg: number, after?: () => void) {
+export function danger(run: Run, x: number, y: number, r: number, delay: number, dmg: number, after?: () => void) {
   const a = run.addArea('warning', x, y, r, delay, { enemy: true });
   a.onEnd = () => {
     const p = run.player;
@@ -196,7 +203,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const p = run.player;
         const tx = p.x + p.vx * 0.6, ty = p.y + p.vy * 0.6;
         const area = P.area ?? 'cheese';
-        lobShot(run, e, tx, ty, 0.9, 'proj.e_generic', e.damage, (x, y) => {
+        lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage, (x, y) => {
           hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * 0.2);
           run.fx.burst(x, y, 10, { colors: ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
         });
@@ -491,14 +498,14 @@ export function onEnemyDeath(run: Run, e: Enemy) {
 // BOSSES
 // ---------------------------------------------------------------------------
 
-type Pattern = (run: Run, e: Enemy, dt: number) => void;
+export type Pattern = (run: Run, e: Enemy, dt: number) => void;
 
-function ring(run: Run, e: Enemy, n: number, speed: number, sprite: string, off = 0, dmgMul = 0.45) {
+export function ring(run: Run, e: Enemy, n: number, speed: number, sprite: string, off = 0, dmgMul = 0.45) {
   for (let i = 0; i < n; i++) shoot(run, e, off + (i / n) * TAU, speed, sprite, e.damage * dmgMul, 8);
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
 
-function aimed(run: Run, e: Enemy, n: number, spread: number, speed: number, sprite: string) {
+export function aimed(run: Run, e: Enemy, n: number, spread: number, speed: number, sprite: string) {
   const t = toPlayer(run, e);
   const a = Math.atan2(t.dy, t.dx);
   for (let i = 0; i < n; i++) {
@@ -508,7 +515,7 @@ function aimed(run: Run, e: Enemy, n: number, spread: number, speed: number, spr
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
 
-function summon(run: Run, e: Enemy, id: string, n: number) {
+export function summon(run: Run, e: Enemy, id: string, n: number) {
   const def = ENEMIES[id];
   if (!def) return;
   for (let i = 0; i < n; i++) {
@@ -520,7 +527,7 @@ function summon(run: Run, e: Enemy, id: string, n: number) {
 }
 
 /** Jump to (tx,ty) over `time`, slam on landing. */
-function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
+export function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
   e.onLand = null;
   e.slamR = r;
   e.state = 50;
@@ -533,7 +540,7 @@ function leap(e: Enemy, tx: number, ty: number, time: number, r = e.r * 1.8) {
 }
 
 /** generic leap update; returns true on landing */
-function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
+export function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
   const step = Math.min(dt, e.leapT); // never fly past the target
   e.x += e.vx * step;
   e.y += e.vy * step;
@@ -561,7 +568,7 @@ function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolean {
  * Boss brain: cycles through an attack list. Each attack = [name, duration].
  * state 0 = walk (timer until next attack). Attacks run in `bossAttack`.
  */
-function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: number, perform: (name: string, t: number, first: boolean) => boolean) {
+export function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul: number, perform: (name: string, t: number, first: boolean) => boolean) {
   if (dt <= 0) return; // hit-stop: don't re-run an attack's first frame
   // enrage under 50% HP
   const enraged = e.hp < e.maxHp * 0.5;
@@ -952,6 +959,8 @@ const PATTERNS: Record<string, Pattern> = {
 };
 
 function updateBoss(run: Run, e: Enemy, dt: number) {
-  const pat = PATTERNS[e.def.boss?.pattern ?? 'ketchup'] ?? PATTERNS.ketchup;
+  const id = e.def.boss?.pattern ?? 'ketchup';
+  // the Il Menù bosses live in ./bosses/ (looked up lazily: that module imports these helpers)
+  const pat = PATTERNS[id] ?? BOSS_PATTERNS[id] ?? PATTERNS.ketchup;
   pat(run, e, dt);
 }

@@ -62,6 +62,12 @@ export class Enemy {
   leapDur = 0; // total leap time
   /** fired once when the current boss leap lands (cleared by every new leap) */
   onLand: (() => void) | null = null;
+  /** seconds of invulnerability left (a phased-out boss): no hits, no contact, not targeted */
+  invuln = 0;
+  /** 0..1 how faded/translucent the sprite is drawn (phase-out) */
+  fade = 0;
+  /** spawned as this stage's final boss */
+  isFinal = false;
   /** last time hit per weapon slot (for persistent hitboxes) */
   lastHit: Record<number, number> = {};
 }
@@ -202,7 +208,7 @@ export class EnemyShot {
   onLand: ((s: EnemyShot) => void) | null = null;
 }
 
-export type PickupKind = 'xp' | 'coin' | 'coinbag' | 'cannolo' | 'lasagna' | 'bell' | 'spumante' | 'gelato' | 'chest';
+export type PickupKind = 'xp' | 'coin' | 'coinbag' | 'cannolo' | 'lasagna' | 'bell' | 'spumante' | 'gelato' | 'chest' | 'ingredient';
 
 export class Pickup {
   alive = false;
@@ -222,9 +228,12 @@ export class Pickup {
   frame = 0;
   gold = false; // golden chest
   qs = 0;
+  /** ingredient: seconds since it appeared (drifts toward the chef after 90 s) */
+  age = 0;
 }
 
-export type AreaKind = 'fire' | 'oil' | 'pesto' | 'cream' | 'ketchup' | 'cheese' | 'warning' | 'crater' | 'steam';
+/** 'oil' = the chef's olive-oil slick; 'seedoil' / 'butter' / 'stink' are enemy hazards (Il Menù). */
+export type AreaKind = 'fire' | 'oil' | 'pesto' | 'cream' | 'ketchup' | 'cheese' | 'warning' | 'crater' | 'steam' | 'butter' | 'seedoil' | 'stink';
 
 export class Area {
   alive = false;
