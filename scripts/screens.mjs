@@ -13,7 +13,7 @@ await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 await page.mouse.click(5, 5);
 await page.waitForTimeout(1200);
-await page.evaluate(() => { const kf = window.__kf; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['kitchen','trattoria','streets']; kf.save.coins = 4321; kf.save.seen.push('e:spezzato','e:ketchup','e:panna','e:ananas','e:b_ketchup','w:mattarello','w:coltelli','p:olio'); });
+await page.evaluate(() => { const kf = window.__kf; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['pomodoro','carbonara','alfredo','amatriciana','margherita']; kf.save.coins = 4321; kf.save.seen.push('e:spezzato','e:ketchup','e:panna','e:ananas','e:b_ketchup','w:mattarello','w:coltelli','p:olio'); });
 const shot = async (name) => { await page.waitForTimeout(500); await page.screenshot({ path: `${out}/${name}.png` }); };
 await page.evaluate(() => window.__kf.ui.showTitle()); await shot('s1-title');
 await page.evaluate(() => window.__kf.ui.showCharSelect()); await shot('s2-chars');
@@ -21,7 +21,7 @@ await page.evaluate(() => window.__kf.ui.showStageSelect()); await page.waitForT
 await page.evaluate(() => window.__kf.ui.showShop()); await shot('s4-shop');
 await page.evaluate(() => window.__kf.ui.showCollection('crimes')); await shot('s5-collection');
 await page.evaluate(() => window.__kf.ui.showSettings(() => window.__kf.ui.showTitle())); await shot('s6-settings');
-await page.evaluate(() => window.__kf.startRun('enzo', 'kitchen'));
+await page.evaluate(() => window.__kf.startRun('enzo', 'carbonara'));
 await page.waitForTimeout(2500);
 await page.keyboard.down('KeyD'); await page.waitForTimeout(2500); await page.keyboard.up('KeyD');
 await shot('s7-game');

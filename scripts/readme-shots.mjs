@@ -13,7 +13,7 @@ const shot = async (name) => { await page.evaluate(() => { const r = window.__kf
 await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 await page.mouse.click(5, 5);
-await page.evaluate(() => { const kf = window.__kf; kf.save.runs = 4; kf.save.coins = 2750; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['kitchen','trattoria','streets','foodcourt']; for (const id of ['spezzato','ketchup','panna','forbici','cipolla','aglio','ananas','pollo','cappuccino','b_ananas','b_panna','fantasma','pentola']) kf.save.seen.push('e:' + id); kf.ui.showTitle(); });
+await page.evaluate(() => { const kf = window.__kf; kf.save.runs = 4; kf.save.coins = 2750; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['pomodoro','carbonara','alfredo','amatriciana','cacioepepe','margherita','marinara','ragu','pesto','vongole','foodcourt']; for (const id of ['spezzato','ketchup','panna','forbici','cipolla','aglio','ananas','pollo','cappuccino','b_ananas','b_panna','fantasma','pentola']) kf.save.seen.push('e:' + id); kf.ui.showTitle(); });
 await page.waitForTimeout(2500);
 await shot('title');
 await page.evaluate(() => window.__kf.ui.showCharSelect());
@@ -35,13 +35,13 @@ const play = async (stage, char, weapons, t, secs) => {
     await page.evaluate(() => { const r = window.__kf.run; if (r) { r.player.hp = 1e6; r.pendingLevels = 0; } const el = document.querySelector('.choice'); if (el) el.click(); const b=[...document.querySelectorAll('.btn')].find(b=>b.textContent.includes('Continua')); if (b && b.style.visibility!=='hidden') b.click(); });
   }
 };
-await play('kitchen', 'enzo', 'olive,forchette,rotella,forno', 250, 7);
+await play('carbonara', 'enzo', 'olive,forchette,rotella,forno', 250, 7);
 await shot('kitchen');
 await page.evaluate(() => window.__kf.quitRun());
-await play('trattoria', 'nonna', 'pizza,peperoncino,moka,basilico', 520, 7);
+await play('margherita', 'nonna', 'pizza,peperoncino,moka,basilico', 520, 7);
 await shot('trattoria');
 await page.evaluate(() => window.__kf.quitRun());
-await play('streets', 'peppe', 'vesuvio,forma,coltelli,spaghetti', 830, 8);
+await play('marinara', 'peppe', 'vesuvio,forma,coltelli,spaghetti', 830, 8);
 await shot('streets');
 await page.evaluate(() => window.__kf.quitRun());
 await play('foodcourt', 'concetta', 'olive,moka,rotella,basilico', 590, 7);

@@ -10,7 +10,7 @@ page.setDefaultTimeout(0);
 await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 await page.mouse.click(5, 5);
-await page.evaluate(() => window.__kf.startRun('enzo', 'trattoria'));
+await page.evaluate(() => window.__kf.startRun('enzo', 'alfredo'));
 await page.waitForTimeout(2500);
 const res = await page.evaluate(async (n) => {
   const kf = window.__kf; const run = kf.run;

@@ -2,7 +2,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const [,, stage = 'kitchen', char = 'enzo', secs = '900', skill = '1'] = process.argv;
+const [,, stage = 'pomodoro', char = 'enzo', secs = '900', skill = '1'] = process.argv;
 const port = process.env.PORT || '5175';
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 800, height: 600 } });

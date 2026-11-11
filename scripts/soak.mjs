@@ -1,9 +1,9 @@
-// Soak test: run every stage to 15:00+ in god mode with rendering every few steps; report errors.
+// Soak test: run every dish of the menu to 15:00+ in god mode with rendering every few steps; report errors.
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const port = process.env.PORT || '5175';
-const stages = (process.argv[2] || 'kitchen,trattoria,streets,foodcourt').split(',');
+const stages = (process.argv[2] || 'pomodoro,carbonara,alfredo,amatriciana,cacioepepe,margherita,marinara,ragu,pesto,vongole,foodcourt').split(',');
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.setDefaultTimeout(0);

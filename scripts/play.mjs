@@ -2,7 +2,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const [,, out = '.', stage = 'kitchen', char = 'enzo', secs = '12', w = '1280', h = '720'] = process.argv;
+const [,, out = '.', stage = 'carbonara', char = 'enzo', secs = '12', w = '1280', h = '720'] = process.argv;
 const port = process.env.PORT || '5173';
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
@@ -18,7 +18,7 @@ await page.mouse.click(10, 10);
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${out}/1-title.png` });
 if (process.env.TITLE_ONLY) { console.log(logs.join('\n')); await browser.close(); process.exit(0); }
-await page.evaluate(([s, c]) => { const kf = window.__kf; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['kitchen','trattoria','streets','foodcourt']; kf.startRun(c, s); }, [stage, char]);
+await page.evaluate(([s, c]) => { const kf = window.__kf; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['pomodoro','carbonara','alfredo','amatriciana','cacioepepe','margherita','marinara','ragu','pesto','vongole','foodcourt']; kf.startRun(c, s); }, [stage, char]);
 await page.waitForTimeout(1500);
 const keys = ['KeyD', 'KeyS', 'KeyA', 'KeyW'];
 const total = +secs;
