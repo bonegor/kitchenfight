@@ -2,7 +2,7 @@
 import type { SaveData } from '../core/save';
 import type { Run } from './run';
 import { CHARACTERS } from './passives';
-import { STAGES } from './stages';
+import { STAGES, dishWon } from './stages';
 import { BOSS_IDS } from './enemies';
 
 export interface Medal {
@@ -27,7 +27,11 @@ export const MEDALS: Medal[] = [
   { id: 'nonna', name: 'La Nonna Approva', desc: 'Win a stage as Nonna Pina.', icon: 'icon.w.ciabatta', check: (_s, r, v) => v && r.char.id === 'nonna' },
   { id: 'micio', name: 'Gatto Chef', desc: 'Win a stage as Micio.', icon: 'icon.w.basilico', check: (_s, r, v) => v && r.char.id === 'micio' },
   { id: 'allchefs', name: 'Tutti a Tavola', desc: 'Unlock every chef.', icon: 'icon.level', check: (s) => CHARACTERS.every((c) => s.unlockedChars.includes(c.id)) },
-  { id: 'giro', name: "Giro d'Italia", desc: 'Win all four stages.', icon: 'icon.e.pizza_celeste', check: (s) => STAGES.every((st) => (s.records[st.id]?.wins ?? 0) > 0) },
+  { id: 'giro', name: "Giro d'Italia", desc: 'Win every dish on the menu.', icon: 'icon.e.pizza_celeste', check: (s) => STAGES.every((st) => dishWon(s, st.id)) },
+  { id: 'perfetta', name: 'Ricetta Perfetta', desc: 'Collect every real ingredient and win the dish.', icon: 'icon.star', check: (_s, r, v) => v && r.recipeComplete },
+  { id: 'romani', name: 'Primi Romani', desc: 'Win Carbonara, Alfredo, Amatriciana and Cacio e Pepe.', icon: 'icon.w.forchette', check: (s) => ['carbonara', 'alfredo', 'amatriciana', 'cacioepepe'].every((id) => dishWon(s, id)) },
+  { id: 'pizzaiolo', name: 'Pizzaiolo DOC', desc: 'Win the Margherita and the Marinara.', icon: 'icon.w.pizza', check: (s) => ['margherita', 'marinara'].every((id) => dishWon(s, id)) },
+  { id: 'quaderno', name: 'Il Quaderno della Nonna', desc: 'Complete 5 different recipes.', icon: 'icon.p.ricettario', check: (s) => STAGES.filter((st) => s.records[st.id]?.perfect).length >= 5 },
 ];
 
 /** Award new medals; returns the ones earned now. */

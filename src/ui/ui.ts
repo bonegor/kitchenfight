@@ -10,7 +10,7 @@ import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
-import { STAGES, stageById } from '../game/stages';
+import { STAGES, stageById, isDishUnlocked, unlockText } from '../game/stages';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
 import type { SaveData } from '../core/save';
@@ -50,7 +50,7 @@ export class UI {
   private toastsEl: HTMLElement | null = null;
   private lastHud: Record<string, any> = {};
   private selectedChar = 'enzo';
-  selectedStage = 'kitchen';
+  selectedStage = STAGES[0].id;
   private levelBanish = false;
   /** armed while the 'press any key' gate is showing (gamepad confirm uses it) */
   loadingStart: (() => void) | null = null;
@@ -269,7 +269,7 @@ export class UI {
         return;
       }
       this.showStageSelect();
-    }, 'Choose kitchen');
+    }, 'Choose your dish');
     const renderDetail = (id: string) => {
       const c = charById(id);
       const unlocked = this.isCharUnlocked(id);
@@ -324,19 +324,19 @@ export class UI {
     this.show(el, 'charselect', () => this.showTitle());
     audio.playMusic('menu');
     // the stage picker comes next: start rendering its default stage's music now
-    const st = this.isStageUnlocked(this.selectedStage) ? this.selectedStage : 'kitchen';
+    const st = this.isStageUnlocked(this.selectedStage) ? this.selectedStage : STAGES[0].id;
     audio.preload([stageById(st).music]).catch(() => undefined);
   }
 
   // ------------------------------------------------------------------ stage select
 
   isStageUnlocked(id: string) {
-    return this.app.save.unlockedStages.includes(id);
+    return isDishUnlocked(this.app.save, id);
   }
 
   showStageSelect() {
     const grid = h('div', { class: 'stage-grid' });
-    if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = 'kitchen';
+    if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = STAGES[0].id;
     audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
     // Warm the music of the stage the player is looking at. Debounced: the render worker can't
     // cancel a track, so browsing across cards must not queue a ~100 s render per card.
@@ -355,7 +355,7 @@ export class UI {
       const card = h('div', { class: 'stage-card' + (unlocked ? '' : ' locked'), 'data-nav': '', ...(st.id === this.selectedStage ? { 'data-nav-default': '' } : {}) },
         cv,
         h('div', { class: 'info' },
-          h('div', { class: 'num' }, `Stage ${st.num} · ${st.subtitle}`),
+          h('div', { class: 'num' }, `${st.num} · ${st.course} · ${st.subtitle}`),
           h('h3', {}, st.name),
           h('p', {}, st.desc),
           unlocked
@@ -363,8 +363,9 @@ export class UI {
                 h('span', { class: 'tag' }, '⏱ ' + formatTime(rec?.bestTime ?? 0)),
                 h('span', { class: 'tag green' }, '🏆 ' + (rec?.wins ?? 0)),
                 h('span', { class: 'tag red' }, '🍴 ' + (rec?.bestKills ?? 0)),
+                rec?.perfect ? h('span', { class: 'tag' }, '★ Ricetta perfetta') : null,
               )
-            : h('div', { class: 'lock-note' }, '🔒 Win ' + stageById(st.unlockAfter ?? 'kitchen').name + ' to unlock'),
+            : h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st)),
         ),
       );
       setTimeout(() => renderStagePreview(cv, st, char.sprite), 0);
@@ -391,7 +392,7 @@ export class UI {
     const el = h('div', { class: 'screen dim' },
       h('div', { class: 'paper panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-head' }, h('h2', {}, 'Scegli la Cucina'), h('span', { class: 'sub' }, `Chef: ${char.name} — choose where to fight`)),
+        h('div', { class: 'panel-head' }, h('h2', {}, 'Il Menù'), h('span', { class: 'sub' }, `Chef: ${char.name} — choose your dish`)),
         h('div', { class: 'panel-body' }, grid),
         h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', () => this.showCharSelect(), 'Back')),
       ),

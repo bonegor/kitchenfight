@@ -14,6 +14,8 @@ import { updateEnemy, onEnemyDeath } from './ai';
 import { Director } from './director';
 import type { StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
+import { envForStage } from '../gfx/envvariants';
+import { recipeById, intruderIn, FRIEND_OR_FOE, RECIPE_COMPLETE, type RecipeDef } from './recipes';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
 import type { SaveData } from '../core/save';
@@ -45,6 +47,8 @@ export interface RunHooks {
   onVictory(): void;
   onRevive(): void;
   onToast(text: string, kind?: 'info' | 'warn' | 'good'): void;
+  /** a real ingredient was collected (index into run.recipe.ingredients); `complete` = it was the last one */
+  onIngredient(index: number, complete: boolean): void;
 }
 
 export class Player {
@@ -132,6 +136,19 @@ export class Run {
   damageTaken = 0;
   healed = 0;
   bestCombo = 0;
+  /** Il Menù: the dish being cooked, which real ingredients were collected, and whether all were */
+  recipe: RecipeDef | null = null;
+  recipeGot: boolean[] = [];
+  recipeComplete = false;
+  /** stat bonuses from collected ingredients (+ the recipe-complete reward) */
+  ingredientMods: StatMod[] = [];
+  /** intruders already announced this run (first sighting toast) */
+  private sighted = new Set<string>();
+  /** friend-or-foe notes already shown this run */
+  private fofShown = new Set<string>();
+  private toastQueue: { text: string; kind: 'info' | 'warn' | 'good' }[] = [];
+  private toastT = 4;
+  private sightT = 0;
 
   private enemyPool: Enemy[] = [];
   private projPool: Projectile[] = [];
@@ -143,8 +160,10 @@ export class Run {
   constructor(stage: StageDef, char: CharacterDef, public save: SaveData, public hooks: RunHooks) {
     this.stage = stage;
     this.char = char;
-    const env = STAGE_ENVS[stage.env] ?? Object.values(STAGE_ENVS)[0];
+    const env = envForStage(stage) ?? Object.values(STAGE_ENVS)[0];
     this.world = new World(env, this.rng.int(0, 1000));
+    this.recipe = recipeById(stage.recipe) ?? null;
+    this.recipeGot = this.recipe ? this.recipe.ingredients.map(() => false) : [];
     this.director = new Director(this, stage);
     this.player.r = char.radius;
     // permanent power-ups
@@ -190,6 +209,7 @@ export class Run {
       const d = PASSIVES[pa.id];
       for (const m of d.mods) apply(m, pa.level);
     }
+    for (const m of this.ingredientMods) apply(m);
     st.cooldown = Math.max(0.35, st.cooldown);
     st.moveSpeed = Math.max(0.4, st.moveSpeed);
     const oldMax = this.stats.maxHp;
@@ -305,6 +325,9 @@ export class Run {
     e.leapT = 0;
     e.leapDur = 0;
     e.onLand = null;
+    e.invuln = 0;
+    e.fade = 0;
+    e.isFinal = false;
     e.lastHit = {};
     this.enemies.push(e);
     if (e.boss) this.bosses.push(e);
@@ -342,6 +365,7 @@ export class Run {
     p.speed = 0;
     p.gold = false;
     p.frame = 0;
+    p.age = 0;
     if (pop) {
       const a = this.rng.next() * TAU;
       const sp = 20 + this.rng.next() * 50;
@@ -362,9 +386,40 @@ export class Run {
       case 'spumante': p.sprite = 'pickup.spumante'; p.r = 12; break;
       case 'gelato': p.sprite = 'pickup.gelato'; p.r = 11; break;
       case 'chest': p.sprite = 'pickup.chest'; p.r = 16; break;
+      case 'ingredient': p.sprite = this.recipe?.ingredients[value]?.sprite ?? 'pickup.xp3'; p.r = 14; break;
     }
     this.pickups.push(p);
     return p;
+  }
+
+  /**
+   * Place real ingredient #index on the map: 320–520 units from the chef on free ground,
+   * preferably behind him (opposite to where he is walking), so he has to turn back for it.
+   */
+  spawnIngredient(index: number) {
+    const ing = this.recipe?.ingredients[index];
+    if (!ing || this.recipeGot[index]) return;
+    const p = this.player;
+    const moving = Math.hypot(p.vx, p.vy) > 20;
+    const base = moving ? Math.atan2(-p.vy, -p.vx) : this.rng.next() * TAU;
+    let x = p.x + Math.cos(base) * 420, y = p.y + Math.sin(base) * 420;
+    for (let tries = 0; tries < 24; tries++) {
+      const a = base + (this.rng.next() - 0.5) * (tries < 12 ? 1.6 : TAU);
+      const d = 320 + this.rng.next() * 200;
+      const tx = p.x + Math.cos(a) * d, ty = p.y + Math.sin(a) * d;
+      if (this.world.free(tx, ty, 26)) {
+        x = tx;
+        y = ty;
+        break;
+      }
+    }
+    this.dropPickup('ingredient', x, y, index, false);
+    this.hooks.onToast(`${ing.it} is on the map! Follow the green arrow.`, 'good');
+  }
+
+  /** How many real ingredients have been collected. */
+  ingredientsGot(): number {
+    return this.recipeGot.filter(Boolean).length;
   }
 
   xpSprite(v: number) {
@@ -383,7 +438,7 @@ export class Run {
     let best: Enemy | null = null;
     let bd = maxD * maxD;
     for (const e of this.enemies) {
-      if (!e.alive || e.spawnT > 0.25 || (e.state === 1 && e.def.behavior === 'ghost')) continue;
+      if (!e.alive || e.spawnT > 0.25 || e.invuln > 0 || (e.state === 1 && e.def.behavior === 'ghost')) continue;
       if (exclude && exclude.has(e.id)) continue;
       const d = (e.x - x) ** 2 + (e.y - y) ** 2;
       if (d < bd) {
@@ -463,7 +518,7 @@ export class Run {
 
   /** Apply damage to an enemy from a weapon. Returns true if it died. */
   hitEnemy(e: Enemy, base: number, w: WeaponInstance | null, kx: number, ky: number, o: { knock?: number; crit?: number; critMul?: number; noNumber?: boolean; silent?: boolean } = {}): boolean {
-    if (!e.alive) return false;
+    if (!e.alive || e.invuln > 0) return false;
     let dmg = base * (0.92 + this.rng.next() * 0.16);
     let crit = false;
     if (o.crit && this.rng.next() < o.crit) {
@@ -540,7 +595,7 @@ export class Run {
 
   bossDefeated(e: Enemy) {
     this.bosses = this.bosses.filter((b) => b !== e);
-    const final = !!e.def.boss?.final && this.stage.finalBoss === e.def.id;
+    const final = e.isFinal;
     this.fx.screenFlash(0.8);
     this.fx.shake(0.9);
     this.slowMo = 1.2;
@@ -1006,6 +1061,17 @@ export class Run {
     this.updatePickups(dt);
     this.compact();
 
+    // first sightings of the dish's intruders + queued toasts (one every few seconds)
+    if ((this.sightT -= dt) <= 0) {
+      this.sightT = 0.4;
+      this.checkSightings();
+    }
+    if ((this.toastT -= dt) <= 0 && this.toastQueue.length) {
+      const t = this.toastQueue.shift()!;
+      this.hooks.onToast(t.text, t.kind);
+      this.toastT = 5;
+    }
+
     if (this.freezeT > 0) this.freezeT -= dt;
     if (this.xpComboT > 0) {
       this.xpComboT -= dt;
@@ -1138,6 +1204,7 @@ export class Run {
       if (e.attackPose > 0) e.attackPose -= dt;
       if (e.telegraph > 0) e.telegraph -= dt;
       if (e.buff > 0) e.buff -= dt;
+      if (e.invuln > 0) e.invuln -= dt;
       // status
       if (e.burn > 0) {
         e.burn -= dt;
@@ -1180,7 +1247,7 @@ export class Run {
       }
       // contact with player
       const rr = e.r * 0.85 + p.r;
-      const ghosted = e.state === 1 && e.def.behavior === 'ghost';
+      const ghosted = (e.state === 1 && e.def.behavior === 'ghost') || e.invuln > 0;
       if (!isFrozen && !ghosted && e.z < 8 && dx * dx + dy * dy < rr * rr && e.spawnT <= 0.1) {
         if (e.damage > contactDmg) {
           contactDmg = e.damage;
@@ -1399,7 +1466,7 @@ export class Run {
     // persistent weapons share hit delays via the weapon slot (orbits)
     this.grid.query(p.x, p.y, p.r + 30, tmpE);
     for (const e of tmpE) {
-      if (!e.alive || (e.state === 1 && e.def.behavior === 'ghost')) continue;
+      if (!e.alive || e.invuln > 0 || (e.state === 1 && e.def.behavior === 'ghost')) continue;
       const rr = p.r + e.r;
       const dx = e.x - p.x, dy = e.y - p.y;
       if (dx * dx + dy * dy > rr * rr) continue;
@@ -1581,8 +1648,18 @@ export class Run {
       }
       const dx = pl.x - p.x, dy = pl.y - 10 - p.y;
       const d2 = dx * dx + dy * dy;
+      if (p.kind === 'ingredient') {
+        // not magnet-pulled until the chef is right next to it; after 90 s it drifts toward him
+        p.age += dt;
+        if (!p.magnet && d2 < 60 * 60) p.magnet = true;
+        else if (!p.magnet && p.age > 90) {
+          const d = Math.sqrt(d2) || 1;
+          p.x += (dx / d) * 36 * dt;
+          p.y += (dy / d) * 36 * dt;
+        }
+      }
       const autoMag = p.kind !== 'chest' && p.kind !== 'xp' && p.kind !== 'coin' ? 0.6 : 1;
-      if (!p.magnet && d2 < magR * magR * autoMag * (p.kind === 'chest' ? 0.4 : 1)) p.magnet = true;
+      if (!p.magnet && p.kind !== 'ingredient' && d2 < magR * magR * autoMag * (p.kind === 'chest' ? 0.4 : 1)) p.magnet = true;
       if (p.magnet && p.t > 0.25) {
         const d = Math.sqrt(d2) || 1;
         p.speed = Math.min(900, p.speed + 1300 * dt);
@@ -1657,6 +1734,75 @@ export class Run {
         this.sfx('chest_drop');
         this.say(['Mangia!', 'Che bella cesta!', 'Un regalo!'], true);
         break;
+      case 'ingredient':
+        this.collectIngredient(p.value);
+        break;
+    }
+  }
+
+  /** A real ingredient: buff for the rest of the run; all of them = RICETTA COMPLETA. */
+  collectIngredient(index: number) {
+    const r = this.recipe;
+    if (!r || this.recipeGot[index]) return;
+    const ing = r.ingredients[index];
+    this.recipeGot[index] = true;
+    this.ingredientMods.push(...ing.mods);
+    this.recomputeStats();
+    const pl = this.player;
+    const n = this.ingredientsGot(), m = r.ingredients.length;
+    this.sfx('ui_unlock');
+    this.fx.text(pl.x, pl.y - 74, `${ing.it} ✓ ${n}/${m}`, '#7cff8a', 18, 2.2);
+    this.fx.text(pl.x, pl.y - 52, ing.buff, '#fff3b0', 13, 2);
+    this.fx.ring(pl.x, pl.y, 10, 170, 0.7, '#7cff8a', 7);
+    this.fx.burst(pl.x, pl.y - 20, 24, { sprite: 'fx.spark', speed: 220, size: 1, life: 0.8, additive: true });
+    this.say([ing.it + '!', 'Questo sì!', 'Ci vuole!', 'Che profumo!', 'Perfetto!'], true, '#e8ffd8');
+    const complete = n === m;
+    if (complete) this.completeRecipe();
+    this.hooks.onIngredient(index, complete);
+    // friend or foe: the same ingredient is a crime in another dish
+    const f = FRIEND_OR_FOE.find((x) => x.ingredient === ing.id && x.friendIn.includes(r.id));
+    if (f && !this.fofShown.has('i:' + f.ingredient)) {
+      this.fofShown.add('i:' + f.ingredient);
+      this.queueToast(f.friendLine, 'info');
+    }
+  }
+
+  completeRecipe() {
+    if (this.recipeComplete) return;
+    this.recipeComplete = true;
+    this.ingredientMods.push(...RECIPE_COMPLETE.mods);
+    this.recomputeStats();
+    const pl = this.player;
+    this.heal(this.stats.maxHp);
+    this.coins += RECIPE_COMPLETE.coins;
+    this.sfx('pickup_bell');
+    this.fx.screenFlash(0.45, '#eaffd8');
+    this.fx.burst(pl.x, pl.y - 30, 70, { sprite: 'fx.confetti', frames: 6, speed: 520, size: 1, life: 2.2, gravity: 300, up: 380, shrink: false, drag: 1.4, spin: 14 });
+    this.fx.text(pl.x, pl.y - 100, 'RICETTA COMPLETA!', '#ffd34d', 24, 2.6);
+    this.fx.bubble(pl, 'Come la faceva la Nonna!', -80, '#fff3b0', 2, true);
+  }
+
+  /** Queue a toast (rate-limited so sightings and notes do not flood the screen). */
+  queueToast(text: string, kind: 'info' | 'warn' | 'good' = 'info') {
+    if (this.toastQueue.length < 6) this.toastQueue.push({ text, kind });
+  }
+
+  /** First sighting of each intruder of this dish: "<it> nella Carbonara? NO! <line>". */
+  private checkSightings() {
+    const r = this.recipe;
+    if (!r) return;
+    for (const e of this.enemies) {
+      if (!e.alive || e.boss || !this.onScreen(e.x, e.y, -30)) continue;
+      const intr = intruderIn(r, e.def.id);
+      if (!intr || this.sighted.has(intr.enemy)) continue;
+      this.sighted.add(intr.enemy);
+      const home = intr.fromDish ? recipeById(intr.fromDish) ?? r : r;
+      this.queueToast(`${intr.it} ${home.inDish}? NO! ${intr.line}`, 'warn');
+      const f = FRIEND_OR_FOE.find((x) => x.enemy === intr.enemy && x.foeIn.includes(r.id));
+      if (f && !this.fofShown.has('e:' + f.enemy)) {
+        this.fofShown.add('e:' + f.enemy);
+        this.queueToast(f.foeLine, 'info');
+      }
     }
   }
 
@@ -1696,6 +1842,7 @@ export class Run {
     rec.bestKills = Math.max(rec.bestKills, this.kills);
     rec.bestLevel = Math.max(rec.bestLevel, this.level);
     if (victory) rec.wins++;
+    if (this.recipeComplete) rec.perfect = true;
     return this.coins;
   }
 

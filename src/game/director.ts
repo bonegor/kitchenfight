@@ -15,6 +15,8 @@ export class Director {
   private bossWarn = -1;
   bossActive = false;
   finalSpawned = false;
+  /** ingredient indices waiting for the previous ingredient to be collected (one at a time) */
+  private ingredientQueue: number[] = [];
 
   constructor(private run: Run, private stage: StageDef) {}
 
@@ -116,6 +118,11 @@ export class Director {
       this.eventIdx++;
     }
 
+    // real ingredients: one on the map at a time
+    if (this.ingredientQueue.length && !run.pickups.some((q) => q.alive && q.kind === 'ingredient')) {
+      run.spawnIngredient(this.ingredientQueue.shift()!);
+    }
+
     // bosses (warning 3 s before)
     const b = this.stage.bosses[this.bossIdx];
     if (b) {
@@ -125,22 +132,28 @@ export class Director {
         run.hooks.onToast('⚠ ' + (ENEMIES[b.id]?.boss?.title ?? 'Boss') + ' is coming!', 'warn');
       }
       if (t >= b.at) {
-        this.spawnBoss(b.id);
+        this.spawnBoss(b.id, b.hp, this.bossIdx === this.stage.bosses.length - 1);
         this.bossIdx++;
       }
     }
     this.bossActive = run.bosses.some((e) => e.alive);
   }
 
-  spawnBoss(id: string) {
+  /**
+   * @param slotHp the stage's boss base HP for this slot (Il Menù reuses bosses across tiers)
+   * @param lastSlot this is the stage's 15:00 boss
+   */
+  spawnBoss(id: string, slotHp?: number, lastSlot = false) {
     const run = this.run;
     const def = ENEMIES[id];
     if (!def) return;
     const pos = this.spawnPos(def.radius, run.rng.int(0, 3));
     const lvlMul = 1 + (run.level - 1) * 0.035;
-    const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) });
+    const slot = slotHp ? slotHp / def.hp : 1;
+    const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) * slot });
     e.spawnT = 0.6;
-    const final = id === this.stage.finalBoss && run.time >= this.stage.bosses[this.stage.bosses.length - 1].at - 1;
+    const final = lastSlot && id === this.stage.finalBoss;
+    e.isFinal = final;
     if (final) this.finalSpawned = true;
     run.fx.shake(0.5);
     run.sfx('boss_roar');
@@ -162,7 +175,10 @@ export class Director {
     const halfDiag = Math.hypot(v.x1 - v.x0, v.y1 - v.y0) / 2;
     switch (ev.kind) {
       case 'toast':
-        if (ev.text) run.hooks.onToast(ev.text, ev.text.includes('ILLEGAL') ? 'warn' : 'info');
+        if (ev.text) run.hooks.onToast(ev.text, ev.tone ?? (ev.text.includes('ILLEGAL') ? 'warn' : 'info'));
+        break;
+      case 'ingredient':
+        if (ev.index !== undefined && run.recipe && ev.index < run.recipe.ingredients.length && !run.recipeGot[ev.index]) this.ingredientQueue.push(ev.index);
         break;
       case 'ring': {
         if (!def) return;

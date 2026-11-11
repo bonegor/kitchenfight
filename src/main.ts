@@ -17,14 +17,22 @@ import { loadSave, writeSave, resetSave, SaveData } from './core/save';
 import { Run, RunHooks } from './game/run';
 import { Renderer } from './game/render';
 import { UI } from './ui/ui';
-import { stageById, STAGES } from './game/stages';
+import { stageById, STAGES, isDishUnlocked, refreshUnlocks } from './game/stages';
+import { recipeById } from './game/recipes';
 import { charById, CHARACTERS } from './game/passives';
 import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
 import type { Enemy } from './game/entities';
 import { awardMedals } from './game/medals';
 
+/** Unlock every dish the save's wins allow (also completes a v1 → v2 migration) and keep lastStage valid. */
+function prepareSave(s: SaveData): SaveData {
+  refreshUnlocks(s);
+  if (!isDishUnlocked(s, s.lastStage)) s.lastStage = STAGES[0].id;
+  return s;
+}
+
 class App {
-  save: SaveData = loadSave();
+  save: SaveData = prepareSave(loadSave());
   canvas = document.getElementById('game') as HTMLCanvasElement;
   input = new Input(this.canvas);
   renderer = new Renderer(this.canvas);
@@ -68,7 +76,7 @@ class App {
     } catch {
       /* fonts are optional */
     }
-    await prerenderAll(['chef.', 'enemy.', 'proj.', 'pickup.', 'fx.', 'icon.', 'ui.'], (p) => loading.set(p * 0.9));
+    await prerenderAll(['chef.', 'enemy.', 'proj.', 'pickup.', 'fx.', 'icon.', 'ui.', 'ingr.', 'dish.'], (p) => loading.set(p * 0.9));
     loading.set(1);
     this.mode = 'menu';
     this.startAttract();
@@ -76,7 +84,7 @@ class App {
       audio.unlock();
       this.applySettings();
       this.ui.showTitle();
-      const st = STAGES.find((x) => x.id === this.save.lastStage && this.save.unlockedStages.includes(x.id)) ?? STAGES[0];
+      const st = STAGES.find((x) => x.id === this.save.lastStage && isDishUnlocked(this.save, x.id)) ?? STAGES[0];
       audio.preload([st.music]).catch(() => undefined);
       // a gamepad press is not a user activation, so the browser may keep audio locked
       setTimeout(() => {
@@ -112,7 +120,7 @@ class App {
   }
 
   resetSave() {
-    this.save = resetSave();
+    this.save = prepareSave(resetSave());
     // tear down everything the old UI put on screen before replacing it
     this.ui.closeOverlay();
     this.ui.clearScreen();
@@ -127,7 +135,7 @@ class App {
   // ------------------------------------------------------------------ attract mode (title background)
 
   startAttract() {
-    const stages = STAGES.filter((s) => this.save.unlockedStages.includes(s.id));
+    const stages = STAGES.filter((s) => isDishUnlocked(this.save, s.id));
     const st = stages[Math.floor(Math.random() * stages.length)] ?? STAGES[0];
     const chars = CHARACTERS.filter((c) => this.save.unlockedChars.includes(c.id));
     const ch = chars[Math.floor(Math.random() * chars.length)] ?? CHARACTERS[0];
@@ -150,6 +158,7 @@ class App {
       onVictory: () => this.startAttract(),
       onRevive: () => undefined,
       onToast: () => undefined,
+      onIngredient: () => undefined,
     };
     r = new Run(st, ch, dummySave, hooks);
     r.muted = true;
@@ -200,6 +209,13 @@ class App {
         onVictory: () => this.finishRun(true),
         onRevive: () => this.ui.toast('Bis! A second helping of life.', 'good'),
         onToast: (t, k) => this.ui.toast(t, k),
+        onIngredient: (index: number, complete: boolean) => {
+          const r = run.recipe;
+          if (!r) return;
+          const ing = r.ingredients[index];
+          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false);
+          else this.ui.banner(`${ing.it} ✓ ${run.ingredientsGot()}/${r.ingredients.length}`, ing.buff, false);
+        },
       };
       const run = new Run(st, ch, this.save, hooks);
       audio.setMusicMuffled(false);
@@ -217,7 +233,8 @@ class App {
           if (run.fx.bubblesEnabled) audio.voice(line, ch.voice);
         }
       }, 400);
-      this.ui.banner(st.name, st.subtitle + ' — survive 15:00');
+      const recipe = recipeById(st.recipe);
+      this.ui.banner(st.name, recipe ? 'Ingredienti veri: ' + recipe.ingredients.map((i) => i.it.toLowerCase()).join(', ') : st.subtitle + ' — survive 15:00');
       if (this.save.runs === 0) {
         const touch = matchMedia('(pointer: coarse)').matches;
         const tips: [number, string][] = [
@@ -248,16 +265,13 @@ class App {
     const newRecord = !prev || run.time > prev.bestTime + 0.5;
     run.commitResults(victory);
     const unlocks: { icon: string; text: string }[] = [];
-    if (victory) {
-      for (const s of STAGES) {
-        if (s.unlockAfter === run.stage.id && !this.save.unlockedStages.includes(s.id)) {
-          this.save.unlockedStages.push(s.id);
-          unlocks.push({ icon: 'icon.star', text: `New kitchen unlocked: ${s.name}!` });
-          // the stage picker opens on the new kitchen (and warms its music) next time
-          this.save.lastStage = s.id;
-          this.ui.selectedStage = s.id;
-        }
-      }
+    if (run.recipeComplete) unlocks.push({ icon: run.recipe?.sprite ?? 'icon.star', text: `Ricetta completa: ${run.stage.name}! ★` });
+    const fresh = refreshUnlocks(this.save);
+    for (const s of fresh) unlocks.push({ icon: 'icon.star', text: `New dish on the menu: ${s.name}!` });
+    if (fresh.length) {
+      // the menu opens on the new dish (and warms its music) next time
+      this.save.lastStage = fresh[0].id;
+      this.ui.selectedStage = fresh[0].id;
     }
     for (const c of CHARACTERS) {
       if (this.save.unlockedChars.includes(c.id) || !c.unlock?.check) continue;
@@ -324,6 +338,7 @@ class App {
       onVictory: () => { won = true; },
       onRevive: () => undefined,
       onToast: () => undefined,
+      onIngredient: () => undefined,
     };
     r = new Run(st, ch, save, hooks);
     r.muted = true;
@@ -347,7 +362,7 @@ class App {
         snaps.push({ m: Math.round(r.time / 60), lvl: r.level, hp: Math.round(p.hp), maxHp: Math.round(r.stats.maxHp), kills: r.kills, alive: r.enemies.length, weapons: r.weapons.map((w) => w.def.id + ':' + w.level).join(' '), passives: r.passives.map((q) => q.id + ':' + q.level).join(' '), bosses: r.bosses.filter((b) => b.alive).map((b) => b.def.id + ' ' + Math.round((b.hp / b.maxHp) * 100) + '%').join(',') });
       }
     }
-    return { stage: stageId, char: charId, time: Math.round(r.time), dead, won, level: r.level, kills: r.kills, coins: r.coins, evolutions: r.evolutionsDone, ms: Math.round(performance.now() - t0), snaps, dmgTaken: Math.round(r.damageTaken), dmgBy: Object.fromEntries(Object.entries(r.dmgBy).map(([k, v]) => [k, Math.round(v)])), wdmg: r.weapons.map((w) => w.def.id + ':' + Math.round(w.damageDealt)).join(' ') };
+    return { stage: stageId, char: charId, time: Math.round(r.time), dead, won, level: r.level, kills: r.kills, coins: r.coins, ingredients: r.ingredientsGot() + '/' + r.recipeGot.length, recipeComplete: r.recipeComplete, evolutions: r.evolutionsDone, ms: Math.round(performance.now() - t0), snaps, dmgTaken: Math.round(r.damageTaken), dmgBy: Object.fromEntries(Object.entries(r.dmgBy).map(([k, v]) => [k, Math.round(v)])), wdmg: r.weapons.map((w) => w.def.id + ':' + Math.round(w.damageDealt)).join(' ') };
   }
 
   // ------------------------------------------------------------------ loop
@@ -463,6 +478,7 @@ function autopilot(r: Run): { x: number; y: number } {
     let d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
     if (hurt && (q.kind === 'cannolo' || q.kind === 'lasagna')) d *= 0.1;
     if (q.kind === 'chest') d *= 0.3;
+    if (q.kind === 'ingredient') d = Math.min(d * 0.02, 250 * 250 - 1); // a real ingredient is worth the detour
     if (d < best && d < 260 * 260) { best = d; tx = q.x; ty = q.y; }
   }
   if (hurt && best > 120 * 120) {

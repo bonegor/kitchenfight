@@ -8,10 +8,13 @@
  *   &flash=1                                also show hit-flash silhouette
  *   &cols=8                                 columns
  *   /gallery.html?stage=kitchen&zoom=1      stage environment preview (tiles + props)
+ *   /gallery.html?stage=carbonara           a dish's environment variant (decor; ambient light is not applied here)
  */
 import './gfx/art/index';
 import { getSprite, spriteIds, drawSprite, RES } from './gfx/sprites';
 import { STAGE_ENVS } from './gfx/art/index';
+import { STAGES } from './game/stages';
+import { envForStage } from './gfx/envvariants';
 
 const q = new URLSearchParams(location.search);
 const root = document.getElementById('root')!;
@@ -76,7 +79,8 @@ function gallery() {
 }
 
 function stagePreview(id: string) {
-  const env = STAGE_ENVS[id];
+  const dish = STAGES.find((s) => s.id === id || `${s.env}:${s.id}` === id);
+  const env = STAGE_ENVS[id] ?? (dish ? envForStage(dish) : undefined);
   if (!env) { root.textContent = 'unknown stage ' + id + ' — known: ' + Object.keys(STAGE_ENVS).join(', '); return; }
   const zoom = parseFloat(q.get('zoom') ?? '1');
   const W = parseInt(q.get('w') ?? '1400'), H = parseInt(q.get('h') ?? '900');

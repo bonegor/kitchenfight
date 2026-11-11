@@ -1,6 +1,7 @@
 /** Passive items (stat boosters) + permanent pantry power-ups + characters. */
 import type { PassiveDef, CharacterDef, StatMod } from './types';
 import type { SaveData } from '../core/save';
+import { dishWon } from './stages';
 
 export const PASSIVES: Record<string, PassiveDef> = {};
 function P(d: PassiveDef) {
@@ -77,7 +78,7 @@ export const CHARACTERS: CharacterDef[] = [
     id: 'nonna', name: 'Nonna Pina', title: 'La Nonna', sprite: 'chef.nonna', portrait: 'portrait.nonna', weapon: 'ciabatta',
     bio: 'Eighty-seven years old. Her slipper has a longer range than most artillery.',
     mods: [{ stat: 'armor', add: 1 }, { stat: 'recovery', add: 0.3 }, { stat: 'moveSpeed', add: -0.1 }],
-    bonusText: '+1 Armor, +0.3 HP/s, −10% Speed', unlock: { text: 'Survive 5 minutes in any stage', check: (s: SaveData) => s.bestTime >= 300 }, voice: 'nonna', radius: 13,
+    bonusText: '+1 Armor, +0.3 HP/s, −10% Speed', unlock: { text: 'Survive 5 minutes in any dish', check: (s: SaveData) => s.bestTime >= 300 }, voice: 'nonna', radius: 13,
   },
   {
     id: 'peppe', name: 'Peppe', title: 'Il Pizzaiolo', sprite: 'chef.peppe', portrait: 'portrait.peppe', weapon: 'pizza',
@@ -87,7 +88,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: 'sofia', name: 'Sofia', title: 'La Romana', sprite: 'chef.sofia', portrait: 'portrait.sofia', weapon: 'forchette',
     bio: 'Roman trattoria cook. Guanciale, pecorino, eggs, pepper. That is the list. There is no other list.',
-    mods: [{ stat: 'cooldown', add: -0.08 }], bonusText: '−8% Cooldown', unlock: { text: 'Win La Cucina', check: (s: SaveData) => (s.records.kitchen?.wins ?? 0) > 0 }, voice: 'angry', radius: 13,
+    mods: [{ stat: 'cooldown', add: -0.08 }], bonusText: '−8% Cooldown', unlock: { text: 'Win the Carbonara', check: (s: SaveData) => dishWon(s, 'carbonara') || (s.records.kitchen?.wins ?? 0) > 0 }, voice: 'angry', radius: 13,
   },
   {
     id: 'tommaso', name: "Fra' Tommaso", title: 'Il Casaro', sprite: 'chef.tommaso', portrait: 'portrait.tommaso', weapon: 'forma',
@@ -97,12 +98,12 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: 'concetta', name: 'Zia Concetta', title: 'La Calabrese', sprite: 'chef.concetta', portrait: 'portrait.concetta', weapon: 'peperoncino',
     bio: 'Fiery Calabrian aunt. Her chilli jars come with a legal disclaimer.',
-    mods: [{ stat: 'luck', add: 0.15 }, { stat: 'might', add: 0.1 }], bonusText: '+15% Luck, +10% Might', unlock: { text: 'Win La Trattoria', check: (s: SaveData) => (s.records.trattoria?.wins ?? 0) > 0 }, voice: 'angry', radius: 14,
+    mods: [{ stat: 'luck', add: 0.15 }, { stat: 'might', add: 0.1 }], bonusText: '+15% Luck, +10% Might', unlock: { text: "Win the Amatriciana", check: (s: SaveData) => dishWon(s, 'amatriciana') || (s.records.trattoria?.wins ?? 0) > 0 }, voice: 'angry', radius: 14,
   },
   {
     id: 'micio', name: 'Micio', title: 'Il Gatto', sprite: 'chef.micio', portrait: 'portrait.micio', weapon: 'basilico',
     bio: "The trattoria's cat. Unpaid, unbothered, and the only one allowed to sit on the counter.",
-    mods: [{ stat: 'moveSpeed', add: 0.2 }, { stat: 'magnet', add: 0.3 }, { stat: 'maxHp', mul: 0.85 }], bonusText: '+20% Speed, +30% Magnet, −15% Max HP', unlock: { text: 'Win I Vicoli di Napoli', check: (s: SaveData) => (s.records.streets?.wins ?? 0) > 0 }, voice: 'cat', radius: 12,
+    mods: [{ stat: 'moveSpeed', add: 0.2 }, { stat: 'magnet', add: 0.3 }, { stat: 'maxHp', mul: 0.85 }], bonusText: '+20% Speed, +30% Magnet, −15% Max HP', unlock: { text: 'Win the Margherita', check: (s: SaveData) => dishWon(s, 'margherita') || (s.records.streets?.wins ?? 0) > 0 }, voice: 'cat', radius: 12,
   },
 ];
 

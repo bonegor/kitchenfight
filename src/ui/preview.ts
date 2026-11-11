@@ -1,12 +1,12 @@
 /** Static illustrated previews of a stage (tiles + props + a few crimes). */
-import { STAGE_ENVS } from '../gfx/stageenv';
+import { envForStage } from '../gfx/envvariants';
 import { getSprite, drawSprite, hasSprite } from '../gfx/sprites';
 import { hash2, seededRandom } from '../core/math';
 import { ENEMIES } from '../game/enemies';
 import type { StageDef } from '../game/stages';
 
 export function renderStagePreview(cv: HTMLCanvasElement, stage: StageDef, chefSprite = 'chef.enzo') {
-  const env = STAGE_ENVS[stage.env];
+  const env = envForStage(stage); // the dish's variant (light + decor) of its environment
   const W = cv.width, H = cv.height;
   const ctx = cv.getContext('2d')!;
   ctx.fillStyle = '#3a2a22';
