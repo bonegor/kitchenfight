@@ -14,5 +14,14 @@ import './env_kitchen';
 import './env_trattoria';
 import './env_streets';
 import './env_foodcourt';
+// Il Menù art (each file fills in its own sprites; see the contract in its header)
+import './recipes_enemies_a';
+import './recipes_enemies_b';
+import './recipes_bosses_a';
+import './recipes_bosses_b';
+import './recipes_ingredients';
+import './recipes_dishes';
+// MUST stay last: stand-ins for every Il Menù sprite no module above has defined yet
+import './placeholders';
 
 export { STAGE_ENVS, registerStageEnv } from '../stageenv';
