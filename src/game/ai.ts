@@ -73,8 +73,14 @@ export function lobShot(run: Run, e: Enemy, tx: number, ty: number, time: number
   return s;
 }
 
-/** Enemy hazard kinds. 'oil' is the seed-oil slick (area kind 'seedoil'; the chef's own oil is 'oil'). */
-export type HazardKind = 'cream' | 'ketchup' | 'cheese' | 'butter' | 'oil' | 'stink' | 'fire';
+/**
+ * Enemy hazard kinds. 'oil' is the seed-oil slick (area kind 'seedoil'; the chef's own oil is 'oil');
+ * 'floret' is the mashed broccoli a Broccolo Americano's lobbed florets leave behind.
+ */
+export type HazardKind = 'cream' | 'ketchup' | 'cheese' | 'butter' | 'oil' | 'stink' | 'fire' | 'floret';
+
+/** Splash colours when a lobbed shot lands and leaves its hazard (cheese and cream by default). */
+const LAND_SPLASH: Partial<Record<HazardKind, string[]>> = { floret: ['#79bd57', '#3e8c39', '#a9d273'] };
 
 /** Ground hazard that slows (and optionally hurts) the player. */
 export function hazard(run: Run, kind: HazardKind, x: number, y: number, r: number, life: number, slow: number, damage = 0) {
@@ -205,7 +211,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const area = P.area ?? 'cheese';
         lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage, (x, y) => {
           hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * 0.2);
-          run.fx.burst(x, y, 10, { colors: ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
+          run.fx.burst(x, y, 10, { colors: LAND_SPLASH[area as HazardKind] ?? ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
         });
         e.attackPose = 0.3;
         run.sfx('enemy_shoot', { volume: 0.35, pitch: 0.8 }, e.x);

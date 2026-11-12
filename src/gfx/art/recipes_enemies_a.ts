@@ -37,7 +37,11 @@
  *   proj.e_spore        24×24     (12,12)  1 frame: a dark olive-khaki puff of mushroom spores with sickly yellow-green
  *                                          highlights (DANGER style: hot rim, red glow).
  *   proj.e_floret       24×24     (12,12)  1 frame: a round broccoli floret dripping cream, stalk stub at the back
- *                                          (lobbed and spun; lands as a cream puddle). DANGER style.
+ *                                          (lobbed and spun; lands as fx.floret_patch). DANGER style.
+ *   fx.floret_patch     76×56     (38,28)  1 frame, res 2: the floret smashed on the floor, seen from above: a matte
+ *                                          sage-green smear (no cream, no gloss, so it never reads as the chef's bright
+ *                                          pesto), broken floret chunks on stubs of stalk and loose buds (enemy hazard
+ *                                          'floret'; drawn scaled to the hazard radius at ~0.92 alpha).
  */
 import {
   Ctx, Pt, INK, shape, group, ellipsePath, circlePath, polyPath, smoothPath, line, inkLine, legs, eye, brow,
@@ -1213,6 +1217,30 @@ fx('fx.butter_puddle', 76, 56, (ctx) => {
     // top face edge (the pat is a soft block seen from above)
     line(ctx, [[-6.4, 1.8], [-1, 2.6], [6.6, 1.2]], 0.6, rgba('#c99a30', 0.7), true);
     glint(ctx, 5.4, -2.6, 1.2, 0.5, -0.2, 0.85);
+  });
+}, { res: 2 });
+
+// ===========================================================================
+// FX — smashed broccoli (enemy hazard 'floret', where a lobbed floret lands)
+// ===========================================================================
+
+fx('fx.floret_patch', 76, 56, (ctx) => {
+  // a matte, muted sage smear of mashed buds: no cream and no gloss, so it reads apart from the chef's
+  // bright, glossy pesto and from the pale cream puddles
+  puddle(ctx, 29, 20, 61, { base: '#9db562', alpha: 0.74, rim: '#46642a', glossA: 0, satellites: 4 });
+  const lob = puddlePts(29, 20, 61);
+  clipTo(ctx, (c) => smoothPath(c, lob, true, 0.6), () => {
+    speckle(ctx, 0, 0, 26, 18, 40, BROC_DK, 1.1, 62, 0.55);
+    speckle(ctx, 0, 0, 26, 18, 34, BROC, 1.3, 63, 0.8);
+    speckle(ctx, 0, 0, 26, 18, 22, BROC_HI, 0.9, 64, 0.85);
+  });
+  // broken floret chunks, each a few buds on a stub of stalk
+  const chunks: [number, number, number, number][] = [[-9, -6, 0.5, 4.2], [8, 4, -0.7, 4.6], [19, -2, 1.9, 3.6], [-2, 9, 2.8, 3.8], [-20, 3, -2.2, 3.2], [9, -10, -2.6, 3.0]];
+  chunks.forEach(([x, y, a, r], i) => {
+    rot(ctx, x, y, a, () => {
+      shape(ctx, (c) => ellipsePath(c, -r * 1.05, 0, r * 0.8, r * 0.42), { fill: STALK, ink: 0.85, shadow: STALK_SH, shadowOffset: [-0.4, -0.5] });
+      floret(ctx, [[0, -r * 0.55, r * 0.72], [0.2, r * 0.55, r * 0.7], [r * 0.7, 0, r * 0.78]], 0.95, 70 + i);
+    });
   });
 }, { res: 2 });
 

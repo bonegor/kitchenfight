@@ -546,7 +546,7 @@ export class Renderer {
     const k = a.life / a.max;
     const fadeIn = clamp((a.max - a.life) / 0.2, 0, 1);
     const fade = Math.min(fadeIn, clamp(a.life / 0.5, 0, 1));
-    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle', butter: 'fx.butter_puddle', seedoil: 'fx.seedoil_puddle' };
+    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle', butter: 'fx.butter_puddle', seedoil: 'fx.seedoil_puddle', floret: 'fx.floret_patch' };
     if (a.kind === 'warning') {
       const col = a.enemy ? '#ff3b2f' : '#ff9b3d';
       ctx.strokeStyle = rgba(col, 0.85);

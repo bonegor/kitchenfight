@@ -278,7 +278,7 @@ E({
 });
 E({
   id: 'funghi', name: 'Funghi Abusivi', en: 'Bootleg Mushrooms', sprite: 'enemy.funghi',
-  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
+  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 }, flying: true,
   color: 'brown', juice: '#d9c3a0', chunk: 'bread',
   info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef\'s 2020 carbonara video with mushrooms, peas and crème fraîche.', severity: 2 },
 });
@@ -290,7 +290,7 @@ E({
 });
 E({
   id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
-  radius: 15, hp: 22, speed: 44, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, shot: 'proj.e_floret', area: 'cream', r: 24, slow: 0.25 },
+  radius: 15, hp: 22, speed: 44, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, shot: 'proj.e_floret', area: 'floret', r: 24, slow: 0.25 },
   color: 'green', juice: '#4f9a3a', chunk: 'tomato',
   info: { crime: 'Broccoli in Fettuccine Alfredo', why: 'Broccoli is a common American add-on to "Alfredo" and is unknown in the Roman dish, which is only egg fettuccine, butter and Parmigiano. Italians love pasta with broccoli, just in other dishes.', severity: 2 },
 });
