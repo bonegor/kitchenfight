@@ -1,18 +1,33 @@
 /**
  * IL FRULLATORE ROVENTE — The Red-Hot Blender (final boss of the Pesto).
  *
- *   spray   a sweeping cone of green sludge (one stream; two crossing streams enraged)
- *   vortex  contracting green rings warn, then the blade spins up and PULLS the chef in
- *           (slower than the chef can walk) while rings of sludge spin out
- *   blades  three rotating rings of sludge
+ *   spray   the cone it will sweep is marked while it winds up, then a sweeping stream of
+ *           green sludge (two crossing streams enraged)
+ *   vortex  contracting green rings + "Frulla frulla!" warn, then the blade spins up and PULLS
+ *           the chef in (slower than the chef can walk) while rings of sludge spin out
+ *   blades  three staggered rings of sludge (each ring's gaps sit where the last ring's shots were)
  *   summon  a handful of bootleg cashews ('anacardo' swarm)
- * Enrage (< 50 % HP): it OVERHEATS: red-hot glow, fire patches under it as it walks.
+ * Enrage (< 50 % HP): it OVERHEATS: red-hot glow, embers, fire patches under it as it walks.
  */
 import { brain, ring, shoot, summon, hazard, steer, toPlayer, type Pattern } from '../ai';
+import type { Run } from '../run';
+import type { Enemy } from '../entities';
 import { TAU } from '../../core/math';
 
 const PESTO = 'proj.e_pesto';
 const HOT = 1; // e.aux flag
+const SWEEP = 0.55; // half-width of the spray sweep (radians)
+
+/** Mark the arc the spray will sweep: a row of warning dots at two distances. */
+function sprayCone(run: Run, e: Enemy, centre: number, wind: number) {
+  for (const dist of [95, 165]) {
+    const n = dist > 100 ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      const a = centre + (i / (n - 1) - 0.5) * 2 * SWEEP;
+      run.addArea('warning', e.x + Math.cos(a) * dist, e.y - e.r * 0.5 + Math.sin(a) * dist, 13, wind, { enemy: true });
+    }
+  }
+}
 
 export const frullatore: Pattern = (run, e, dt) => {
   if (e.bossPhase) {
@@ -28,15 +43,17 @@ export const frullatore: Pattern = (run, e, dt) => {
   brain(run, e, dt, ['spray', 'vortex', 'blades', 'summon', 'spray', 'blades'], 0.95, (a, t, first) => {
     steer(e, 0, 0, dt, 6);
     if (a === 'spray') {
-      const wind = 0.5, dur = 1.3;
+      const wind = 0.6, dur = 1.3;
       if (first) {
         e.telegraph = wind;
         e.attackPose = wind + dur;
         const tp = toPlayer(run, e);
         e.ax = Math.atan2(tp.dy, tp.dx); // cone centre
+        sprayCone(run, e, e.ax, wind);
+        run.sfx('enemy_dash', { volume: 0.4, pitch: 1.4 }, e.x);
       }
       if (t > wind && Math.floor((t - dt) * 9) !== Math.floor(t * 9)) {
-        const sweep = Math.sin((t - wind) * 5) * 0.55;
+        const sweep = Math.sin((t - wind) * 5) * SWEEP;
         shoot(run, e, e.ax + sweep, 230, PESTO, e.damage * 0.45, 8);
         if (e.bossPhase) shoot(run, e, e.ax - sweep, 230, PESTO, e.damage * 0.45, 8);
         run.sfx('enemy_shoot', { volume: 0.25, pitch: 1.3 }, e.x);
@@ -44,7 +61,7 @@ export const frullatore: Pattern = (run, e, dt) => {
       return t > wind + dur;
     }
     if (a === 'vortex') {
-      const wind = 0.7, dur = 2.4;
+      const wind = 0.8, dur = 2.4;
       if (first) {
         e.telegraph = wind;
         e.attackPose = wind + dur;
@@ -70,13 +87,16 @@ export const frullatore: Pattern = (run, e, dt) => {
       return t > wind + dur;
     }
     if (a === 'blades') {
+      const n = e.bossPhase ? 18 : 14;
       if (first) {
         e.telegraph = 0.45;
         e.attackPose = 1.6;
+        e.ay = Math.random() * TAU; // this volley's base angle
       }
       for (let k = 0; k < 3; k++) {
         const at = 0.45 + k * 0.35;
-        if (t >= at && t - dt < at) ring(run, e, e.bossPhase ? 18 : 14, 170, PESTO, k * 0.22 + e.bossStep * 0.3, 0.45);
+        // each ring is offset by half a gap: its shots fly where the previous ring left gaps
+        if (t >= at && t - dt < at) ring(run, e, n, 170, PESTO, e.ay + (k % 2) * (Math.PI / n), 0.45);
       }
       return t > 1.5;
     }
