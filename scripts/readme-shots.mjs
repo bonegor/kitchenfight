@@ -1,7 +1,10 @@
 // Capture README screenshots into docs/screenshots (JPEG): PORT=5175 node scripts/readme-shots.mjs
 // OUT=<dir> writes them somewhere else (e.g. a scratch folder to check them first).
 // Gameplay shots are named after the dish (Il Menù): carbonara (kitchen), alfredo (trattoria),
-// margherita and vongole (the Naples alleys, two light variants), foodcourt (the finale).
+// margherita and vongole (the Naples alleys, two light variants), foodcourt (the finale); menu is
+// the dish picker. Run it on the finished build (final art and UI), check the shots, then point the
+// README gallery at menu/carbonara/alfredo/margherita/vongole.jpg and delete the old kitchen.jpg,
+// trattoria.jpg and streets.jpg (the README keeps them until the new shots exist).
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -13,6 +16,31 @@ page.setDefaultTimeout(0);
 const logs = [];
 page.on('pageerror', (e) => logs.push('pageerror: ' + e.message));
 const shot = async (name) => { await page.evaluate(() => { const r = window.__kf.run; if (r) { r.fx.hurt = 0; r.player.hurtT = 0; } }); await page.waitForTimeout(60); return page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 84 }); };
+// before a gameplay shot: no toast over the boss bar (empty the run's queue, hold the next one, drop the
+// shown ones) and no boss on top of the chef (a boss closer than 300 units steps aside, still on screen)
+const tidy = async () => {
+  for (let i = 0; i < 3; i++) { // close a level-up that is already on screen
+    const open = await page.evaluate(() => { const r = window.__kf.run; if (r) r.pendingLevels = 0; const el = document.querySelector('.choice'); if (el) el.click(); return !!el; });
+    if (!open) break;
+    await page.waitForTimeout(300);
+  }
+  await page.evaluate(() => {
+    const r = window.__kf.run;
+    if (r) {
+      r.toastQueue.length = 0; r.toastT = 60;
+      r.xp = r.xpNext * 0.55; r.pendingLevels = 0; // no level-up cards in the shot
+      const p = r.player;
+      for (const b of r.bosses) {
+        if (!b.alive || Math.hypot(b.x - p.x, b.y - p.y) >= 300) continue;
+        const side = b.x >= p.x ? 1 : -1;
+        b.x = p.x + side * 380; b.y = p.y + 40;
+      }
+    }
+    document.querySelectorAll('.toast').forEach((t) => t.remove());
+  });
+  await page.waitForTimeout(250);
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+};
 await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 await page.mouse.click(5, 5);
@@ -44,18 +72,24 @@ const play = async (stage, char, weapons, t, secs, got = 2) => {
   }
 };
 await play('carbonara', 'enzo', 'olive,forchette,rotella,forno', 250, 7);
+await tidy();
 await shot('carbonara');
 await page.evaluate(() => window.__kf.quitRun());
-await play('alfredo', 'sofia', 'coltelli,forma,moka,basilico', 420, 7);
+// before the 5:00 mid-boss, and no cheese wheels over the chef
+await play('alfredo', 'sofia', 'coltelli,forchette,moka,basilico', 270, 7);
+await tidy();
 await shot('alfredo');
 await page.evaluate(() => window.__kf.quitRun());
 await play('margherita', 'nonna', 'pizza,peperoncino,moka,basilico', 520, 7, 3);
+await tidy();
 await shot('margherita');
 await page.evaluate(() => window.__kf.quitRun());
 await play('vongole', 'peppe', 'vesuvio,forma,coltelli,spaghetti', 400, 8, 4);
+await tidy();
 await shot('vongole');
 await page.evaluate(() => window.__kf.quitRun());
 await play('foodcourt', 'concetta', 'olive,moka,rotella,basilico', 590, 7, 3);
+await tidy();
 await shot('foodcourt');
 await page.evaluate(() => { const r = window.__kf.run; r.pendingLevels = 1; });
 await page.waitForTimeout(1300);

@@ -39,18 +39,31 @@ before quoting anything from this file: no source page could be opened during th
 
 - **Popularity** (●●●●● 5 … ●○○○○ 1) is how often and how loudly Italians complain about an intruder:
   5 = national scandal, 1 = eye-roll. It is an **editorial estimate**, not a measured count (see the
-  [limits](#how-this-was-researched-and-its-limits)). The only survey numbers are YouGov's 2022 net scores.
+  [limits](#how-this-was-researched-and-its-limits)). The only survey numbers behind it are YouGov's 2022
+  net scores.
 - **C** = contested: Italians genuinely disagree, or the item has real historical roots. Contested
   intruders carry a note with the other side, in the game and here.
 - **✓** = a quote whose exact wording was matched against a **search-engine snippet** (not the live page).
-  Everything else is a paraphrase, marked as such.
-- **sweep only** = evidence found by the influencer-chef or popular-posts sweep and never reviewed by the
-  two checker lenses (see [method](#how-this-was-researched-and-its-limits)).
-- **In the game** tables list the intruders exactly as `src/game/recipes.ts` has them, in its order, which
-  the waves follow: earlier intruders come more often (garlic, a support enemy, is exempt and stays a seasoning).
-  The **enemy** column is the game's enemy id and name.
+  Everything else is a paraphrase, marked as such. A note such as "(✓ quoted under Authority sources)"
+  next to a link points to where that source's verified quote is printed in the same dish section.
+- **sweep only** = evidence found by one of the two sweeps (below) and never reviewed by the two lenses.
+- **Intruders in the game** tables list the intruders of `src/game/recipes.ts` in its order, which the
+  waves follow: earlier intruders come more often (garlic, a support enemy, is exempt and stays a seasoning).
+  The **Enemy** column is the game's enemy id and name. The *Why* column is condensed from each intruder's
+  `why` text; the sources follow each table.
 - Real people are named here as **sources only**. The in-game texts (`why`, `line`, `note`, `blurb`,
   `method`) use archetypes ("a TV chef", "a famous Naples pizzaiolo"), following the rule in RESEARCH.md.
+
+**Who did the research** (details in [the method](#how-this-was-researched-and-its-limits)):
+
+- the **researcher** wrote each dish's first draft: recipe, intruders, sources and quotes;
+- the **sources lens** checked that draft's URLs, titles, dates and quotes;
+- the **culinary lens** (Italian-culinary lens) checked the recipe and whether Italians really reject each intruder;
+- the **influencer-chef sweep** and the **popular-posts sweep** searched Italian chefs and creators, and
+  viral posts and polls, for extra evidence;
+- the **editor** merged it all into one entry per dish and ran a few last searches of their own.
+
+"General knowledge, no URL" marks a point a lens added from desk knowledge without a search result behind it.
 
 ## The menu at a glance
 
@@ -69,8 +82,12 @@ before quoting anything from this file: no source page could be opened during th
 | 11 | Il Menù degli Orrori (`foodcourt`) | Il Gran Finale | guanciale, Parmigiano, basil, clams, tomato, olive oil ("Nonna's pantry") | the best-known crimes of the menu, plus method crimes and drinks | — |
 
 ¹ researcher + sources lens + culinary lens + influencer-chef sweep + popular-posts sweep.
-² researcher + sources lens + culinary lens (no chef or posts sweep for these two pizzas; their chicken,
-BBQ and "pepperoni" entries come from the lens-reviewed Neapolitan-toppings and Diavola entries).
+² researcher + sources lens + culinary lens for the Margherita and Marinara entries themselves (the two
+sweeps did not cover them). The Margherita's Hawaiian, chicken and BBQ intruders, and the Marinara's
+cheddar, come from the research's Neapolitan-toppings entry, which went through all five passes, and
+"pepperoni" from the lens-reviewed Diavola entry (see [editorial calls](#editorial-calls-in-the-game-data)).
+The chef credits in the Margherita's sources were found by the researcher, for the Margherita or for
+those toppings entries.
 ³ researcher + sources lens + culinary lens + popular-posts sweep.
 
 Collecting an ingredient gives a small buff for the rest of the run; collecting all of them is
@@ -115,11 +132,17 @@ chili: a free choice") · Basilico.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources |
-|---|---|---|---|---|---|
-| `ketchup` Spruzzatore Rosso | Ketchup | ●●●●● 5 | | A sweetened, vinegared industrial sauce, not a tomato sauce. In YouGov's 17-country survey Italians rated ketchup on pasta the worst crime against Italian food (net −82), worse than starting pasta in cold water. | [YouGov 2022](https://business.yougov.com/content/40810-italian-food-crimes); [Dissapore 2022](https://www.dissapore.com/notizie/pasta-con-il-ketchup-per-gli-italiani-e-il-crimine-alimentare-piu-grave); [Fine Dining Lovers 2022](https://www.finedininglovers.com/explore/articles/survey-finds-most-offensive-crimes-against-italian-food) |
-| `polpetta` Polpetta Rotolante | Meatballs piled on the spaghetti | ●●○○○ 2 | C | Spaghetti and meatballs is Italian-American. In Italy polpette are a second course; their sauce may dress the pasta, but big meatballs are not served on top. | [Tasting Table](https://www.tastingtable.com/1190751/why-you-shouldnt-expect-to-find-spaghetti-and-meatballs-in-italy) (added by the culinary lens) |
-| `pollo` Pollo Infiltrato | Chicken *(sweep only)* | ●●○○○ 2 | | Pasta is the first course, chicken the second. A sign at a 2023 Trevi Fountain protest against "food crimes" said chicken on pasta is a crime in Italy. | [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `ketchup` Spruzzatore Rosso | Ketchup | ●●●●● 5 | | A sweetened, vinegared industrial sauce, not a tomato sauce. In YouGov's 17-country survey Italians rated ketchup on pasta the single worst crime against Italian food (net −82), worse even than starting pasta in cold water. |
+| `polpetta` Polpetta Rotolante | Meatballs piled on the spaghetti | ●●○○○ 2 | C | Spaghetti and meatballs is Italian-American. In Italy polpette are a second course; their sauce may dress the pasta, but big meatballs are not served on top. |
+| `pollo` Pollo Infiltrato | Chicken *(sweep only)* | ●●○○○ 2 | | Pasta is the first course, chicken the second. A sign at a 2023 Trevi Fountain protest against "food crimes" said chicken on pasta is a crime in Italy. |
+
+*Sources:*
+
+- **Ketchup:** [YouGov 2022](https://business.yougov.com/content/40810-italian-food-crimes); [Dissapore 2022](https://www.dissapore.com/notizie/pasta-con-il-ketchup-per-gli-italiani-e-il-crimine-alimentare-piu-grave); [Fine Dining Lovers 2022](https://www.finedininglovers.com/explore/articles/survey-finds-most-offensive-crimes-against-italian-food)
+- **Meatballs piled on the spaghetti:** [Tasting Table](https://www.tastingtable.com/1190751/why-you-shouldnt-expect-to-find-spaghetti-and-meatballs-in-italy) (added by the culinary lens)
+- **Chicken:** [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/)
 
 *Contested notes.* Meatballs: Italy does have pasta with tiny meatballs (Abruzzo's chitarra con le
 pallottine); the complaint is the big American-style meatball on a plate of spaghetti. Chicken: the
@@ -197,7 +220,8 @@ only from egg, cheese, fat and starch.
   Accademia carbonara could be verified, so the game claims neither a ban nor a prescription from it.
 - [History of Carbonara (Vincenzo's Plate)](https://www.vincenzosplate.com/history-of-carbonara/) — no cream;
   the creaminess comes from emulsifying raw egg, Pecorino and pasta water.
-- Chef sources: Monosilio in [Il Fatto Quotidiano (2016)](https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/),
+- Chef sources: Monosilio in [Scatti di Gusto (2018)](https://www.scattidigusto.it/2018/04/05/carbonara-ricetta-perfetta-luciano-monosilio/),
+  [Il Fatto Quotidiano (2016)](https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/),
   [Italia Squisita](https://italiasquisita.net/it/video-ricette/pasta-alla-carbonara-di-luciano-monosilio),
   [SCMP](https://www.scmp.com/magazines/post-magazine/article/1862632/king-carbonara-luciano-monosilio-reveals-secrets-behind-his)
   and the pasta makers' [Carbonara Day guide](https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc);
@@ -206,18 +230,31 @@ only from egg, cheese, fat and starch.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `panna` Panna Invasora | Cream (and crème fraîche) | ●●●●● 5 | | The creaminess comes from yolks, Pecorino, guanciale fat and pasta water; chefs say cream makes it greasier and flattens it. The most common complaint about carbonara abroad. | [Vincenzo's Plate 2025](https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/) (Vincenzo Prosperi) ✓ "NO CREAM IN CARBONARA!"; [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [Scatti di Gusto 2021](https://www.scattidigusto.it/2021/02/04/carbonara-la-cremosa-ricetta-romana-per-dimenticare-martha-stewart/); [Il Fatto Quotidiano 2024](https://www.ilfattoquotidiano.it/2024/11/19/viva-la-carbonara-oppure-no-le-ricette-un-tanto-al-click-fanno-inorridire-i-puristi-e-non-solo-ma-forse-un-trucco-per-salvare-la-ricetta-ce/7773500/) |
-| `cipolla` Cipolla Clandestina | Onion | ●●●●○ 4 | | Not part of the Roman dish. A 2016 French one-pot video that boiled onion with the pasta caused an outcry in Italy. | [Dissapore](https://www.dissapore.com/ricette/carbonara-5-errori-da-non-fare/); [Gambero Rosso 2016](https://www.gamberorosso.it/notizie/attualita/video-carbonara-sbagliata-francese-cipolla/); [The Local 2016](https://www.thelocal.it/20160407/italians-pour-scorn-french-attempt-to-reinvent-carbonara) |
-| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Guanciale is cured pork cheek, never smoked. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. | [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Sole 24 Ore 2021](https://en.ilsole24ore.com/art/carbonara-pomodoro-e-bacon-ricetta-new-york-times-fa-infuriare-coldiretti-ADdj51LB) |
-| `aglio` Aglio in Camicia | Garlic | ●●●○○ 3 | C | Purists say its sharpness competes with guanciale and pepper, and Roman rules lists ban it. | [Dissapore](https://www.dissapore.com/ricette/carbonara-5-errori-da-non-fare/); [Gambero Rosso 2024](https://www.gamberorosso.it/notizie/la-carbonara-del-1954-la-prima-ricetta-del-piatto-icona-di-roma-che-viene-da-milano-ed-e-fatta-con-laglio); [Il Sole 24 Ore 2024](https://en.ilsole24ore.com/art/carbonara-day-ricetta-compie-70-anni-e-aglio-e-gruviera-fa-inorridire-puristi-AFSGQIKD) |
-| `parmesan` Spargipolvere | Parmesan instead of Pecorino | ●●●○○ 3 | C | The cheese of Roman carbonara is sharp, salty Pecorino Romano; using only Parmigiano is a listed purist sin. | [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) (Luciano Monosilio) |
-| `pollo` Pollo Infiltrato | Chicken | ●●●○○ 3 | | The only meat is guanciale. Italian coverage of American pasta lists chicken among typical US additions. | [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [AGI 2023](https://www.agi.it/cronaca/news/2023-07-18/carbonara-di-pollo-sintetico-made-in-italy-ricette-22282277/); [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/) |
-| `piselli` Piselli Ribelli | Peas | ●●○○○ 2 | | Not part of carbonara. Coldiretti lists frozen peas among the distortions found abroad. | [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce) ✓ headline "La Carbonara? Con panna, piselli, burro e basilico"; [MeteoWeb 2024](https://www.meteoweb.eu/2024/04/carbonara-day-ricette-tarocche-in-6-ristoranti-stranieri-su-10/1001399577/) |
-| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition. Italian social media mocked a celebrity chef's 2020 carbonara with mushrooms, peas and crème fraîche. | [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html) |
-| `prosciutto` Prosciutto Impostore | Cooked ham *(sweep only)* | ●●○○○ 2 | | A British-style shortcut for guanciale; Italian food media list ham carbonara among recipe "horrors", and an Italian TV chef rejected it on live British TV. | [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) (Gino D'Acampo); [ITV](https://itv.com/thismorning/food/classic-italian-carbonara-gino-dacampo-recipe) (Gino D'Acampo); [Scatti di Gusto 2016](https://www.scattidigusto.it/ricette-italiane-orrori-ingredienti) |
-| `burro` Burro Furbetto | Butter | ●●○○○ 2 | | The fat comes from rendered guanciale. Coldiretti names butter among the add-ons of fake carbonara abroad. | [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce); [Reporter Gourmet](https://reportergourmet.com/en/news/8374-carbonara-according-to-bruno-barbieri-the-top-chef-s-recipe-with-only-egg-yolks-and-butter) (Bruno Barbieri) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `panna` Panna Invasora | Cream (and crème fraîche) | ●●●●● 5 | | The creaminess comes from yolks, Pecorino, guanciale fat and pasta water; Italian chefs say cream makes it greasier and flattens its flavour. The most common complaint about carbonara made outside Italy. |
+| `cipolla` Cipolla Clandestina | Onion | ●●●●○ 4 | | Not part of the Roman dish. A 2016 French one-pot video that boiled onion with the pasta caused an outcry in Italy. |
+| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Guanciale is cured pork cheek, never smoked. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. |
+| `aglio` Aglio in Camicia | Garlic | ●●●○○ 3 | C | Purists say its sharpness has no place in carbonara, where it competes with the guanciale and pepper, and Roman lists of rules ban it outright. |
+| `parmesan` Spargipolvere | Parmesan instead of Pecorino | ●●●○○ 3 | C | The cheese of Roman carbonara is sharp, salty Pecorino Romano; using only Parmigiano is a listed purist sin. |
+| `pollo` Pollo Infiltrato | Chicken | ●●●○○ 3 | | The only meat is guanciale. Italian coverage of American pasta lists chicken among the typical US additions, and a 2023 Trevi Fountain protest sign called chicken on pasta a crime in Italy. |
+| `piselli` Piselli Ribelli | Peas | ●●○○○ 2 | | Not part of carbonara. Coldiretti lists frozen peas among the distortions found abroad. |
+| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche. |
+| `prosciutto` Prosciutto Impostore | Cooked ham *(sweep only)* | ●●○○○ 2 | | A British-style shortcut for guanciale; Italian food media list ham carbonara among recipe "horrors", and an Italian TV chef rejected it on live British TV. |
+| `burro` Burro Furbetto | Butter | ●●○○○ 2 | | The fat comes from rendered guanciale. Coldiretti names butter among the add-ons of fake carbonara abroad. |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Cream (and crème fraîche):** [Vincenzo's Plate 2025](https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/) (Vincenzo Prosperi) ✓ "NO CREAM IN CARBONARA!"; [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [Scatti di Gusto 2021](https://www.scattidigusto.it/2021/02/04/carbonara-la-cremosa-ricetta-romana-per-dimenticare-martha-stewart/); [Il Fatto Quotidiano 2024](https://www.ilfattoquotidiano.it/2024/11/19/viva-la-carbonara-oppure-no-le-ricette-un-tanto-al-click-fanno-inorridire-i-puristi-e-non-solo-ma-forse-un-trucco-per-salvare-la-ricetta-ce/7773500/)
+- **Onion:** [Dissapore](https://www.dissapore.com/ricette/carbonara-5-errori-da-non-fare/); [Gambero Rosso 2016](https://www.gamberorosso.it/notizie/attualita/video-carbonara-sbagliata-francese-cipolla/); [The Local 2016](https://www.thelocal.it/20160407/italians-pour-scorn-french-attempt-to-reinvent-carbonara)
+- **Smoked bacon:** [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Sole 24 Ore 2021](https://en.ilsole24ore.com/art/carbonara-pomodoro-e-bacon-ricetta-new-york-times-fa-infuriare-coldiretti-ADdj51LB)
+- **Garlic:** [Dissapore](https://www.dissapore.com/ricette/carbonara-5-errori-da-non-fare/); [Gambero Rosso 2024](https://www.gamberorosso.it/notizie/la-carbonara-del-1954-la-prima-ricetta-del-piatto-icona-di-roma-che-viene-da-milano-ed-e-fatta-con-laglio); [Il Sole 24 Ore 2024](https://en.ilsole24ore.com/art/carbonara-day-ricetta-compie-70-anni-e-aglio-e-gruviera-fa-inorridire-puristi-AFSGQIKD)
+- **Parmesan instead of Pecorino:** [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) (Luciano Monosilio)
+- **Chicken:** [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [AGI 2023](https://www.agi.it/cronaca/news/2023-07-18/carbonara-di-pollo-sintetico-made-in-italy-ricette-22282277/); [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/)
+- **Peas:** [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce) ✓ headline "La Carbonara? Con panna, piselli, burro e basilico"; [MeteoWeb 2024](https://www.meteoweb.eu/2024/04/carbonara-day-ricette-tarocche-in-6-ristoranti-stranieri-su-10/1001399577/)
+- **Mushrooms:** [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html)
+- **Cooked ham:** [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) (Gino D'Acampo; a mirror address, as found in search); [ITV](https://itv.com/thismorning/food/classic-italian-carbonara-gino-dacampo-recipe) (Gino D'Acampo); [Scatti di Gusto 2016](https://www.scattidigusto.it/ricette-italiane-orrori-ingredienti)
+- **Butter:** [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce); [Reporter Gourmet](https://reportergourmet.com/en/news/8374-carbonara-according-to-bruno-barbieri-the-top-chef-s-recipe-with-only-egg-yolks-and-butter) (Bruno Barbieri)
 
 **Contested and caveat notes** (designer-facing; names stay out of the game)
 
@@ -292,7 +329,7 @@ traditionally finish it at the table.
   Douglas Fairbanks and Mary Pickford tasted it.
 - [Vi racconto la storia di mio nonno Alfredo di Lelio (Gambero Rosso)](https://www.gamberorosso.it/rubriche/storie/vi-racconto-la-storia-di-mio-nonno-alfredo-di-lelio-inventore-delle-note-fettuccine-allalfredo/) —
   the inventor's granddaughter Ines Di Lelio: butter and Parmigiano as a restorative for his wife after childbirth.
-- [Our history (Il Vero Alfredo, Rome)](https://ilveroalfredo.it/en/?p=770);
+- [Our history (Il Vero Alfredo, Rome)](https://ilveroalfredo.it/en/?p=770) (a shortlink, as found in search);
   [Fettuccine Alfredo (Turismo Roma)](https://www.turismoroma.it/it/page/fettuccine-alfredo);
   [The Real Alfredo (Saveur)](https://www.saveur.com/article/Kitchen/The-Real-Alfredo/) — reconstructs the dish from
   fettuccine, butter and Parmigiano-Reggiano;
@@ -301,15 +338,28 @@ traditionally finish it at the table.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `panna` Panna Invasora | Cream | ●●●●● 5 | | The original is egg fettuccine, butter and Parmigiano emulsified with pasta water. Heavy cream is the American addition that defines "Alfredo sauce" abroad. | [The Daily Meal](https://www.thedailymeal.com/1761698/biggest-misconception-alfredo-pasta-queen) (The Pasta Queen, Nadia Caterina Munno); [Gambero Rosso](https://www.gamberorosso.it/notizie/la-storia-delle-fettuccine-alfredo); [Saveur](https://www.saveur.com/article/Kitchen/The-Real-Alfredo/); [Dissapore](https://www.dissapore.com/ricette/fettuccine-alfredo/) |
-| `pollo` Pollo Infiltrato | Chicken | ●●●●● 5 | | In Italy chicken is normally a main course, rarely a pasta topping, and "chicken Alfredo" is unknown. It is the US chain-restaurant version Italian creators mock most. | [Nordot](https://nordot.app/1169279368201650965) (The Pasta Queen) ✓ "Chicken alfredo really rubs me the wrong way"; [Mashed](https://mashed.com/990011/the-tiktok-recipe-the-pasta-queen-wants-to-call-the-pasta-police-on) (The Pasta Queen); [Wikipedia](https://en.wikipedia.org/wiki/Fettuccine_Alfredo) |
-| `alfredo` Alfredo il Colloso | Creamy chicken "Alfredo" | ●●●●● 5 | | Cream *and* chicken: the version served abroad. In Italy it is simply fettuccine al burro. | [The Daily Meal](https://www.thedailymeal.com/1761698/biggest-misconception-alfredo-pasta-queen) (The Pasta Queen) |
-| `broccoli` Broccolo Americano | Broccoli | ●●○○○ 2 | | A common American add-on, unknown in the Roman dish. | [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [Wikipedia](https://en.wikipedia.org/wiki/Fettuccine_Alfredo) |
-| `gamberi` Gambero Saltatore | Shrimp | ●●○○○ 2 | | The original has no protein at all; seafood is a US restaurant add-on. | [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [Eroica Fenice](https://www.eroicafenice.com/salotto-culturale/fettuccine-alfredo-storia-di-un-piatto-iconico/) |
-| `aglio` Aglio in Camicia | Garlic | ●●○○○ 2 | | The Roman original is butter and Parmigiano on egg pasta; garlic came with the American cream version. | [Dissapore](https://www.dissapore.com/ricette/fettuccine-alfredo/); [Eroica Fenice](https://www.eroicafenice.com/salotto-culturale/fettuccine-alfredo-storia-di-un-piatto-iconico/) |
-| `parmesan` Spargipolvere | Imitation "Parmesan" in a shaker | ●○○○○ 1 | | Real Parmigiano Reggiano is the hero of this dish; Coldiretti calls US-made "Parmesan" a fake of Parmigiano and Grana. *Adapted from the pizza research* (see [editorial calls](#editorial-calls-in-the-game-data)). | [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `panna` Panna Invasora | Cream | ●●●●● 5 | | The original is egg fettuccine, butter and Parmigiano emulsified with pasta water. Heavy cream is the American addition that defines "Alfredo sauce" abroad. |
+| `pollo` Pollo Infiltrato | Chicken | ●●●●● 5 | | In Italy chicken is normally a main course, rarely a pasta topping, and "chicken Alfredo" is unknown. It is the US chain-restaurant version Italian creators mock most. |
+| `alfredo` Alfredo il Colloso | Creamy chicken "Alfredo" | ●●●●● 5 | | Cream *and* chicken: the version served abroad. In Italy it is simply fettuccine al burro. |
+| `broccoli` Broccolo Americano | Broccoli | ●●○○○ 2 | | A common American add-on, unknown in the Roman dish. |
+| `gamberi` Gambero Saltatore | Shrimp | ●●○○○ 2 | | The original has no protein at all; seafood is a US restaurant add-on. |
+| `aglio` Aglio in Camicia | Garlic | ●●○○○ 2 | | The Roman original is butter and Parmigiano on egg pasta; garlic came with the American cream version. |
+| `parmesan` Spargipolvere | Imitation "Parmesan" in a shaker | ●○○○○ 1 | | Real Parmigiano Reggiano is the hero of this dish; Coldiretti calls US-made "Parmesan" a fake of Parmigiano and Grana. *Adapted from the pizza research* (see [editorial calls](#editorial-calls-in-the-game-data)). |
+
+*Creamy chicken "Alfredo"* has no research entry of its own: it combines the cream and chicken entries
+(see [editorial calls](#editorial-calls-in-the-game-data)).
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Cream:** [The Daily Meal](https://www.thedailymeal.com/1761698/biggest-misconception-alfredo-pasta-queen) (The Pasta Queen, Nadia Caterina Munno); [Gambero Rosso](https://www.gamberorosso.it/notizie/la-storia-delle-fettuccine-alfredo); [Saveur](https://www.saveur.com/article/Kitchen/The-Real-Alfredo/); [Dissapore](https://www.dissapore.com/ricette/fettuccine-alfredo/)
+- **Chicken:** [Nordot](https://nordot.app/1169279368201650965) (The Pasta Queen; a syndicated copy, the original interview was not identified) ✓ "Chicken alfredo really rubs me the wrong way"; [Mashed](https://mashed.com/990011/the-tiktok-recipe-the-pasta-queen-wants-to-call-the-pasta-police-on) (The Pasta Queen); [Wikipedia](https://en.wikipedia.org/wiki/Fettuccine_Alfredo)
+- **Creamy chicken "Alfredo":** [The Daily Meal](https://www.thedailymeal.com/1761698/biggest-misconception-alfredo-pasta-queen) (The Pasta Queen)
+- **Broccoli:** [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [Wikipedia](https://en.wikipedia.org/wiki/Fettuccine_Alfredo)
+- **Shrimp:** [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [Eroica Fenice](https://www.eroicafenice.com/salotto-culturale/fettuccine-alfredo-storia-di-un-piatto-iconico/)
+- **Garlic:** [Dissapore](https://www.dissapore.com/ricette/fettuccine-alfredo/); [Eroica Fenice](https://www.eroicafenice.com/salotto-culturale/fettuccine-alfredo-storia-di-un-piatto-iconico/)
+- **Imitation "Parmesan" in a shaker:** [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/)
 
 *Note.* Broccoli with pasta is normal in Italy in other dishes (pasta e broccoli): the complaint is only about Alfredo.
 
@@ -355,7 +405,7 @@ return it at the end so it stays crisp. Toss with the pasta and finish with plen
 **Authority sources**
 
 - [MIPAAF provvedimento 13 marzo 2020: Amatriciana Tradizionale STG, disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) —
-  ✓ "La "Amatriciana Tradizionale" a differenza di altre salse analoghe non prevede l'impiego di
+  ✓ "La «Amatriciana Tradizionale» a differenza di altre salse analoghe non prevede l'impiego di
   ingredienti quali aglio cipolla o pancetta." (Unlike other similar sauces, it does not use garlic,
   onion or pancetta.) *Verified by the editor's own search; the dish's in-game quote.*
 - [Disciplinare Amatriciana Tradizionale STG (Regione Veneto copy)](https://elezioni2020.regione.veneto.it/documents/10701/3259398/disciplinare_amatriciana_tradizionale_stg.pdf/63e210c6-6444-4ed9-8629-4fc20cab7345) —
@@ -370,12 +420,19 @@ return it at the end so it stays crisp. Toss with the pasta and finish with plen
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `aglio` Aglio in Camicia | Garlic | ●●●●● 5 | | The STG explicitly excludes it. When a celebrity chef said on Italian TV in 2015 that he adds a clove, Amatrice's town council answered with a formal statement and the chef apologised. | [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) ✓; [Blitz Quotidiano 2015](https://archivio.blitzquotidiano.it/cucina/carlo-cracco-chiede-scusa-per-amatriciana-con-aglio-era-solo-una-battuta-2097854) (Carlo Cracco); [Dissapore 2015](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/) (Carlo Cracco); [The Local 2015](https://www.thelocal.com/20150210/top-italy-chef-apologizes-for-garlic-gaffe) |
-| `cipolla` Cipolla Clandestina | Onion | ●●●●● 5 | C | The STG and the Amatrice recipe exclude it; its sweetness softens the balance of guanciale, tomato and pecorino. In 2020 an onion amatriciana on a national TV cooking show set off a public row. | [Gambero Rosso](https://www.gamberorosso.it/notizie/storie/amatriciana-con-cipolla-o-senza-diatriba/); [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/06/03/amatriciana-con-aceto-e-cipolla-alla-prova-del-cuoco-e-scandalo); [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) ✓ |
-| `bacon` Bacon Abusivo | Pancetta (or bacon) | ●●●●○ 4 | C | Amatriciana is made with guanciale, and the STG names pancetta among the excluded ingredients. Smoked bacon is even further away. | [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) ✓; [Dissapore](https://www.dissapore.com/cucina/amatriciana-5-errori-da-evitare-accuratamente/) |
-| `parmesan` Spargipolvere | Parmesan | ●●○○○ 2 | C | Finished with pecorino (Amatrice's or Romano), the cheeses the specification allows. Parmigiano is milder and from another region. | [STG (Regione Veneto copy)](https://elezioni2020.regione.veneto.it/documents/10701/3259398/disciplinare_amatriciana_tradizionale_stg.pdf/63e210c6-6444-4ed9-8629-4fc20cab7345); [Gambero Rosso](https://www.gamberorosso.it/notizie/storie/amatriciana-con-cipolla-o-senza-diatriba/) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `aglio` Aglio in Camicia | Garlic | ●●●●● 5 | | The STG explicitly excludes it. When a celebrity chef said on Italian TV in 2015 that he adds a clove, Amatrice's town council answered with a formal statement and the chef apologised. |
+| `cipolla` Cipolla Clandestina | Onion | ●●●●● 5 | C | The STG and the Amatrice recipe exclude it; its sweetness softens the balance of guanciale, tomato and pecorino. In 2020 an onion amatriciana on a national TV cooking show set off a public row. |
+| `bacon` Bacon Abusivo | Pancetta (or bacon) | ●●●●○ 4 | C | Amatriciana is made with guanciale, and the STG names pancetta among the excluded ingredients. Smoked bacon is even further away. |
+| `parmesan` Spargipolvere | Parmesan | ●●○○○ 2 | C | Finished with pecorino (Amatrice's or Romano), the cheeses the specification allows. Parmigiano is milder and from another region. |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Garlic:** [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) (✓ quoted under Authority sources); [Blitz Quotidiano 2015](https://archivio.blitzquotidiano.it/cucina/carlo-cracco-chiede-scusa-per-amatriciana-con-aglio-era-solo-una-battuta-2097854) (Carlo Cracco); [Dissapore 2015](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/) (Carlo Cracco); [The Local 2015](https://www.thelocal.com/20150210/top-italy-chef-apologizes-for-garlic-gaffe)
+- **Onion:** [Gambero Rosso](https://www.gamberorosso.it/notizie/storie/amatriciana-con-cipolla-o-senza-diatriba/); [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/06/03/amatriciana-con-aceto-e-cipolla-alla-prova-del-cuoco-e-scandalo); [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) (✓ quoted under Authority sources)
+- **Pancetta (or bacon):** [STG disciplinare](https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf) (✓ quoted under Authority sources); [Dissapore](https://www.dissapore.com/cucina/amatriciana-5-errori-da-evitare-accuratamente/)
+- **Parmesan:** [STG (Regione Veneto copy)](https://elezioni2020.regione.veneto.it/documents/10701/3259398/disciplinare_amatriciana_tradizionale_stg.pdf/63e210c6-6444-4ed9-8629-4fc20cab7345); [Gambero Rosso](https://www.gamberorosso.it/notizie/storie/amatriciana-con-cipolla-o-senza-diatriba/)
 
 In the waves, garlic is a *support* enemy (it speeds up the crimes around it), so it stays a seasoning
 whatever its rank here.
@@ -436,17 +493,24 @@ pepper water, then off the heat toss in the cheese cream, adding water until it 
 - [Cacio e pepe: 5 errori da non fare (Dissapore)](https://www.dissapore.com/ricette/cacio-e-pepe-5-errori-da-non-fare/) — adding oil is a common mistake.
 - [Max cucina l'Italia: Cacio e pepe (Sky TG24)](https://tg24.sky.it/lifestyle/ricette/cacio-e-pepe-ricetta) and
   [Gambero Rosso video](https://www.gamberorosso.it/notizie/videoricette-spaghetti-cacio-e-pepe-di-max-mariola/) — Roman chef and YouTuber Max Mariola.
-- [Traditional or gourmet? (Italia Squisita via Life in Italy)](https://lifeinitaly.com/?p=55289) — Claudio Gargioli
+- [Traditional or gourmet? (Italia Squisita via Life in Italy)](https://lifeinitaly.com/?p=55289) (a shortlink, as found in search) — Claudio Gargioli
   (Armando al Pantheon) against Cristina Bowerman.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `burro` Burro Furbetto | Butter | ●●●●● 5 | | Only Pecorino, pepper and pasta water; the cream is the cheese emulsion. In 2025 Rome's restaurateurs protested a British food website's recipe with butter and Parmesan until it was rewritten. | [Gambero Rosso 2025](https://www.gamberorosso.it/notizie/attualita/caso-cacio-pepe-bbc/); [Open 2025](https://www.open.online/2025/08/06/pasta-cacio-pepe-ricetta-burro-parmigiano-bbc/); [Euronews 2025](https://www.euronews.com/culture/2025/08/11/explained-how-a-pasta-recipe-has-triggered-a-diplomatic-row-between-uk-and-italy) |
-| `panna` Panna Invasora | Cream | ●●●●○ 4 | | A shortcut that hides a failed emulsion; even the corrected British recipe was criticised for a double-cream rescue tip. | [Gambero Rosso](https://www.gamberorosso.it/attualita/ricetta-vera-cacio-pepe/); [Euronews 2025](https://www.euronews.com/culture/2025/08/11/explained-how-a-pasta-recipe-has-triggered-a-diplomatic-row-between-uk-and-italy); [StartupItalia 2025](https://startupitalia.eu/lifestyle/cacio-e-pepe-ricetta-sbagliata-bbc/) |
-| `parmesan` Spargipolvere | Parmesan | ●●●●○ 4 | C | "Cacio" here means Pecorino Romano; Parmigiano in its place was half of the 2025 scandal. | [Gambero Rosso 2025](https://www.gamberorosso.it/notizie/attualita/caso-cacio-pepe-bbc/); [Wanted in Rome 2025](https://wantedinrome.com/news/italy-controversy-butter-uk-recipe-cacio-e-pepe.html); [Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/alessandro-borghese-la-ricetta-e-i-segreti-per-cucinare-al-meglio-la-sua-famosa-cacio-e-pepe-172107/) (Alessandro Borghese) |
-| `olio` Olio Sbagliato | Olive oil | ●●●○○ 3 | C | The fat comes from the cheese, so oil is unnecessary and can split the sauce. Dissapore ran a headline calling oil in cacio e pepe an "atrocity". | [Dissapore](https://www.dissapore.com/cucina/atrocita-onta-ripulsa-lolio-nella-cacio-e-pepe-non-va/); [Dissapore](https://www.dissapore.com/cucina/battaglie-culturali-via-lolio-dalla-cacio-e-pepe/); [Scatti di Gusto](https://www.scattidigusto.it/la-ricetta-migliore-come-fare-la-cacio-e-pepe-mantecata-e-senza-olio) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `burro` Burro Furbetto | Butter | ●●●●● 5 | | Only Pecorino, pepper and pasta water; the cream is the cheese emulsion. In 2025 Rome's restaurateurs protested a British food website's recipe with butter and Parmesan until it was rewritten. |
+| `panna` Panna Invasora | Cream | ●●●●○ 4 | | A shortcut that hides a failed emulsion; even the corrected British recipe was criticised for a double-cream rescue tip. |
+| `parmesan` Spargipolvere | Parmesan | ●●●●○ 4 | C | "Cacio" here means Pecorino Romano; Parmigiano in its place was half of the 2025 scandal. |
+| `olio` Olio Sbagliato | Olive oil | ●●●○○ 3 | C | The fat comes from the cheese, so oil is unnecessary and can split the sauce. Dissapore ran a headline calling oil in cacio e pepe an "atrocity". |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Butter:** [Gambero Rosso 2025](https://www.gamberorosso.it/notizie/attualita/caso-cacio-pepe-bbc/); [Open 2025](https://www.open.online/2025/08/06/pasta-cacio-pepe-ricetta-burro-parmigiano-bbc/); [Euronews 2025](https://www.euronews.com/culture/2025/08/11/explained-how-a-pasta-recipe-has-triggered-a-diplomatic-row-between-uk-and-italy)
+- **Cream:** [Gambero Rosso](https://www.gamberorosso.it/attualita/ricetta-vera-cacio-pepe/); [Euronews 2025](https://www.euronews.com/culture/2025/08/11/explained-how-a-pasta-recipe-has-triggered-a-diplomatic-row-between-uk-and-italy); [StartupItalia 2025](https://startupitalia.eu/lifestyle/cacio-e-pepe-ricetta-sbagliata-bbc/)
+- **Parmesan:** [Gambero Rosso 2025](https://www.gamberorosso.it/notizie/attualita/caso-cacio-pepe-bbc/); [Wanted in Rome 2025](https://wantedinrome.com/news/italy-controversy-butter-uk-recipe-cacio-e-pepe.html); [Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/alessandro-borghese-la-ricetta-e-i-segreti-per-cucinare-al-meglio-la-sua-famosa-cacio-e-pepe-172107/) (Alessandro Borghese)
+- **Olive oil:** [Dissapore](https://www.dissapore.com/cucina/atrocita-onta-ripulsa-lolio-nella-cacio-e-pepe-non-va/); [Dissapore](https://www.dissapore.com/cucina/battaglie-culturali-via-lolio-dalla-cacio-e-pepe/); [Scatti di Gusto](https://www.scattidigusto.it/la-ricetta-migliore-come-fare-la-cacio-e-pepe-mantecata-e-senza-olio)
 
 **Contested and caveat notes**
 
@@ -509,22 +573,34 @@ wood-fired oven at about 485 °C (EU STG figures)
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `ananas` Ananas Corazzato (+ `ananas_pezzo` chunks) | Pineapple | ●●●●● 5 | C | In neither the STG nor the AVPN rules; its sweetness clashes with the tomato. A famous Naples pizzaiolo's "Margherita with pineapple" (end of 2023) caused a national row. | [ANSA 2023](https://ansa.it/amp/english/news/lifestyle/food_wine/2023/12/30/famed-naples-pizza-maker-adds-pineapple-spurring-row_1717aa08-bf5e-4cc7-8a36-faf3e42e72fd.html); [CBC 2024](https://www.cbc.ca/lite/story/1.7107921); [Open 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/) (Gino Sorbillo); [YouGov 2022](https://yougov.co.uk/international/articles/40810-italian-food-crimes) |
-| `hawaiana` Fetta Hawaiana | Ham & pineapple "Hawaiian" | ●●●●● 5 | C | The "Hawaiian" was invented in Canada in 1962. Italians rated pineapple on pizza −63 in YouGov's survey. | [YouGov 2022](https://yougov.co.uk/international/articles/40810-italian-food-crimes); [Euronews 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food) (Vincenzo's Plate); [Gambero Rosso 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/) (Antonino Cannavacciuolo) |
-| `macchiata` Margherita Macchiata | Ketchup on pizza | ●●●○○ 3 | | The Margherita's tomato is plain, raw and crushed; ketchup is cooked, sweet and vinegary. Coldiretti lists ketchup pizza among foreign "horrors". | [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/); [Il Fatto Quotidiano 2023](https://www.ilfattoquotidiano.it/2023/08/02/ketchup-sulla-pizza-spaghetti-tagliati-con-le-forbici-e-ghiaccio-nel-vino-rosso-il-tiktoker-americano-uccide-la-cucina-italiana/7249975/) |
-| `pollo` Pollo Infiltrato | Chicken on pizza | ●●●○○ 3 | | Everywhere on pizza abroad, almost nowhere in Italian pizzerias; on Coldiretti's list of horrors. | [Il Post 2022](https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/); [Sky TG24 2023](https://tg24.sky.it/lifestyle/2023/12/07/pizza-zebra-yogurt-dati); [Dissapore](https://www.dissapore.com/notizie/meta-pollo-meta-pizza-kfc-presenta-la-chizza/) |
-| `bbq` Salsa Barbecue | BBQ sauce | ●●○○○ 2 | | A foreign topping Italian pizzerias do not use. In early 2022 the only chain offering BBQ chicken pizza in Italy was American, and it left Italy that August. | [Il Post 2022](https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/); [Il Post 2022](https://www.ilpost.it/2022/08/10/chiusura-dominos-pizza-italia-fallimento-franchising/) |
-| `cheddar` Cheddar Arancione | Cheddar | ●○○○○ 1 | | Mozzarella or fior di latte only; Coldiretti singles out "Anglo-Saxon cheddar" on pizza abroad. | [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/) |
-| `pepperoni` Peperone Equivoco | "Pepperoni" (the American salami, and the word) | ●●○○○ 2 | C | "Peperoni" means bell peppers in Italian; Italians order a diavola with salame piccante and find "pepperoni pizza" funny. | [Ooni](https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni); [Explore](https://explore.com/1549092/popular-type-pizza-pepperoni-never-find-italy-unless-tourist-trap); [La Voce di New York 2026](https://lavocedinewyork.com/food/2026/11/02/pepperoni-pizza-la-regina-americana-che-confonde-gli-italiani/) (not re-checked) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `ananas` Ananas Corazzato (+ `ananas_pezzo` chunks) | Pineapple | ●●●●● 5 | C | In neither the EU STG nor the AVPN rules for a Margherita; many Italians say its sweetness clashes with the acidic tomato. A famous Naples pizzaiolo's "Margherita with pineapple" (end of 2023) caused a national row. |
+| `hawaiana` Fetta Hawaiana | Ham & pineapple "Hawaiian" | ●●●●● 5 | C | The most famous pizza "crime" in Italian eyes: a sweet fruit on a savoury pizza. The "Hawaiian" was invented in Canada in 1962, not in Hawaii and not in Italy. |
+| `macchiata` Margherita Macchiata | Ketchup on pizza | ●●●○○ 3 | | The Margherita's tomato is plain, raw and crushed; ketchup is cooked, sweet and vinegary. Coldiretti lists ketchup pizza among foreign "horrors". |
+| `pollo` Pollo Infiltrato | Chicken on pizza | ●●●○○ 3 | | Popular on pizza in many countries, almost never seen in Italian pizzerias. Coldiretti lists chicken pizzas abroad among its pizza "horrors", and a fast-food chain's fried-chicken-base "pizza" was reported in Italy as one that makes Italians angry. |
+| `bbq` Salsa Barbecue | BBQ sauce | ●●○○○ 2 | | A foreign topping Italian pizzerias do not use. In early 2022 the only chain offering BBQ chicken pizza in Italy was American, and it left Italy that August. |
+| `cheddar` Cheddar Arancione | Cheddar | ●○○○○ 1 | | A Margherita's cheese is mozzarella or fior di latte, optionally with a little grated hard cheese; Coldiretti singles out "Anglo-Saxon cheddar" among the wrong cheeses used on pizza abroad. |
+| `pepperoni` Peperone Equivoco | "Pepperoni" (the American salami, and the word) | ●●○○○ 2 | C | "Peperoni" means bell peppers in Italian; Italians order a diavola with salame piccante and find "pepperoni pizza" funny. |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Pineapple:** [ANSA 2023](https://ansa.it/amp/english/news/lifestyle/food_wine/2023/12/30/famed-naples-pizza-maker-adds-pineapple-spurring-row_1717aa08-bf5e-4cc7-8a36-faf3e42e72fd.html); [CBC 2024](https://www.cbc.ca/lite/story/1.7107921); [Open 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/) (Gino Sorbillo); [YouGov 2022](https://yougov.co.uk/international/articles/40810-italian-food-crimes)
+- **Ham & pineapple "Hawaiian":** [YouGov 2022](https://yougov.co.uk/international/articles/40810-italian-food-crimes); [Euronews 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food) (Vincenzo's Plate); [Gambero Rosso 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/) (Antonino Cannavacciuolo)
+- **Ketchup on pizza:** [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/); [Il Fatto Quotidiano 2023](https://www.ilfattoquotidiano.it/2023/08/02/ketchup-sulla-pizza-spaghetti-tagliati-con-le-forbici-e-ghiaccio-nel-vino-rosso-il-tiktoker-americano-uccide-la-cucina-italiana/7249975/)
+- **Chicken on pizza:** [Il Post 2022](https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/); [Sky TG24 2023](https://tg24.sky.it/lifestyle/2023/12/07/pizza-zebra-yogurt-dati); [Dissapore](https://www.dissapore.com/notizie/meta-pollo-meta-pizza-kfc-presenta-la-chizza/)
+- **BBQ sauce:** [Il Post 2022](https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/); [Il Post 2022](https://www.ilpost.it/2022/08/10/chiusura-dominos-pizza-italia-fallimento-franchising/)
+- **Cheddar:** [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/)
+- **"Pepperoni" (the American salami, and the word):** [Ooni](https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni); [Explore](https://explore.com/1549092/popular-type-pizza-pepperoni-never-find-italy-unless-tourist-trap); [La Voce di New York 2026](https://lavocedinewyork.com/food/2026/11/02/pepperoni-pizza-la-regina-americana-che-confonde-gli-italiani/) (not re-checked)
 
 **Contested and caveat notes**
 
 - *Pineapple.* Since about 2017 a few star pizzaioli have broken the taboo: Gino Sorbillo (a 2017 tasting
   night, then the 2023 menu item), Franco Pepe's "AnaNascosta" (pineapple wrapped in ham, since 2019),
-  Simone Lombardi; YouTube chef Vincenzo's Plate even published a pineapple pizza. It is still the
-  number-one pizza crime for most Italians, so it stays the level's final boss.
+  Simone Lombardi; YouTube chef Vincenzo's Plate even published a pineapple pizza. In November 2026 Pepe
+  told AGI that pineapple pizzas are unfairly demonised and that customers keep asking for his AnaNascosta
+  ([AGI 2026](https://www.agi.it/cronaca/news/2026-11-05/ananas-pizza-tradizione-39893064/amp/); not re-checked).
+  It is still the number-one pizza crime for most Italians, so it stays the level's final boss.
 - *Hawaiian.* Cooked ham is a classic Italian pizza topping; the complaint is the pineapple.
 - *Ketchup.* Sorbillo's 2023 datterini-tomato "ketchup" Margherita was a provocation, not a variant.
 - *"Pepperoni".* American pepperoni is a close cousin of southern Italian spicy salami; Italians joke about
@@ -546,6 +622,11 @@ friarielli; spicy salami and 'nduja; chocolate-hazelnut spread on a *dessert* pi
 - UNESCO added the art of the Neapolitan pizzaiuolo to its Intangible Cultural Heritage list on 7 December 2017.
 - Italian food media have mocked people who condemn pineapple pizza while happily eating würstel-and-fries pizza
   ([Scatti di Gusto 2023](https://www.scattidigusto.it/2023/12/30/pizza-allananas-condanni-sorbillo-e-mangi-la-wurstel-e-patatine/)).
+- In November 2026 an Italian chef was reportedly fired by a restaurant in Brisbane, Australia, after
+  refusing to make ham-and-pineapple pizza for a private function; the case reportedly went to Australia's
+  Fair Work Commission ([EWN 2026](https://www.ewn.co.za/2026/11/08/italian-chef-fired-for-refusing-to-put-pineapple-on-pizza),
+  [Dexerto 2026](https://www.dexerto.com/food/italian-chef-fired-after-refusing-to-put-pineapple-on-pizza-3425033/);
+  reported, not re-checked).
 
 ---
 
@@ -570,13 +651,24 @@ mocks it). No cheese of any kind: the AVPN defines it as tomato, oil, oregano an
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources |
-|---|---|---|---|---|---|
-| `filante` La Filante Abusiva | Mozzarella (any cheese) | ●●○○○ 2 | | Defined with no cheese at all; its long-lasting ingredients are why it is linked to Naples' sailors. Mozzarella makes it a different pizza. | [AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf); [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara) |
-| `gamberi` Gambero Saltatore | Prawns (seafood) | ●●○○○ 2 | | Despite the name, no fish or seafood: "marinara" refers to sailors (*marinai*), not to food from the sea. | [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara); [Napolike](https://www.napolike.it/storia-della-pizza-napoletana-unesco) |
-| `vongola` Vongola Formaggiosa | Clams (seafood) | ●●○○○ 2 | | As above: the sailors' pizza, not a seafood pizza. | [Napolike](https://www.napolike.it/storia-della-pizza-napoletana-unesco); [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara) |
-| `parmesan` Spargipolvere | Grated cheese | ●○○○○ 1 | | The AVPN gives grated cheese to the Margherita, not to the cheese-free Marinara. | [AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf) |
-| `cheddar` Cheddar Arancione | Cheddar | ●●○○○ 2 | | No cheese of any kind, least of all the "Anglo-Saxon cheddar" Coldiretti calls out abroad. *Adapted from the pizza research* (see [editorial calls](#editorial-calls-in-the-game-data)). | [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `filante` La Filante Abusiva | Mozzarella (any cheese) | ●●○○○ 2 | | Defined with no cheese at all; its long-lasting ingredients are why it is linked to Naples' sailors. Mozzarella makes it a different pizza. |
+| `gamberi` Gambero Saltatore | Prawns (seafood) | ●●○○○ 2 | | Despite the name, no fish or seafood: "marinara" refers to sailors (*marinai*), not to food from the sea. |
+| `vongola` Vongola Formaggiosa | Clams (seafood) | ●●○○○ 2 | | As above: the sailors' pizza, not a seafood pizza. |
+| `parmesan` Spargipolvere | Grated cheese | ●○○○○ 1 | | The AVPN gives grated cheese to the Margherita, not to the cheese-free Marinara. |
+| `cheddar` Cheddar Arancione | Cheddar | ●●○○○ 2 | | No cheese of any kind, least of all the "Anglo-Saxon cheddar" Coldiretti calls out abroad. *Adapted from the pizza research* (see [editorial calls](#editorial-calls-in-the-game-data)). |
+
+*Prawns* and *Clams* are one research entry ("Seafood: prawns, mussels, clams", 2), split in two for the
+game: see [editorial calls](#editorial-calls-in-the-game-data).
+
+*Sources:*
+
+- **Mozzarella (any cheese):** [AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf); [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara)
+- **Prawns (seafood):** [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara); [Napolike](https://www.napolike.it/storia-della-pizza-napoletana-unesco)
+- **Clams (seafood):** [Napolike](https://www.napolike.it/storia-della-pizza-napoletana-unesco); [Wikipedia](https://en.wikipedia.org/wiki/Pizza_marinara)
+- **Grated cheese:** [AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf)
+- **Cheddar:** [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/)
 
 **Accepted in Italy:** a basil leaf; anchovies. Everything in the Margherita's "accepted" list still holds
 for Italian pizza in general, but not on a Marinara, which has no cheese.
@@ -642,12 +734,19 @@ milk. Toss with tagliatelle.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `fantasma` Spaghetti Fantasma | Spaghetti bolognese | ●●●●● 5 | C | In Bologna ragù goes on egg tagliatelle, whose wide, porous surface holds the sauce. In 2019 Bologna's mayor asked for photos of "spaghetti bolognese" from around the world, calling it a dish that does not exist. | [CBC 2019](https://www.cbc.ca/lite/story/1.5041024) ✓ "Spaghetti Bolognese doesn't actually exist; yet, it's famous the world over"; [Italy Segreta](https://italysegreta.com/it/gli-spaghetti-alla-bolognese-non-esistono/); [Vincenzo's Plate](https://www.vincenzosplate.com/the-secret-to-authentic-bolognese-sauce/) (Vincenzo Prosperi) |
-| `aglio` Aglio in Camicia | Garlic | ●●●●○ 4 | | The registered recipe names garlic among the ingredients not allowed; the aromatic base is onion, carrot and celery only. | [LaPresse 2023](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) ✓; [Il Resto del Carlino 2023](https://www.ilrestodelcarlino.it/bologna/cultura/ragu-bolognese-ricetta-camera-di-commercio-p04w1fsk) ✓ "Aglio, rosmarino, prezzemolo, altri aromi o spezie"; [AGI 2023](https://www.agi.it/cronaca/news/2023-04-20/vero_ragu_bolognese_ricetta_aggiornata_ingredienti-21053153/) |
-| `panna` Panna Invasora | Cream | ●●●○○ 3 | C | Bologna's heritage text rules cream out for tagliatelle al ragù; the registered softener is whole milk. A major US newspaper's creamy "white Bolognese" (2016) drew Italian protests. | [Bologna heritage sheet 2022](https://assets.culturabologna.it/ddbb8840-5178-4a44-b17b-de32ecf6f74e-2022-tagliatella-al-ragu.pdf) ✓; [The Local 2016](https://cms.thelocal.com/?p=384656); [Travel Emilia-Romagna 2016](https://www.travelemiliaromagna.it/en/?p=44632) (Bruno Barbieri) |
-| `bacon` Bacon Abusivo | Smoked pancetta (or bacon) | ●●○○○ 2 | | The recipe uses fresh, unsmoked pancetta; smoked pancetta is explicitly not allowed, and foreign recipes often use bacon. | [LaPresse 2023](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) ✓ |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `fantasma` Spaghetti Fantasma | Spaghetti bolognese | ●●●●● 5 | C | In Bologna ragù goes on egg tagliatelle, whose wide, porous surface holds the sauce. In 2019 Bologna's mayor asked for photos of "spaghetti bolognese" from around the world, calling it a dish that does not exist. |
+| `aglio` Aglio in Camicia | Garlic | ●●●●○ 4 | | The registered recipe names garlic among the ingredients not allowed; the aromatic base is onion, carrot and celery only. |
+| `panna` Panna Invasora | Cream | ●●●○○ 3 | C | Bologna's heritage text rules cream out for tagliatelle al ragù; the registered softener is whole milk. A major US newspaper's creamy "white Bolognese" (2016) drew Italian protests. |
+| `bacon` Bacon Abusivo | Smoked pancetta (or bacon) | ●●○○○ 2 | | The recipe uses fresh, unsmoked pancetta; smoked pancetta is explicitly not allowed, and foreign recipes often use bacon. |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Spaghetti bolognese:** [CBC 2019](https://www.cbc.ca/lite/story/1.5041024) ✓ "Spaghetti Bolognese doesn't actually exist; yet, it's famous the world over"; [Italy Segreta](https://italysegreta.com/it/gli-spaghetti-alla-bolognese-non-esistono/); [Vincenzo's Plate](https://www.vincenzosplate.com/the-secret-to-authentic-bolognese-sauce/) (Vincenzo Prosperi)
+- **Garlic:** [LaPresse 2023](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) (✓ quoted under Authority sources); [Il Resto del Carlino 2023](https://www.ilrestodelcarlino.it/bologna/cultura/ragu-bolognese-ricetta-camera-di-commercio-p04w1fsk) ✓ "Aglio, rosmarino, prezzemolo, altri aromi o spezie"; [AGI 2023](https://www.agi.it/cronaca/news/2023-04-20/vero_ragu_bolognese_ricetta_aggiornata_ingredienti-21053153/)
+- **Cream:** [Bologna heritage sheet 2022](https://assets.culturabologna.it/ddbb8840-5178-4a44-b17b-de32ecf6f74e-2022-tagliatella-al-ragu.pdf) (✓ quoted under Authority sources); [The Local 2016](https://cms.thelocal.com/?p=384656) (a CMS address, as found in search); [Travel Emilia-Romagna 2016](https://www.travelemiliaromagna.it/en/?p=44632) (Bruno Barbieri; a shortlink, as found in search)
+- **Smoked pancetta (or bacon):** [LaPresse 2023](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) (✓ quoted under Authority sources)
 
 **Contested and caveat notes**
 
@@ -716,13 +815,21 @@ work in pine nuts and the cheeses, then loosen with olive oil. Never cook it: to
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `panna` Panna Invasora | Cream | ●●●●○ 4 | | Not among the seven raw ingredients, and it dulls the basil; a long-running argument in Italian food writing. | [Gambero Rosso](https://www.gamberorosso.it/notizie/rubriche/classifiche/10-pesti-genovesi-classifica-gambero-rosso/); [Gazzetta del Gusto](https://gazzettadelgusto.it/cibo/10-curiosita-sul-pesto-genovese-tra-storia-e-rituali/) |
-| `anacardo` Anacardo Abusivo | Cashews | ●●●○○ 3 | | Cheap industrial jars replace pine nuts with cashews: the mark of an imitation "alla genovese". | [Dissapore](https://www.dissapore.com/spesa/il-migliore-pesto-genovese-in-barattolo/) ✓ "Il pesto migliore: oli vegetali, addensanti e anacardi che vi risparmiate"; [L'Indipendente 2025](https://www.lindipendente.online/2025/09/01/pesto-genovese-o-alla-genovese-il-tranello-dellindustria-alimentare/) |
-| `olio` Olio Sbagliato | Seed oil (sunflower) | ●●●○○ 3 | | The recipe wants extra virgin olive oil, ideally Ligurian; many commercial pestos swap in seed oils. | [Dissapore](https://www.dissapore.com/spesa/il-migliore-pesto-genovese-in-barattolo/); [Il Fatto Alimentare](https://ilfattoalimentare.it/confronto-prodotti-pesto-alla-genovese-tabella-ingredienti-prezzi.html) |
-| `burro` Burro Furbetto | Butter | ●●●○○ 3 | C | Not among today's seven ingredients. A waitress at a Genoa pesto restaurant called it a crime, like cream in carbonara; when a Milan-area star chef defended butter in 2015, Genoa called it "stuff for the Milanese". | [Internazionale 2023](https://www.internazionale.it/essenziale/notizie/tom-landolfi/2023/01/04/caccia-pesto-perfetto) ✓ "Il burro no, è reato, non scherziamo. Sarebbe come mettere la panna nella carbonara"; [Dissapore 2015](https://www.dissapore.com/grande-notizia/pesto-alla-genovese-davide-oldani-burro/) (Davide Oldani) ✓ "Davide Oldani insiste con il burro ma a Genova dicono che è roba per milanesi" |
-| `parmesan` Spargipolvere | Generic or non-Italian cheese | ●○○○○ 1 | C | The cheeses are Parmigiano (or Grana) and Sardinian pecorino; purists reject Gouda versions, and Coldiretti complains about generic cheese in pesto abroad. | [Scatti di Gusto 2016](https://www.scattidigusto.it/ricetta-pesto-ingredienti-alternativi) (Roberto Panizza); [MeteoWeb 2016](https://www.meteoweb.eu/2016/04/il-made-in-italy-taroccato-non-e-solo-carbonara-gate-dalla-falsa-caprese-alla-pizza-ecco-le-peggiori-imitazioni/666794/) |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `panna` Panna Invasora | Cream | ●●●●○ 4 | | Not among the seven raw ingredients, and it dulls the basil; a long-running argument in Italian food writing. |
+| `anacardo` Anacardo Abusivo | Cashews | ●●●○○ 3 | | Cheap industrial jars often replace pine nuts with cashews; Italian food media treat this as the mark of an imitation "alla genovese". |
+| `olio` Olio Sbagliato | Seed oil (sunflower) | ●●●○○ 3 | | The recipe wants extra virgin olive oil, ideally Ligurian; many commercial pestos swap in seed oils. |
+| `burro` Burro Furbetto | Butter | ●●●○○ 3 | C | Not among today's seven ingredients. A waitress at a Genoa pesto restaurant called it a crime, like cream in carbonara; when a Milan-area star chef defended butter in 2015, Genoa called it "stuff for the Milanese". |
+| `parmesan` Spargipolvere | Generic or non-Italian cheese | ●○○○○ 1 | C | The cheeses are Parmigiano (or Grana) and Sardinian pecorino; purists reject Gouda versions, and Coldiretti complains about generic cheese in pesto abroad. |
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Cream:** [Gambero Rosso](https://www.gamberorosso.it/notizie/rubriche/classifiche/10-pesti-genovesi-classifica-gambero-rosso/); [Gazzetta del Gusto](https://gazzettadelgusto.it/cibo/10-curiosita-sul-pesto-genovese-tra-storia-e-rituali/)
+- **Cashews:** [Dissapore](https://www.dissapore.com/spesa/il-migliore-pesto-genovese-in-barattolo/) ✓ "Il pesto migliore: oli vegetali, addensanti e anacardi che vi risparmiate"; [L'Indipendente 2025](https://www.lindipendente.online/2025/09/01/pesto-genovese-o-alla-genovese-il-tranello-dellindustria-alimentare/)
+- **Seed oil (sunflower):** [Dissapore](https://www.dissapore.com/spesa/il-migliore-pesto-genovese-in-barattolo/); [Il Fatto Alimentare](https://ilfattoalimentare.it/confronto-prodotti-pesto-alla-genovese-tabella-ingredienti-prezzi.html)
+- **Butter:** [Internazionale 2023](https://www.internazionale.it/essenziale/notizie/tom-landolfi/2023/01/04/caccia-pesto-perfetto) ✓ "Il burro no, è reato, non scherziamo. Sarebbe come mettere la panna nella carbonara"; [Dissapore 2015](https://www.dissapore.com/grande-notizia/pesto-alla-genovese-davide-oldani-burro/) (Davide Oldani) ✓ "Davide Oldani insiste con il burro ma a Genova dicono che è roba per milanesi"
+- **Generic or non-Italian cheese:** [Scatti di Gusto 2016](https://www.scattidigusto.it/ricetta-pesto-ingredienti-alternativi) (Roberto Panizza); [MeteoWeb 2016](https://www.meteoweb.eu/2016/04/il-made-in-italy-taroccato-non-e-solo-carbonara-gate-dalla-falsa-caprese-alla-pizza-ecco-le-peggiori-imitazioni/666794/)
 
 The butter quote is the dish's in-game quote ("a waitress at a Genoa pesto restaurant, to Internazionale").
 
@@ -784,12 +891,22 @@ turns creamy from starch alone; add parsley off the heat.
 
 **Intruders in the game**
 
-| Enemy | Intruder | Popularity | C | Why Italians object | Sources (chefs in brackets) |
-|---|---|---|---|---|---|
-| `vongola` Vongola Formaggiosa | Cheese on clams | ●●●●● 5 | C | An unwritten rule: no grated aged cheese on fish and shellfish pasta, because it covers the clams. YouGov 2022: cheese on seafood pasta −39. The classic tourist mistake. | [Vincenzo's Plate](https://www.vincenzosplate.com/italian-food-mistakes-americans-make/) (Vincenzo Prosperi) ✓ "If you order spaghetti alle vongole in Italy and ask for cheese on top, your waiter will look at you with an expression you will not forget."; [YouGov 2022](https://business.yougov.com/content/40810-italian-food-crimes) |
-| `parmesan` Spargipolvere | Grated Parmesan | ●●●●● 5 | C | Same rule, same survey: asking for grated Parmigiano on clams is the classic tourist mistake. | [Gambero Rosso](https://www.gamberorosso.it/notizie/attualita/new-york-times-cacio-pepe-tonno/) ✓ "quella di non condire con del formaggio, soprattutto stagionato come Pecorino o Parmigiano, un piatto che contenga del pesce"; [Foodie](https://www.foodie.com/1593411/mistakes-make-ordering-italian-food) ✓ "Any seafood pastas with a cheese or cream-based sauce will be indicative of a non-authentic Italian restaurant." |
-| `burro` Burro Furbetto | Butter | ●●●●○ 4 | C | The Neapolitan recipe uses only olive oil. In December 2023 a famous TV chef posted vongole finished with butter and Italian social media erupted. | [Dissapore](https://www.dissapore.com/notizie/bruno-barbieri-mette-il-burro-negli-spaghetti-con-le-vongole-e-scatena-il-panico/) (Bruno Barbieri); [Il Fatto Quotidiano 2023](https://www.ilfattoquotidiano.it/2023/12/24/bruno-barbieri-cucina-gli-spaghetti-alle-vongole-con-il-burro-e-scoppia-il-putiferio-li-rimanderei-indietro-lui-non-me-ne-frega-niente/7393250/) (Bruno Barbieri); [Scatti di Gusto 2024](https://www.scattidigusto.it/2024/01/01/spaghetti-con-vongole-e-burro-cosa-non-va-nella-ricetta-di-barbieri/) |
-| `panna` Panna Invasora | Cream | ●●●○○ 3 | | The creaminess comes only from clam juice, oil and pasta starch; dairy cream is a foreign addition that smothers the sea. | [Wikipedia](https://en.wikipedia.org/wiki/Spaghetti_alle_vongole) ✓; [Foodie](https://www.foodie.com/1593411/mistakes-make-ordering-italian-food) ✓ |
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `vongola` Vongola Formaggiosa | Cheese on clams | ●●●●● 5 | C | Italians widely follow an unwritten rule: no grated aged cheese (Parmigiano, Pecorino) on fish and shellfish pasta, because it covers the delicate taste of the clams. YouGov 2022: cheese on seafood pasta −39. The classic tourist mistake. |
+| `parmesan` Spargipolvere | Grated Parmesan | ●●●●● 5 | C | Same rule, same survey: asking for grated Parmigiano on clams is the classic tourist mistake. |
+| `burro` Burro Furbetto | Butter | ●●●●○ 4 | C | The Neapolitan recipe uses only olive oil. In December 2023 a famous TV chef posted vongole finished with butter and Italian social media erupted. |
+| `panna` Panna Invasora | Cream | ●●●○○ 3 | | The creaminess comes only from clam juice, olive oil and pasta starch; dairy cream is an Italian-American or foreign addition that smothers the taste of the sea. |
+
+*Cheese on clams* and *Grated Parmesan* are one research entry ("Parmesan or other grated cheese", 5),
+split in two for the game: see [editorial calls](#editorial-calls-in-the-game-data).
+
+*Sources* (Italian chefs and creators in brackets):
+
+- **Cheese on clams:** [Vincenzo's Plate](https://www.vincenzosplate.com/italian-food-mistakes-americans-make/) (Vincenzo Prosperi) ✓ "If you order spaghetti alle vongole in Italy and ask for cheese on top, your waiter will look at you with an expression you will not forget."; [YouGov 2022](https://business.yougov.com/content/40810-italian-food-crimes)
+- **Grated Parmesan:** [Gambero Rosso](https://www.gamberorosso.it/notizie/attualita/new-york-times-cacio-pepe-tonno/) ✓ "quella di non condire con del formaggio, soprattutto stagionato come Pecorino o Parmigiano, un piatto che contenga del pesce"; [Foodie](https://www.foodie.com/1593411/mistakes-make-ordering-italian-food) ✓ "Any seafood pastas with a cheese or cream-based sauce will be indicative of a non-authentic Italian restaurant."
+- **Butter:** [Dissapore](https://www.dissapore.com/notizie/bruno-barbieri-mette-il-burro-negli-spaghetti-con-le-vongole-e-scatena-il-panico/) (Bruno Barbieri); [Il Fatto Quotidiano 2023](https://www.ilfattoquotidiano.it/2023/12/24/bruno-barbieri-cucina-gli-spaghetti-alle-vongole-con-il-burro-e-scoppia-il-putiferio-li-rimanderei-indietro-lui-non-me-ne-frega-niente/7393250/) (Bruno Barbieri); [Scatti di Gusto 2024](https://www.scattidigusto.it/2024/01/01/spaghetti-con-vongole-e-burro-cosa-non-va-nella-ricetta-di-barbieri/)
+- **Cream:** [Wikipedia](https://en.wikipedia.org/wiki/Spaghetti_alle_vongole) (✓ quoted under Authority sources); [Foodie](https://www.foodie.com/1593411/mistakes-make-ordering-italian-food) (✓ quoted in the Grated Parmesan sources above)
 
 The Vincenzo's Plate line is the dish's in-game quote. (The culinary lens thought it close to a paraphrase;
 the sources lens matched it verbatim in a search excerpt, so it is marked verified at excerpt level.)
@@ -830,15 +947,20 @@ here. Chef twists (Cannavacciuolo's creamy version with milk) are not mocked.
 Basilico (from Genoa) · Vongole veraci (from Naples' sea) · Pomodoro (from the Campania sun) · Olio
 extravergine (from every corner of Italy).
 
-**Intruders:** the best-known crimes of the menu, each shown with the dish it comes from ("Panna nella
-Carbonara? NO!"): cream, smoked bacon, onion, Parmesan instead of Pecorino, peas and mushrooms (from the
-Carbonara); ketchup (Pomodoro); pineapple (Margherita); butter (Cacio e Pepe); garlic (Amatriciana);
-spaghetti bolognese (Ragù); chicken (Alfredo); cheese on clams (Vongole). The rest of the menu's crimes
-can join them, since the finale is exempt from the 80 % rule: the method crimes (snapped spaghetti,
-scissors, the cold pot, the single pot, the cursed can, frozen lasagna), the drinks (the cappuccino, which
-turns up after the 11:00 event, and the frappé), the viral phone, balsamic glaze, pasta crisps, the
-Alfredo blob, the stained Margherita, the Hawaiian slice, "pepperoni", the rolling meatball and the other
-dishes' intruders.
+**Intruders** (in `recipes.ts`): the best-known crimes of the menu, each shown with the dish it comes from
+("Panna nella Carbonara? NO!"): cream, smoked bacon, onion, Parmesan instead of Pecorino, peas and mushrooms
+(from the Carbonara); ketchup (Pomodoro); pineapple (Margherita); butter (Cacio e Pepe); garlic
+(Amatriciana); spaghetti bolognese (Ragù); chicken (Alfredo); cheese on clams (Vongole).
+
+**In the waves.** The finale's waves are mixed by hand and exempt from every wave rule: `stageRuleProblems()`
+skips it. Besides the listed intruders they bring the method crimes (snapped spaghetti, scissors, the cold
+pot, the single pot, the cursed can, frozen lasagna), the drinks (the frappé, and the cappuccino, which
+turns up after the 11:00 event), the viral phone, balsamic glaze, pasta crisps, Alfredo the Gluey, the
+stained Margherita, the Hawaiian slice, "pepperoni", the rolling meatball and intruders of other dishes
+(cashews, BBQ sauce, broccoli, cheddar, the cheese pull, shrimp, the wrong oil, cooked ham, pineapple chunks).
+*At the time of writing, three listed intruders (smoked bacon, garlic and chicken) appear in no finale
+minute or event*, and neither do the mushy pasta and the pasta-rinser of its extras list; that is a wave fix
+for `stages.ts`.
 
 > *Fun fact (in-game):* In a 2022 YouGov survey, Italians rated ketchup on pasta at −82, pineapple on pizza
 > at −63 and cream in carbonara at −45. They were far kinder to ragù on spaghetti: +81.
@@ -860,24 +982,30 @@ toast, when you collect it where it belongs or meet it where it does not (`FRIEN
 | Onion (soffritto) | Ragù | Carbonara, Amatriciana | `cipolla` |
 
 More cross-dish reminders from the research: peas are mocked in carbonara but accepted in ragù; cream is
-mocked in carbonara, Alfredo, cacio e pepe and pesto but common on Italian pizza; Parmigiano is correct
-in Alfredo, ragù (at the table) and lasagne.
+mocked in carbonara, Alfredo, cacio e pepe, pesto and vongole, and on tagliatelle al ragù (Bolognese custom
+allows it when the ragù dresses dry pasta), yet it is common on Italian pizza and fine in penne panna e
+pomodoro; Parmigiano is correct in Alfredo, ragù (at the table) and lasagne.
 
 ## Accepted in Italy: never an enemy
 
 The game must never mock these. Each dish section lists its own; the cross-menu essentials:
 
-| Where | Accepted | Source |
-|---|---|---|
-| Any pizza | Cream, sweetcorn, würstel and fries, tuna and onion, cooked ham, mushrooms, artichokes, olives, anchovies, spicy salami | [Scatti di Gusto 2024](https://www.scattidigusto.it/2024/03/14/identita-di-pizza-2024-la-disobbedienza-e-a-tutta-panna-e-fiordilatte/); [Scatti di Gusto 2023](https://www.scattidigusto.it/2023/12/30/pizza-allananas-condanni-sorbillo-e-mangi-la-wurstel-e-patatine/); [Scatti di Gusto 2023](https://www.scattidigusto.it/2023/05/31/pizza-tonno-e-cipolla-palazzo-petrucci-napoli/) |
-| Margherita | Real grated Parmigiano or pecorino; buffalo mozzarella; cherry tomatoes | [AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf) |
-| Pomodoro | Garlic or onion; cheese on top | [Dissapore](https://www.dissapore.com/grande-notizia/sughi-al-pomodoro-veloci-5-errori/) |
-| Carbonara | Yolks only or with whole eggs; some Parmigiano or Grana blended in; rigatoni | [AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) |
-| Amatriciana | White wine; a spoonful of olive oil; black pepper | [Regione Veneto STG copy](https://elezioni2020.regione.veneto.it/documents/10701/3259398/disciplinare_amatriciana_tradizionale_stg.pdf/63e210c6-6444-4ed9-8629-4fc20cab7345) |
-| Alfredo | Parmigiano, lots of butter, black pepper | [Gambero Rosso](https://www.gamberorosso.it/notizie/la-storia-delle-fettuccine-alfredo) |
-| Ragù | Milk, olive oil, light broth, nutmeg, mixed meats, peas, cream on *dry* pasta | [Accademia](https://accademiaitalianadellacucina.it/en/node/62013) |
-| Pesto | Garlic in any amount; potatoes and green beans; Grana Padano | [Scatti di Gusto](https://www.scattidigusto.it/pesto-al-mortaio-la-ricetta-di-roberto-panizza-da-fare-a-casa/) |
-| Vongole | Garlic, parsley, a few cherry tomatoes, white wine | [Dissapore](https://www.dissapore.com/grande-notizia/antonino-cannavacciuolo-spaghetti-alle-vongole-con-o-senza-pomodoro/) |
+Each item is followed by its source; "culinary lens" means the culinary lens added it from desk knowledge
+(no URL).
+
+| Where | Accepted (source) |
+|---|---|
+| Any pizza | Cream and sweetcorn ([Scatti di Gusto 2024](https://www.scattidigusto.it/2024/03/14/identita-di-pizza-2024-la-disobbedienza-e-a-tutta-panna-e-fiordilatte/)); würstel and fries ([Scatti di Gusto 2023](https://www.scattidigusto.it/2023/12/30/pizza-allananas-condanni-sorbillo-e-mangi-la-wurstel-e-patatine/)); tuna and onion ([Scatti di Gusto 2023](https://www.scattidigusto.it/2023/05/31/pizza-tonno-e-cipolla-palazzo-petrucci-napoli/)); sausage and friarielli, cooked ham, mushrooms, artichokes, olives, anchovies, bell peppers (culinary lens); spicy salami and 'nduja (culinary lens, Diavola) |
+| Margherita | Real grated Parmigiano or pecorino; fior di latte or buffalo mozzarella; cherry tomatoes ([AVPN 2024](https://www.pizzanapoletana.org/public/pdf/Disciplinare-2024-ENG.pdf); the STG lists the last two) |
+| Marinara | A basil leaf; anchovies (culinary lens) |
+| Pomodoro | Garlic or onion; Parmigiano or pecorino on top ([Dissapore](https://www.dissapore.com/grande-notizia/sughi-al-pomodoro-veloci-5-errori/)); a potato or carrot against acidity ([Il Fatto Quotidiano 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/)) |
+| Carbonara | Yolks only, or yolks plus some whole eggs ([Scatti di Gusto](https://www.scattidigusto.it/carbonara-ricetta-perfetta-luciano-monosilio)); some Parmigiano or Grana blended into the Pecorino ([AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/)); rigatoni or mezze maniche (culinary lens and popular-posts sweep, general knowledge, no URL) |
+| Amatriciana | A splash of dry white wine ([Blitz Quotidiano 2015](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)); a spoonful of olive oil ([Gazzetta del Gusto, De.C.O.](https://gazzettadelgusto.it/ricette/salse-sughi/storia-e-ricetta-originale-dellamatriciana/?print=pdf)); black pepper instead of or with chili ([STG, Regione Veneto copy](https://elezioni2020.regione.veneto.it/documents/10701/3259398/disciplinare_amatriciana_tradizionale_stg.pdf/63e210c6-6444-4ed9-8629-4fc20cab7345)) |
+| Cacio e Pepe | A pinch of starch ([Dissapore 2025](https://www.dissapore.com/notizie/la-formula-della-cacio-e-pepe-senza-grumi-vince-il-premio-ignobel-2025/)); some Parmigiano blended in ([Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/alessandro-borghese-la-ricetta-e-i-segreti-per-cucinare-al-meglio-la-sua-famosa-cacio-e-pepe-172107/)); dried spaghetti or short shapes (culinary lens) |
+| Alfredo | Parmigiano, lots of butter, pasta water, black pepper ([Gambero Rosso](https://www.gamberorosso.it/notizie/la-storia-delle-fettuccine-alfredo)) |
+| Ragù | Milk, olive oil, light broth, nutmeg ([Accademia](https://accademiaitalianadellacucina.it/en/node/62013)); mixed beef and pork, knife-chopped meat, red or white wine ([Bologna Chamber of Commerce press review, 2023](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/Rassegna/Carlino21042023.pdf)); chicken livers, sausage, peas, dried porcini ([Bologna Chamber of Commerce press review](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/Rassegna/Corriere1.pdf)); cream on *dry* pasta ([Bologna heritage sheet 2022](https://assets.culturabologna.it/ddbb8840-5178-4a44-b17b-de32ecf6f74e-2022-tagliatella-al-ragu.pdf)) |
+| Pesto | Garlic in any amount ([Scatti di Gusto](https://www.scattidigusto.it/pesto-al-mortaio-la-ricetta-di-roberto-panizza-da-fare-a-casa/)); potatoes and green beans; Grana Padano; Pecorino Romano, Sardo or Fiore Sardo; rocket pesto and walnut sauce as their own recipes (culinary lens) |
+| Vongole | A few cherry tomatoes, white wine, chili, lupini clams ([Dissapore](https://www.dissapore.com/grande-notizia/antonino-cannavacciuolo-spaghetti-alle-vongole-con-o-senza-pomodoro/)); a chef's creamy version with milk, as a twist ([Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/spaghetti-alle-vongole-di-antonino-cannavacciuolo-il-segreto-per-farli-cremosi-la-ricetta-173794/)) |
 
 ## The most-cited complaints (top 20)
 
@@ -910,9 +1038,10 @@ Runners-up: pesto + cream; cacio e pepe + Parmesan or cream; carbonara + white w
 
 ## Italian influencer chefs and creators consulted
 
-The brief suggested Italian influencer chefs as a source. None of them is named in the game; the game
-uses archetypes ("the Purist Chef", "the TV Judge", "the Pizzaiolo Provocateur"). Several appear on both
-sides of a debate, which is why they are useful.
+The brief suggested Italian influencer chefs as a source. None of them is named in the game's texts:
+they are credited only as sources (`chef` credits and `quote.by`), and the texts use archetypes such as
+"a TV chef", "a celebrity chef", "a famous TV chef", "a Milan-area star chef" and "a famous Naples
+pizzaiolo". Several appear on both sides of a debate, which is why they are useful.
 
 | Who | Where | What the research uses them for |
 |---|---|---|
@@ -922,13 +1051,13 @@ sides of a debate, which is why they are useful.
 | **The Pasta Queen** (Nadia Caterina Munno) | TikTok, Instagram, books | Against chicken Alfredo and cream in Alfredo; ✓ "Chicken alfredo really rubs me the wrong way". [The Daily Meal](https://www.thedailymeal.com/1761698/biggest-misconception-alfredo-pasta-queen) |
 | **Italia Squisita** | YouTube (food media brand) | Roman chefs react to carbonara videos; traditional vs gourmet cacio e pepe. [italiasquisita.net](https://italiasquisita.net/it/video/carbonara-gli-chef-reagiscono-ai-video-piu-visti-al-mondo) |
 | **Lionfield** (Matteo Salvatori, Emiliano Santoro) | YouTube, TikTok | Italian "pasta police" ("Not approved!"). [Tubefilter](https://www.tubefilter.com/2021/12/18/creators-on-the-rise-lionfield/amp/) |
-| **Gino D'Acampo** | ITV This Morning, books | The 2010 live-TV carbonara rebuttal (milk or ham: accounts differ); pineapple pizza. [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) |
+| **Gino D'Acampo** | ITV This Morning, books | The 2010 live-TV carbonara rebuttal (milk or ham: accounts differ); pineapple pizza. [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) (a mirror address, as found in search) |
 | **Bruno Barbieri** | MasterChef Italia, Instagram | Defended traditional ragù (2016), but his butter vongole (2023) caused a row: both sides. [Il Fatto Quotidiano](https://www.ilfattoquotidiano.it/2023/12/24/bruno-barbieri-cucina-gli-spaghetti-alle-vongole-con-il-burro-e-scoppia-il-putiferio-li-rimanderei-indietro-lui-non-me-ne-frega-niente/7393250/) |
 | **Antonino Cannavacciuolo** | MasterChef Italia | Sugar in tomato sauce "improponibile"; a little tomato in vongole is fine; sceptical of pineapple pizza. [Dissapore](https://www.dissapore.com/grande-notizia/antonino-cannavacciuolo-spaghetti-alle-vongole-con-o-senza-pomodoro/) |
 | **Carlo Cracco** | TV, restaurants | The 2015 garlic-in-amatriciana and onion-in-gricia rows: a source of controversy, not of rules. [Dissapore](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/) |
 | **Alessandro Borghese** | Sky TV | His cacio e pepe reportedly blends Parmigiano with Pecorino (single secondary source). [Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/alessandro-borghese-la-ricetta-e-i-segreti-per-cucinare-al-meglio-la-sua-famosa-cacio-e-pepe-172107/) |
 | **Gino Sorbillo** | Naples pizzerias, social media | Pineapple, ketchup and banana pizzas as provocations: why pineapple is "contested". [Open](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/) |
-| **Franco Pepe** | Pepe in Grani, Caiazzo | "AnaNascosta" (pineapple wrapped in prosciutto) since 2019. [Gambero Rosso](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/) |
+| **Franco Pepe** | Pepe in Grani, Caiazzo | "AnaNascosta" (pineapple wrapped in prosciutto) since 2019; in 2026 he told AGI pineapple pizzas are unfairly demonised (not re-checked). [Gambero Rosso](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/), [AGI 2026](https://www.agi.it/cronaca/news/2026-11-05/ananas-pizza-tradizione-39893064/amp/) |
 | **Roberto Panizza** | Il Genovese; World Pesto Championship | The go-to purist voice on pesto ingredients. [Scatti di Gusto](https://www.scattidigusto.it/ricetta-pesto-ingredienti-alternativi) |
 | **Davide Oldani** | D'O restaurant | His 2015 butter pesto, dismissed by Genoa. [Dissapore](https://www.dissapore.com/grande-notizia/pesto-alla-genovese-davide-oldani-ci-mette-il-burro/) |
 | **Massimo Bottura** | Osteria Francescana | A parsley-and-mint "pesto" video that angered the Genoese. [Blitz Quotidiano](https://archivio.blitzquotidiano.it/video/massimo-bottura-pesto-genovese-video-2844499) |
@@ -963,26 +1092,44 @@ pre-cooked sugared pizza sauce, onion or canned clams in vongole, dried "Italian
 
 ## Editorial calls in the game data
 
-Where the game data goes beyond a one-to-one copy of the research, `src/game/recipes.ts` says so in its
-header. The calls are:
+`src/game/recipes.ts` is not a one-to-one copy of the research dataset. Its header lists the first two calls
+below; this section lists them all. Where an intruder was split from one research entry, or combined from
+two, its popularity is **inherited** from those entries, not separately researched.
 
 - **No sugar enemy in the Pomodoro.** The research supports sugar (4, contested), but no enemy fits it.
+  Other researched intruders with no fitting enemy are left out too (tomato and pancetta in the Carbonara,
+  vinegar in the Amatriciana…); each dish's "Also researched" list names them.
 - **Alfredo's imitation "Parmesan" and the Marinara's cheddar** are required by the level design, but the
   research has no dish-specific evidence for them. Their texts are adapted from the pizza research
-  (Coldiretti on imitation "Parmesan" and "Anglo-Saxon cheddar") and cite that pizza source.
+  (Coldiretti on imitation "Parmesan" and "Anglo-Saxon cheddar") and cite that pizza source. Their
+  popularity comes from those pizza entries (imitation "Parmesan" 1, cheddar 2 in the toppings entry).
+- **Alfredo's `alfredo`, "Creamy chicken Alfredo" (5), has no research entry of its own.** It combines the
+  cream (5) and chicken (5) entries into the version served abroad, and cites the cream entry's chef source.
+- **The Vongole's one complaint is two enemies.** The research has a single intruder, "Parmesan or other
+  grated cheese" (5, contested). The game splits it into `vongola` "Cheese on clams" and `parmesan` "Grated
+  Parmesan", both at 5 with the same `why` text, so the same complaint fills two places in the wave order.
+- **The Marinara's seafood is two enemies.** The research entry "Seafood (prawns, mussels, clams)" (2) becomes
+  `gamberi` "Prawns" and `vongola` "Clams", both at 2 with the same `why` text.
+- **The Margherita borrows from other pizza entries.** Its own research entry has pineapple, ketchup, cheddar
+  and imitation "Parmesan". The game adds `hawaiana` (the toppings entry's pineapple, 5, contested), `pollo`
+  (chicken, 3) and `bbq` (BBQ sauce, 2) from the Neapolitan-toppings entry, and `pepperoni` (2, contested)
+  from the Diavola entry. Its own imitation "Parmesan" entry is not an enemy on the Margherita.
+- **Renamed or widened entries.** The Ragù's "Spaghetti" is `fantasma` "Spaghetti bolognese"; the Pesto's
+  "Gouda and other non-Italian cheeses" is `parmesan` "Generic or non-Italian cheese".
 - **One enemy, several crimes.** An enemy stands for whatever its ingredient means *in that dish*:
   `bacon` is smoked bacon in the Carbonara, pancetta-or-bacon in the Amatriciana and smoked pancetta in the
   Ragù; `parmesan` is "Parmesan instead of Pecorino" in the Roman pastas, grated cheese on clams in the
   Vongole, generic cheese in the Pesto and imitation "Parmesan" in the Alfredo; `olio` (the Wrong Oil) is
   olive oil in the Cacio e Pepe but seed oil in the Pesto; `vongola` (the Cheesy Clam) is cheese on clams in
   the Vongole and clams on the Marinara; `pollo` is chicken on pasta or on pizza. The general crime of each
-  enemy is in the Crimes tab; the per-dish reason is in the Ricette tab and in the first-sighting toast.
+  enemy is in Il Ricettario's Crimini tab; the per-dish reason is in the Ricette tab, and a shortened form
+  of it is in the first-sighting toast.
 - **The Carbonara's `bacon` is smoked bacon, not pancetta**: pancetta there is a contested fallback, so it is
   not a foe (friend-or-foe toasts call pancetta a foe only in the Amatriciana).
 - **Method crimes** (snapping spaghetti, rinsing, cold-water starts, canned and one-pot carbonara…) are not
   ingredients. They join the dishes where they fit as "extras", capped at 20 % of the wave weight.
 - **Sweep-only intruders in the game:** the Carbonara's mushrooms and cooked ham, and the Pomodoro's
-  chicken. They are kept at the lowest weights and are the first to revisit.
+  chicken. They sit near the end of their dish's wave order and are the first to revisit.
 
 ## How this was researched, and its limits
 
@@ -1019,14 +1166,20 @@ the sources lens showed to be unsupported; intruders kept when the culinary lens
   Bologna heritage sheet), Pesto (Internazionale) and Vongole (Vincenzo's Plate). Cacio e Pepe, the two
   pizzas and the finale have none.
 - **Popularity is an editorial estimate** (1–5, the lower of the two lens scores), not a measured count.
-  The only survey numbers are YouGov's 2022 net scores among Italians (ketchup on pasta −82, pineapple on
-  pizza −63, cream in carbonara −45, cheese on seafood pasta −39, Bolognese sauce on spaghetti +81), and they
-  come from write-ups of the survey.
-- **Very recent items could not be re-checked:** Franco Pepe to AGI (5 Nov 2026), the Brisbane chef firing
-  (8 Nov 2026), La Voce di New York on "pepperoni" (2 Nov 2026), the 2026 Spanish chef's ragù, the Carbonara
-  Day 2026 survey percentages and the 2026 Senate pasta alla Norma.
-- **Coverage.** The Margherita and Marinara were not part of the chef or popular-posts sweeps; the Ragù and
-  Pesto were not part of the chef sweep. Sweep-only items were never reviewed by a lens.
+  The only survey numbers behind it are YouGov's 2022 net scores among Italians (ketchup on pasta −82,
+  pineapple on pizza −63, cream in carbonara −45, cheese on seafood pasta −39, Bolognese sauce on spaghetti
+  +81), and they come from write-ups of the survey. (The 2026 AstraRicerche carbonara percentages in the
+  Carbonara fun facts are a single, unconfirmed search snippet and were not used for popularity.)
+- **Very recent items could not be re-checked:** Franco Pepe to AGI (5 Nov 2026) and the Brisbane chef
+  firing (8 Nov 2026), both under the Margherita; La Voce di New York on "pepperoni" (2 Nov 2026); the 2026
+  Spanish chef's ragù; the Carbonara Day 2026 survey percentages; and the 2026 Senate pasta alla Norma.
+- **Coverage.** The Margherita and Marinara entries were not part of the chef or popular-posts sweeps
+  (the toppings entries some of their intruders come from were); the Ragù and Pesto were not part of the
+  chef sweep. Sweep-only items were never reviewed by a lens.
+- **Links as found.** A few links are the address the search returned rather than the publisher's canonical
+  page: a Food52 mirror (`vercel.food52.com`), The Local's CMS address (`cms.thelocal.com/?p=…`), WordPress
+  shortlinks (`?p=…`) for Il Vero Alfredo, Life in Italy and Travel Emilia-Romagna, and a Nordot syndication
+  copy. They are marked where they appear; replace them with the canonical page once it can be opened.
 - **The working files** (the research dataset `recipes_dataset.json` and the full dossier, with every
   evidence entry and the "+N more" sources) were produced during the research and are not in the repository.
   This file is the edited record; `src/game/recipes.ts` holds the in-game subset.
@@ -1049,4 +1202,6 @@ When you change `src/game/recipes.ts`:
 5. **Never mock what Italians accept** ([list above](#accepted-in-italy-never-an-enemy)).
 6. **Intruders must be enemies.** `enemy` is an `ENEMIES` id; the waves in `stages.ts` must keep ≥ 80 % of
    each minute's weight on the dish's intruders, follow the intruder order and spawn every intruder.
-   `stageRuleProblems()` checks all three, and `scripts/validate.mjs` prints any problem.
+   `stageRuleProblems()` checks all three for dishes 1–10 (garlic, a support enemy, is left out of the order
+   and spawn checks), and `scripts/validate.mjs` prints any problem. **The finale is not checked at all**, so
+   check its waves by hand: every intruder listed for it should appear in some minute or event.

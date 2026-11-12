@@ -26,7 +26,7 @@ XP ingredients → level up → choose 1 of 3–4 upgrades → elites & bosses d
 runs buy permanent upgrades in **La Dispensa** (the pantry).
 
 ## Il Menù: the levels
-Eleven dishes in six courses, 15:00 each (mid-bosses at 5:00 and 10:00, final boss at 15:00).
+Ten dishes and a finale, in six courses, 15:00 each (mid-bosses at 5:00 and 10:00, final boss at 15:00).
 Each plays in one of the four environments below with its own light and a little extra decor.
 The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.md).
 
@@ -53,10 +53,10 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
   the old streets; the finale ≈ the old food court. A dish's waves choose *who* comes; its tier sets how
   many and how tough.
 - **Music** is the environment's track (kitchen, trattoria, streets, food court).
-- **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, particles, a
-  night ramp) and add a little decor made of existing props (tomato crates, a flour-dusted pantry, lemon
-  crates, embers, wine crates, basil pots, sea-side puddles). The paths and the spawn area stay those of
-  the base environment.
+- **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, a night ramp)
+  and the particles (dust, flour, embers, fireflies), and add a little decor made of existing props (tomato
+  crates and sauce stains, a flour-dusted pantry, lemon crates, wine crates, basil pots, sea-side puddles).
+  The paths and the spawn area stay those of the base environment.
 - **Old saves** (four stages, save version 1) migrate to version 2: La Cucina's records and wins carry
   over to the Pomodoro and the Carbonara, La Trattoria's to the Margherita, I Vicoli's to the Marinara;
   the Food Court keeps its id. The unlocked list restarts from the Pomodoro (plus the finale if it was
@@ -106,17 +106,18 @@ each corner of Italy.
 - **RICETTA COMPLETA!** All of a dish's ingredients in one run: full heal, +10% Might, +50 coins,
   confetti and the dinner bell. The dish's record gets **★ Ricetta completa** on its menu card (saved even
   if the run is then lost; the *Ricetta Perfetta* medal also needs the win).
-- **Intruders.** The first time each intruder of the dish is on screen, a toast names the crime:
-  "Panna nella Carbonara? NO! <one-liner>". **Friend or foe:** butter, garlic, pancetta, Parmigiano,
-  mozzarella and onion belong in some dishes and are crimes in others; a one-off toast says so when you
+- **Intruders.** The first time each intruder of the dish is on screen, a toast names the crime with a
+  one-line reason ("Panna nella Carbonara? NO! …"); the full reason is in Il Ricettario. **Friend or
+  foe:** butter, garlic, pancetta, Parmigiano, mozzarella and onion belong in some dishes and are crimes in others; a one-off toast says so when you
   collect one where it belongs or meet it where it does not ("Garlic! In pesto it belongs. Not here!").
   At most 6 toasts wait in the queue; one is shown every 5 s.
 - **Waves.** In every minute at least 80 % of the spawn weight comes from the dish's intruders; the rest
   (≤ 20 %) are the dish's *extras*, method crimes that fit it (snapped spaghetti in the Pomodoro, the
   one-pot carbonara in the Carbonara…). Over the run, the intruders' shares follow their order in the
-  recipe (the loudest crime comes most often; garlic, a support enemy, is exempt), and every intruder
-  spawns. The finale is exempt from the 80 % rule. `stageRuleProblems()` checks all of this and
-  `scripts/validate.mjs` prints any problem.
+  recipe (the loudest crime comes most often), and every intruder spawns. Garlic, a support enemy, is
+  exempt from the order (and from the spawn check). `stageRuleProblems()` checks all of this for dishes
+  1–10 and `scripts/validate.mjs` prints any problem. **The finale is exempt from every wave rule**: its
+  waves are mixed by hand and not checked.
 
 ## Characters
 | id | Name | Starting weapon | Bonus | Unlock |
@@ -190,7 +191,7 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | Panna Invasora | Invading Cream | puddler | Cream where it does not belong | Carbonara, Alfredo, Cacio e Pepe, Ragù, Pesto, Vongole |
 | Forbici Furiose | Furious Scissors | charger | Cutting spaghetti with scissors (or a knife) | method crime (Pomodoro) |
 | Pasta Scotta | Mushy Pasta | hopper | Overcooked, mushy pasta | method crime (Pomodoro, Alfredo, Amatriciana, Cacio e Pepe) |
-| Lo Sciacquapasta | The Pasta-Rinser | hopper | Rinsing cooked pasta (splits off Mushy Pasta) | method crime |
+| Lo Sciacquapasta | The Pasta-Rinser | hopper | Rinsing cooked pasta (splits off Mushy Pasta) | method crime (wherever Mushy Pasta is: Pomodoro, Alfredo, Amatriciana, Cacio e Pepe) |
 | Cipolla Clandestina | Stowaway Onion | chase | Onion in carbonara or amatriciana | Carbonara, Amatriciana |
 | Aglio in Camicia | Garlic in Its Shirt | support | Garlic where it does not belong | Carbonara, Alfredo, Amatriciana, Ragù |
 | Bacon Abusivo | Unlicensed Bacon | slither | Bacon (or smoked pancetta) instead of guanciale | Carbonara, Amatriciana, Ragù |
@@ -201,18 +202,18 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | Peperone Equivoco | The Misunderstood Pepper | orbiter | "Pepperoni" pizza | Margherita |
 | Polpetta Rotolante | Rolling Meatball | roller | Spaghetti and meatballs | Pomodoro (extra in the Ragù) |
 | Fetta Hawaiana | Hawaiian Slice | chase | Ham & pineapple "Hawaiian" pizza | Margherita |
-| Cappuccino Ritardatario | Latecomer Cappuccino | chase | Cappuccino after 11 a.m. (or with a meal) | the finale |
+| Cappuccino Ritardatario | Latecomer Cappuccino | chase | Cappuccino after 11 a.m. (or with a meal) | only in the finale |
 | Alfredo il Colloso | Alfredo the Gluey | puddler | Creamy chicken "Alfredo" | Alfredo |
 | Spargipolvere | The Dust-Sprinkler | lobber | Powdered "parmesan", or Parmigiano where it does not belong | Carbonara, Alfredo, Amatriciana, Cacio e Pepe, Marinara, Pesto, Vongole |
 | Margherita Macchiata | Stained Margherita | burster | Ketchup on pizza | Margherita |
-| Frappè Zuccheroso | Sugar-Rush Frappé | charger | Giant whipped-cream "coffee" drinks | the finale |
+| Frappè Zuccheroso | Sugar-Rush Frappé | charger | Giant whipped-cream "coffee" drinks | only in the finale |
 | Il Telefonino Virale | The Viral Phone | ranged | Viral "Italian" recipe videos | extra in the Pesto |
 | Pentola Fredda | The Cold Pot | aura | Starting pasta in cold water | method crime (Pomodoro, Cacio e Pepe) |
 | Vongola Formaggiosa | The Cheesy Clam | strafe | Grated cheese on seafood pasta (and seafood on the Marinara) | Marinara, Vongole |
 | Lasagna Surgelata | Frozen Lasagna | chase | Frozen microwave lasagna | extra in the Ragù |
 | La Pentola Unica | The Single Pot | devourer | One-pot "carbonara" | extra in the Carbonara |
-| Glassa Balsamica | Balsamic Glaze | puddler | Sugary balsamic glaze on everything | the finale |
-| Patatine di Pasta | Pasta Crisps | swarm | Air-fried "pasta chips" | the finale |
+| Glassa Balsamica | Balsamic Glaze | puddler | Sugary balsamic glaze on everything | only in the finale |
+| Patatine di Pasta | Pasta Crisps | swarm | Air-fried "pasta chips" | only in the finale |
 | Scatoletta Maledetta | The Cursed Little Can | kamikaze | Canned carbonara | extra in the Carbonara |
 | Spaghetti Fantasma | Ghost Spaghetti | ghost | Spaghetti bolognese | Ragù |
 | **Burro Furbetto** (new) | Sneaky Butter | puddler (butter slick) | Butter where it does not belong | Carbonara, Cacio e Pepe, Pesto, Vongole |
@@ -226,7 +227,9 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | **Cheddar Arancione** (new) | Orange Cheddar | strafe | Cheddar on pizza | Margherita, Marinara |
 | **Salsa Barbecue** (new) | BBQ Sauce | ranged | BBQ sauce on pizza | Margherita |
 
-The finale mixes crimes from the whole menu (its waves are exempt from the 80 % rule).
+The finale mixes crimes from the whole menu, and its waves are exempt from every wave rule. At the time of
+writing every enemy above appears there except Mushy Pasta, the Pasta-Rinser, garlic, bacon and chicken.
+The last three are listed among the finale's intruders, so their absence is a wave fix for `stages.ts`.
 
 | Boss | English | The crime | Final boss of | Mid-boss in |
 |---|---|---|---|---|
@@ -293,6 +296,7 @@ Banish.
   intruders with *why Italians object* and how loudly, the sources (authorities and Italian chefs), a
   verified quote where there is one, and a fun fact. The long version, with the research limits, is
   [RECIPES.md](RECIPES.md).
-- **Crimes** — the bestiary with *why Italians object* (from research) and, for each crime, the dishes it
+- **Crimini** — the bestiary with *why Italians object* (from research) and, for each crime, the dishes it
   does not belong in ("Non appartiene a:").
-- Weapons and their evolutions, the passive ingredients, and each dish's records.
+- **Armi** (weapons and their evolutions), **Ingredienti** (the passive ingredients) and **Record** (each
+  dish's records).

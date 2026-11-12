@@ -7,9 +7,10 @@ scissors, cappuccino after 11 a.m.… A top-down **survivors-like** arena game
 on desktop and mobile.
 
 **Every level is an Italian dish** — carbonara, cacio e pepe, the Margherita, ragù, pesto,
-spaghetti alle vongole… — and the enemies are the ingredients that do **not** belong in it:
-cream and smoked bacon in the carbonara, butter in the cacio e pepe, pineapple on the Margherita,
-cheese on the clams. The dish's real ingredients are on the map, waiting to be collected.
+spaghetti alle vongole… — plus a finale in the food court where the crimes are born. The enemies
+are the ingredients that do **not** belong in the dish: cream and smoked bacon in the carbonara,
+butter in the cacio e pepe, pineapple on the Margherita, cheese on the clams. The dish's real
+ingredients are on the map, waiting to be collected.
 
 Every enemy is a real Italian food pet peeve, researched from Italian chefs,
 institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RESEARCH.md)**
@@ -20,12 +21,10 @@ Italian food media and Italian influencer chefs): **[docs/RECIPES.md](docs/RECIP
 
 <p align="center">
   <img src="docs/screenshots/title.jpg" width="49%" alt="Title screen" />
-  <img src="docs/screenshots/menu.jpg" width="49%" alt="Il Menù — choose your dish" />
-  <img src="docs/screenshots/carbonara.jpg" width="49%" alt="Spaghetti alla Carbonara in the kitchen" />
-  <img src="docs/screenshots/alfredo.jpg" width="49%" alt="Fettuccine Alfredo in the trattoria" />
-  <img src="docs/screenshots/margherita.jpg" width="49%" alt="Pizza Margherita in the Naples alleys at sunset" />
-  <img src="docs/screenshots/vongole.jpg" width="49%" alt="Spaghetti alle Vongole on a seaside morning" />
-  <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="Il Menù degli Orrori, the food-court finale" />
+  <img src="docs/screenshots/kitchen.jpg" width="49%" alt="La Cucina, the kitchen" />
+  <img src="docs/screenshots/trattoria.jpg" width="49%" alt="La Trattoria at night" />
+  <img src="docs/screenshots/streets.jpg" width="49%" alt="I Vicoli di Napoli with the Cappuccino Clock Tower boss" />
+  <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="La Food Court with the Cursed Microwave" />
   <img src="docs/screenshots/levelup.jpg" width="49%" alt="Level-up cards" />
   <img src="docs/screenshots/chefs.jpg" width="49%" alt="Seven playable chefs" />
   <img src="docs/screenshots/ricettario.jpg" width="49%" alt="Il Ricettario — the encyclopedia of food crimes" />
@@ -47,7 +46,7 @@ Italian food media and Italian influencer chefs): **[docs/RECIPES.md](docs/RECIP
 
 ## 🍅 The game
 
-- **Il Menù: 11 levels, each a real Italian dish** (15 minutes each, mini-bosses at 5:00 and 10:00, a final boss at 15:00),
+- **Il Menù: 10 real Italian dishes and a finale** (15 minutes each, mini-bosses at 5:00 and 10:00, a final boss at 15:00),
   in six courses: *Le Basi* (Spaghetti al Pomodoro) → *Primi Romani* (Carbonara, Fettuccine Alfredo, Amatriciana,
   Cacio e Pepe) → *Le Pizze* (Margherita, Marinara) → *Dal Nord* (Tagliatelle al Ragù, Trofie al Pesto Genovese) →
   *Dal Sud e dal Mare* (Spaghetti alle Vongole) → *Il Gran Finale* (*Il Menù degli Orrori*, the food court where crimes
