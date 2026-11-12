@@ -35,19 +35,14 @@ function rimShot(run: Run, e: Enemy, a: number, speed: number, dmg: number, rim:
 }
 
 /**
- * A slowing cheese cloud that is easy to see on any floor: the 'cheese' area is only a soft glow,
- * so while it lives it pulses an amber rim and grated shreds drift down inside it.
+ * A slowing cheese cloud that is easy to see on any floor: the renderer gives every 'cheese' area an
+ * amber rim with a pulsing cream ring, and here grated shreds drift down inside it while it lives.
  */
 function cheeseCloud(run: Run, x: number, y: number, r: number, life: number) {
   const area = hazard(run, 'cheese', x, y, r, life, 0.35, 3);
-  let n = 0;
   const tick = () => {
     // areas are pooled: stop when this one died (or was reused for something else)
     if (!area.alive || area.kind !== 'cheese' || area.x !== x || area.y !== y) return;
-    if (n % 3 === 0) {
-      run.fx.ring(x, y, r * 0.86, r * 1.0, 0.55, '#c9973a', 3.5, false);
-      run.fx.ring(x, y, r * 0.8, r * 0.94, 0.55, '#fff3c8', 2, false);
-    }
     const k = Math.min(3, Math.ceil(r / 24));
     for (let i = 0; i < k; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.85;
@@ -59,7 +54,6 @@ function cheeseCloud(run: Run, x: number, y: number, r: number, life: number) {
       const p = run.fx.particles[run.fx.particles.length - 1];
       if (p && p.sprite === 'fx.cheese_flake') p.z = 14 + Math.random() * 22;
     }
-    n++;
     run.schedule(0.14, tick);
   };
   tick();
