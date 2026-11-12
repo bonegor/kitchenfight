@@ -33,6 +33,7 @@ const SPECS: Spec[] = [
   { id: 'boss.grattugiato', kind: 'boss', w: 200, h: 226, ax: 100, ay: 160, r: 58, color: '#f3ecd0', label: 'GRATTUG', form: 'box' },
   // enemy projectiles
   { id: 'proj.e_spore', kind: 'proj', w: 24, h: 24, ax: 12, ay: 12, r: 6, color: '#cdb48a', label: '' },
+  { id: 'proj.e_floret', kind: 'proj', w: 24, h: 24, ax: 12, ay: 12, r: 6, color: '#3f8a34', label: '' },
   { id: 'proj.e_bbq', kind: 'proj', w: 24, h: 24, ax: 12, ay: 12, r: 6, color: '#6a3018', label: '' },
   { id: 'proj.e_clove', kind: 'proj', w: 24, h: 24, ax: 12, ay: 12, r: 6, color: '#f4ecd6', label: '' },
   { id: 'proj.e_butterpat', kind: 'proj', w: 24, h: 24, ax: 12, ay: 12, r: 6, color: '#fbe58a', label: '' },

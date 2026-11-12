@@ -290,7 +290,7 @@ E({
 });
 E({
   id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
-  radius: 15, hp: 22, speed: 44, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 290, cd: 3.2, area: 'cream', r: 26, slow: 0.3 },
+  radius: 15, hp: 22, speed: 44, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 290, cd: 3.2, shot: 'proj.e_floret', area: 'cream', r: 26, slow: 0.3 },
   color: 'green', juice: '#4f9a3a', chunk: 'tomato',
   info: { crime: 'Broccoli in Fettuccine Alfredo', why: 'Broccoli is a common American add-on to "Alfredo" and is unknown in the Roman dish, which is only egg fettuccine, butter and Parmigiano. Italians love pasta with broccoli, just in other dishes.', severity: 2 },
 });

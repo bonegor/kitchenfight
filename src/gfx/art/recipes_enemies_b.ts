@@ -23,5 +23,11 @@
  *                                          hazard 'oil'; drawn scaled to the hazard radius). Must differ from the
  *                                          chef's golden fx.oil_slick (paler, colder, "cheap").
  *   proj.e_bbq          24×24     (12,12)  1 frame: enemy shot (blob of BBQ sauce). DANGER style (projectiles.ts).
+ *
+ * Shared helpers (exported, import them instead of copying; do NOT edit those files):
+ *   import { danger, sauceBlob } from './projectiles';   // danger(id, size, paint): 24×24 box at size 12
+ *   import { fx, puddle, puddlePts } from './fx';         // puddle(ctx, rx, ry, seed, { base, rim, glossA, satellites })
+ *   import { enemySprite, cyc } from './enemies_b_kit';   // enemySprite('olio', w, h, ay, draw, ax?) = enemy.olio, 4 frames + flash
+ *   painter: '../painter'; generic shapes/gradients: './items_kit' (S, radial, softGlow, sparkle, ...)
  */
 export {};

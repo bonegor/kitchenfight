@@ -151,7 +151,8 @@ projectile('proj.basilico', 22, 14, (ctx) => basilLeaf(ctx, 16, { ink: 1.0, stem
 // ===========================================================================
 // ENEMY PROJECTILES — round, hot rim, red glow = DANGER
 // ===========================================================================
-function danger(id: string, size: number, paint: (ctx: Ctx) => void) {
+/** An enemy shot in the DANGER style (hot rim, red glow). Exported for the Il Menù art files. */
+export function danger(id: string, size: number, paint: (ctx: Ctx) => void) {
   const box = Math.ceil(size + 12);
   projectile(id, box, box, paint, {
     edge: '#ffb03a',
@@ -165,7 +166,7 @@ function danger(id: string, size: number, paint: (ctx: Ctx) => void) {
 }
 
 /** Generic glossy sauce blob (wobbly round). */
-function sauceBlob(ctx: Ctx, r: number, col: string, shadow: string, seed: number, ink = 1.15) {
+export function sauceBlob(ctx: Ctx, r: number, col: string, shadow: string, seed: number, ink = 1.15) {
   const R = rng(seed);
   const pts: Pt[] = [];
   for (let i = 0; i < 9; i++) {

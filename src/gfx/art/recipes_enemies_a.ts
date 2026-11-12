@@ -23,5 +23,13 @@
  *                                          fx.cream_puddle in fx.ts.
  *   proj.e_spore        24×24     (12,12)  1 frame: enemy shot (spore puff). Enemy shots read as DANGER: round,
  *                                          hot rim, red glow (see danger() in projectiles.ts).
+ *   proj.e_floret       24×24     (12,12)  1 frame: a lobbed broccoli floret dripping cream (the broccoli's shot;
+ *                                          it lands as a cream puddle). DANGER style.
+ *
+ * Shared helpers (exported, import them instead of copying; do NOT edit those files):
+ *   import { danger, sauceBlob } from './projectiles';   // danger(id, size, paint): 24×24 box at size 12
+ *   import { fx, puddle, puddlePts } from './fx';         // puddle(ctx, rx, ry, seed, { base, rim, glossA, satellites })
+ *   import { enemySprite, cyc } from './enemies_b_kit';   // enemySprite('burro', w, h, ay, draw, ax?) = enemy.burro, 4 frames + flash
+ *   painter: '../painter'; generic shapes/gradients: './items_kit' (S, radial, softGlow, sparkle, ...)
  */
 export {};

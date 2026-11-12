@@ -20,5 +20,12 @@
  *   proj.e_meatball  24×24  (12,12)  1 frame: a meatball in red sauce (lobbed). DANGER style (projectiles.ts).
  *   proj.e_pesto     24×24  (12,12)  1 frame: a blob of green sludge (sprays, rings). DANGER style.
  *   proj.e_cheese    24×24  (12,12)  1 frame: a clump of grated cheese "snow" (cones, lobs). DANGER style.
+ *
+ * Shared helpers (exported, import them instead of copying; do NOT edit those files):
+ *   import { registerBoss, type Pose } from './bosses_a';  // registerBoss(id, w, h, ax, ay, (ctx, f, pose) => …)
+ *                                                          // defines boss.<id> (4 f) + boss.<id>.attack (2 f)
+ *   import { danger, sauceBlob } from './projectiles';     // danger(id, size, paint): 24×24 box at size 12
+ *   import { OUT, lit, S, G, softGlow, ... } from './bosses_b_kit';  // the boss painting kit
+ *   painter: '../painter'
  */
 export {};

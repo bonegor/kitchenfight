@@ -20,12 +20,13 @@ import {
   line, inkLine, eye, brow, mouth, speckle, glint, rgba,
 } from '../painter';
 
-type Pose = 'idle' | 'windup' | 'attack';
+export type Pose = 'idle' | 'windup' | 'attack';
 const TAU = Math.PI * 2;
 /** Boss outline width. */
 const BI = 3.4;
 
-function registerBoss(id: string, w: number, h: number, ax: number, ay: number, draw: (ctx: Ctx, f: number, pose: Pose) => void) {
+/** boss.<id> (4 frames, idle) + boss.<id>.attack (2 frames: wind-up, attack), same box. Exported for the Il Menù art files. */
+export function registerBoss(id: string, w: number, h: number, ax: number, ay: number, draw: (ctx: Ctx, f: number, pose: Pose) => void) {
   defineSprite({ id: `boss.${id}`, w, h, ax, ay, frames: 4, flash: true, draw: (ctx, f) => draw(ctx, f, 'idle') });
   defineSprite({ id: `boss.${id}.attack`, w, h, ax, ay, frames: 2, flash: true, draw: (ctx, f) => draw(ctx, f, f === 0 ? 'windup' : 'attack') });
 }

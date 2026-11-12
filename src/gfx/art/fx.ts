@@ -13,7 +13,8 @@ import {
 import { S, composite, radial, linear, softGlow, sparklePath, tube, CompositeOpts } from './items_kit';
 import { flamePath, angerMark, heartPath, basilLeaf } from './items_objects';
 
-function fx(id: string, w: number, h: number, draw: (ctx: Ctx, f: number) => void, o: { frames?: number; res?: number } = {}) {
+/** A plain fx sprite (anchor = centre). Exported for the Il Menù art files. */
+export function fx(id: string, w: number, h: number, draw: (ctx: Ctx, f: number) => void, o: { frames?: number; res?: number } = {}) {
   defineSprite({ id, w, h, frames: o.frames, res: o.res, draw });
 }
 
@@ -431,7 +432,7 @@ fx('fx.fire_patch', 76, 70, (ctx, f) => {
 // ===========================================================================
 // PUDDLES
 // ===========================================================================
-function puddlePts(rx: number, ry: number, seed: number, n = 14, wob = 0.16): Pt[] {
+export function puddlePts(rx: number, ry: number, seed: number, n = 14, wob = 0.16): Pt[] {
   const R = rng(seed);
   const pts: Pt[] = [];
   for (let i = 0; i < n; i++) {
@@ -442,7 +443,8 @@ function puddlePts(rx: number, ry: number, seed: number, n = 14, wob = 0.16): Pt
   return pts;
 }
 
-function puddle(ctx: Ctx, rx: number, ry: number, seed: number, o: { base: string; alpha?: number; rim?: string; glossA?: number; satellites?: number }) {
+/** A flat toon liquid puddle (no ink): base colour, lighter middle, darker rim. Exported for the Il Menù art files. */
+export function puddle(ctx: Ctx, rx: number, ry: number, seed: number, o: { base: string; alpha?: number; rim?: string; glossA?: number; satellites?: number }) {
   const pts = puddlePts(rx, ry, seed);
   const R = rng(seed + 5);
   const sats: [number, number, number, number][] = [];

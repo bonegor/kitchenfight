@@ -16,5 +16,12 @@
  *
  *   proj.e_clove      24×24  (12,12)  1 frame: a garlic clove (aimed fans, rings). DANGER style (projectiles.ts).
  *   proj.e_butterpat  24×24  (12,12)  1 frame: a butter pat (rings, lobbed pats). DANGER style.
+ *
+ * Shared helpers (exported, import them instead of copying; do NOT edit those files):
+ *   import { registerBoss, type Pose } from './bosses_a';  // registerBoss(id, w, h, ax, ay, (ctx, f, pose) => …)
+ *                                                          // defines boss.<id> (4 f) + boss.<id>.attack (2 f)
+ *   import { danger, sauceBlob } from './projectiles';     // danger(id, size, paint): 24×24 box at size 12
+ *   import { OUT, lit, S, G, softGlow, ... } from './bosses_b_kit';  // the boss painting kit
+ *   painter: '../painter'
  */
 export {};
