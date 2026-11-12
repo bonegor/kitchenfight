@@ -10,7 +10,9 @@ import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
-import { STAGES, stageById, isDishUnlocked, unlockText } from '../game/stages';
+import { STAGES, COURSES, stageById, isDishUnlocked, unlockText, dishesWon, type StageDef } from '../game/stages';
+import { RECIPES, recipeById, dishesForIntruder, type RecipeDef, type RecipeIntruder } from '../game/recipes';
+import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
 import type { SaveData } from '../core/save';
@@ -62,6 +64,20 @@ export class UI {
     this.root = document.getElementById('ui')!;
     this.selectedChar = app.save.lastChar;
     this.selectedStage = app.save.lastStage;
+    this.applyScale();
+    window.addEventListener('resize', () => this.applyScale());
+  }
+
+  /**
+   * Big windows (1440p, 4K at 100 %): scale the whole DOM UI with CSS zoom, so menus and HUD
+   * keep their 720p proportions instead of shrinking to a corner of the screen. main.css
+   * divides its viewport units by --z, so they still mean "a share of the window".
+   */
+  private applyScale() {
+    let z = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.92;
+    z = z < 1.05 ? 1 : Math.min(2.5, Math.round(z * 20) / 20);
+    if (typeof CSS === 'undefined' || !CSS.supports?.('zoom', '2')) z = 1;
+    this.root.style.setProperty('--z', String(z));
   }
 
   // ------------------------------------------------------------------ infra
@@ -108,8 +124,8 @@ export class UI {
       inp.consume('back');
       return;
     }
-    if (inp.consume('up')) this.nav.move(0, -1);
-    if (inp.consume('down')) this.nav.move(0, 1);
+    if (inp.consume('up') && !this.menuMove(-1)) this.nav.move(0, -1);
+    if (inp.consume('down') && !this.menuMove(1)) this.nav.move(0, 1);
     if (inp.consume('left')) { if (!this.nav.adjust(-1)) this.nav.move(-1, 0); }
     if (inp.consume('right')) { if (!this.nav.adjust(1)) this.nav.move(1, 0); }
     if (inp.consume('confirm')) this.nav.activate();
@@ -124,6 +140,33 @@ export class UI {
       if (inp.consume('skip')) (this.overlay?.querySelector('[data-act=skip]') as HTMLElement | null)?.click();
       if (inp.consume('banish')) (this.overlay?.querySelector('[data-act=banish]') as HTMLElement | null)?.click();
     }
+  }
+
+  /**
+   * Il Menù: up / down go to the dish card straight above / below (the one whose column
+   * overlaps), so the wide finale card and the next course are not skipped for the Back
+   * button. False = no card that way: the normal spatial move takes over.
+   */
+  private menuMove(dy: number): boolean {
+    const cur = this.nav.cur;
+    if (this.current !== 'stageselect' || !cur?.classList.contains('dish-card') || !this.screen) return false;
+    const r0 = cur.getBoundingClientRect();
+    const cx0 = (r0.left + r0.right) / 2;
+    let best: HTMLElement | null = null, bestD = Infinity;
+    for (const el of this.screen.querySelectorAll<HTMLElement>('.dish-card')) {
+      if (el === cur) continue;
+      const r = el.getBoundingClientRect();
+      const along = dy > 0 ? r.top - r0.bottom : r0.top - r.bottom;
+      if (along < -6) continue;
+      const overlap = Math.min(r.right, r0.right) - Math.max(r.left, r0.left);
+      const d = along + Math.max(0, -overlap) * 3 + Math.abs((r.left + r.right) / 2 - cx0) * 0.1;
+      if (d < bestD) {
+        bestD = d;
+        best = el;
+      }
+    }
+    if (best) this.nav.focus(best);
+    return !!best;
   }
 
   private btn(label: string | Node, cls: string, onClick: () => void, sub?: string, attrs: Record<string, any> = {}) {
@@ -151,7 +194,7 @@ export class UI {
     const fill = h('i');
     const msg = h('div', { class: 'msg' }, 'Preheating the oven…');
     const el = h('div', { class: 'screen solid loading' },
-      h('div', { class: 'logo', style: { fontSize: 'clamp(48px,9vw,96px)' } }, h('span', { class: 'k' }, 'Kitchen '), h('span', { class: 'f' }, 'Fight!')),
+      h('div', { class: 'logo', style: { fontSize: 'clamp(48px, calc(9vw / var(--z, 1)), 96px)' } }, h('span', { class: 'k' }, 'Kitchen '), h('span', { class: 'f' }, 'Fight!')),
       h('div', { class: 'bar' }, fill),
       msg,
     );
@@ -213,7 +256,7 @@ export class UI {
       h('div', { class: 'menu-col' },
         this.btn('Gioca!', 'big', () => this.showCharSelect(), 'Play', { 'data-nav-default': '' }),
         this.btn('La Dispensa', 'green', () => this.showShop(), 'Pantry · Power-ups'),
-        this.btn('Il Ricettario', 'gold', () => this.showCollection(), 'Book of Crimes'),
+        this.btn('Il Ricettario', 'gold', () => this.showCollection(), 'Recipes & crimes'),
         h('div', { style: { display: 'flex', gap: '12px' } },
           this.btn('Opzioni', 'cream', () => this.showSettings(() => this.showTitle()), 'Settings', { style: 'flex:1' }),
           this.btn('Crediti', 'cream', () => this.showCredits(), 'Credits', { style: 'flex:1' }),
@@ -235,18 +278,21 @@ export class UI {
 
   showStory(next: () => void) {
     this.storySeen = true;
-    const lineup = ['enemy.ananas', 'enemy.panna', 'enemy.ketchup', 'enemy.forbici', 'enemy.spezzato', 'enemy.cappuccino', 'enemy.polpetta']
+    const lineup = ['enemy.panna', 'enemy.ananas', 'enemy.ketchup', 'enemy.bacon', 'enemy.cipolla', 'enemy.burro', 'enemy.polpetta']
       .filter((id) => hasSprite(id))
       .map((id) => img(spriteURL(id)));
     const row = h('div', { class: 'story-lineup' }, lineup);
+    const dishes = h('div', { class: 'story-dishes' },
+      ['carbonara', 'margherita', 'pesto'].map((id) => recipeById(id)).filter((r): r is RecipeDef => !!r).map((r) => img(icon(r.sprite), '', r.it)));
     const el = h('div', { class: 'screen dim' },
       h('div', { class: 'paper panel story', style: { width: 'min(720px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-body' },
           h('div', { class: 'story-kicker' }, 'Napoli, oggi.'),
-          h('p', {}, 'The internet has unleashed a plague of ', h('b', {}, 'culinary crimes'), ': cream in the carbonara, pineapple on the pizza, ketchup on the spaghetti, cappuccino after lunch…'),
+          h('p', {}, 'Every dish on Nonna’s menu has its ', h('b', {}, 'proper recipe'), '. But the internet keeps sneaking in ', h('b', {}, 'ingredients that do not belong'), ': cream in the carbonara, pineapple on the Margherita, ketchup on the spaghetti…'),
           row,
-          h('p', {}, 'They crawled out of viral videos and now they are marching on the kitchens of Italy. Only one brigade stands in their way.'),
+          dishes,
+          h('p', {}, 'Cook your way through ', h('b', {}, 'Il Menù'), ': pick up the real ingredients, throw out the intruders, and serve every dish the way Italy makes it.'),
           h('p', { class: 'story-quote' }, '«Non si fa!» — Nonna'),
         ),
         h('div', { class: 'panel-foot' }, this.btn('Andiamo! ▶', 'big green', next, "Let's go", { 'data-nav-default': '' })),
@@ -335,7 +381,7 @@ export class UI {
   }
 
   showStageSelect() {
-    const grid = h('div', { class: 'stage-grid' });
+    const save = this.app.save;
     if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = STAGES[0].id;
     audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
     // Warm the music of the stage the player is looking at. Debounced: the render worker can't
@@ -348,56 +394,121 @@ export class UI {
       }, 300);
     };
     const char = charById(this.selectedChar);
-    for (const st of STAGES) {
-      const unlocked = this.isStageUnlocked(st.id);
-      const rec = this.app.save.records[st.id];
-      const cv = h('canvas', { width: 460, height: 260 }) as HTMLCanvasElement;
-      const card = h('div', { class: 'stage-card' + (unlocked ? '' : ' locked'), 'data-nav': '', ...(st.id === this.selectedStage ? { 'data-nav-default': '' } : {}) },
-        cv,
-        h('div', { class: 'info' },
-          h('div', { class: 'num' }, `${st.num} · ${st.course} · ${st.subtitle}`),
-          h('h3', {}, st.name),
-          h('p', {}, st.desc),
-          unlocked
-            ? h('div', { class: 'rec' },
-                h('span', { class: 'tag' }, '⏱ ' + formatTime(rec?.bestTime ?? 0)),
-                h('span', { class: 'tag green' }, '🏆 ' + (rec?.wins ?? 0)),
-                h('span', { class: 'tag red' }, '🍴 ' + (rec?.bestKills ?? 0)),
-                rec?.perfect ? h('span', { class: 'tag' }, '★ Ricetta completa') : null,
-              )
-            : h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st)),
-        ),
-      );
-      setTimeout(() => renderStagePreview(cv, st, char.sprite), 0);
-      card.addEventListener('navfocus', () => {
-        this.selectedStage = st.id;
-        if (unlocked) warm(st.id);
-      });
-      card.addEventListener('click', () => {
-        if (!unlocked) {
-          audio.sfx('ui_error');
-          return;
-        }
-        clearTimeout(warmT);
-        audio.preload([st.music]).catch(() => undefined); // renders while the run loads
-        audio.sfx('ui_confirm');
-        this.selectedStage = st.id;
-        this.app.save.lastChar = this.selectedChar;
-        this.app.save.lastStage = st.id;
-        this.app.persist();
-        this.app.startRun(this.selectedChar, st.id);
-      });
-      grid.appendChild(card);
+    const won = dishesWon(save);
+    const perfect = STAGES.filter((st) => save.records[st.id]?.perfect).length;
+    const courses = h('div', { class: 'menu-courses' });
+    let n = 0;
+    for (const course of COURSES) {
+      const stages = STAGES.filter((st) => st.course === course);
+      if (!stages.length) continue;
+      const cards = h('div', { class: 'course-cards' });
+      courses.appendChild(h('section', { class: 'course' + (stages.length === 1 ? ' single' : ''), style: `--n:${stages.length}` },
+        h('div', { class: 'course-head' }, h('h3', {}, course), h('span', { class: 'en' }, COURSE_EN[course] ?? '')),
+        cards,
+      ));
+      for (const st of stages) {
+        const unlocked = this.isStageUnlocked(st.id);
+        const card = this.dishCard(st, char.sprite, won, n++);
+        card.addEventListener('navfocus', () => {
+          this.selectedStage = st.id;
+          if (unlocked) warm(st.id);
+        });
+        card.addEventListener('click', () => {
+          if (!unlocked) {
+            audio.sfx('ui_error');
+            return;
+          }
+          clearTimeout(warmT);
+          audio.preload([st.music]).catch(() => undefined); // renders while the run loads
+          audio.sfx('ui_confirm');
+          this.selectedStage = st.id;
+          save.lastChar = this.selectedChar;
+          save.lastStage = st.id;
+          this.app.persist();
+          this.app.startRun(this.selectedChar, st.id);
+        });
+        cards.appendChild(card);
+      }
     }
-    const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel' },
+    const el = h('div', { class: 'screen dim menu-screen' },
+      h('div', { class: 'paper panel menu-panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-head' }, h('h2', {}, 'Il Menù'), h('span', { class: 'sub' }, `Chef: ${char.name} — choose your dish`)),
-        h('div', { class: 'panel-body' }, grid),
+        h('div', { class: 'panel-head' },
+          h('div', {}, h('h2', {}, 'Il Menù'), h('div', { class: 'sub' }, 'Choose your dish')),
+          h('div', { class: 'menu-meta' },
+            h('span', { class: 'chef-chip' }, img(icon(char.sprite)), char.name),
+            h('span', { class: 'tag green', title: 'Dishes won' }, `🏆 ${won}/${STAGES.length}`),
+            h('span', { class: 'tag gold', title: 'Recipes completed' }, `★ ${perfect}`),
+          ),
+        ),
+        h('div', { class: 'panel-body menu-scroll' }, courses),
         h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', () => this.showCharSelect(), 'Back')),
       ),
     );
     this.show(el, 'stageselect', () => this.showCharSelect());
+  }
+
+  /** One dish of Il Menù: its art over its arena, names, origin, real ingredients, intruders, records. */
+  private dishCard(st: StageDef, chefSprite: string, won: number, n: number): HTMLElement {
+    const save = this.app.save;
+    const r = recipeById(st.recipe);
+    const unlocked = this.isStageUnlocked(st.id);
+    const rec = save.records[st.id];
+    const cv = h('canvas', { width: 480, height: 270 }) as HTMLCanvasElement;
+    setTimeout(() => renderStagePreview(cv, st, chefSprite, { ring: true }), 30 + n * 40);
+    const pic = h('div', { class: 'dish-pic' },
+      cv,
+      r ? img(icon(r.sprite), 'dish-art', r.it) : null,
+      h('span', { class: 'dish-num' }, String(st.num)),
+      rec?.perfect ? h('span', { class: 'perfect-badge', title: 'Ricetta completa' }, '★') : null,
+    );
+    const titled = (src: string, cls: string, title: string) => {
+      const im = img(icon(src), cls, title);
+      im.title = title;
+      return im;
+    };
+    // up to 6 intruders fit a menu card; beyond that 5 + "+N" (a wide card shows them all, via CSS)
+    const MAXI = 6;
+    const intr = r?.intruders ?? [];
+    const cut = intr.length > MAXI ? MAXI - 1 : intr.length;
+    const rows = r ? [
+      h('div', { class: 'icon-row ok', title: 'Ingredienti veri: the real ingredients' },
+        h('span', { class: 'lbl' }, '✓'),
+        r.ingredients.map((i) => titled(i.sprite, 'ing', i.it)),
+      ),
+      h('div', { class: 'icon-row no', title: 'Intrusi: ingredients that do not belong' },
+        h('span', { class: 'lbl' }, '✗'),
+        intr.map((i, k) => titled(ENEMIES[i.enemy]?.sprite ?? '', k < cut ? 'foe' : 'foe x', i.it)),
+        cut < intr.length ? h('span', { class: 'more' }, '+' + (intr.length - cut)) : null,
+      ),
+    ] : [];
+    let foot: HTMLElement;
+    if (!unlocked) {
+      const u = st.unlock;
+      foot = h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st) + (u && 'wins' in u ? ` (${Math.min(won, u.wins)}/${u.wins})` : ''));
+    } else if (!rec) {
+      foot = h('div', { class: 'rec' }, h('span', { class: 'tag new' }, '✨ Nuovo! Not cooked yet'));
+    } else {
+      foot = h('div', { class: 'rec' },
+        h('span', { class: 'tag', title: 'Best time' }, '⏱ ' + formatTime(rec.bestTime ?? 0)),
+        h('span', { class: 'tag green', title: 'Wins' }, '🏆 ' + (rec.wins ?? 0)),
+        h('span', { class: 'tag red', title: 'Best kills' }, '🍴 ' + (rec.bestKills ?? 0)),
+        rec.perfect ? h('span', { class: 'tag gold', title: 'Every real ingredient collected' }, '★ Ricetta completa') : null,
+      );
+    }
+    // the card is the size container (container queries pick a vertical or a side-by-side layout)
+    return h('div', { class: 'dish-card' + (unlocked ? '' : ' locked') + (st.id === 'foodcourt' ? ' finale' : ''), 'data-nav': '', ...(st.id === this.selectedStage ? { 'data-nav-default': '' } : {}) },
+      h('div', { class: 'dc' },
+        pic,
+        h('div', { class: 'dish-info' },
+          h('h4', {}, st.name),
+          h('div', { class: 'en' }, st.subtitle),
+          r ? h('div', { class: 'origin' }, '📍 ' + shortOrigin(r)) : null,
+          rows,
+          foot,
+        ),
+      ),
+    );
   }
 
   // ------------------------------------------------------------------ HUD
@@ -424,9 +535,20 @@ export class UI {
       this.showPause();
     });
     pause.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-    const hud = h('div', { id: 'hud' },
+    // the dish being cooked: its art + one badge per real ingredient (grey until collected)
+    const recipe = run.recipe;
+    const ingSlots = recipe ? recipe.ingredients.map((ing) => h('span', { class: 'ri' }, img(icon(ing.sprite), '', ing.it), h('b', { class: 'ck' }, '✓'))) : [];
+    const strip = recipe
+      ? h('div', { class: 'recipe-strip' + (recipe.ingredients.length > 5 ? ' six' : '') },
+          img(icon(recipe.sprite), 'rs-dish', recipe.it),
+          ingSlots,
+          h('span', { class: 'rs-star' }, '★'),
+        )
+      : null;
+    const hud = h('div', { id: 'hud', class: strip ? 'has-recipe' : '' },
       h('div', { class: 'xpbar' }, xpFill, lv),
       timer,
+      strip,
       h('div', { class: 'hud-left' }, wslots, pslots),
       h('div', { class: 'hud-right' },
         h('div', { class: 'hud-stat' }, img(icon('icon.kill')), kills),
@@ -441,9 +563,12 @@ export class UI {
     this.root.appendChild(hud);
     this.hud = hud;
     this.toastsEl = toasts;
-    this.hudRefs = { xpFill, lv, timer, kills, coins, wslots, pslots, boss, bossName, bossFill, fps };
+    this.hudRefs = { xpFill, lv, timer, kills, coins, wslots, pslots, boss, bossName, bossFill, fps, strip, ingSlots };
     this.lastHud = {};
     this.bossTracked = null;
+    this.bannerQ = [];
+    this.bannerHeldUntil = 0;
+    clearTimeout(this.bannerT);
   }
 
   removeHud() {
@@ -485,6 +610,33 @@ export class UI {
           : h('div', { class: 'slot passive empty' }));
       }
     }
+    // recipe strip: ✓ pops on collect, a green pulse on the ingredient that is on the map now
+    if (r.strip) {
+      const got = run.recipeGot.map((g) => (g ? 1 : 0)).join('') + (run.recipeComplete ? '*' : '');
+      if (L.rg !== got) {
+        const first = L.rg === undefined;
+        L.rg = got;
+        run.recipeGot.forEach((g, i) => {
+          const el = r.ingSlots[i] as HTMLElement | undefined;
+          if (!el || el.classList.contains('got') === g) return;
+          el.classList.toggle('got', g);
+          if (g && !first) {
+            el.classList.remove('pop');
+            void el.offsetWidth; // restart the animation
+            el.classList.add('pop');
+          }
+        });
+        r.strip.classList.toggle('complete', run.recipeComplete);
+      }
+      if ((L.mapT = (L.mapT ?? 0) + 1) % 12 === 1) {
+        let onMap = -1;
+        for (const p of run.pickups) if (p.alive && p.kind === 'ingredient') { onMap = p.value; break; }
+        if (L.onMap !== onMap) {
+          L.onMap = onMap;
+          (r.ingSlots as HTMLElement[]).forEach((el, i) => el.classList.toggle('onmap', i === onMap));
+        }
+      }
+    }
     // boss bar
     const b = run.bosses.find((e) => e.alive) ?? null;
     if (b !== this.bossTracked) {
@@ -504,7 +656,9 @@ export class UI {
 
   toast(text: string, kind: 'info' | 'warn' | 'good' = 'info') {
     if (!this.toastsEl) return;
-    const t = h('div', { class: 'toast ' + kind }, text);
+    // first sightings: "Panna nella Carbonara? NO!" in bold, the reason after it
+    const m = /^(.{2,60}\? NO!)\s+(.+)$/.exec(text);
+    const t = h('div', { class: 'toast ' + kind }, m ? [h('b', {}, m[1]), ' ', m[2]] : text);
     this.toastsEl.appendChild(t);
     while (this.toastsEl.children.length > 3) this.toastsEl.firstChild?.remove();
     setTimeout(() => t.remove(), 3700);
@@ -529,23 +683,72 @@ export class UI {
     for (const ev of evs) document.addEventListener(ev, onGesture, { passive: true });
   }
 
-  /** One banner at a time: a new one replaces the one on screen, except that a boss banner
-   *  is not cut short (a plain banner waits for it to finish). */
-  banner(text: string, sub = '', boss = false) {
-    const hud = this.hud;
-    if (!hud) return;
-    const wait = boss ? 0 : this.bossBannerUntil - performance.now();
-    if (wait > 0) {
-      setTimeout(() => this.hud === hud && this.banner(text, sub, boss), wait);
+  /**
+   * One banner at a time. A new banner replaces the one on screen, except that a "held" banner
+   * (boss, dish, recipe complete) is not cut short: a plain or held banner waits for it to end.
+   * Only a boss banner always shows at once (it replaces even a held one).
+   * opt.icon: a sprite shown above the text (ingredient badge, plated dish).
+   */
+  banner(text: string, sub = '', boss = false, opt: { icon?: string; cls?: string; ms?: number; hold?: boolean } = {}) {
+    const make = () => h('div', { class: 'big-banner' + (boss ? ' boss' : '') + (opt.cls ? ' ' + opt.cls : '') },
+      opt.icon ? h('span', { class: 'bn-ico' }, img(icon(opt.icon))) : null,
+      h('span', { class: 'bn-t' }, text),
+      sub ? h('small', {}, sub) : null,
+    );
+    this.showBanner(make, opt.ms ?? 2500, boss ? 'boss' : opt.hold ? 'hold' : 'plain');
+  }
+
+  /** Run start: the plated dish, its name and its real ingredients ("Ingredienti veri"). */
+  dishBanner(run: Run) {
+    const r = run.recipe;
+    if (!r) {
+      this.banner(run.stage.name, run.stage.subtitle + ' — survive 15:00', false, { hold: true, ms: 3000 });
       return;
     }
-    hud.querySelectorAll('.big-banner').forEach((el) => el.remove());
-    if (boss) this.bossBannerUntil = performance.now() + 2500;
-    const b = h('div', { class: 'big-banner' + (boss ? ' boss' : '') }, text, sub ? h('small', {}, sub) : null);
-    hud.appendChild(b);
-    setTimeout(() => b.remove(), 2500);
+    const make = () => h('div', { class: 'big-banner dish-banner' + (r.ingredients.length > 5 ? ' six' : '') },
+      img(icon(r.sprite), 'db-art', r.it),
+      h('div', { class: 'db-name' }, r.it),
+      h('div', { class: 'db-lbl' }, 'Ingredienti veri'),
+      h('div', { class: 'db-ings' }, r.ingredients.map((i) => h('div', { class: 'db-ing' }, h('span', { class: 'badge' }, img(icon(i.sprite), '', i.it)), h('span', { class: 'nm' }, i.it)))),
+    );
+    this.showBanner(make, 4200, 'hold');
   }
-  private bossBannerUntil = 0;
+
+  private showBanner(make: () => HTMLElement, ms: number, kind: 'plain' | 'hold' | 'boss') {
+    if (!this.hud) return;
+    if (kind === 'boss' || (performance.now() >= this.bannerHeldUntil && !this.bannerQ.length)) this.putBanner(make, ms, kind);
+    else {
+      this.bannerQ.push({ make, ms, kind });
+      this.scheduleBanners();
+    }
+  }
+
+  /** Show the next waiting banner once the held one has had its time. */
+  private scheduleBanners() {
+    clearTimeout(this.bannerT);
+    const hud = this.hud;
+    this.bannerT = window.setTimeout(() => {
+      if (this.hud !== hud || !hud) return;
+      const next = this.bannerQ.shift();
+      if (next) this.putBanner(next.make, next.ms, next.kind);
+    }, Math.max(0, this.bannerHeldUntil - performance.now()) + 40);
+  }
+
+  private putBanner(make: () => HTMLElement, ms: number, kind: 'plain' | 'hold' | 'boss') {
+    const hud = this.hud;
+    if (!hud) return;
+    hud.querySelectorAll('.big-banner').forEach((el) => el.remove());
+    // a plain banner can be replaced at once, unless others are waiting: then it gets 1.5 s
+    this.bannerHeldUntil = performance.now() + (kind !== 'plain' ? ms : this.bannerQ.length ? 1500 : 0);
+    const b = make();
+    b.style.animationDuration = (ms - 100) / 1000 + 's';
+    hud.appendChild(b);
+    setTimeout(() => b.remove(), ms);
+    if (this.bannerQ.length) this.scheduleBanners();
+  }
+  private bannerHeldUntil = 0;
+  private bannerQ: { make: () => HTMLElement; ms: number; kind: 'plain' | 'hold' | 'boss' }[] = [];
+  private bannerT = 0;
 
   // ------------------------------------------------------------------ level up
 
@@ -802,12 +1005,32 @@ export class UI {
     const lines = victory
       ? ['Tradition is safe — for tonight.', 'Nonna would be proud.', run.recipe && run.recipe.id !== 'foodcourt' ? `The ${run.recipe.it} stays pure.` : 'Italian cooking stays pure.', 'Bravissimo, Chef!']
       : ['The crimes got into the kitchen…', 'Somebody put cream in it. Again.', 'Even Nonna is speechless.', 'Next time, al dente.'];
+    // the dish: which real ingredients made it into the pot
+    const r = run.recipe;
+    const got = run.ingredientsGot(), m = run.recipeGot.length;
+    const dishRow = r
+      ? h('div', { class: 'res-dish' + (run.recipeComplete ? ' complete' : '') },
+          img(icon(r.sprite), 'res-dish-art', r.it),
+          h('div', { class: 'res-dish-info' },
+            h('div', { class: 'nm' }, r.it),
+            h('div', { class: 'res-ings' }, r.ingredients.map((ing, i) => {
+              const s = h('span', { class: 'ri' + (run.recipeGot[i] ? ' got' : '') }, img(icon(ing.sprite), '', ing.it), h('b', { class: 'ck' }, '✓'));
+              s.title = ing.it + (run.recipeGot[i] ? ' ✓' : ' (missed)');
+              return s;
+            })),
+            run.recipeComplete
+              ? h('div', { class: 'cnt done' }, '★ Ricetta completa')
+              : h('div', { class: 'cnt' }, `${got}/${m} ingredienti`, h('span', { class: 'sub' }, got ? ' · find them all for ★' : ' · follow the green arrow')),
+          ),
+        )
+      : null;
     const el = h('div', { class: 'screen dim results' },
       h('div', { class: 'res-title ' + (victory ? 'win' : 'lose') }, victory ? 'Vittoria!' : 'Mamma Mia!'),
       h('div', { class: 'res-sub' }, lines[Math.floor(Math.random() * lines.length)]),
       h('div', { class: 'paper panel' },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-body' },
+          dishRow,
           h('div', { class: 'stats-row' },
             h('div', { class: 'stat-box' + (newRecord ? ' record' : '') }, h('div', { class: 'v' }, formatTime(run.time)), h('div', { class: 'k' }, newRecord ? '★ New record!' : 'Survived')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, String(run.level)), h('div', { class: 'k' }, 'Level')),
@@ -903,7 +1126,8 @@ export class UI {
 
   // ------------------------------------------------------------------ collection
 
-  showCollection(tab: 'crimes' | 'weapons' | 'passives' | 'records' = 'crimes') {
+  /** @param focus a dish id (recipes tab) or an enemy id (crimes tab) to open on */
+  showCollection(tab: 'recipes' | 'crimes' | 'weapons' | 'passives' | 'records' = 'recipes', focus?: string) {
     const s = this.app.save;
     const seen = new Set(s.seen);
     const list = h('div', { class: 'coll-list' });
@@ -914,6 +1138,7 @@ export class UI {
       t.addEventListener('click', () => { audio.sfx('ui_click'); this.showCollection(id); });
       tabs.appendChild(t);
     };
+    mk('recipes', '🍝 Ricette');
     mk('crimes', '🍍 Crimini');
     mk('weapons', '🔪 Armi');
     mk('passives', '🧄 Ingredienti');
@@ -932,7 +1157,50 @@ export class UI {
       if (shown < want) sc.scrollBy({ top: want - shown, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     };
     let body: HTMLElement;
-    if (tab === 'crimes') {
+    let onBack = () => this.showTitle();
+    if (tab === 'recipes') {
+      // dish list → the proper recipe (the detail scrolls on its own; Enter walks into it)
+      list.classList.add('dishes');
+      detail.classList.add('recipe');
+      detail.setAttribute('data-nav-scroll', '');
+      const start = recipeById(focus ?? '') ? focus! : recipeById(this.selectedStage) ? this.selectedStage : RECIPES[0].id;
+      let selItem: HTMLElement | null = null;
+      for (const r of RECIPES) {
+        const it = h('div', { class: 'coll-item dish', 'data-nav': '', ...(r.id === start ? { 'data-nav-default': '' } : {}) },
+          img(icon(r.sprite), '', r.it),
+          h('span', { class: 'cap' }, shortDishName(r)),
+          s.records[r.id]?.perfect ? h('span', { class: 'star' }, '★') : null,
+        );
+        it.title = r.it;
+        const select = () => {
+          if (selItem === it) return;
+          selItem?.classList.remove('sel');
+          selItem = it;
+          it.classList.add('sel');
+          this.renderRecipe(detail, r);
+        };
+        it.addEventListener('navfocus', select);
+        it.addEventListener('click', () => {
+          select();
+          revealDetail();
+          // keyboard / gamepad: step into the recipe (down then walks through it)
+          const first = detail.querySelector<HTMLElement>('[data-nav]');
+          if (first && !matchMedia('(max-width: 720px)').matches) this.nav.focus(first, false);
+        });
+        list.appendChild(it);
+        if (r.id === start) {
+          selItem = it;
+          it.classList.add('sel');
+        }
+      }
+      this.renderRecipe(detail, recipeById(start)!, false);
+      body = h('div', { class: 'coll recipes' }, list, detail);
+      // Esc inside a recipe goes back to the dish list first
+      onBack = () => {
+        if (selItem && this.nav.cur && detail.contains(this.nav.cur)) this.nav.focus(selItem, false);
+        else this.showTitle();
+      };
+    } else if (tab === 'crimes') {
       const ids = [...REGULAR_ENEMY_IDS, ...BOSS_IDS];
       const showE = (id: string) => {
         const d = ENEMIES[id];
@@ -940,8 +1208,11 @@ export class UI {
         detail.innerHTML = '';
         if (!known) {
           detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, 'Not yet encountered. Keep cooking.'));
+          this.nav.refresh();
           return;
         }
+        // the dishes this crime does not belong in: chips that open the recipe
+        const dishes = dishesForIntruder(id);
         detail.append(
           img(icon(d.sprite), 'big'),
           h('h3', {}, d.name),
@@ -950,17 +1221,30 @@ export class UI {
           h('div', { class: 'kv' }, 'Severity ', sev(d.info.severity), h('span', { class: 'sub' }, ` · defeated ${s.kills[id] ?? 0}×`)),
           h('p', { class: 'why' }, d.info.why),
           d.info.quote ? h('blockquote', {}, d.info.quote) : '',
+          dishes.length
+            ? h('div', { class: 'not-in' },
+                h('span', { class: 'lbl' }, 'Non appartiene a:'),
+                dishes.map((r) => {
+                  const c = h('span', { class: 'dish-chip', 'data-nav': '' }, img(icon(r.sprite), '', r.it), shortDishName(r));
+                  c.title = `${r.it}: open the recipe`;
+                  c.addEventListener('click', () => { audio.sfx('ui_click'); this.showCollection('recipes', r.id); });
+                  return c;
+                }),
+              )
+            : '',
         );
+        this.nav.refresh();
       };
-      ids.forEach((id, i) => {
+      const start = focus && ids.includes(focus) ? focus : ids[0];
+      ids.forEach((id) => {
         const d = ENEMIES[id];
         const known = seen.has('e:' + id);
-        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
+        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(id === start ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
         it.addEventListener('navfocus', () => showE(id));
         it.addEventListener('click', () => { showE(id); revealDetail(); });
         list.appendChild(it);
       });
-      showE(ids[0]);
+      showE(start);
       body = h('div', { class: 'coll' }, list, detail);
     } else if (tab === 'weapons') {
       const ids = Object.keys(WEAPONS);
@@ -1031,10 +1315,14 @@ export class UI {
           h('div', { class: 'stat-box' }, h('div', { class: 'v' }, s.totalCoins.toLocaleString()), h('div', { class: 'k' }, 'Coins earned')),
         ),
         h('table', { class: 'dmg' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'Stage'), h('th', {}, 'Best time'), h('th', {}, 'Wins'), h('th', {}, 'Best kills'), h('th', {}, 'Best level'))),
+          h('thead', {}, h('tr', {}, h('th', {}, 'Dish'), h('th', { class: 'num' }, '★'), h('th', {}, 'Best time'), h('th', {}, 'Wins'), h('th', {}, 'Best kills'), h('th', {}, 'Best level'))),
           h('tbody', {}, STAGES.map((st) => {
             const r = s.records[st.id];
-            return h('tr', {}, h('td', {}, st.name), h('td', { class: 'num' }, formatTime(r?.bestTime ?? 0)), h('td', { class: 'num' }, String(r?.wins ?? 0)), h('td', { class: 'num' }, String(r?.bestKills ?? 0)), h('td', { class: 'num' }, String(r?.bestLevel ?? 0)));
+            const rc = recipeById(st.recipe);
+            return h('tr', {},
+              h('td', { class: 'dish-td' }, rc ? img(icon(rc.sprite), 'td-dish') : null, st.name),
+              h('td', { class: 'num star' }, r?.perfect ? '★' : ''),
+              h('td', { class: 'num' }, formatTime(r?.bestTime ?? 0)), h('td', { class: 'num' }, String(r?.wins ?? 0)), h('td', { class: 'num' }, String(r?.bestKills ?? 0)), h('td', { class: 'num' }, String(r?.bestLevel ?? 0)));
           })),
         ),
         h('h3', { class: 'medals-h' }, 'Medaglie'),
@@ -1046,15 +1334,105 @@ export class UI {
       );
     }
     const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel' },
+      h('div', { class: 'paper panel coll-panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-head' }, h('div', {}, h('h2', {}, 'Il Ricettario'), h('div', { class: 'sub' }, "Nonna's book of culinary crimes — and of the tools to fight them.")), tabs),
+        h('div', { class: 'panel-head' }, h('div', {}, h('h2', {}, 'Il Ricettario'), h('div', { class: 'sub' }, "Nonna's book of proper recipes, culinary crimes and the tools to fight them.")), tabs),
         h('div', { class: 'panel-body' }, body),
         h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', () => this.showTitle(), 'Back')),
       ),
     );
-    this.show(el, 'collection', () => this.showTitle());
+    this.show(el, 'collection', onBack);
     audio.playMusic('menu');
+  }
+
+  /** The recipe page of a dish (Ricettario → Ricette). */
+  private renderRecipe(detail: HTMLElement, r: RecipeDef, refresh = true) {
+    const st = STAGES.find((x) => x.id === r.id);
+    const rec = this.app.save.records[r.id];
+    const link = (src: { url: string; name: string }, text = src.name, nav = false) =>
+      h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', ...(nav ? { 'data-nav': '' } : {}) }, text);
+    const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
+    // the Italian chefs and creators behind the sources (recipe sources + intruder sources)
+    const chefs = new Map<string, { chef: string; name: string; url: string }>();
+    for (const s of r.sources) if (s.chef) chefs.set(s.url, { chef: s.chef, name: s.name, url: s.url });
+    for (const i of r.intruders) if (i.chef && !chefs.has(i.source.url)) chefs.set(i.source.url, { chef: i.chef, name: i.source.name, url: i.source.url });
+    const meta = (s: { lang?: string; year?: string; url: string }) => h('span', { class: 'meta' }, [s.lang?.toUpperCase(), s.year, hostOf(s.url)].filter(Boolean).join(' · '));
+    const q = r.quote;
+    const quote = q
+      ? h('blockquote', { class: 'rc-quote', 'data-nav': '' },
+          h('div', { class: 'q' }, '«' + q.text + '»'),
+          q.translation ? h('div', { class: 'tr' }, q.translation) : null,
+          h('div', { class: 'by' }, '— ' + q.by + ' · ', link(q.source, 'source ↗')),
+        )
+      : null;
+    if (quote) this.openOnActivate(quote);
+    detail.innerHTML = '';
+    detail.scrollTop = 0;
+    detail.appendChild(h('div', { class: 'rc-page' },
+      h('div', { class: 'rc-head', 'data-nav': '' },
+        img(icon(r.sprite), 'rc-art', r.it),
+        h('div', { class: 'rc-title' },
+          h('div', { class: 'rc-kicker' }, (st ? st.num + ' · ' : '') + r.course + ' · ' + shortOrigin(r)),
+          h('h3', {}, r.it),
+          h('div', { class: 'en' }, r.en),
+          rec?.perfect ? h('span', { class: 'tag gold' }, '★ Ricetta completa') : null,
+        ),
+      ),
+      h('p', { class: 'rc-blurb' }, r.blurb),
+      h('div', { class: 'rc-facts' },
+        h('div', {}, h('b', {}, 'Origine '), r.origin),
+        h('div', {}, h('b', {}, r.course === 'Le Pizze' ? 'Impasto ' : r.id === 'foodcourt' ? 'Dispensa ' : 'Pasta '), r.shape),
+      ),
+      sec('Gli ingredienti veri', 'The real ingredients'),
+      h('div', { class: 'rc-ings', 'data-nav': '' }, r.ingredients.map((i) =>
+        h('div', { class: 'rc-ing' },
+          h('span', { class: 'badge' }, img(icon(i.sprite), '', i.it)),
+          h('div', {}, h('b', {}, i.it), h('span', { class: 'en' }, i.en), i.note ? h('div', { class: 'note' }, i.note) : null),
+        ))),
+      sec('Il metodo', 'Method'),
+      h('p', { class: 'rc-method', 'data-nav': '' }, r.method),
+      sec('Gli intrusi', 'What does not belong, and why'),
+      r.intruders.map((i) => this.intruderRow(i)),
+      quote,
+      h('div', { class: 'rc-fact', 'data-nav': '' }, h('b', {}, '💡 Lo sapevi? '), r.funFact),
+      chefs.size
+        ? [sec('Gli chef', 'Italian chefs and creators'),
+           h('ul', { class: 'rc-sources chefs' }, [...chefs.values()].map((c) => h('li', {}, h('b', { class: 'chef' }, '👨‍🍳 ' + c.chef), link(c, c.name + ' ↗', true))))]
+        : null,
+      sec('Fonti', 'Sources (open in a new tab)'),
+      h('ul', { class: 'rc-sources' }, r.sources.filter((s) => !s.chef).map((s) => h('li', {}, link(s, s.name + ' ↗', true), meta(s)))),
+    ));
+    if (refresh) this.nav.refresh();
+  }
+
+  /** An intruder in a recipe: enemy, why, how loudly Italians complain, the other side, source. */
+  private intruderRow(i: RecipeIntruder): HTMLElement {
+    const d = ENEMIES[i.enemy];
+    const from = i.fromDish ? recipeById(i.fromDish) : undefined;
+    const row = h('div', { class: 'rc-intr', 'data-nav': '' },
+      img(icon(d?.sprite ?? ''), 'foe', i.it),
+      h('div', { class: 'body' },
+        h('div', { class: 'top' }, h('b', {}, i.it), h('span', { class: 'en' }, i.en)),
+        h('div', { class: 'meta' },
+          h('span', { class: 'pop', title: `How loudly Italians complain: ${i.popularity}/5` }, 'Indignazione ', [1, 2, 3, 4, 5].map((n) => h('i', { class: n <= i.popularity ? 'on' : '' }))),
+          i.contested ? h('span', { class: 'tag contested', title: 'Italians genuinely disagree, or it has real historical roots' }, 'Discusso') : null,
+          from ? h('span', { class: 'tag from' }, 'da ' + shortDishName(from)) : null,
+        ),
+        h('p', { class: 'why' }, i.why),
+        i.note ? h('p', { class: 'note' }, h('b', {}, 'L’altra campana: '), i.note) : null,
+        h('div', { class: 'src' }, 'Fonte: ', h('a', { href: i.source.url, target: '_blank', rel: 'noopener noreferrer' }, i.source.name + ' ↗'), i.chef ? h('span', { class: 'chef' }, ' · 👨‍🍳 ' + i.chef) : null),
+      ),
+    );
+    this.openOnActivate(row);
+    return row;
+  }
+
+  /** Enter / A on a focused block opens its source link (a mouse click on the text does nothing). */
+  private openOnActivate(el: HTMLElement) {
+    el.addEventListener('click', (e) => {
+      if (e.isTrusted || (e.target as HTMLElement).closest('a')) return;
+      el.querySelector<HTMLAnchorElement>('a[href]')?.click();
+    });
   }
 
   // ------------------------------------------------------------------ settings
