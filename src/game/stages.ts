@@ -3,8 +3,9 @@
  * made (≥ 80 % of their weight) of that dish's intruders, its real ingredients to
  * collect, and three bosses (5:00, 10:00, 15:00).
  *
- * BALANCE: all difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves).
- * A level's waves only choose WHO comes (pools); HOW MANY and HOW TOUGH come from its tier.
+ * BALANCE: the difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves and
+ * BOSS_HP_FACTOR). A level's waves only choose WHO comes (pools); HOW MANY and HOW TOUGH come
+ * from its tier, with three optional per-dish factors (StageSpec.rateMul / dmgMul / bossHpMul).
  *
  * POOLS: over the whole run, each intruder's share of the spawn weight follows the order of
  * recipe.intruders (the spec's "weight order": the loudest crime comes most often), checked
@@ -67,7 +68,7 @@ export interface Tier {
   hpGrowth: number;
   /** enemy damage multiplier reached after 7 minutes */
   dmgBase: number;
-  /** multiplies BASE_RATE (spawns per second) */
+  /** multiplies BASE_RATE (spawns per second); a rate above 1 phases in over RATE_RAMP */
   rate: number;
   /** multiplies BASE_MAX (soft cap of alive enemies) */
   max: number;
@@ -76,26 +77,43 @@ export interface Tier {
 }
 
 // =====================================================================================
-// TIERS — the one table the balance pass tunes (pre-menu stages for reference:
-// kitchen 1 / 0.11 / 1, trattoria 1.6 / 0.13 / 1.15, streets 2.2 / 0.15 / 1.25, foodcourt 2.9 / 0.17 / 1.4)
-// hpBase / dmgBase only phase in over 7 minutes, so the opening minutes are shaped by the pools
-// and `rate`. T4–T5 lean on hpGrowth / dmgBase / rate because their intruders (puddlers,
-// a swarm) are softer than the old alleys' crowd. bossHp: the 5:00 slot grows gently from T2
-// to T6 (no 5:00 walls); BOSS_HP_FACTOR evens out the ranged bosses.
+// TIERS — the one table the balance pass tunes, read top to bottom as the menu's ramp.
+// Pre-menu stages for reference (hpBase / hpGrowth / dmgBase): kitchen 1 / 0.11 / 1,
+// trattoria 1.6 / 0.13 / 1.15, streets 2.2 / 0.15 / 1.25, foodcourt 2.9 / 0.17 / 1.4.
+// - hpBase, rate, max and bossHp rise (or hold) from T1 to T6. hpGrowth and dmgBase rise from
+//   T1 to T5 and step back for T6 on purpose: the finale's own crowd (frozen lasagne, devouring
+//   pots, cursed cans, squeeze bottles) hits hardest by itself; with T5's growth and damage it
+//   would be far beyond the old food court it is tuned against.
+// - The Il Menù intruders of T3–T5 are softer than the old stages' crowd (puddlers, a swarm,
+//   strafers, lobbers), so these tiers carry more hpGrowth / dmgBase than the old stage each one
+//   matches. dmgBase also scales boss hits; the bosses' base damage was cut by a fifth for it.
+// - The openings stay gentle: hpBase and dmgBase phase in over the first 7 minutes (Director)
+//   and a rate above 1 over minutes 1–5 (RATE_RAMP, waves()), so the tiers pull apart from
+//   minute 3–4 on and differ most in minutes 5–15.
+// - bossHp is the slot's base HP; the real HP is ×hpBase × player level × time
+//   (Director.spawnBoss). BOSS_HP_FACTOR evens out the bosses that are slow to bring down
+//   anywhere, and a dish can scale one slot with StageSpec.bossHpMul.
+// - A dish whose intruders are softer than its tier-mates' asks for more of them
+//   (StageSpec.rateMul, phased in like `rate`) or for harder hits (StageSpec.dmgMul).
+// - Measured with the bot (auto-revive, a mid pantry, 12 runs per dish), deaths in minutes 5–15:
+//   T1 0 · T2 0.2 · T3 ~6 · T4 ~8 · T5 ~14 · T6 ~26 (old kitchen 0.2 · trattoria 10 · streets 18 ·
+//   food court 27). Every dish sits at or above the dishes that unlock it.
 // =====================================================================================
 export const TIERS: Record<TierId, Tier> = {
   T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, rate: 0.74, max: 0.8, bossHp: [1300, 2100, 3300] },
   T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, rate: 0.93, max: 0.94, bossHp: [1400, 2300, 3600] },
-  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.13, dmgBase: 1.12, rate: 0.96, max: 1, bossHp: [2200, 4800, 6200] },
-  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.16, dmgBase: 1.3, rate: 1.14, max: 1.12, bossHp: [2600, 4500, 6000] },
-  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.18, dmgBase: 1.45, rate: 1.25, max: 1.2, bossHp: [2900, 5000, 6600] },
-  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.17, dmgBase: 1.4, rate: 1.08, max: 1.05, bossHp: [3000, 5200, 9000] },
+  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 1.7, rate: 1.12, max: 1.05, bossHp: [1500, 2700, 4800] },
+  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.33, dmgBase: 2.35, rate: 1.3, max: 1.12, bossHp: [1600, 3000, 4800] },
+  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.4, dmgBase: 2.55, rate: 1.4, max: 1.2, bossHp: [1600, 3000, 5000] },
+  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.6, rate: 1.4, max: 1.2, bossHp: [1800, 3200, 6000] },
 };
 
 /** Spawns per second, minute by minute (×tier.rate). Minutes 5 and 10 breathe (boss); minute 15 is the final boss. */
 export const BASE_RATE = [0.9, 1.45, 2.0, 2.45, 2.85, 2.5, 3.25, 3.55, 3.95, 4.3, 3.55, 4.7, 5.1, 5.5, 6.0, 3.2];
 /** Soft cap of alive enemies, minute by minute (×tier.max). */
 export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 182, 202, 222, 128];
+/** A spawn-rate factor above 1 (tier × dish) is ×1 up to the first minute here and phases in linearly to full at the second. */
+export const RATE_RAMP: [number, number] = [1, 5];
 /** Max share of a minute's spawn weight that may come from non-intruder extras. */
 export const MAX_EXTRA_SHARE = 0.2;
 /** Intruders left out of the weight-order check (support enemies: see the header). */
@@ -161,31 +179,37 @@ interface MinuteSpec { pool: Pool; extras: string[]; share: number }
 /** One minute: intruder pool + optional dish-relevant extras taking `share` of the weight. */
 const M = (pool: Pool, extras: string[] = [], share = 0.15): MinuteSpec => ({ pool, extras, share: extras.length ? share : 0 });
 
-function waves(tier: TierId, minutes: MinuteSpec[]): WaveMinute[] {
+/** Spawn-rate factor of minute i: a factor above 1 phases in over RATE_RAMP (the openings stay gentle). */
+export function rateFactor(mul: number, i: number): number {
+  const k = Math.min(1, Math.max(0, (i - RATE_RAMP[0]) / (RATE_RAMP[1] - RATE_RAMP[0])));
+  return mul > 1 ? 1 + (mul - 1) * k : mul;
+}
+
+function waves(tier: TierId, minutes: MinuteSpec[], rateMul = 1): WaveMinute[] {
   const T = TIERS[tier];
   return minutes.map((m, i) => {
     const sum = m.pool.reduce((a, [, w]) => a + w, 0);
     const extraW = m.extras.length ? ((m.share / (1 - m.share)) * sum) / m.extras.length : 0;
     const pool: Pool = [...m.pool, ...m.extras.map((id) => [id, Math.floor(extraW * 100) / 100] as [string, number])];
-    return { pool, rate: Math.round(BASE_RATE[i] * T.rate * 100) / 100, max: Math.round(BASE_MAX[i] * T.max) };
+    return { pool, rate: Math.round(BASE_RATE[i] * rateFactor(T.rate * rateMul, i) * 100) / 100, max: Math.round(BASE_MAX[i] * T.max) };
   });
 }
 
 /**
- * Per-boss factor on the tier's slot HP. The ranged bosses keep their distance (the chef's
- * melee weapons reach them less often), so they take ~25 % longer to bring down at equal HP;
- * this evens out the fight length across the bosses that share a slot.
+ * Per-boss factor on the tier's slot HP, measured in full runs (bot with a mid-progress pantry,
+ * auto-revive): at equal HP these bosses took clearly longer to bring down than the others in
+ * their slot. The ranged ones (influencer, clock tower) keep out of the chef's melee reach; the
+ * can, the microwave and the cheese bag hide behind the adds and hazards they bring; the butter
+ * block's enrage shrinks it. The Bolognese is untouchable while it is phased out: with a fixed
+ * build and no waves it took 1.3× as long as the other ragù-tier finals at equal HP.
  */
-export const BOSS_HP_FACTOR: Record<string, number> = { b_influencer: 0.8, b_campanile: 0.8 };
+export const BOSS_HP_FACTOR: Record<string, number> = {
+  b_influencer: 0.6, b_campanile: 0.5, b_burro: 0.7, b_microonde: 0.65, b_scatolone: 0.7, b_grattugiato: 0.6, b_frullatore: 0.65, b_aglio: 0.8, b_bolognese: 0.8,
+};
 
-const bosses = (tier: TierId, mid5: string, mid10: string, final: string) => {
+const bosses = (tier: TierId, ids: [string, string, string], mul: [number, number, number] = [1, 1, 1]) => {
   const hp = TIERS[tier].bossHp;
-  const f = (id: string) => BOSS_HP_FACTOR[id] ?? 1;
-  return [
-    { at: 300, id: mid5, hp: Math.round(hp[0] * f(mid5)) },
-    { at: 600, id: mid10, hp: Math.round(hp[1] * f(mid10)) },
-    { at: 900, id: final, hp: Math.round(hp[2] * f(final)) },
-  ];
+  return ids.map((id, i) => ({ at: 300 * (i + 1), id, hp: Math.round(hp[i] * (BOSS_HP_FACTOR[id] ?? 1) * mul[i]) }));
 };
 
 const MUSIC: Record<string, MusicId> = { kitchen: 'kitchen', trattoria: 'trattoria', streets: 'streets', foodcourt: 'foodcourt' };
@@ -210,6 +234,12 @@ interface StageSpec {
   variant?: StageVariant;
   tier: TierId;
   bosses: [string, string, string];
+  /** optional per-slot factor on the boss HP: a boss that is slow to bring down only in this dish */
+  bossHpMul?: [number, number, number];
+  /** optional factor on the tier's spawn rate (phases in like the tier's): soft intruders come in larger numbers */
+  rateMul?: number;
+  /** optional factor on the tier's dmgBase: slow, soft intruders hit harder (and so do the dish's bosses) */
+  dmgMul?: number;
   unlock: UnlockRule;
   accent: string;
   minutes: MinuteSpec[];
@@ -235,10 +265,10 @@ function stage(num: number, s: StageSpec): StageDef {
     tier: s.tier,
     hpBase: T.hpBase,
     hpGrowth: T.hpGrowth,
-    dmgBase: T.dmgBase,
-    bosses: bosses(s.tier, ...s.bosses),
+    dmgBase: Math.round(T.dmgBase * (s.dmgMul ?? 1) * 100) / 100,
+    bosses: bosses(s.tier, s.bosses, s.bossHpMul),
     finalBoss: s.bosses[2],
-    waves: waves(s.tier, s.minutes),
+    waves: waves(s.tier, s.minutes, s.rateMul),
     events,
     unlock: s.unlock,
     nightRamp: s.variant?.nightRamp,
@@ -258,10 +288,10 @@ const SPECS: StageSpec[] = [
     id: 'pomodoro', env: 'kitchen', tier: 'T1', bosses: ['b_scatolone', 'b_microonde', 'b_ketchup'], unlock: null, accent: '#e8442f',
     variant: { label: 'morning', tint: '#fff6e8', darkness: 0, vignette: 0.22, particles: 'dust', decor: 'tomatoes' },
     minutes: [
-      // gentle opening: squeeze bottles and a few rolling meatballs; the leaping chicken waits for minute 3
-      M([['ketchup', 2.5], ['polpetta', 1]], ['spezzato'], 0.2),
-      M([['ketchup', 3], ['polpetta', 1.5]], ['spezzato'], 0.2),
-      M([['ketchup', 3], ['polpetta', 1.5], ['pollo', 0.5]], ['spezzato'], 0.2),
+      // gentle opening: a few squeeze bottles and as many rolling meatballs; the leaping chicken waits for minute 3
+      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2),
+      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2),
+      M([['ketchup', 2.5], ['polpetta', 1.5], ['pollo', 0.5]], ['spezzato'], 0.2),
       M([['ketchup', 3], ['polpetta', 2], ['pollo', 1]], ['spezzato', 'forbici'], 0.2),
       M([['polpetta', 2.5], ['pollo', 2], ['ketchup', 2]], ['scotta'], 0.2),
       M([['ketchup', 3], ['polpetta', 1.5]], ['spezzato'], 0.2),
@@ -338,12 +368,12 @@ const SPECS: StageSpec[] = [
     id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
     variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
     minutes: [
-      // cream and shrimp open; the leaping chicken and the broccoli lobs build up from minute 2
-      M([['panna', 3], ['gamberi', 1]], ['scotta'], 0.1),
-      M([['panna', 3], ['alfredo', 0.5], ['gamberi', 1.5]]),
-      M([['panna', 3], ['alfredo', 1], ['broccoli', 1], ['pollo', 1]]),
-      M([['pollo', 2], ['panna', 2.5], ['broccoli', 1.5], ['alfredo', 1]], ['scotta'], 0.12),
-      M([['alfredo', 2], ['gamberi', 1.5], ['panna', 3], ['pollo', 2], ['broccoli', 1.5]]),
+      // cream opens with a few shrimp; the broccoli lobs from minute 2, the leaping chicken from minute 3
+      M([['panna', 3], ['gamberi', 0.3]], ['scotta'], 0.1),
+      M([['panna', 3], ['alfredo', 0.5], ['gamberi', 0.5]]),
+      M([['panna', 3], ['alfredo', 1], ['broccoli', 1], ['gamberi', 0.3]]),
+      M([['pollo', 0.5], ['panna', 2.5], ['broccoli', 1.5], ['alfredo', 1]], ['scotta'], 0.12),
+      M([['alfredo', 2], ['gamberi', 1.2], ['panna', 3], ['pollo', 1.5], ['broccoli', 1.5]]),
       M([['panna', 2.5], ['pollo', 1.5], ['gamberi', 1.5]], ['scotta'], 0.12),
       M([['alfredo', 2.5], ['broccoli', 3], ['aglio', 2], ['pollo', 3]]),
       M([['parmesan', 2], ['panna', 3], ['gamberi', 2], ['aglio', 2], ['pollo', 3]], ['scotta'], 0.12),
@@ -360,11 +390,11 @@ const SPECS: StageSpec[] = [
       T(20, "Fettuccine, butter, Parmigiano, pasta water. Alfredo's dining room is open."),
       E(100, 'ring', 'panna', 16),
       E(160, 'elite', 'panna'),
-      E(220, 'stampede', 'pollo', 18),
+      E(220, 'stampede', 'panna', 16),
       E(270, 'elite', 'broccoli'),
       E(400, 'ring', 'gamberi', 26),
       E(460, 'elite', 'alfredo'),
-      E(520, 'wall', 'pollo', 16),
+      E(520, 'stampede', 'pollo', 18),
       E(570, 'elite', 'parmesan'),
       T(660, 'The US-style lunch crowd arrives: chicken AND cream!', 'warn'),
       E(662, 'stampede', 'pollo', 24),
@@ -375,97 +405,98 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
+    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], rateMul: 1.45, dmgMul: 1.35, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
     variant: { label: 'evening', tint: '#ffd6a8', darkness: 0.46, darkColor: '#2a120a', vignette: 0.45, particles: 'embers', decor: 'embers' },
     minutes: [
       M([['bacon', 3.5]], ['spezzato'], 0.2),
       M([['bacon', 3.5], ['cipolla', 0.5]], ['spezzato'], 0.2),
-      M([['bacon', 2.5], ['cipolla', 2], ['aglio', 1]], ['spezzato'], 0.2),
-      M([['cipolla', 3], ['bacon', 2.5], ['parmesan', 1]], ['scotta'], 0.15),
+      M([['bacon', 2.5], ['cipolla', 1.2], ['aglio', 0.5]], ['spezzato'], 0.2),
+      M([['cipolla', 2.5], ['bacon', 2.5], ['parmesan', 1]], ['scotta'], 0.15),
       M([['aglio', 2], ['bacon', 3.5], ['cipolla', 2.5], ['parmesan', 1]], ['spezzato'], 0.15),
       M([['bacon', 3.5], ['cipolla', 2.5], ['aglio', 1]], ['spezzato'], 0.2),
-      M([['cipolla', 4.5], ['aglio', 2.5], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
-      M([['bacon', 3.5], ['aglio', 2], ['cipolla', 3.5], ['parmesan', 1]], ['spezzato'], 0.15),
-      M([['parmesan', 2], ['cipolla', 4], ['bacon', 2.5], ['aglio', 2]], ['scotta'], 0.15),
-      M([['aglio', 3], ['cipolla', 3.5], ['bacon', 3.5], ['parmesan', 2]], ['spezzato', 'scotta'], 0.15),
+      M([['cipolla', 4.5], ['aglio', 3.5], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
+      M([['bacon', 3.5], ['aglio', 3], ['cipolla', 3.5], ['parmesan', 2]], ['spezzato'], 0.15),
+      M([['parmesan', 2], ['cipolla', 4], ['bacon', 2.5], ['aglio', 3]], ['scotta'], 0.15),
+      M([['aglio', 4], ['cipolla', 3.5], ['bacon', 3.5], ['parmesan', 2]], ['spezzato', 'scotta'], 0.15),
       M([['bacon', 3.5], ['cipolla', 2.5]], ['spezzato'], 0.2),
-      M([['cipolla', 5], ['aglio', 3], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
-      M([['bacon', 4.5], ['aglio', 3], ['cipolla', 3.5], ['parmesan', 2]], ['spezzato'], 0.15),
-      M([['cipolla', 5], ['parmesan', 3], ['aglio', 3], ['bacon', 2.5]], ['scotta', 'spezzato'], 0.15),
-      M([['aglio', 3], ['cipolla', 5], ['bacon', 3.5], ['parmesan', 3]], ['spezzato', 'scotta'], 0.15),
+      M([['cipolla', 5], ['aglio', 4], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
+      M([['bacon', 4.5], ['aglio', 4], ['cipolla', 4], ['parmesan', 3]], ['spezzato'], 0.15),
+      M([['cipolla', 5], ['parmesan', 3], ['aglio', 4], ['bacon', 2.5]], ['scotta', 'spezzato'], 0.15),
+      M([['aglio', 4], ['cipolla', 5.5], ['bacon', 3.5], ['parmesan', 3]], ['spezzato', 'scotta'], 0.15),
       M([['bacon', 3.5], ['cipolla', 3.5]], ['spezzato'], 0.2),
     ],
     events: [
       T(20, "Amatrice's recipe: guanciale, tomato, pecorino. No garlic, no onion, no pancetta."),
       E(100, 'ring', 'bacon', 18),
-      E(160, 'elite', 'cipolla'),
+      E(160, 'elite', 'bacon'),
       E(220, 'wall', 'bacon', 18),
       E(270, 'elite', 'aglio'),
-      E(400, 'ring', 'cipolla', 18),
+      E(400, 'ring', 'cipolla', 28),
       E(460, 'elite', 'parmesan'),
       E(520, 'stampede', 'bacon', 26),
       E(570, 'elite', 'cipolla'),
       T(660, 'Somebody is peeling a whole bulb of garlic!', 'warn'),
-      E(662, 'ring', 'aglio', 10),
+      E(662, 'ring', 'aglio', 16),
       E(760, 'elite', 'aglio'),
-      E(820, 'ring', 'cipolla', 24),
+      E(820, 'ring', 'cipolla', 36),
       E(865, 'elite', 'bacon'),
     ],
   },
   {
-    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_alfredo', 'b_influencer', 'b_burro'], unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
+    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_alfredo', 'b_influencer', 'b_burro'], bossHpMul: [1, 1, 0.8], rateMul: 1.2, unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
     variant: { label: 'late night', tint: '#ffe0c0', darkness: 0.6, darkColor: '#1a0c18', vignette: 0.5, particles: 'dust', decor: 'osteria' },
     minutes: [
-      M([['burro', 3], ['panna', 1.5]], ['scotta'], 0.15),
+      // butter and cream open; the grated cheese only seasons the dish, and less of it before 5:00
+      M([['burro', 3], ['panna', 1.5]], ['scotta'], 0.08),
+      M([['burro', 3], ['panna', 2]], ['scotta'], 0.1),
+      M([['panna', 3], ['burro', 2.5]], ['scotta'], 0.12),
+      M([['burro', 3], ['parmesan', 0.8], ['olio', 1]], ['scotta', 'pentola'], 0.15),
+      M([['panna', 3], ['burro', 3], ['parmesan', 1]], ['scotta'], 0.2),
       M([['burro', 3], ['panna', 2]], ['scotta'], 0.2),
-      M([['panna', 3], ['burro', 2.5], ['parmesan', 0.5]], ['scotta'], 0.2),
-      M([['burro', 3], ['parmesan', 1.5], ['olio', 1]], ['scotta', 'pentola'], 0.2),
-      M([['panna', 3], ['burro', 3], ['parmesan', 1.5]], ['scotta'], 0.2),
-      M([['burro', 3], ['panna', 2]], ['scotta'], 0.2),
-      M([['parmesan', 2], ['burro', 3], ['olio', 1], ['panna', 2.5]], ['pentola'], 0.15),
-      M([['burro', 4], ['panna', 3], ['parmesan', 1.5]], ['scotta'], 0.2),
-      M([['panna', 3], ['parmesan', 2], ['burro', 3], ['olio', 1]], ['scotta', 'pentola'], 0.2),
-      M([['burro', 4], ['parmesan', 2.5], ['panna', 2.5]], ['scotta'], 0.2),
+      M([['parmesan', 1.5], ['burro', 3], ['olio', 1], ['panna', 2.5]], ['pentola'], 0.15),
+      M([['burro', 4], ['panna', 3], ['parmesan', 1.2]], ['scotta'], 0.2),
+      M([['panna', 3], ['parmesan', 1.5], ['burro', 3], ['olio', 1]], ['scotta', 'pentola'], 0.2),
+      M([['burro', 4], ['parmesan', 2], ['panna', 2.5]], ['scotta'], 0.2),
       M([['burro', 3], ['panna', 3]], ['scotta'], 0.2),
-      M([['parmesan', 2.5], ['burro', 4], ['panna', 3], ['olio', 1]], ['pentola'], 0.15),
-      M([['panna', 4], ['burro', 4], ['parmesan', 2.5]], ['scotta'], 0.2),
-      M([['burro', 4], ['parmesan', 2.5], ['panna', 3], ['olio', 1.5]], ['scotta', 'pentola'], 0.2),
-      M([['burro', 5], ['panna', 4], ['parmesan', 3], ['olio', 1]], ['scotta'], 0.2),
+      M([['parmesan', 2], ['burro', 4], ['panna', 3], ['olio', 1]], ['pentola'], 0.15),
+      M([['panna', 4], ['burro', 4], ['parmesan', 2]], ['scotta'], 0.2),
+      M([['burro', 4], ['parmesan', 2], ['panna', 3], ['olio', 1.5]], ['scotta', 'pentola'], 0.2),
+      M([['burro', 5], ['panna', 4], ['parmesan', 2.5], ['olio', 1]], ['scotta'], 0.2),
       M([['burro', 3], ['panna', 3]], ['scotta'], 0.2),
     ],
     events: [
       T(20, 'Pecorino, pepper, pasta water. Three ingredients and nowhere to hide.'),
-      E(100, 'ring', 'burro', 16),
+      E(100, 'wall', 'burro', 12),
       E(160, 'elite', 'panna'),
-      E(220, 'wall', 'burro', 16),
-      E(270, 'elite', 'parmesan'),
+      E(220, 'stampede', 'panna', 14),
+      E(270, 'elite', 'olio'),
       E(400, 'ring', 'panna', 22),
-      E(460, 'elite', 'burro'),
-      E(520, 'stampede', 'panna', 20),
-      E(570, 'elite', 'olio'),
+      E(460, 'elite', 'parmesan'),
+      E(520, 'ring', 'scotta', 16),
+      E(570, 'elite', 'pentola'),
       T(660, 'Someone is reaching for the butter!', 'warn'),
       E(662, 'ring', 'burro', 18),
-      E(760, 'elite', 'parmesan'),
+      E(760, 'wall', 'olio', 14),
       E(820, 'ring', 'panna', 26),
       E(865, 'elite', 'burro'),
     ],
   },
   // ------------------------------------------------------------------ Le Pizze
   {
-    id: 'margherita', env: 'streets', tier: 'T3', bosses: ['b_deepdish', 'b_ketchup', 'b_ananas'], unlock: { anyOf: ['carbonara'] }, accent: '#3fa34d',
+    id: 'margherita', env: 'streets', tier: 'T3', bosses: ['b_deepdish', 'b_ketchup', 'b_ananas'], bossHpMul: [1, 0.7, 1], unlock: { anyOf: ['carbonara'] }, accent: '#3fa34d',
     variant: { label: 'sunset to night', nightRamp: [0.15, 0.62], decor: 'basil' },
     minutes: [
       M([['pepperoni', 3], ['ananas_pezzo', 3], ['hawaiana', 1]]),
       M([['hawaiana', 3], ['pepperoni', 3], ['cheddar', 1.5]]),
-      M([['pollo', 1.5], ['cheddar', 1.5], ['ananas_pezzo', 3], ['macchiata', 1]]),
-      M([['ananas', 2], ['pollo', 1.5], ['hawaiana', 3], ['bbq', 2]]),
-      M([['bbq', 2], ['ananas', 2], ['cheddar', 2.5], ['pepperoni', 3], ['macchiata', 1]]),
+      M([['pollo', 0.5], ['cheddar', 1.5], ['ananas_pezzo', 3], ['macchiata', 1]]),
+      M([['ananas', 2], ['pollo', 0.5], ['hawaiana', 3], ['bbq', 1.5]]),
+      M([['bbq', 1.5], ['ananas', 2], ['cheddar', 2.5], ['pepperoni', 3], ['macchiata', 1]]),
       M([['hawaiana', 3], ['ananas_pezzo', 3], ['pepperoni', 2]]),
       M([['macchiata', 3.5], ['cheddar', 2.5], ['ananas', 2], ['bbq', 2], ['pollo', 2]]),
       M([['ananas', 3], ['pollo', 2.5], ['hawaiana', 2], ['bbq', 2]]),
       M([['cheddar', 2.5], ['hawaiana', 3], ['ananas', 2], ['macchiata', 3.5], ['pepperoni', 2]]),
-      M([['ananas', 3], ['bbq', 2.5], ['pollo', 3], ['cheddar', 1.5]]),
-      M([['hawaiana', 3], ['pollo', 2.5], ['pepperoni', 3]]),
+      M([['ananas', 3], ['bbq', 2.5], ['pollo', 3.5], ['cheddar', 1.5]]),
+      M([['hawaiana', 3], ['pollo', 3], ['pepperoni', 3]]),
       M([['ananas', 3], ['macchiata', 3.5], ['bbq', 2.5], ['cheddar', 2.5]]),
       M([['ananas', 3], ['pollo', 3], ['hawaiana', 3], ['macchiata', 3.5], ['pepperoni', 2]]),
       M([['ananas', 4], ['cheddar', 2.5], ['bbq', 2.5], ['hawaiana', 3]]),
@@ -475,8 +506,8 @@ const SPECS: StageSpec[] = [
     events: [
       T(20, 'Tomato, mozzarella, basil, olive oil. Table six ordered a Hawaiian…'),
       E(100, 'ring', 'pepperoni', 20),
-      E(160, 'elite', 'pollo'),
-      E(220, 'stampede', 'pollo', 18),
+      E(160, 'elite', 'pepperoni'),
+      E(220, 'stampede', 'hawaiana', 16),
       E(270, 'elite', 'ananas'),
       E(400, 'ring', 'ananas_pezzo', 34),
       E(460, 'elite', 'bbq'),
@@ -490,19 +521,20 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'marinara', env: 'streets', tier: 'T4', bosses: ['b_grattugiato', 'b_campanile', 'b_deepdish'], unlock: { anyOf: ['margherita'] }, accent: '#c9302c',
+    id: 'marinara', env: 'streets', tier: 'T4', bosses: ['b_grattugiato', 'b_campanile', 'b_deepdish'], rateMul: 1.3, unlock: { anyOf: ['margherita'] }, accent: '#c9302c',
     variant: { label: 'night', nightRamp: [0.45, 0.7], darkColor: '#101634', tint: '#f0ecff', particles: 'fireflies', decor: 'tomatoes' },
     minutes: [
-      M([['filante', 3], ['gamberi', 1.5]], ['ananas_pezzo'], 0.15),
-      M([['filante', 3], ['gamberi', 2], ['vongola', 1.5]]),
-      M([['vongola', 3], ['filante', 3], ['parmesan', 1]], ['ananas_pezzo'], 0.12),
-      M([['cheddar', 2], ['gamberi', 3], ['vongola', 2], ['filante', 2]]),
-      M([['parmesan', 2], ['cheddar', 3], ['gamberi', 3], ['filante', 2]], ['ananas_pezzo'], 0.12),
+      // the cheese pull leads; the hopping shrimp join slowly (they are the pool's only leapers)
+      M([['filante', 3], ['gamberi', 0.4]], ['ananas_pezzo'], 0.15),
+      M([['filante', 3], ['gamberi', 0.6], ['vongola', 1.5]]),
+      M([['vongola', 3], ['filante', 3], ['parmesan', 1], ['gamberi', 0.3]], ['ananas_pezzo'], 0.12),
+      M([['cheddar', 2], ['gamberi', 1.5], ['vongola', 2], ['filante', 2]]),
+      M([['parmesan', 2], ['cheddar', 3], ['gamberi', 2], ['filante', 2]], ['ananas_pezzo'], 0.12),
       M([['gamberi', 3], ['filante', 3]], ['ananas_pezzo'], 0.15),
       M([['vongola', 3], ['parmesan', 2], ['cheddar', 2], ['gamberi', 2]]),
       M([['filante', 3], ['gamberi', 3], ['vongola', 2], ['parmesan', 2]], ['ananas_pezzo'], 0.12),
-      M([['cheddar', 3], ['filante', 3], ['vongola', 3], ['gamberi', 2]]),
-      M([['parmesan', 3], ['vongola', 3], ['gamberi', 3], ['cheddar', 2]], ['ananas_pezzo'], 0.12),
+      M([['cheddar', 3], ['filante', 3], ['vongola', 3], ['gamberi', 3]]),
+      M([['parmesan', 3], ['vongola', 3], ['gamberi', 3.5], ['cheddar', 2]], ['ananas_pezzo'], 0.12),
       M([['gamberi', 3], ['filante', 3]], ['ananas_pezzo'], 0.15),
       M([['vongola', 3], ['cheddar', 3], ['filante', 3], ['parmesan', 2]]),
       M([['gamberi', 4], ['parmesan', 3], ['vongola', 3], ['filante', 3]], ['ananas_pezzo'], 0.12),
@@ -514,46 +546,47 @@ const SPECS: StageSpec[] = [
       T(20, 'Tomato, garlic, oregano, oil. No cheese. No seafood. Just the sailors.'),
       E(100, 'ring', 'filante', 18),
       E(160, 'elite', 'filante'),
-      E(220, 'stampede', 'gamberi', 20),
+      E(220, 'stampede', 'filante', 18),
       E(270, 'elite', 'vongola'),
       E(400, 'ring', 'vongola', 24),
       E(460, 'elite', 'cheddar'),
-      E(520, 'wall', 'filante', 16),
+      E(520, 'stampede', 'gamberi', 20),
       E(570, 'elite', 'parmesan'),
       T(660, 'Cheese pull! Somebody ordered EXTRA mozzarella.', 'warn'),
       E(662, 'stampede', 'filante', 22),
       E(760, 'elite', 'gamberi'),
-      E(820, 'ring', 'cheddar', 24),
+      E(820, 'ring', 'gamberi', 28),
       E(865, 'elite', 'filante'),
     ],
   },
   // ------------------------------------------------------------------ Dal Nord
   {
-    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
+    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.65, 0.6, 1], rateMul: 1.05, unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
     variant: { label: 'Bologna afternoon', tint: '#ffe2b8', darkness: 0.16, darkColor: '#2a160c', vignette: 0.36, particles: 'dust', decor: 'osteria' },
     minutes: [
-      // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff and the frozen lasagne
-      M([['bacon', 2.5], ['fantasma', 1]], ['polpetta'], 0.08),
-      M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.1),
-      M([['fantasma', 3], ['bacon', 2], ['panna', 1.5], ['aglio', 0.5]], ['polpetta'], 0.12),
-      M([['panna', 3.5], ['fantasma', 3], ['bacon', 2], ['aglio', 1]], ['surgelata', 'polpetta'], 0.15),
-      M([['fantasma', 3], ['aglio', 2], ['bacon', 2], ['panna', 3.5]], ['polpetta'], 0.15),
-      M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.15),
-      M([['fantasma', 3], ['panna', 5], ['aglio', 2], ['bacon', 1]], ['surgelata'], 0.15),
-      M([['bacon', 2.5], ['fantasma', 3], ['aglio', 2]], ['polpetta'], 0.15),
-      M([['panna', 5], ['fantasma', 3], ['bacon', 2], ['aglio', 2]], ['surgelata', 'polpetta'], 0.18),
-      M([['fantasma', 3.5], ['aglio', 3], ['bacon', 2], ['panna', 3.5]], ['polpetta', 'surgelata'], 0.18),
-      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.15),
-      M([['fantasma', 3.5], ['panna', 5], ['aglio', 3], ['bacon', 2]], ['surgelata', 'polpetta'], 0.18),
-      M([['bacon', 3], ['fantasma', 3.5], ['panna', 5], ['aglio', 2.5]], ['polpetta', 'surgelata'], 0.2),
-      M([['fantasma', 4], ['aglio', 3], ['panna', 5], ['bacon', 2]], ['surgelata', 'polpetta'], 0.2),
-      M([['fantasma', 4.5], ['bacon', 2.5], ['panna', 5], ['aglio', 3]], ['surgelata', 'polpetta'], 0.2),
-      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.15),
+      // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff, the meatballs
+      // and a few frozen lasagne (the microwave at 10:00 brings more)
+      M([['bacon', 2.5], ['fantasma', 0.5]]),
+      M([['bacon', 2.5], ['fantasma', 1], ['panna', 0.5]]),
+      M([['fantasma', 2], ['bacon', 2], ['panna', 1.5], ['aglio', 0.5]]),
+      M([['panna', 3.5], ['fantasma', 3], ['bacon', 2], ['aglio', 1]], ['polpetta'], 0.06),
+      M([['fantasma', 3], ['aglio', 2], ['bacon', 2], ['panna', 3.5]], ['polpetta', 'surgelata'], 0.1),
+      M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.12),
+      M([['fantasma', 3], ['panna', 5], ['aglio', 2], ['bacon', 1]], ['polpetta'], 0.12),
+      M([['bacon', 2.5], ['fantasma', 3], ['aglio', 2]], ['polpetta', 'surgelata'], 0.12),
+      M([['panna', 5], ['fantasma', 3], ['bacon', 2], ['aglio', 2]], ['polpetta'], 0.12),
+      M([['fantasma', 3.5], ['aglio', 3], ['bacon', 2], ['panna', 3.5]], ['polpetta', 'surgelata'], 0.12),
+      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.12),
+      M([['fantasma', 3.5], ['panna', 5], ['aglio', 3], ['bacon', 2]], ['polpetta'], 0.12),
+      M([['bacon', 3], ['fantasma', 4], ['panna', 5], ['aglio', 2.5]], ['polpetta', 'surgelata'], 0.12),
+      M([['fantasma', 4.5], ['aglio', 3], ['panna', 5], ['bacon', 2]], ['polpetta'], 0.12),
+      M([['fantasma', 4.5], ['bacon', 2.5], ['panna', 5], ['aglio', 3]], ['surgelata', 'polpetta'], 0.12),
+      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.12),
     ],
     events: [
       T(20, 'Bologna: the ragù simmers for hours. Spaghetti? That dish does not exist here.'),
       E(100, 'ring', 'bacon', 20),
-      E(160, 'elite', 'fantasma'),
+      E(160, 'elite', 'bacon'),
       E(230, 'stampede', 'bacon', 22),
       E(275, 'elite', 'panna'),
       E(400, 'ring', 'fantasma', 22),
@@ -610,43 +643,44 @@ const SPECS: StageSpec[] = [
     id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
     variant: { label: 'seaside morning', tint: '#dcecff', darkness: 0.04, darkColor: '#0c1a30', vignette: 0.3, particles: 'dust', decor: 'sea' },
     minutes: [
-      M([['vongola', 4], ['panna', 1]]),
-      M([['vongola', 4], ['parmesan', 1], ['panna', 1]]),
-      M([['vongola', 3], ['burro', 2], ['parmesan', 1]]),
-      M([['parmesan', 2], ['vongola', 4], ['panna', 2]]),
-      M([['burro', 2], ['vongola', 4], ['parmesan', 2], ['panna', 1]]),
+      // the clams lead, butter and cream join early; the grated cheese waits for minute 3 and builds late
+      M([['vongola', 3], ['panna', 1.5], ['burro', 1]]),
+      M([['vongola', 3], ['burro', 1.5], ['panna', 1.5]]),
+      M([['vongola', 3], ['burro', 2], ['panna', 1]]),
+      M([['vongola', 3], ['panna', 2], ['burro', 1.5], ['parmesan', 0.5]]),
+      M([['burro', 2], ['vongola', 3.5], ['parmesan', 1], ['panna', 1.5]]),
       M([['vongola', 4], ['panna', 2]]),
-      M([['parmesan', 3], ['burro', 2], ['vongola', 3], ['panna', 2]]),
-      M([['vongola', 4], ['burro', 3], ['panna', 2]]),
-      M([['panna', 3], ['parmesan', 3], ['vongola', 4]]),
-      M([['burro', 3], ['vongola', 4], ['parmesan', 3], ['panna', 2]]),
+      M([['parmesan', 2.5], ['burro', 2], ['vongola', 3], ['panna', 2]]),
+      M([['vongola', 4], ['burro', 2.5], ['panna', 2], ['parmesan', 1.5]]),
+      M([['panna', 2.5], ['parmesan', 3.5], ['vongola', 4]]),
+      M([['burro', 3], ['vongola', 4], ['parmesan', 3.5], ['panna', 2]]),
       M([['vongola', 4], ['burro', 2]]),
-      M([['parmesan', 3], ['vongola', 4], ['panna', 3], ['burro', 2]]),
-      M([['vongola', 5], ['burro', 3], ['parmesan', 3]]),
-      M([['panna', 3], ['vongola', 5], ['burro', 3], ['parmesan', 3]]),
-      M([['vongola', 5], ['parmesan', 4], ['burro', 3], ['panna', 3]]),
-      M([['vongola', 4], ['panna', 2]]),
+      M([['parmesan', 4], ['vongola', 4], ['panna', 2.5], ['burro', 2]]),
+      M([['vongola', 5], ['burro', 3], ['parmesan', 4]]),
+      M([['panna', 3], ['vongola', 5], ['burro', 3], ['parmesan', 4]]),
+      M([['vongola', 5], ['parmesan', 4.5], ['burro', 3], ['panna', 3]]),
+      M([['vongola', 4], ['panna', 2], ['burro', 1]]),
     ],
     events: [
       T(20, 'Clams, olive oil, garlic, parsley. The cheese stays in the fridge.'),
       E(100, 'ring', 'vongola', 22),
       E(160, 'elite', 'burro'),
-      E(220, 'stampede', 'vongola', 22),
-      E(275, 'elite', 'parmesan'),
-      E(400, 'ring', 'vongola', 32),
+      E(220, 'stampede', 'panna', 16),
+      E(275, 'elite', 'vongola'),
+      E(400, 'wall', 'burro', 20),
       E(460, 'elite', 'panna'),
-      E(520, 'wall', 'vongola', 20),
+      E(520, 'stampede', 'vongola', 24),
       E(570, 'elite', 'burro'),
       T(660, 'The tourist table asks for grated cheese.', 'warn'),
       E(662, 'ring', 'parmesan', 12),
       E(760, 'elite', 'vongola'),
-      E(820, 'stampede', 'vongola', 30),
+      E(820, 'ring', 'vongola', 36),
       E(865, 'elite', 'parmesan'),
     ],
   },
   // ------------------------------------------------------------------ Il Gran Finale
   {
-    id: 'foodcourt', env: 'foodcourt', tier: 'T6', bosses: ['b_campanile', 'b_influencer', 'b_fusione'], unlock: { wins: 6 }, accent: '#d93fd0',
+    id: 'foodcourt', env: 'foodcourt', tier: 'T6', bosses: ['b_campanile', 'b_influencer', 'b_fusione'], bossHpMul: [0.55, 0.8, 1], unlock: { wins: 6 }, accent: '#d93fd0',
     minutes: [
       // every crime of the menu turns up at least once (stageRuleProblems checks the listed ones)
       M([['spezzato', 3], ['pastachips', 3], ['piselli', 2], ['anacardo', 2], ['scotta_mini', 1.5]]),
