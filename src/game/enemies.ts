@@ -262,7 +262,7 @@ E({
   id: 'fantasma', name: 'Spaghetti Fantasma', en: 'Ghost Spaghetti', sprite: 'enemy.fantasma',
   radius: 15, hp: 26, speed: 58, damage: 8, xp: 3, behavior: 'ghost', params: { period: 1.6 }, flying: true,
   color: 'red', juice: '#c8421e', chunk: 'bread',
-  info: { crime: 'Spaghetti bolognese', why: "Bologna's ragù goes on fresh egg tagliatelle or into lasagne, not on dried spaghetti. It flickers in and out of existence — hit it while it's solid. (Fun fact: most Italians in the YouGov poll actually shrugged.)", severity: 3, quote: '"Spaghetti bolognese doesn\'t actually exist, yet it\'s famous the world over." — the mayor of Bologna on Italian radio, 2019 (as reported)' },
+  info: { crime: 'Spaghetti bolognese', why: "Bologna's ragù goes on fresh egg tagliatelle or into lasagne, not on dried spaghetti. It flickers in and out of existence — hit it while it's solid. (Fun fact: most Italians in the YouGov poll actually shrugged.)", severity: 3, quote: '"Spaghetti Bolognese doesn\'t actually exist; yet, it\'s famous the world over" — the mayor of Bologna, 2019 (via CBC)' },
 });
 
 // ---------------------------------------------------------------------------

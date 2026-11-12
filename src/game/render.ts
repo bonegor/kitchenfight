@@ -591,6 +591,19 @@ export class Renderer {
       ctx.drawImage(gs, a.x - a.r * 1.4, a.y - a.r * 1.2, a.r * 2.8, a.r * 2.4);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
+      if (a.enemy) {
+        // enemy fire (the Red-Hot Blender) gets a hot red danger rim, so it never reads as the chef's own fire
+        const pulse = 0.75 + Math.sin(this.t * 10 + a.rot) * 0.25;
+        ctx.fillStyle = rgba('#ff2a1a', 0.16 * pulse * fade);
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r * 1.1, a.r * 0.88, 0, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = rgba('#ff2a1a', 0.9 * pulse * fade);
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([7, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
   }
 

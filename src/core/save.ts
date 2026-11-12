@@ -17,7 +17,9 @@ export interface StageRecord {
   wins: number;
   bestKills: number;
   bestLevel: number;
-  /** Il Menù: every real ingredient of the dish was collected in a run (★ on the menu) */
+  /** Il Menù: every real ingredient of the dish was collected in one run, won or lost ("★ Ricetta
+   *  completa" on the menu card; the 'Il Quaderno della Nonna' medal counts these). NOT the
+   *  'Ricetta Perfetta' medal, which also needs the win. */
   perfect?: boolean;
 }
 

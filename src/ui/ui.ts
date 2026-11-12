@@ -363,7 +363,7 @@ export class UI {
                 h('span', { class: 'tag' }, '⏱ ' + formatTime(rec?.bestTime ?? 0)),
                 h('span', { class: 'tag green' }, '🏆 ' + (rec?.wins ?? 0)),
                 h('span', { class: 'tag red' }, '🍴 ' + (rec?.bestKills ?? 0)),
-                rec?.perfect ? h('span', { class: 'tag' }, '★ Ricetta perfetta') : null,
+                rec?.perfect ? h('span', { class: 'tag' }, '★ Ricetta completa') : null,
               )
             : h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st)),
         ),
@@ -529,12 +529,23 @@ export class UI {
     for (const ev of evs) document.addEventListener(ev, onGesture, { passive: true });
   }
 
+  /** One banner at a time: a new one replaces the one on screen, except that a boss banner
+   *  is not cut short (a plain banner waits for it to finish). */
   banner(text: string, sub = '', boss = false) {
-    if (!this.hud) return;
+    const hud = this.hud;
+    if (!hud) return;
+    const wait = boss ? 0 : this.bossBannerUntil - performance.now();
+    if (wait > 0) {
+      setTimeout(() => this.hud === hud && this.banner(text, sub, boss), wait);
+      return;
+    }
+    hud.querySelectorAll('.big-banner').forEach((el) => el.remove());
+    if (boss) this.bossBannerUntil = performance.now() + 2500;
     const b = h('div', { class: 'big-banner' + (boss ? ' boss' : '') }, text, sub ? h('small', {}, sub) : null);
-    this.hud.appendChild(b);
+    hud.appendChild(b);
     setTimeout(() => b.remove(), 2500);
   }
+  private bossBannerUntil = 0;
 
   // ------------------------------------------------------------------ level up
 
@@ -789,7 +800,7 @@ export class UI {
         );
       });
     const lines = victory
-      ? ['Tradition is safe — for tonight.', 'Nonna would be proud.', 'The carbonara remains pure.', 'Bravissimo, Chef!']
+      ? ['Tradition is safe — for tonight.', 'Nonna would be proud.', run.recipe && run.recipe.id !== 'foodcourt' ? `The ${run.recipe.it} stays pure.` : 'Italian cooking stays pure.', 'Bravissimo, Chef!']
       : ['The crimes got into the kitchen…', 'Somebody put cream in it. Again.', 'Even Nonna is speechless.', 'Next time, al dente.'];
     const el = h('div', { class: 'screen dim results' },
       h('div', { class: 'res-title ' + (victory ? 'win' : 'lose') }, victory ? 'Vittoria!' : 'Mamma Mia!'),

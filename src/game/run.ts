@@ -15,7 +15,7 @@ import { Director } from './director';
 import type { StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
-import { recipeById, intruderIn, FRIEND_OR_FOE, RECIPE_COMPLETE, type RecipeDef } from './recipes';
+import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
 import type { SaveData } from '../core/save';
@@ -1230,8 +1230,9 @@ export class Run {
       if (e.freeze > 0) e.freeze -= dt;
       if (e.stun > 0) e.stun -= dt;
       if (!isFrozen && (e.stun <= 0 || e.boss)) {
-        // an airborne boss ignores slows, so its slam lands exactly when the warning circle ends
-        const slow = e.boss && e.state === 50 ? 0 : e.slowAmt;
+        // an airborne boss ignores slows, so its slam lands exactly when the warning circle ends;
+        // a phased-out boss ignores them too, so it never shows up faded but hittable
+        const slow = e.boss && (e.state === 50 || e.invuln > 0) ? 0 : e.slowAmt;
         updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
       }
       if (!e.alive) continue;
@@ -1751,8 +1752,7 @@ export class Run {
     const pl = this.player;
     const n = this.ingredientsGot(), m = r.ingredients.length;
     this.sfx('ui_unlock');
-    this.fx.text(pl.x, pl.y - 74, `${ing.it} ✓ ${n}/${m}`, '#7cff8a', 18, 2.2);
-    this.fx.text(pl.x, pl.y - 52, ing.buff, '#fff3b0', 13, 2);
+    // (the "<ingredient> ✓ n/m" + buff banner comes from hooks.onIngredient, not world text)
     this.fx.ring(pl.x, pl.y, 10, 170, 0.7, '#7cff8a', 7);
     this.fx.burst(pl.x, pl.y - 20, 24, { sprite: 'fx.spark', speed: 220, size: 1, life: 0.8, additive: true });
     this.say([ing.it + '!', 'Questo sì!', 'Ci vuole!', 'Che profumo!', 'Perfetto!'], true, '#e8ffd8');
@@ -1760,10 +1760,11 @@ export class Run {
     if (complete) this.completeRecipe();
     this.hooks.onIngredient(index, complete);
     // friend or foe: the same ingredient is a crime in another dish
+    // (it jumps the queue: it is about the pickup that just happened)
     const f = FRIEND_OR_FOE.find((x) => x.ingredient === ing.id && x.friendIn.includes(r.id));
     if (f && !this.fofShown.has('i:' + f.ingredient)) {
       this.fofShown.add('i:' + f.ingredient);
-      this.queueToast(f.friendLine, 'info');
+      this.toastQueue.unshift({ text: f.friendLine, kind: 'info' });
     }
   }
 
@@ -1778,20 +1779,27 @@ export class Run {
     this.sfx('pickup_bell');
     this.fx.screenFlash(0.45, '#eaffd8');
     this.fx.burst(pl.x, pl.y - 30, 70, { sprite: 'fx.confetti', frames: 6, speed: 520, size: 1, life: 2.2, gravity: 300, up: 380, shrink: false, drag: 1.4, spin: 14 });
-    this.fx.text(pl.x, pl.y - 100, 'RICETTA COMPLETA!', '#ffd34d', 24, 2.6);
     this.fx.bubble(pl, 'Come la faceva la Nonna!', -80, '#fff3b0', 2, true);
   }
 
-  /** Queue a toast (rate-limited so sightings and notes do not flood the screen). */
-  queueToast(text: string, kind: 'info' | 'warn' | 'good' = 'info') {
-    if (this.toastQueue.length < 6) this.toastQueue.push({ text, kind });
+  /** Queue a toast (rate-limited so sightings and notes do not flood the screen). False = queue full, dropped. */
+  queueToast(text: string, kind: 'info' | 'warn' | 'good' = 'info'): boolean {
+    if (this.toastQueue.length >= Run.TOAST_QUEUE) return false;
+    this.toastQueue.push({ text, kind });
+    return true;
   }
+
+  /** At most this many toasts wait in the queue (one is shown every 5 s). */
+  static readonly TOAST_QUEUE = 6;
 
   /** First sighting of each intruder of this dish: "<it> nella Carbonara? NO! <line>". */
   private checkSightings() {
     const r = this.recipe;
     if (!r) return;
     for (const e of this.enemies) {
+      // an intruder only counts as sighted once its toasts are queued: with no room
+      // (both toasts need a slot) it waits for a later check instead of being lost
+      if (this.toastQueue.length > Run.TOAST_QUEUE - 2) return;
       if (!e.alive || e.boss || !this.onScreen(e.x, e.y, -30)) continue;
       const intr = intruderIn(r, e.def.id);
       if (!intr || this.sighted.has(intr.enemy)) continue;
@@ -1801,7 +1809,7 @@ export class Run {
       const f = FRIEND_OR_FOE.find((x) => x.enemy === intr.enemy && x.foeIn.includes(r.id));
       if (f && !this.fofShown.has('e:' + f.enemy)) {
         this.fofShown.add('e:' + f.enemy);
-        this.queueToast(f.foeLine, 'info');
+        this.queueToast(foeLineFor(f, r.id), 'info');
       }
     }
   }

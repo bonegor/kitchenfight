@@ -45,8 +45,11 @@ export const bolognese: Pattern = (run, e, dt) => {
   brain(run, e, dt, order, 0.9, (a, t, first) => {
     if (a === 'phase') {
       const out = 0.35, glide = 2.0, back = 0.5;
+      // invulnerable exactly while the timeline says it is faded out: refreshed from the
+      // attack's own clock every frame, so no slow or hitch can make it faded but hittable
+      const solidAt = out + glide + back * 0.6;
+      e.invuln = t < solidAt ? Math.max(0.05, solidAt - t) : 0;
       if (first) {
-        e.invuln = out + glide + back * 0.6;
         run.fx.bubble(e, 'Non esisto…', -e.r * 2.3, '#ffd0c8', 1.2, true);
         run.sfx('enemy_split', { volume: 0.5, pitch: 0.6 }, e.x);
       }

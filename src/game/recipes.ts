@@ -14,6 +14,14 @@
  *  - things Italians accept (cream, corn or würstel on pizza, cheese on tomato pasta,
  *    garlic in pesto…) are never intruders.
  *
+ * Editorial calls where the spec left a choice:
+ *  - the Pomodoro has no sugar intruder: the research supports "Zucchero" (contested), but no
+ *    enemy fits it;
+ *  - Alfredo's 'parmesan' (imitation 'Parmesan') and the Marinara's 'cheddar' are required by
+ *    the spec, but the research has no dish-specific evidence for them: their texts are adapted
+ *    from its pizza entries (Coldiretti on imitation 'Parmesan' and 'Anglo-Saxon cheddar') and
+ *    cite that pizza source.
+ *
  * GENERATED from the research dataset by the foundation tooling, then kept by hand.
  */
 import type { StatMod } from './types';
@@ -1220,6 +1228,13 @@ export interface FriendOrFoe {
   friendLine: string;
   /** toast when the intruder is met in a dish where it is a foe */
   foeLine: string;
+  /** per-dish foe toast where the plain one would be too absolute (the item is contested there) */
+  foeLines?: Record<string, string>;
+}
+
+/** The foe toast for this intruder in this dish. */
+export function foeLineFor(f: FriendOrFoe, dishId: string): string {
+  return f.foeLines?.[dishId] ?? f.foeLine;
 }
 
 export const FRIEND_OR_FOE: FriendOrFoe[] = [
@@ -1227,21 +1242,34 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     ingredient: 'burro', enemy: 'burro', friendIn: ['alfredo'], foeIn: ['cacioepepe', 'vongole', 'pesto', 'carbonara'],
     friendLine: 'Burro! In Fettuccine Alfredo it IS the sauce. In cacio e pepe it would be a crime.',
     foeLine: 'Butter? In Fettuccine Alfredo it belongs. Not here!',
+    foeLines: {
+      pesto: 'Butter? In Fettuccine Alfredo it belongs. Today\'s Genoese pesto uses olive oil only.',
+      vongole: 'Butter? In Fettuccine Alfredo it belongs. Neapolitan vongole use olive oil only.',
+    },
   },
   {
     ingredient: 'aglio', enemy: 'aglio', friendIn: ['pomodoro', 'marinara', 'pesto', 'vongole'], foeIn: ['amatriciana', 'carbonara', 'ragu', 'alfredo'],
-    friendLine: 'Aglio! Here it belongs. In amatriciana or carbonara it would be a crime.',
+    friendLine: 'Aglio! Here it belongs. In amatriciana it would be a crime.',
     foeLine: 'Garlic! In pesto it belongs. Not here!',
+    foeLines: {
+      carbonara: 'Garlic? In pesto it belongs. In carbonara, purists ban it today.',
+    },
   },
   {
-    ingredient: 'pancetta', enemy: 'bacon', friendIn: ['ragu'], foeIn: ['carbonara', 'amatriciana'],
-    friendLine: 'Pancetta! Fresh, in a Bolognese ragù, it belongs. In carbonara, guanciale rules.',
-    foeLine: 'Pancetta? Fresh, in a Bolognese ragù, sì. Here it is guanciale or nothing!',
+    // carbonara's 'bacon' is SMOKED bacon (a crime); pancetta there is a contested fallback, not a foe
+    ingredient: 'pancetta', enemy: 'bacon', friendIn: ['ragu'], foeIn: ['amatriciana'],
+    friendLine: 'Pancetta! Fresh, in a Bolognese ragù, it belongs. The Amatriciana rules want guanciale.',
+    foeLine: 'Pancetta? Fresh, in a Bolognese ragù, sì. The Amatriciana rules want guanciale.',
   },
   {
     ingredient: 'parmigiano', enemy: 'parmesan', friendIn: ['alfredo', 'pesto'], foeIn: ['carbonara', 'amatriciana', 'cacioepepe', 'vongole'],
     friendLine: 'Parmigiano! In Alfredo and pesto it belongs. Never on clams.',
-    foeLine: 'Parmigiano? In Alfredo and pesto, sì. Here, no!',
+    foeLine: 'Parmigiano? In Alfredo and pesto, sì. Here the cheese is Pecorino!',
+    foeLines: {
+      carbonara: 'Parmigiano? In Alfredo and pesto, sì. Here Pecorino leads: a little blended in, at most.',
+      cacioepepe: 'Parmigiano? In Alfredo and pesto, sì. Here Pecorino leads: a little blended in, at most.',
+      vongole: 'Parmigiano? In Alfredo and pesto, sì. On clams, no cheese!',
+    },
   },
   {
     ingredient: 'mozzarella', enemy: 'filante', friendIn: ['margherita'], foeIn: ['marinara'],
@@ -1252,5 +1280,8 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     ingredient: 'soffritto', enemy: 'cipolla', friendIn: ['ragu'], foeIn: ['carbonara', 'amatriciana'],
     friendLine: 'Soffritto! Onion belongs in a Bolognese ragù. Never in carbonara.',
     foeLine: 'Onion? In a Bolognese soffritto, sì. Not here!',
+    foeLines: {
+      amatriciana: 'Onion? In a Bolognese soffritto, sì. The Amatriciana rules leave it out.',
+    },
   },
 ];
