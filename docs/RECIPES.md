@@ -967,15 +967,15 @@ extravergine (from every corner of Italy).
 (from the Carbonara); ketchup (Pomodoro); pineapple (Margherita); butter (Cacio e Pepe); garlic
 (Amatriciana); spaghetti bolognese (Ragù); chicken (Alfredo); cheese on clams (Vongole).
 
-**In the waves.** The finale's waves are mixed by hand and exempt from every wave rule: `stageRuleProblems()`
-skips it. Besides the listed intruders they bring the method crimes (snapped spaghetti, scissors, the cold
-pot, the single pot, the cursed can, frozen lasagna), the drinks (the frappé, and the cappuccino, which
-turns up after the 11:00 event), the viral phone, balsamic glaze, pasta crisps, Alfredo the Gluey, the
-stained Margherita, the Hawaiian slice, "pepperoni", the rolling meatball and intruders of other dishes
-(cashews, BBQ sauce, broccoli, cheddar, the cheese pull, shrimp, the wrong oil, cooked ham, pineapple chunks).
-*At the time of writing, three listed intruders (smoked bacon, garlic and chicken) appear in no finale
-minute or event*, and neither do the mushy pasta and the pasta-rinser of its extras list; that is a wave fix
-for `stages.ts`.
+**In the waves.** The finale's waves are mixed by hand from the whole menu and exempt from the 80 % and
+order rules; `stageRuleProblems()` only checks that every intruder and extra listed for it spawns in some
+minute or event. Besides the listed intruders (chicken also comes as a stampede at 12:40) they bring the
+method crimes (snapped spaghetti, scissors, overcooked pasta, the pasta-rinser, the cold pot, the single pot,
+the cursed can, frozen lasagna), the drinks (the frappé, and the cappuccino, which turns up after the 11:00
+event), the viral phone, balsamic glaze, pasta crisps, Alfredo the Gluey, the stained Margherita, the
+Hawaiian slice, "pepperoni", the rolling meatball and intruders of other dishes (cashews, BBQ sauce,
+broccoli, cheddar, the cheese pull, shrimp, the wrong oil, cooked ham, pineapple chunks): every enemy of the
+game except the bosses turns up at least once.
 
 > *Fun fact (in-game):* In a 2022 YouGov survey, Italians rated ketchup on pasta at −82, pineapple on pizza
 > at −63 and cream in carbonara at −45. They were far kinder to ragù on spaghetti: +81.
@@ -1218,5 +1218,6 @@ When you change `src/game/recipes.ts`:
 6. **Intruders must be enemies.** `enemy` is an `ENEMIES` id; the waves in `stages.ts` must keep ≥ 80 % of
    each minute's weight on the dish's intruders, follow the intruder order and spawn every intruder.
    `stageRuleProblems()` checks all three for dishes 1–10 (garlic, a support enemy, is left out of the order
-   and spawn checks), and `scripts/validate.mjs` prints any problem. **The finale is not checked at all**, so
-   check its waves by hand: every intruder listed for it should appear in some minute or event.
+   check only), and `scripts/validate.mjs` prints any problem. **The finale** is mixed by hand and skips the
+   80 % and order rules, but the check still makes sure every intruder and extra listed for it spawns in
+   some minute or event.

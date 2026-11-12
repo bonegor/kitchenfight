@@ -47,11 +47,8 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
 - **Unlock rules** (`StageDef.unlock`): `null` (from the start), `{ anyOf: [...] }` (win any of these
   dishes) or `{ wins: n }` (win n different dishes). Locked cards say why ("Win Pizza Marinara or Trofie
   al Pesto Genovese to unlock").
-- **Difficulty** comes from six tiers (`TIERS` in `src/game/stages.ts`), interpolated from the old stages:
-  Pomodoro ≈ the old kitchen ×0.9; Carbonara ≈ the old kitchen; Alfredo, Amatriciana and Margherita ≈ the
-  old trattoria; Cacio e Pepe and Marinara between the trattoria and the streets; Ragù, Pesto and Vongole ≈
-  the old streets; the finale ≈ the old food court. A dish's waves choose *who* comes; its tier sets how
-  many and how tough.
+- **Difficulty** comes from the dish's tier, one of six, tuned against the old stages (see
+  [Difficulty](#difficulty) below). A dish's waves choose *who* comes; its tier sets how many and how tough.
 - **Music** is the environment's track (kitchen, trattoria, streets, food court).
 - **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, a night ramp)
   and the particles (dust, flour, embers, fireflies), and add a little decor made of existing props (tomato
@@ -61,6 +58,49 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
   over to the Pomodoro and the Carbonara, La Trattoria's to the Margherita, I Vicoli's to the Marinara;
   the Food Court keeps its id. The unlocked list restarts from the Pomodoro (plus the finale if it was
   already open), then every dish whose rule the carried-over wins satisfy is unlocked.
+
+### Difficulty
+Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each tuned against one of the old stages.
+
+| Tier | Dishes | Tuned against | hpBase | hpGrowth | dmgBase | rate | max | Boss HP 5:00 / 10:00 / 15:00 |
+|---|---|---|---|---|---|---|---|---|
+| T1 | Pomodoro | the old kitchen ×0.9 | 0.9 | 0.10 | 0.85 | 0.74 | 0.8 | 1300 / 2100 / 3300 |
+| T2 | Carbonara | the old kitchen | 1.0 | 0.11 | 1.0 | 0.93 | 0.94 | 1400 / 2300 / 3600 |
+| T3 | Alfredo, Amatriciana, Margherita | the old trattoria | 1.6 | 0.21 | 1.7 | 1.12 | 1.05 | 1500 / 2700 / 4800 |
+| T4 | Cacio e Pepe, Marinara | between the trattoria and the streets | 1.9 | 0.33 | 2.35 | 1.3 | 1.12 | 1600 / 3000 / 4800 |
+| T5 | Ragù, Pesto, Vongole | the old streets | 2.2 | 0.40 | 2.55 | 1.4 | 1.2 | 1600 / 3000 / 5000 |
+| T6 | the finale | the old food court | 2.9 | 0.26 | 1.6 | 1.4 | 1.2 | 1800 / 3200 / 6000 |
+
+- **The columns.** `hpBase` and `dmgBase` multiply enemy HP and damage and phase in over the first 7
+  minutes (`Director`); `hpGrowth` adds HP every minute, faster after 10:00. `rate` and `max` multiply the
+  spawns per second and the cap of live enemies (`BASE_RATE`, `BASE_MAX`). A rate factor above 1 is ×1
+  until minute 1 and reaches full strength at minute 5 (`RATE_RAMP`), so the openings stay gentle and the
+  tiers differ most in minutes 5–15.
+- **Hotter than the old stages.** The menu's intruders (puddlers, swarms, strafers, lobbers) are softer
+  than the old stages' crowd, so T3–T5 carry more `hpGrowth` and `dmgBase` than the stage each one matches
+  (the old trattoria had 0.13 / 1.15, the streets 0.15 / 1.25). T6 steps back on both: the finale's own
+  crowd (frozen lasagna, the single pot, the cursed little can) hits hardest by itself.
+- **Bosses.** A slot's HP replaces the boss's own and is then ×hpBase, ×player level and ×time
+  (`Director.spawnBoss`). `BOSS_HP_FACTOR` lowers it for the bosses that are slow to bring down anywhere:
+  L'Influencer ×0.6 and Il Campanile ×0.5 (they keep out of reach), Lo Scatolone ×0.7, Il Microonde ×0.65
+  and Il Sacco del Grattugiato ×0.6 (they hide behind their adds and hazards), Il Panetto Supremo ×0.7,
+  Il Frullatore ×0.65, Il Re dell'Aglio ×0.8, and Lo Spaghettone ×0.8 (untouchable while phased out).
+  `dmgBase` scales boss hits too, so the bosses' base damage (`enemies.ts`) stays at 14–24.
+- **Per-dish factors** (`StageSpec`): `rateMul` (more spawns, phased in like `rate`) for a dish whose
+  intruders are softer than its tier-mates', `dmgMul` (harder hits) and `bossHpMul` (one slot's HP).
+
+| Dish | rateMul | dmgMul | bossHpMul (5:00 / 10:00 / 15:00) |
+|---|---|---|---|
+| Amatriciana | 1.45 | 1.35 | — |
+| Cacio e Pepe | 1.2 | — | 1 / 1 / 0.8 |
+| Margherita | — | — | 1 / 0.7 / 1 |
+| Marinara | 1.3 | — | — |
+| Ragù | 1.05 | — | 0.65 / 0.6 / 1 |
+| the finale | — | — | 0.55 / 0.8 / 1 |
+
+- **Measured** with the test bot (auto-revive, a mid-progress pantry, 12 runs per dish), deaths in
+  minutes 5–15: T1 0, T2 0.2, T3 about 6, T4 about 8, T5 about 14, T6 about 26 (the old kitchen 0.2,
+  trattoria 10, streets 18, food court 27). Every dish is at least as hard as the dishes that unlock it.
 
 ### Environments
 | Environment | Look | Dishes |
@@ -115,9 +155,10 @@ each corner of Italy.
   (≤ 20 %) are the dish's *extras*, method crimes that fit it (snapped spaghetti in the Pomodoro, the
   one-pot carbonara in the Carbonara…). Over the run, the intruders' shares follow their order in the
   recipe (the loudest crime comes most often), and every intruder spawns. Garlic, a support enemy, is
-  exempt from the order (and from the spawn check). `stageRuleProblems()` checks all of this for dishes
-  1–10 and `scripts/validate.mjs` prints any problem. **The finale is exempt from every wave rule**: its
-  waves are mixed by hand and not checked.
+  exempt from the order, but it has to spawn too. **The finale's** waves are mixed by hand from the whole
+  menu and exempt from the 80 % and order rules, but every intruder and extra its recipe lists must spawn
+  in some minute or event. `stageRuleProblems()` checks all of this and `scripts/validate.mjs` prints any
+  problem.
 
 ## Characters
 | id | Name | Starting weapon | Bonus | Unlock |
@@ -227,9 +268,9 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | **Cheddar Arancione** (new) | Orange Cheddar | strafe | Cheddar on pizza | Margherita, Marinara |
 | **Salsa Barbecue** (new) | BBQ Sauce | ranged | BBQ sauce on pizza | Margherita |
 
-The finale mixes crimes from the whole menu, and its waves are exempt from every wave rule. At the time of
-writing every enemy above appears there except Mushy Pasta, the Pasta-Rinser, garlic, bacon and chicken.
-The last three are listed among the finale's intruders, so their absence is a wave fix for `stages.ts`.
+The finale mixes crimes from the whole menu, and every enemy above appears in one of its minutes or events.
+Its waves are exempt from the 80 % and order rules; `stageRuleProblems()` checks that every intruder and
+extra its recipe lists spawns.
 
 | Boss | English | The crime | Final boss of | Mid-boss in |
 |---|---|---|---|---|
