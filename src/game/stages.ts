@@ -648,21 +648,22 @@ const SPECS: StageSpec[] = [
   {
     id: 'foodcourt', env: 'foodcourt', tier: 'T6', bosses: ['b_campanile', 'b_influencer', 'b_fusione'], unlock: { wins: 6 }, accent: '#d93fd0',
     minutes: [
-      M([['spezzato', 3], ['pastachips', 3], ['piselli', 2], ['anacardo', 2]]),
-      M([['pastachips', 3], ['fantasma', 2], ['spezzato', 2], ['panna', 2]]),
-      M([['pentola', 1], ['fantasma', 2], ['macchiata', 1], ['panna', 2], ['spezzato', 3], ['burro', 2]]),
+      // every crime of the menu turns up at least once (stageRuleProblems checks the listed ones)
+      M([['spezzato', 3], ['pastachips', 3], ['piselli', 2], ['anacardo', 2], ['scotta_mini', 1.5]]),
+      M([['pastachips', 3], ['fantasma', 2], ['spezzato', 2], ['panna', 2], ['bacon', 2]]),
+      M([['pentola', 1], ['fantasma', 2], ['macchiata', 1], ['panna', 2], ['spezzato', 3], ['burro', 2], ['scotta', 1.5]]),
       M([['surgelata', 1], ['glassa', 2], ['frappe', 1], ['scatoletta', 1], ['panna', 2], ['ketchup', 1]]),
       M([['pentola', 1], ['fantasma', 2], ['smartphone', 2], ['ananas', 2], ['parmesan', 2], ['cheddar', 2]]),
-      M([['scatoletta', 3], ['ketchup', 3], ['pastachips', 3]]),
+      M([['scatoletta', 3], ['ketchup', 3], ['pastachips', 3], ['pollo', 2]]),
       M([['surgelata', 2], ['pentolaunica', 2], ['alfredo', 2], ['forbici', 2], ['bbq', 2]]),
-      M([['fantasma', 3], ['scatoletta', 2], ['cipolla', 2], ['polpetta', 2], ['pentola', 1]]),
-      M([['surgelata', 2], ['ananas', 3], ['macchiata', 2], ['frappe', 3], ['gamberi', 2]]),
+      M([['fantasma', 3], ['scatoletta', 2], ['cipolla', 2], ['polpetta', 2], ['pentola', 1], ['aglio', 1]]),
+      M([['surgelata', 2], ['ananas', 3], ['macchiata', 2], ['frappe', 3], ['gamberi', 2], ['bacon', 1.5]]),
       M([['vongola', 2], ['scatoletta', 3], ['smartphone', 3], ['glassa', 2], ['pentolaunica', 1], ['funghi', 2]]),
       M([['ananas', 3], ['hawaiana', 3], ['pepperoni', 3]]),
-      M([['cappuccino', 3], ['surgelata', 2], ['fantasma', 2], ['pentola', 1], ['macchiata', 2], ['prosciutto', 2]]),
-      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 2], ['forbici', 2], ['olio', 2]]),
+      M([['cappuccino', 3], ['surgelata', 2], ['fantasma', 2], ['pentola', 1], ['macchiata', 2], ['prosciutto', 2], ['pollo', 2]]),
+      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 2], ['forbici', 2], ['olio', 2], ['aglio', 1]]),
       M([['cappuccino', 3], ['surgelata', 3], ['ananas', 3], ['smartphone', 3], ['glassa', 2], ['broccoli', 2]]),
-      M([['cappuccino', 3], ['surgelata', 3], ['fantasma', 3], ['pentola', 2], ['alfredo', 2], ['frappe', 2], ['filante', 2]]),
+      M([['cappuccino', 3], ['surgelata', 3], ['fantasma', 3], ['pentola', 2], ['alfredo', 2], ['frappe', 2], ['filante', 2], ['bacon', 2]]),
       M([['panna', 2], ['ketchup', 3], ['ananas_pezzo', 3], ['pastachips', 3]]),
     ],
     events: [
@@ -677,7 +678,7 @@ const SPECS: StageSpec[] = [
       E(570, 'elite', 'surgelata'),
       T(660, "It's after 11:00 — cappuccino is now ILLEGAL.", 'warn'),
       E(662, 'ring', 'cappuccino', 22),
-      E(760, 'elite', 'alfredo'),
+      E(760, 'stampede', 'pollo', 20),
       E(820, 'ring', 'ananas', 14),
       E(860, 'elite', 'surgelata'),
       E(870, 'elite', 'pentola'),
@@ -762,14 +763,28 @@ export function unlockText(st: StageDef): string {
 // rule checks (scripts/validate.mjs prints these; empty = OK)
 // -------------------------------------------------------------------------------------
 
-/** Every minute's pool must draw ≥ 80 % of its weight from the dish's intruders (finale exempt). */
+/**
+ * The wave rules (empty = OK).
+ * - Dishes 1–10: every minute's pool draws ≥ 80 % of its weight from the dish's intruders and
+ *   the rest from its extras; event enemies are intruders or extras; the intruders' shares follow
+ *   the recipe's order (ORDER_EXEMPT aside); every intruder spawns.
+ * - The finale is mixed by hand from the whole menu (exempt from the 80 % and order rules), but
+ *   every intruder and every extra its recipe lists must spawn in some minute or event.
+ */
 export function stageRuleProblems(): string[] {
   const out: string[] = [];
   for (const st of STAGES) {
     const r: RecipeDef | undefined = recipeById(st.recipe);
     if (!r) { out.push(st.id + ': no recipe'); continue; }
     if (st.waves.length !== 16) out.push(`${st.id}: ${st.waves.length} wave minutes (want 16)`);
-    if (st.id === 'foodcourt') continue;
+    if (st.id === 'foodcourt') {
+      const spawned = new Set<string>();
+      for (const w of st.waves) for (const [id, wt] of w.pool) if (wt > 0) spawned.add(id);
+      for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast') spawned.add(ev.enemy);
+      for (const i of r.intruders) if (![i.enemy, ...(i.alias ?? [])].some((id) => spawned.has(id))) out.push(`${st.id}: listed intruder ${i.enemy} never spawns`);
+      for (const id of r.extras) if (!spawned.has(id)) out.push(`${st.id}: listed extra ${id} never spawns`);
+      continue;
+    }
     st.waves.forEach((w, m) => {
       let tot = 0, intr = 0;
       for (const [id, wt] of w.pool) {
@@ -787,7 +802,7 @@ export function stageRuleProblems(): string[] {
       const a = sh.get(ranked[i]) ?? 0, b = sh.get(ranked[i + 1]) ?? 0;
       if (b > a * ORDER_TOL + 0.005) out.push(`${st.id}: ${ranked[i + 1]} ${(b * 100).toFixed(0)}% outweighs ${ranked[i]} ${(a * 100).toFixed(0)}% (weight order)`);
     }
-    for (const id of ranked) if (!sh.get(id)) out.push(`${st.id}: intruder ${id} never spawns`);
+    for (const i of r.intruders) if (!sh.get(i.enemy)) out.push(`${st.id}: intruder ${i.enemy} never spawns`);
   }
   if (STAGES.length !== RECIPES.length) out.push(`stages ${STAGES.length} vs recipes ${RECIPES.length}`);
   return out;
