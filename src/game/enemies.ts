@@ -278,8 +278,9 @@ E({
 });
 E({
   id: 'funghi', name: 'Funghi Abusivi', en: 'Bootleg Mushrooms', sprite: 'enemy.funghi',
-  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 }, flying: true,
+  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
   color: 'brown', juice: '#d9c3a0', chunk: 'bread',
+  flying: true, // it hovers (rootlets dangle under the clump), like the Stained Margherita
   info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef\'s 2020 carbonara video with mushrooms, peas and crème fraîche.', severity: 2 },
 });
 E({
