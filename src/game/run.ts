@@ -16,6 +16,7 @@ import type { StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
+import { sightingToast } from './sightings';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
 import type { SaveData } from '../core/save';
@@ -1805,7 +1806,8 @@ export class Run {
       if (!intr || this.sighted.has(intr.enemy)) continue;
       this.sighted.add(intr.enemy);
       const home = intr.fromDish ? recipeById(intr.fromDish) ?? r : r;
-      this.queueToast(`${intr.it} ${home.inDish}? NO! ${intr.line}`, 'warn');
+      // short and punchy (≤ ~80 chars): the full reason is in the Ricettario
+      this.queueToast(sightingToast(home, intr), 'warn');
       const f = FRIEND_OR_FOE.find((x) => x.enemy === intr.enemy && x.foeIn.includes(r.id));
       if (f && !this.fofShown.has('e:' + f.enemy)) {
         this.fofShown.add('e:' + f.enemy);

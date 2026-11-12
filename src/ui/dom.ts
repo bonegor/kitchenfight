@@ -49,8 +49,11 @@ export class Nav {
   root: HTMLElement | null = null;
   cur: HTMLElement | null = null;
   onBack: (() => void) | null = null;
+  /** last mouse-wheel turn: content scrolling under a still pointer is not a hover */
+  private wheelAt = -1e9;
 
   constructor() {
+    document.addEventListener('wheel', () => (this.wheelAt = performance.now()), { passive: true, capture: true });
     // Tab / Shift+Tab move DOM focus: let the highlight follow, so Enter activates what is outlined
     document.addEventListener('focusin', (e) => {
       const t = e.target as HTMLElement | null;
@@ -86,7 +89,7 @@ export class Nav {
     if ((el as any)._navWired) return;
     (el as any)._navWired = true;
     el.addEventListener('mouseenter', () => {
-      if (el.hasAttribute('data-nav')) this.focus(el, true);
+      if (el.hasAttribute('data-nav') && performance.now() - this.wheelAt > 500) this.focus(el, true);
     });
   }
 

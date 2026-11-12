@@ -10,7 +10,9 @@ import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
-import { STAGES, stageById, isDishUnlocked, unlockText } from '../game/stages';
+import { STAGES, COURSES, stageById, isDishUnlocked, unlockText, dishesWon, type StageDef } from '../game/stages';
+import { RECIPES, recipeById, dishesForIntruder, type RecipeDef, type RecipeIntruder } from '../game/recipes';
+import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
 import type { SaveData } from '../core/save';
@@ -40,6 +42,25 @@ function icon(id: string): string {
 
 const COIN = () => icon('icon.coin');
 
+type CollTab = 'recipes' | 'crimes' | 'weapons' | 'passives' | 'records';
+
+/** Strip case, accents and punctuation: names compare the way a reader sees them. */
+const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/**
+ * The English line under an Italian name, or null when it would only repeat it
+ * ("Spaghetti / Spaghetti", "Tonnarelli Cacio e Pepe / Cacio e pepe"). When the English is the
+ * Italian plus a gloss in brackets, only the gloss is kept ("Guanciale" → "cured pork cheek").
+ */
+export function enLine(it: string, en: string): string | null {
+  const a = new Set(norm(it).split(' ')), b = norm(en).split(' ').filter(Boolean);
+  // every English word is already in the Italian name ("Margherita pizza", "Cacio e pepe")
+  if (!b.length || b.every((w) => a.has(w))) return null;
+  const m = /^(.*?)\s*\((.+)\)\s*$/.exec(en);
+  if (m && norm(m[1]) === norm(it)) return m[2];
+  return en;
+}
+
 export class UI {
   root: HTMLElement;
   nav = new Nav();
@@ -62,6 +83,23 @@ export class UI {
     this.root = document.getElementById('ui')!;
     this.selectedChar = app.save.lastChar;
     this.selectedStage = app.save.lastStage;
+    this.applyScale();
+    window.addEventListener('resize', () => this.applyScale());
+  }
+
+  /**
+   * Big windows (1440p, 4K at 100 %): scale the whole DOM UI with CSS zoom, so menus and HUD
+   * don't shrink to a corner of the screen. Up to 1080p the UI keeps its own size (z = 1);
+   * above that it grows gently (1440p ≈ 1.55, 4K 2.5). A browser zoomed out (devicePixelRatio
+   * below 1) is the player's choice, so it is left alone. main.css divides its viewport
+   * units by --z, so they still mean "a share of the window".
+   */
+  private applyScale() {
+    const k = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    let z = k <= 1.5 ? 1 : Math.min(2.5, Math.round((1 + (k - 1.5) * 1.1) * 20) / 20);
+    if (window.devicePixelRatio < 0.95) z = 1;
+    if (typeof CSS === 'undefined' || !CSS.supports?.('zoom', '2')) z = 1;
+    this.root.style.setProperty('--z', String(z));
   }
 
   // ------------------------------------------------------------------ infra
@@ -108,10 +146,15 @@ export class UI {
       inp.consume('back');
       return;
     }
-    if (inp.consume('up')) this.nav.move(0, -1);
-    if (inp.consume('down')) this.nav.move(0, 1);
-    if (inp.consume('left')) { if (!this.nav.adjust(-1)) this.nav.move(-1, 0); }
-    if (inp.consume('right')) { if (!this.nav.adjust(1)) this.nav.move(1, 0); }
+    const move = (dx: number, dy: number) => {
+      if (dx && this.nav.adjust(dx)) return;
+      if (this.menuMove(dx, dy) || this.collMove(dx, dy)) return;
+      this.nav.move(dx, dy);
+    };
+    if (inp.consume('up')) move(0, -1);
+    if (inp.consume('down')) move(0, 1);
+    if (inp.consume('left')) move(-1, 0);
+    if (inp.consume('right')) move(1, 0);
     if (inp.consume('confirm')) this.nav.activate();
     if (inp.consume('back')) {
       if (this.nav.onBack) {
@@ -124,6 +167,220 @@ export class UI {
       if (inp.consume('skip')) (this.overlay?.querySelector('[data-act=skip]') as HTMLElement | null)?.click();
       if (inp.consume('banish')) (this.overlay?.querySelector('[data-act=banish]') as HTMLElement | null)?.click();
     }
+  }
+
+  /**
+   * Il Menù: up / down go to the dish card straight above / below (the one whose column
+   * overlaps), so the wide finale card and the next course are not skipped for the Back
+   * button. Left / right go to the card beside it on the same row, else to the previous /
+   * next card in reading order (never to a faraway card or the Back button).
+   * False = not on a card, or no card below / above: the normal spatial move takes over.
+   */
+  private menuMove(dx: number, dy: number): boolean {
+    const cur = this.nav.cur;
+    if (this.current !== 'stageselect' || !cur?.classList.contains('dish-card') || !this.screen) return false;
+    const cards = Array.from(this.screen.querySelectorAll<HTMLElement>('.dish-card'));
+    const r0 = cur.getBoundingClientRect();
+    const cx0 = (r0.left + r0.right) / 2;
+    let best: HTMLElement | null = null, bestD = Infinity;
+    for (const el of cards) {
+      if (el === cur) continue;
+      const r = el.getBoundingClientRect();
+      let d: number;
+      if (dy) {
+        const along = dy > 0 ? r.top - r0.bottom : r0.top - r.bottom;
+        if (along < -6) continue;
+        const overlap = Math.min(r.right, r0.right) - Math.max(r.left, r0.left);
+        d = along + Math.max(0, -overlap) * 3 + Math.abs((r.left + r.right) / 2 - cx0) * 0.1;
+      } else {
+        // same row: the two cards share most of their height
+        const vOverlap = Math.min(r.bottom, r0.bottom) - Math.max(r.top, r0.top);
+        if (vOverlap < Math.min(r.height, r0.height) * 0.5) continue;
+        const along = dx > 0 ? r.left - r0.right : r0.left - r.right;
+        if (along < -6) continue;
+        d = along;
+      }
+      if (d < bestD) {
+        bestD = d;
+        best = el;
+      }
+    }
+    if (!best && dx) best = cards[cards.indexOf(cur) + dx] ?? null;
+    if (best) this.nav.focus(best);
+    return !!best || !!dx;
+  }
+
+  /** The scroll box an element scrolls in (the nearest ancestor that actually scrolls). */
+  private scrollerOf(el: HTMLElement): HTMLElement | null {
+    let sc = el.parentElement;
+    while (sc && sc !== this.root && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
+    return sc && sc !== this.root ? sc : null;
+  }
+
+  /** Fraction (0..1) of an element's height that is inside its scroll box and the window. */
+  private visibleShare(el: HTMLElement): number {
+    const r = el.getBoundingClientRect();
+    if (!r.height) return 0;
+    const sc = this.scrollerOf(el);
+    const b = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    const vy = Math.min(r.bottom, b.bottom, window.innerHeight) - Math.max(r.top, b.top, 0);
+    return Math.max(0, vy) / Math.min(r.height, Math.max(1, b.bottom - b.top));
+  }
+
+  /** Centre the focused element in its scroll box (a screen opening on a card further down). */
+  private revealFocus() {
+    const el = this.nav.cur;
+    if (el && this.visibleShare(el) < 0.98) el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  }
+
+  /** Spatial pick among candidates (the same scoring as Nav.move). */
+  private pick(cur: HTMLElement, items: HTMLElement[], dx: number, dy: number): HTMLElement | null {
+    const r0 = cur.getBoundingClientRect();
+    const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+    let best: HTMLElement | null = null, bestScore = Infinity;
+    for (const el of items) {
+      if (el === cur) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) continue;
+      const vx = r.left + r.width / 2 - cx, vy = r.top + r.height / 2 - cy;
+      const along = vx * dx + vy * dy;
+      if (along <= 4) continue;
+      const score = along + Math.abs(vx * dy - vy * dx) * 2.2;
+      if (score < bestScore) {
+        bestScore = score;
+        best = el;
+      }
+    }
+    return best;
+  }
+
+  /** Top-level [data-nav] blocks of a Ricettario entry, in reading order (links inside a block excluded). */
+  private detailItems(detail: HTMLElement): HTMLElement[] {
+    return Array.from(detail.querySelectorAll<HTMLElement>('[data-nav]')).filter((el) => !el.parentElement?.closest('[data-nav]') || !detail.contains(el.parentElement!.closest('[data-nav]')));
+  }
+
+  /** The links inside a block (an intruder's source and crime card, a chef's links, the quote's source). */
+  private innerItems(block: HTMLElement): HTMLElement[] {
+    return Array.from(block.querySelectorAll<HTMLElement>('[data-nav]'));
+  }
+
+  private scrollAim: { el: HTMLElement; top: number; at: number } | null = null;
+
+  /** Scroll a box by about 60 % of its height (a held key keeps going from where the last press was heading). */
+  private scrollBox(sc: HTMLElement, dy: number) {
+    const now = performance.now();
+    const base = this.scrollAim && this.scrollAim.el === sc && now - this.scrollAim.at < 450 ? this.scrollAim.top : sc.scrollTop;
+    const top = Math.max(0, Math.min(sc.scrollHeight - sc.clientHeight, base + dy * Math.max(80, sc.clientHeight * 0.6)));
+    this.scrollAim = { el: sc, top, at: now };
+    sc.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  /**
+   * Il Ricettario: keyboard / gamepad moves that stay predictable.
+   * - In the list: arrows move between entries; Right (Down on phones, where the list is a strip)
+   *   steps into the entry; other moves only reach things that are on screen (tabs, Back).
+   * - In an entry: Up / Down walk its blocks in reading order (a block taller than the box is
+   *   scrolled through first); Left, or Up from the first block, goes back to the list entry.
+   *   Left / Right move along a row of chips, or into / along the links inside a block.
+   * - Never onto a list entry or block that is scrolled out of view (except the list's own
+   *   neighbours, which scroll in).
+   */
+  private collMove(dx: number, dy: number): boolean {
+    const cur = this.nav.cur;
+    if (this.current !== 'collection' || !cur || !this.screen) return false;
+    const list = this.screen.querySelector<HTMLElement>('.coll-list');
+    const detail = this.screen.querySelector<HTMLElement>('.coll-detail');
+    const stacked = matchMedia('(max-width: 720px)').matches;
+    const selItem = () => list?.querySelector<HTMLElement>('.coll-item.sel') ?? null;
+    if (detail && detail.contains(cur)) {
+      const tops = this.detailItems(detail);
+      const row = tops.includes(cur) ? cur : tops.find((t) => t.contains(cur)) ?? cur;
+      const inner = row !== cur;
+      if (dx) {
+        if (inner) {
+          const sibs = this.innerItems(row);
+          const next = sibs[sibs.indexOf(cur) + dx];
+          this.nav.focus(next ?? (dx < 0 ? row : cur));
+          return true;
+        }
+        // chips on one row (crimes: "Non appartiene a:"): the neighbour on the same line
+        const r0 = row.getBoundingClientRect();
+        const side = tops[tops.indexOf(row) + dx];
+        if (side) {
+          const r = side.getBoundingClientRect();
+          if (Math.min(r.bottom, r0.bottom) - Math.max(r.top, r0.top) > Math.min(r.height, r0.height) * 0.5) {
+            this.nav.focus(side);
+            return true;
+          }
+        }
+        if (dx < 0) {
+          const s = selItem();
+          if (s) this.nav.focus(s);
+        } else {
+          const first = this.innerItems(row)[0];
+          if (first) this.nav.focus(first);
+        }
+        return true;
+      }
+      // Up / Down: read a tall block through before moving on
+      const sc = this.scrollerOf(row);
+      if (sc) {
+        const r = row.getBoundingClientRect(), b = sc.getBoundingClientRect();
+        const bottom = Math.min(b.bottom, window.innerHeight), top = Math.max(b.top, 0);
+        if ((dy > 0 && r.bottom > bottom + 4 && r.top < bottom - 24) || (dy < 0 && r.top < top - 4 && r.bottom > top + 24)) {
+          this.scrollBox(sc, dy);
+          return true;
+        }
+      }
+      // the next block below / above (chips on the current line are skipped: they are Left / Right)
+      const r0 = row.getBoundingClientRect();
+      let j = tops.indexOf(row) + dy;
+      while (tops[j]) {
+        const r = tops[j].getBoundingClientRect();
+        if (Math.min(r.bottom, r0.bottom) - Math.max(r.top, r0.top) < Math.min(r.height, r0.height) * 0.5) break;
+        j += dy;
+      }
+      const next = tops[j];
+      // a smooth scroll still running (a held key) would carry the new block out of view again
+      if (sc && this.scrollAim?.el === sc) {
+        sc.scrollTo({ top: sc.scrollTop, behavior: 'instant' as ScrollBehavior });
+        this.scrollAim = null;
+      }
+      if (next) this.nav.focus(next);
+      else if (dy < 0) {
+        const s = selItem();
+        if (s) this.nav.focus(s);
+      } else if (sc && sc.scrollTop < sc.scrollHeight - sc.clientHeight - 1) this.scrollBox(sc, 1);
+      return true;
+    }
+    const visible = (el: HTMLElement) => this.visibleShare(el) > 0.3;
+    const all = Array.from(this.screen.querySelectorAll<HTMLElement>('[data-nav]'));
+    if (list && list.contains(cur)) {
+      const items = Array.from(list.querySelectorAll<HTMLElement>('[data-nav]'));
+      const best = this.pick(cur, items, dx, dy);
+      if (best) {
+        this.nav.focus(best);
+        return true;
+      }
+      if (detail && ((dx > 0 && !stacked) || (dy > 0 && stacked))) {
+        const first = this.detailItems(detail).find(visible) ?? this.detailItems(detail)[0];
+        if (first) {
+          this.nav.focus(first);
+          return true;
+        }
+      }
+      const out = this.pick(cur, all.filter((el) => !list.contains(el) && !detail?.contains(el) && visible(el)), dx, dy);
+      if (out) this.nav.focus(out);
+      return true;
+    }
+    // tabs and the Back button: anything on screen, never a hidden list entry or block
+    const best = this.pick(cur, all.filter((el) => (!list?.contains(el) && !detail?.contains(el)) || visible(el)), dx, dy);
+    if (best) {
+      // into the list: land on the selected entry when it is the one that way
+      const s = selItem();
+      this.nav.focus(s && list?.contains(best) && visible(s) && dy > 0 ? s : best);
+    }
+    return true;
   }
 
   private btn(label: string | Node, cls: string, onClick: () => void, sub?: string, attrs: Record<string, any> = {}) {
@@ -151,7 +408,7 @@ export class UI {
     const fill = h('i');
     const msg = h('div', { class: 'msg' }, 'Preheating the oven…');
     const el = h('div', { class: 'screen solid loading' },
-      h('div', { class: 'logo', style: { fontSize: 'clamp(48px,9vw,96px)' } }, h('span', { class: 'k' }, 'Kitchen '), h('span', { class: 'f' }, 'Fight!')),
+      h('div', { class: 'logo', style: { fontSize: 'clamp(48px, calc(9vw / var(--z, 1)), 96px)' } }, h('span', { class: 'k' }, 'Kitchen '), h('span', { class: 'f' }, 'Fight!')),
       h('div', { class: 'bar' }, fill),
       msg,
     );
@@ -213,7 +470,7 @@ export class UI {
       h('div', { class: 'menu-col' },
         this.btn('Gioca!', 'big', () => this.showCharSelect(), 'Play', { 'data-nav-default': '' }),
         this.btn('La Dispensa', 'green', () => this.showShop(), 'Pantry · Power-ups'),
-        this.btn('Il Ricettario', 'gold', () => this.showCollection(), 'Book of Crimes'),
+        this.btn('Il Ricettario', 'gold', () => this.showCollection(), 'Recipes & crimes'),
         h('div', { style: { display: 'flex', gap: '12px' } },
           this.btn('Opzioni', 'cream', () => this.showSettings(() => this.showTitle()), 'Settings', { style: 'flex:1' }),
           this.btn('Crediti', 'cream', () => this.showCredits(), 'Credits', { style: 'flex:1' }),
@@ -235,18 +492,21 @@ export class UI {
 
   showStory(next: () => void) {
     this.storySeen = true;
-    const lineup = ['enemy.ananas', 'enemy.panna', 'enemy.ketchup', 'enemy.forbici', 'enemy.spezzato', 'enemy.cappuccino', 'enemy.polpetta']
+    const lineup = ['enemy.panna', 'enemy.ananas', 'enemy.ketchup', 'enemy.bacon', 'enemy.cipolla', 'enemy.burro', 'enemy.polpetta']
       .filter((id) => hasSprite(id))
       .map((id) => img(spriteURL(id)));
     const row = h('div', { class: 'story-lineup' }, lineup);
+    const dishes = h('div', { class: 'story-dishes' },
+      ['carbonara', 'margherita', 'pesto'].map((id) => recipeById(id)).filter((r): r is RecipeDef => !!r).map((r) => img(icon(r.sprite), '', r.it)));
     const el = h('div', { class: 'screen dim' },
       h('div', { class: 'paper panel story', style: { width: 'min(720px,100%)' } },
         h('div', { class: 'checker checker-strip' }),
         h('div', { class: 'panel-body' },
           h('div', { class: 'story-kicker' }, 'Napoli, oggi.'),
-          h('p', {}, 'The internet has unleashed a plague of ', h('b', {}, 'culinary crimes'), ': cream in the carbonara, pineapple on the pizza, ketchup on the spaghetti, cappuccino after lunch…'),
+          h('p', {}, 'Every dish on Nonna’s menu has its ', h('b', {}, 'proper recipe'), '. But the internet keeps sneaking in ', h('b', {}, 'ingredients that do not belong'), ': cream in the carbonara, pineapple on the Margherita, ketchup on the spaghetti…'),
           row,
-          h('p', {}, 'They crawled out of viral videos and now they are marching on the kitchens of Italy. Only one brigade stands in their way.'),
+          dishes,
+          h('p', {}, 'Cook your way through ', h('b', {}, 'Il Menù'), ': pick up the real ingredients, throw out the intruders, and serve every dish the way Italy makes it.'),
           h('p', { class: 'story-quote' }, '«Non si fa!» — Nonna'),
         ),
         h('div', { class: 'panel-foot' }, this.btn('Andiamo! ▶', 'big green', next, "Let's go", { 'data-nav-default': '' })),
@@ -335,7 +595,7 @@ export class UI {
   }
 
   showStageSelect() {
-    const grid = h('div', { class: 'stage-grid' });
+    const save = this.app.save;
     if (!this.isStageUnlocked(this.selectedStage)) this.selectedStage = STAGES[0].id;
     audio.preload([stageById(this.selectedStage).music]).catch(() => undefined);
     // Warm the music of the stage the player is looking at. Debounced: the render worker can't
@@ -348,56 +608,123 @@ export class UI {
       }, 300);
     };
     const char = charById(this.selectedChar);
-    for (const st of STAGES) {
-      const unlocked = this.isStageUnlocked(st.id);
-      const rec = this.app.save.records[st.id];
-      const cv = h('canvas', { width: 460, height: 260 }) as HTMLCanvasElement;
-      const card = h('div', { class: 'stage-card' + (unlocked ? '' : ' locked'), 'data-nav': '', ...(st.id === this.selectedStage ? { 'data-nav-default': '' } : {}) },
-        cv,
-        h('div', { class: 'info' },
-          h('div', { class: 'num' }, `${st.num} · ${st.course} · ${st.subtitle}`),
-          h('h3', {}, st.name),
-          h('p', {}, st.desc),
-          unlocked
-            ? h('div', { class: 'rec' },
-                h('span', { class: 'tag' }, '⏱ ' + formatTime(rec?.bestTime ?? 0)),
-                h('span', { class: 'tag green' }, '🏆 ' + (rec?.wins ?? 0)),
-                h('span', { class: 'tag red' }, '🍴 ' + (rec?.bestKills ?? 0)),
-                rec?.perfect ? h('span', { class: 'tag' }, '★ Ricetta completa') : null,
-              )
-            : h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st)),
-        ),
-      );
-      setTimeout(() => renderStagePreview(cv, st, char.sprite), 0);
-      card.addEventListener('navfocus', () => {
-        this.selectedStage = st.id;
-        if (unlocked) warm(st.id);
-      });
-      card.addEventListener('click', () => {
-        if (!unlocked) {
-          audio.sfx('ui_error');
-          return;
-        }
-        clearTimeout(warmT);
-        audio.preload([st.music]).catch(() => undefined); // renders while the run loads
-        audio.sfx('ui_confirm');
-        this.selectedStage = st.id;
-        this.app.save.lastChar = this.selectedChar;
-        this.app.save.lastStage = st.id;
-        this.app.persist();
-        this.app.startRun(this.selectedChar, st.id);
-      });
-      grid.appendChild(card);
+    const won = dishesWon(save);
+    const perfect = STAGES.filter((st) => save.records[st.id]?.perfect).length;
+    const courses = h('div', { class: 'menu-courses' });
+    let n = 0;
+    for (const course of COURSES) {
+      const stages = STAGES.filter((st) => st.course === course);
+      if (!stages.length) continue;
+      const cards = h('div', { class: 'course-cards' });
+      courses.appendChild(h('section', { class: 'course' + (stages.length === 1 ? ' single' : ''), style: `--n:${stages.length}` },
+        h('div', { class: 'course-head' }, h('h3', {}, course), h('span', { class: 'en' }, COURSE_EN[course] ?? '')),
+        cards,
+      ));
+      for (const st of stages) {
+        const unlocked = this.isStageUnlocked(st.id);
+        const card = this.dishCard(st, char.sprite, won, n++);
+        card.addEventListener('navfocus', () => {
+          this.selectedStage = st.id;
+          if (unlocked) warm(st.id);
+        });
+        card.addEventListener('click', () => {
+          if (!unlocked) {
+            audio.sfx('ui_error');
+            return;
+          }
+          clearTimeout(warmT);
+          audio.preload([st.music]).catch(() => undefined); // renders while the run loads
+          audio.sfx('ui_confirm');
+          this.selectedStage = st.id;
+          save.lastChar = this.selectedChar;
+          save.lastStage = st.id;
+          this.app.persist();
+          this.app.startRun(this.selectedChar, st.id);
+        });
+        cards.appendChild(card);
+      }
     }
-    const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel' },
+    const el = h('div', { class: 'screen dim menu-screen' },
+      h('div', { class: 'paper panel menu-panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-head' }, h('h2', {}, 'Il Menù'), h('span', { class: 'sub' }, `Chef: ${char.name} — choose your dish`)),
-        h('div', { class: 'panel-body' }, grid),
+        h('div', { class: 'panel-head' },
+          h('div', {}, h('h2', {}, 'Il Menù'), h('div', { class: 'sub' }, 'Choose your dish')),
+          h('div', { class: 'menu-meta' },
+            h('span', { class: 'chef-chip' }, img(icon(char.sprite)), char.name),
+            h('span', { class: 'tag green', title: 'Dishes won' }, `🏆 ${won}/${STAGES.length}`),
+            h('span', { class: 'tag gold', title: 'Recipes completed' }, `★ ${perfect}`),
+          ),
+        ),
+        h('div', { class: 'panel-body menu-scroll' }, courses),
         h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', () => this.showCharSelect(), 'Back')),
       ),
     );
     this.show(el, 'stageselect', () => this.showCharSelect());
+    // after a win the default card is the newly unlocked dish, often further down: show it
+    this.revealFocus();
+  }
+
+  /** One dish of Il Menù: its art over its arena, names, origin, real ingredients, intruders, records. */
+  private dishCard(st: StageDef, chefSprite: string, won: number, n: number): HTMLElement {
+    const save = this.app.save;
+    const r = recipeById(st.recipe);
+    const unlocked = this.isStageUnlocked(st.id);
+    const rec = save.records[st.id];
+    const cv = h('canvas', { width: 480, height: 270 }) as HTMLCanvasElement;
+    setTimeout(() => renderStagePreview(cv, st, chefSprite, { ring: true }), 30 + n * 40);
+    const pic = h('div', { class: 'dish-pic' },
+      cv,
+      r ? img(icon(r.sprite), 'dish-art', r.it) : null,
+      h('span', { class: 'dish-num' }, String(st.num)),
+      rec?.perfect ? h('span', { class: 'perfect-badge', title: 'Ricetta completa' }, '★') : null,
+    );
+    const titled = (src: string, cls: string, title: string) => {
+      const im = img(icon(src), cls, title);
+      im.title = title;
+      return im;
+    };
+    // up to 6 intruders fit a menu card; beyond that 5 + "+N" (a wide card shows them all, via CSS)
+    const MAXI = 6;
+    const intr = r?.intruders ?? [];
+    const cut = intr.length > MAXI ? MAXI - 1 : intr.length;
+    const rows = r ? [
+      h('div', { class: 'icon-row ok', title: 'Ingredienti veri: the real ingredients' },
+        h('span', { class: 'lbl' }, '✓'),
+        r.ingredients.map((i) => titled(i.sprite, 'ing', i.it)),
+      ),
+      h('div', { class: 'icon-row no', title: 'Intrusi: ingredients that do not belong' },
+        h('span', { class: 'lbl' }, '✗'),
+        intr.map((i, k) => titled(ENEMIES[i.enemy]?.sprite ?? '', k < cut ? 'foe' : 'foe x', i.it)),
+        cut < intr.length ? h('span', { class: 'more' }, '+' + (intr.length - cut)) : null,
+      ),
+    ] : [];
+    let foot: HTMLElement;
+    if (!unlocked) {
+      const u = st.unlock;
+      foot = h('div', { class: 'lock-note' }, '🔒 ' + unlockText(st) + (u && 'wins' in u ? ` (${Math.min(won, u.wins)}/${u.wins})` : ''));
+    } else if (!rec) {
+      foot = h('div', { class: 'rec' }, h('span', { class: 'tag new' }, '✨ Nuovo! Not cooked yet'));
+    } else {
+      foot = h('div', { class: 'rec' },
+        h('span', { class: 'tag', title: 'Best time' }, '⏱ ' + formatTime(rec.bestTime ?? 0)),
+        h('span', { class: 'tag green', title: 'Wins' }, '🏆 ' + (rec.wins ?? 0)),
+        h('span', { class: 'tag red', title: 'Best kills' }, '🍴 ' + (rec.bestKills ?? 0)),
+        rec.perfect ? h('span', { class: 'tag gold', title: 'Every real ingredient collected' }, '★ Ricetta completa') : null,
+      );
+    }
+    // the card is the size container (container queries pick a vertical or a side-by-side layout)
+    return h('div', { class: 'dish-card' + (unlocked ? '' : ' locked') + (st.id === 'foodcourt' ? ' finale' : ''), 'data-nav': '', ...(st.id === this.selectedStage ? { 'data-nav-default': '' } : {}) },
+      h('div', { class: 'dc' },
+        pic,
+        h('div', { class: 'dish-info' },
+          h('h4', {}, st.name),
+          enLine(st.name, st.subtitle) ? h('div', { class: 'en' }, enLine(st.name, st.subtitle)) : null,
+          r ? h('div', { class: 'origin' }, '📍 ' + shortOrigin(r)) : null,
+          rows,
+          foot,
+        ),
+      ),
+    );
   }
 
   // ------------------------------------------------------------------ HUD
@@ -424,9 +751,20 @@ export class UI {
       this.showPause();
     });
     pause.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-    const hud = h('div', { id: 'hud' },
+    // the dish being cooked: its art + one badge per real ingredient (grey until collected)
+    const recipe = run.recipe;
+    const ingSlots = recipe ? recipe.ingredients.map((ing) => h('span', { class: 'ri' }, img(icon(ing.sprite), '', ing.it), h('b', { class: 'ck' }, '✓'))) : [];
+    const strip = recipe
+      ? h('div', { class: 'recipe-strip' + (recipe.ingredients.length > 5 ? ' six' : '') },
+          img(icon(recipe.sprite), 'rs-dish', recipe.it),
+          ingSlots,
+          h('span', { class: 'rs-star' }, '★'),
+        )
+      : null;
+    const hud = h('div', { id: 'hud', class: strip ? 'has-recipe' : '' },
       h('div', { class: 'xpbar' }, xpFill, lv),
       timer,
+      strip,
       h('div', { class: 'hud-left' }, wslots, pslots),
       h('div', { class: 'hud-right' },
         h('div', { class: 'hud-stat' }, img(icon('icon.kill')), kills),
@@ -441,9 +779,18 @@ export class UI {
     this.root.appendChild(hud);
     this.hud = hud;
     this.toastsEl = toasts;
-    this.hudRefs = { xpFill, lv, timer, kills, coins, wslots, pslots, boss, bossName, bossFill, fps };
+    this.hudRefs = { xpFill, lv, timer, kills, coins, wslots, pslots, boss, bossName, bossFill, fps, strip, ingSlots };
     this.lastHud = {};
     this.bossTracked = null;
+    this.bannerQ = [];
+    this.bannerHeldUntil = 0;
+    this.bannerCur = null;
+    this.hudClock = 0;
+    this.hudLastT = performance.now();
+    this.toastList = [];
+    this.toastWait = [];
+    this.toastHoldUntil = 0;
+    this.nextToastAt = 0;
   }
 
   removeHud() {
@@ -455,6 +802,16 @@ export class UI {
     const r = this.hudRefs;
     if (!this.hud) return;
     const L = this.lastHud;
+    // banners and toasts run on game time: they wait behind a level-up, a chest or the pause menu
+    const now = performance.now();
+    const live = run.state === 'playing';
+    if (live) this.hudClock += Math.min(0.1, Math.max(0, (now - this.hudLastT) / 1000));
+    this.hudLastT = now;
+    if (L.live !== live) {
+      L.live = live;
+      this.hud.classList.toggle('frozen', !live);
+    }
+    this.tickMessages();
     const xpk = clamp(run.xp / run.xpNext, 0, 1);
     const xpPct = Math.round(xpk * 1000) / 10;
     if (L.xp !== xpPct) { r.xpFill.style.width = xpPct + '%'; L.xp = xpPct; }
@@ -485,6 +842,33 @@ export class UI {
           : h('div', { class: 'slot passive empty' }));
       }
     }
+    // recipe strip: ✓ pops on collect, a green pulse on the ingredient that is on the map now
+    if (r.strip) {
+      const got = run.recipeGot.map((g) => (g ? 1 : 0)).join('') + (run.recipeComplete ? '*' : '');
+      if (L.rg !== got) {
+        const first = L.rg === undefined;
+        L.rg = got;
+        run.recipeGot.forEach((g, i) => {
+          const el = r.ingSlots[i] as HTMLElement | undefined;
+          if (!el || el.classList.contains('got') === g) return;
+          el.classList.toggle('got', g);
+          if (g && !first) {
+            el.classList.remove('pop');
+            void el.offsetWidth; // restart the animation
+            el.classList.add('pop');
+          }
+        });
+        r.strip.classList.toggle('complete', run.recipeComplete);
+      }
+      if ((L.mapT = (L.mapT ?? 0) + 1) % 12 === 1) {
+        let onMap = -1;
+        for (const p of run.pickups) if (p.alive && p.kind === 'ingredient') { onMap = p.value; break; }
+        if (L.onMap !== onMap) {
+          L.onMap = onMap;
+          (r.ingSlots as HTMLElement[]).forEach((el, i) => el.classList.toggle('onmap', i === onMap));
+        }
+      }
+    }
     // boss bar
     const b = run.bosses.find((e) => e.alive) ?? null;
     if (b !== this.bossTracked) {
@@ -504,10 +888,46 @@ export class UI {
 
   toast(text: string, kind: 'info' | 'warn' | 'good' = 'info') {
     if (!this.toastsEl) return;
-    const t = h('div', { class: 'toast ' + kind }, text);
+    // the run-start dish banner covers the toast area: wait for it (then one every 0.7 s)
+    if (this.hudClock < this.toastHoldUntil || this.toastWait.length) {
+      if (this.toastWait.length < 6) this.toastWait.push({ text, kind });
+      return;
+    }
+    this.putToast(text, kind);
+  }
+
+  private putToast(text: string, kind: 'info' | 'warn' | 'good') {
+    if (!this.toastsEl) return;
+    // first sightings: "Panna nella Carbonara? NO!" in bold, the reason after it
+    const m = /^(.{2,60}\? NO!)\s+(.+)$/.exec(text);
+    const t = h('div', { class: 'toast ' + kind }, m ? [h('b', {}, m[1]), ' ', m[2]] : text);
     this.toastsEl.appendChild(t);
-    while (this.toastsEl.children.length > 3) this.toastsEl.firstChild?.remove();
-    setTimeout(() => t.remove(), 3700);
+    // a short (landscape phone) screen keeps two: a third would reach down to the chef
+    const max = window.innerHeight / (parseFloat(this.root.style.getPropertyValue('--z')) || 1) <= 520 ? 2 : 3;
+    while (this.toastsEl.children.length > max) this.toastsEl.firstChild?.remove();
+    this.toastList.push({ el: t, endT: this.hudClock + 3.7 });
+  }
+
+  /** Expire toasts and banners, show the next waiting ones (game time, see updateHud). */
+  private tickMessages() {
+    const c = this.hudClock;
+    if (this.toastList.length && this.toastList[0].endT <= c) {
+      for (const t of this.toastList) if (t.endT <= c) t.el.remove();
+      this.toastList = this.toastList.filter((t) => t.endT > c);
+    }
+    if (this.toastWait.length && c >= this.toastHoldUntil && c >= this.nextToastAt) {
+      const t = this.toastWait.shift()!;
+      this.putToast(t.text, t.kind);
+      this.nextToastAt = c + 0.7;
+    }
+    if (this.bannerCur && c >= this.bannerCur.endT) {
+      this.bannerCur.el.remove();
+      this.bannerCur = null;
+    }
+    if (this.bannerQ.length && c >= this.bannerHeldUntil) {
+      const next = this.bannerQ.shift()!;
+      this.putBanner(next.make, next.ms, next.kind);
+    }
   }
 
   /** Shown when audio is still locked (e.g. gamepad-only start); goes away once sound runs. */
@@ -529,23 +949,69 @@ export class UI {
     for (const ev of evs) document.addEventListener(ev, onGesture, { passive: true });
   }
 
-  /** One banner at a time: a new one replaces the one on screen, except that a boss banner
-   *  is not cut short (a plain banner waits for it to finish). */
-  banner(text: string, sub = '', boss = false) {
-    const hud = this.hud;
-    if (!hud) return;
-    const wait = boss ? 0 : this.bossBannerUntil - performance.now();
-    if (wait > 0) {
-      setTimeout(() => this.hud === hud && this.banner(text, sub, boss), wait);
+  /**
+   * One banner at a time. A new banner replaces the one on screen, except that a "held" banner
+   * (boss, dish, recipe complete) is not cut short: a plain or held banner waits for it to end.
+   * Only a boss banner always shows at once (it replaces even a held one).
+   * opt.icon: a sprite shown beside the text (ingredient badge, plated dish).
+   * Timed on game time: a banner waits behind a level-up or the pause menu.
+   */
+  banner(text: string, sub = '', boss = false, opt: { icon?: string; cls?: string; ms?: number; hold?: boolean } = {}) {
+    const make = () => h('div', { class: 'big-banner' + (boss ? ' boss' : '') + (opt.cls ? ' ' + opt.cls : '') },
+      opt.icon ? h('span', { class: 'bn-ico' }, img(icon(opt.icon))) : null,
+      h('span', { class: 'bn-t' }, text),
+      sub ? h('small', {}, sub) : null,
+    );
+    this.showBanner(make, opt.ms ?? 2500, boss ? 'boss' : opt.hold ? 'hold' : 'plain');
+  }
+
+  /** Run start: the plated dish, its name and its real ingredients ("Ingredienti veri"). */
+  dishBanner(run: Run) {
+    const r = run.recipe;
+    if (!r) {
+      this.banner(run.stage.name, run.stage.subtitle + ' — survive 15:00', false, { hold: true, ms: 3000 });
       return;
     }
-    hud.querySelectorAll('.big-banner').forEach((el) => el.remove());
-    if (boss) this.bossBannerUntil = performance.now() + 2500;
-    const b = h('div', { class: 'big-banner' + (boss ? ' boss' : '') }, text, sub ? h('small', {}, sub) : null);
-    hud.appendChild(b);
-    setTimeout(() => b.remove(), 2500);
+    const make = () => h('div', { class: 'big-banner dish-banner n' + r.ingredients.length },
+      img(icon(r.sprite), 'db-art', r.it),
+      h('div', { class: 'db-txt' },
+        h('div', { class: 'db-name' }, r.it),
+        h('div', { class: 'db-lbl' }, 'Ingredienti veri'),
+        h('div', { class: 'db-ings' }, r.ingredients.map((i) => h('div', { class: 'db-ing' }, h('span', { class: 'badge' }, img(icon(i.sprite), '', i.it)), h('span', { class: 'nm' }, i.it)))),
+      ),
+    );
+    this.showBanner(make, 4200, 'hold');
+    // the banner sits where the toasts appear: they wait until it is gone
+    this.toastHoldUntil = this.hudClock + 4.2;
   }
-  private bossBannerUntil = 0;
+
+  private showBanner(make: () => HTMLElement, ms: number, kind: 'plain' | 'hold' | 'boss') {
+    if (!this.hud) return;
+    if (kind === 'boss' || (this.hudClock >= this.bannerHeldUntil && !this.bannerQ.length)) this.putBanner(make, ms, kind);
+    else this.bannerQ.push({ make, ms, kind }); // tickMessages shows it when the held one is done
+  }
+
+  private putBanner(make: () => HTMLElement, ms: number, kind: 'plain' | 'hold' | 'boss') {
+    const hud = this.hud;
+    if (!hud) return;
+    hud.querySelectorAll('.big-banner').forEach((el) => el.remove());
+    // a plain banner can be replaced at once, unless others are waiting: then it gets 1.5 s
+    this.bannerHeldUntil = this.hudClock + (kind !== 'plain' ? ms : this.bannerQ.length ? 1500 : 0) / 1000;
+    const b = make();
+    b.style.animationDuration = (ms - 100) / 1000 + 's';
+    hud.appendChild(b);
+    this.bannerCur = { el: b, endT: this.hudClock + ms / 1000 };
+  }
+  // banner and toast timing, in seconds of game time (hudClock only runs while playing)
+  private hudClock = 0;
+  private hudLastT = 0;
+  private bannerHeldUntil = 0;
+  private bannerQ: { make: () => HTMLElement; ms: number; kind: 'plain' | 'hold' | 'boss' }[] = [];
+  private bannerCur: { el: HTMLElement; endT: number } | null = null;
+  private toastList: { el: HTMLElement; endT: number }[] = [];
+  private toastWait: { text: string; kind: 'info' | 'warn' | 'good' }[] = [];
+  private toastHoldUntil = 0;
+  private nextToastAt = 0;
 
   // ------------------------------------------------------------------ level up
 
@@ -802,23 +1268,44 @@ export class UI {
     const lines = victory
       ? ['Tradition is safe — for tonight.', 'Nonna would be proud.', run.recipe && run.recipe.id !== 'foodcourt' ? `The ${run.recipe.it} stays pure.` : 'Italian cooking stays pure.', 'Bravissimo, Chef!']
       : ['The crimes got into the kitchen…', 'Somebody put cream in it. Again.', 'Even Nonna is speechless.', 'Next time, al dente.'];
+    // the dish: which real ingredients made it into the pot
+    const r = run.recipe;
+    const got = run.ingredientsGot(), m = run.recipeGot.length;
+    const dishRow = r
+      ? h('div', { class: 'res-dish' + (run.recipeComplete ? ' complete' : '') },
+          img(icon(r.sprite), 'res-dish-art', r.it),
+          h('div', { class: 'res-dish-info' },
+            h('div', { class: 'nm' }, r.it),
+            h('div', { class: 'res-ings' }, r.ingredients.map((ing, i) => {
+              const s = h('span', { class: 'ri' + (run.recipeGot[i] ? ' got' : '') }, img(icon(ing.sprite), '', ing.it), h('b', { class: 'ck' }, '✓'));
+              s.title = ing.it + (run.recipeGot[i] ? ' ✓' : ' (missed)');
+              return s;
+            })),
+            run.recipeComplete
+              ? h('div', { class: 'cnt done' }, '★ Ricetta completa')
+              : h('div', { class: 'cnt' }, `${got}/${m} ingredienti`, h('span', { class: 'sub' }, got ? ' · find them all for ★' : ' · follow the green arrow')),
+          ),
+        )
+      : null;
     const el = h('div', { class: 'screen dim results' },
       h('div', { class: 'res-title ' + (victory ? 'win' : 'lose') }, victory ? 'Vittoria!' : 'Mamma Mia!'),
       h('div', { class: 'res-sub' }, lines[Math.floor(Math.random() * lines.length)]),
       h('div', { class: 'paper panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-body' },
+        h('div', { class: 'panel-body', 'data-nav-scroll': '' },
+          dishRow,
           h('div', { class: 'stats-row' },
             h('div', { class: 'stat-box' + (newRecord ? ' record' : '') }, h('div', { class: 'v' }, formatTime(run.time)), h('div', { class: 'k' }, newRecord ? '★ New record!' : 'Survived')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, String(run.level)), h('div', { class: 'k' }, 'Level')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, run.kills.toLocaleString()), h('div', { class: 'k' }, 'Crimes stopped')),
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, '+' + run.coins), h('div', { class: 'k' }, 'Coins')),
           ),
+          // what this service earned comes before the weapon table (the body scrolls, the buttons stay)
+          unlocks.length ? h('div', { class: 'unlock-list' }, unlocks.map((u) => h('div', { class: 'unlock' }, img(icon(u.icon)), h('b', {}, u.text)))) : null,
           h('table', { class: 'dmg' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Weapon'), h('th', {}, 'Lv'), h('th', {}, 'Damage'), h('th', {}, 'Kills'), h('th', {}, 'DPS'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Weapon'), h('th', { class: 'num' }, 'Lv'), h('th', { class: 'num' }, 'Damage'), h('th', { class: 'num' }, 'Kills'), h('th', { class: 'num' }, 'DPS'))),
             h('tbody', {}, rows),
           ),
-          unlocks.length ? h('div', { class: 'unlock-list' }, unlocks.map((u) => h('div', { class: 'unlock' }, img(icon(u.icon)), h('b', {}, u.text)))) : null,
         ),
         h('div', { class: 'panel-foot' },
           this.btn('↻ Ancora', 'green', () => this.app.startRun(run.char.id, run.stage.id), 'Play again', { 'data-nav-default': '' }),
@@ -903,7 +1390,11 @@ export class UI {
 
   // ------------------------------------------------------------------ collection
 
-  showCollection(tab: 'crimes' | 'weapons' | 'passives' | 'records' = 'crimes') {
+  /**
+   * @param focus a dish id (recipes tab) or an enemy id (crimes tab) to open on
+   * @param back where Back / Esc returns to (a crime's dish chip → the recipe → back to the crime)
+   */
+  showCollection(tab: CollTab = 'recipes', focus?: string, back?: { tab: CollTab; focus?: string }) {
     const s = this.app.save;
     const seen = new Set(s.seen);
     const list = h('div', { class: 'coll-list' });
@@ -914,6 +1405,7 @@ export class UI {
       t.addEventListener('click', () => { audio.sfx('ui_click'); this.showCollection(id); });
       tabs.appendChild(t);
     };
+    mk('recipes', '🍝 Ricette');
     mk('crimes', '🍍 Crimini');
     mk('weapons', '🔪 Armi');
     mk('passives', '🧄 Ingredienti');
@@ -932,16 +1424,76 @@ export class UI {
       if (shown < want) sc.scrollBy({ top: want - shown, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     };
     let body: HTMLElement;
-    if (tab === 'crimes') {
+    const leave = back ? () => this.showCollection(back.tab, back.focus) : () => this.showTitle();
+    // Esc: from a link inside a block to the block, from an entry to its list item, then out
+    const onBack = () => {
+      const cur = this.nav.cur;
+      if (cur && detail.contains(cur)) {
+        const tops = this.detailItems(detail);
+        const row = tops.includes(cur) ? null : tops.find((t) => t.contains(cur));
+        const to = row ?? list.querySelector<HTMLElement>('.coll-item.sel');
+        if (to) {
+          this.nav.focus(to, false);
+          return;
+        }
+      }
+      leave();
+    };
+    // keyboard / gamepad Enter on a list entry (an untrusted click) steps into the entry
+    const stepIn = (e: Event, to: HTMLElement | null | undefined) => {
+      if (!e.isTrusted && to) this.nav.focus(to, false);
+    };
+    if (tab === 'recipes') {
+      // dish list → the proper recipe (the detail scrolls on its own; Enter walks into it)
+      list.classList.add('dishes');
+      detail.classList.add('recipe');
+      detail.setAttribute('data-nav-scroll', '');
+      const start = recipeById(focus ?? '') ? focus! : recipeById(this.selectedStage) ? this.selectedStage : RECIPES[0].id;
+      let selItem: HTMLElement | null = null;
+      for (const r of RECIPES) {
+        const it = h('div', { class: 'coll-item dish', 'data-nav': '', ...(r.id === start ? { 'data-nav-default': '' } : {}) },
+          img(icon(r.sprite), '', r.it),
+          h('span', { class: 'cap' }, shortDishName(r)),
+          s.records[r.id]?.perfect ? h('span', { class: 'star' }, '★') : null,
+        );
+        it.title = r.it;
+        const select = () => {
+          if (selItem === it) return;
+          selItem?.classList.remove('sel');
+          selItem = it;
+          it.classList.add('sel');
+          this.renderRecipe(detail, r);
+        };
+        it.addEventListener('navfocus', select);
+        it.addEventListener('click', (e) => {
+          select();
+          if (e.isTrusted) revealDetail();
+          // keyboard / gamepad: step into the recipe (down then walks through it)
+          stepIn(e, this.detailItems(detail)[0]);
+        });
+        list.appendChild(it);
+        if (r.id === start) {
+          selItem = it;
+          it.classList.add('sel');
+        }
+      }
+      this.renderRecipe(detail, recipeById(start)!, false);
+      body = h('div', { class: 'coll recipes' }, list, detail);
+    } else if (tab === 'crimes') {
       const ids = [...REGULAR_ENEMY_IDS, ...BOSS_IDS];
       const showE = (id: string) => {
         const d = ENEMIES[id];
         const known = seen.has('e:' + id);
+        list.querySelectorAll('.coll-item.sel').forEach((x) => x.classList.remove('sel'));
+        list.children[ids.indexOf(id)]?.classList.add('sel');
         detail.innerHTML = '';
         if (!known) {
           detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, 'Not yet encountered. Keep cooking.'));
+          this.nav.refresh();
           return;
         }
+        // the dishes this crime does not belong in: chips that open the recipe
+        const dishes = dishesForIntruder(id);
         detail.append(
           img(icon(d.sprite), 'big'),
           h('h3', {}, d.name),
@@ -950,17 +1502,34 @@ export class UI {
           h('div', { class: 'kv' }, 'Severity ', sev(d.info.severity), h('span', { class: 'sub' }, ` · defeated ${s.kills[id] ?? 0}×`)),
           h('p', { class: 'why' }, d.info.why),
           d.info.quote ? h('blockquote', {}, d.info.quote) : '',
+          dishes.length
+            ? h('div', { class: 'not-in' },
+                h('span', { class: 'lbl' }, 'Non appartiene a:'),
+                dishes.map((r) => {
+                  const c = h('span', { class: 'dish-chip', 'data-nav': '' }, img(icon(r.sprite), '', r.it), shortDishName(r));
+                  c.title = `${r.it}: open the recipe`;
+                  c.addEventListener('click', () => { audio.sfx('ui_click'); this.showCollection('recipes', r.id, { tab: 'crimes', focus: id }); });
+                  return c;
+                }),
+              )
+            : '',
         );
+        this.nav.refresh();
       };
-      ids.forEach((id, i) => {
+      const start = focus && ids.includes(focus) ? focus : ids[0];
+      ids.forEach((id) => {
         const d = ENEMIES[id];
         const known = seen.has('e:' + id);
-        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
+        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(id === start ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
         it.addEventListener('navfocus', () => showE(id));
-        it.addEventListener('click', () => { showE(id); revealDetail(); });
+        it.addEventListener('click', (e) => {
+          showE(id);
+          if (e.isTrusted) revealDetail();
+          stepIn(e, detail.querySelector<HTMLElement>('.dish-chip'));
+        });
         list.appendChild(it);
       });
-      showE(ids[0]);
+      showE(start);
       body = h('div', { class: 'coll' }, list, detail);
     } else if (tab === 'weapons') {
       const ids = Object.keys(WEAPONS);
@@ -1030,11 +1599,18 @@ export class UI {
           h('div', { class: 'stat-box' }, h('div', { class: 'v' }, s.totalKills.toLocaleString()), h('div', { class: 'k' }, 'Crimes stopped')),
           h('div', { class: 'stat-box' }, h('div', { class: 'v' }, s.totalCoins.toLocaleString()), h('div', { class: 'k' }, 'Coins earned')),
         ),
-        h('table', { class: 'dmg' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'Stage'), h('th', {}, 'Best time'), h('th', {}, 'Wins'), h('th', {}, 'Best kills'), h('th', {}, 'Best level'))),
+        h('table', { class: 'dmg records' },
+          h('thead', {}, h('tr', {},
+            h('th', {}, 'Dish'),
+            h('th', { class: 'star', title: 'Ricetta completa: every real ingredient collected' }, '★'),
+            h('th', { class: 'num' }, 'Best time'), h('th', { class: 'num' }, 'Wins'), h('th', { class: 'num opt' }, 'Best kills'), h('th', { class: 'num opt' }, 'Best level'))),
           h('tbody', {}, STAGES.map((st) => {
             const r = s.records[st.id];
-            return h('tr', {}, h('td', {}, st.name), h('td', { class: 'num' }, formatTime(r?.bestTime ?? 0)), h('td', { class: 'num' }, String(r?.wins ?? 0)), h('td', { class: 'num' }, String(r?.bestKills ?? 0)), h('td', { class: 'num' }, String(r?.bestLevel ?? 0)));
+            const rc = recipeById(st.recipe);
+            return h('tr', {},
+              h('td', { class: 'dish-td', title: st.name }, rc ? img(icon(rc.sprite), 'td-dish') : null, h('span', { class: 'long' }, st.name), h('span', { class: 'short' }, rc ? shortDishName(rc) : st.name)),
+              h('td', { class: 'star' }, r?.perfect ? '★' : ''),
+              h('td', { class: 'num' }, formatTime(r?.bestTime ?? 0)), h('td', { class: 'num' }, String(r?.wins ?? 0)), h('td', { class: 'num opt' }, String(r?.bestKills ?? 0)), h('td', { class: 'num opt' }, String(r?.bestLevel ?? 0)));
           })),
         ),
         h('h3', { class: 'medals-h' }, 'Medaglie'),
@@ -1046,15 +1622,145 @@ export class UI {
       );
     }
     const el = h('div', { class: 'screen dim' },
-      h('div', { class: 'paper panel' },
+      h('div', { class: 'paper panel coll-panel' },
         h('div', { class: 'checker checker-strip' }),
-        h('div', { class: 'panel-head' }, h('div', {}, h('h2', {}, 'Il Ricettario'), h('div', { class: 'sub' }, "Nonna's book of culinary crimes — and of the tools to fight them.")), tabs),
+        h('div', { class: 'panel-head' }, h('div', {}, h('h2', {}, 'Il Ricettario'), h('div', { class: 'sub' }, "Nonna's book of proper recipes, culinary crimes and the tools to fight them.")), tabs),
         h('div', { class: 'panel-body' }, body),
-        h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', () => this.showTitle(), 'Back')),
+        h('div', { class: 'panel-foot' }, this.btn('◀ Indietro', 'cream', leave, 'Back')),
       ),
     );
-    this.show(el, 'collection', () => this.showTitle());
+    this.show(el, 'collection', onBack);
+    if (focus) this.revealFocus();
     audio.playMusic('menu');
+  }
+
+  /** The recipe page of a dish (Ricettario → Ricette). */
+  private renderRecipe(detail: HTMLElement, r: RecipeDef, refresh = true) {
+    const st = STAGES.find((x) => x.id === r.id);
+    const rec = this.app.save.records[r.id];
+    const link = (src: { url: string; name: string }, text = src.name, nav = false) =>
+      h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', title: src.name, ...(nav ? { 'data-nav': '' } : {}) }, text);
+    const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
+    // the Italian chefs and creators behind the sources (recipe + intruder sources), one row each
+    const chefs = new Map<string, { url: string; name: string }[]>();
+    const credit = (who: string, src: { url: string; name: string }) => {
+      for (const c of who.split(';').map((x) => x.trim()).filter(Boolean)) {
+        const l = chefs.get(c) ?? [];
+        if (!l.some((x) => x.url === src.url)) l.push(src);
+        chefs.set(c, l);
+      }
+    };
+    for (const s of r.sources) if (s.chef) credit(s.chef, s);
+    for (const i of r.intruders) if (i.chef) credit(i.chef, i.source);
+    // a chef's link reads as its publisher: "(Scatti di Gusto)" at the end of the name, else the site
+    const publisher = (src: { url: string; name: string }) => {
+      const m = /\(([^()]{2,30})\)\s*$/.exec(src.name);
+      return m ? m[1] : hostOf(src.url) || src.name;
+    };
+    const meta = (s: { lang?: string; year?: string; url: string }) => h('span', { class: 'meta' }, [s.lang?.toUpperCase(), s.year, hostOf(s.url)].filter(Boolean).join(' · '));
+    const q = r.quote;
+    const quote = q
+      ? h('blockquote', { class: 'rc-quote', 'data-nav': '' },
+          h('div', { class: 'q' }, '«' + q.text + '»'),
+          q.translation ? h('div', { class: 'tr' }, q.translation) : null,
+          h('div', { class: 'by' }, '— ' + q.by + ' · ', link(q.source, 'source ↗', true)),
+        )
+      : null;
+    if (quote) this.innerOnActivate(quote);
+    const en = enLine(r.it, r.en);
+    detail.innerHTML = '';
+    detail.scrollTop = 0;
+    detail.appendChild(h('div', { class: 'rc-page' },
+      h('div', { class: 'rc-head', 'data-nav': '' },
+        img(icon(r.sprite), 'rc-art', r.it),
+        h('div', { class: 'rc-title' },
+          h('div', { class: 'rc-kicker' }, (st ? st.num + ' · ' : '') + r.course + ' · ' + shortOrigin(r)),
+          h('h3', {}, r.it),
+          en ? h('div', { class: 'en' }, en) : null,
+          rec?.perfect ? h('span', { class: 'tag gold' }, '★ Ricetta completa') : null,
+        ),
+      ),
+      h('p', { class: 'rc-blurb' }, r.blurb),
+      h('div', { class: 'rc-facts' },
+        h('div', {}, h('b', {}, 'Origine '), r.origin),
+        h('div', {}, h('b', {}, r.course === 'Le Pizze' ? 'Impasto ' : r.id === 'foodcourt' ? 'Dispensa ' : 'Pasta '), r.shape),
+      ),
+      sec('Gli ingredienti veri', 'The real ingredients'),
+      h('div', { class: 'rc-ings', 'data-nav': '' }, r.ingredients.map((i) => {
+        const ie = enLine(i.it, i.en);
+        return h('div', { class: 'rc-ing' },
+          h('span', { class: 'badge' }, img(icon(i.sprite), '', i.it)),
+          h('div', {}, h('b', {}, i.it), ie ? h('span', { class: 'en' }, ie) : null, i.note ? h('div', { class: 'note' }, i.note) : null),
+        );
+      })),
+      sec('Il metodo', 'Method'),
+      h('p', { class: 'rc-method', 'data-nav': '' }, r.method),
+      sec('Gli intrusi', 'What does not belong, and why'),
+      r.intruders.map((i) => this.intruderRow(i, r)),
+      quote,
+      h('div', { class: 'rc-fact', 'data-nav': '' }, h('b', {}, '💡 Lo sapevi? '), r.funFact),
+      chefs.size
+        ? [sec('Gli chef', 'Italian chefs and creators'),
+           h('ul', { class: 'rc-sources chefs' }, [...chefs].map(([who, srcs]) => {
+             const li = h('li', { 'data-nav': '' },
+               h('b', { class: 'chef' }, '👨‍🍳 ' + who),
+               h('span', { class: 'links' }, srcs.map((src) => link(src, publisher(src) + ' ↗', true))),
+             );
+             this.innerOnActivate(li);
+             return li;
+           }))]
+        : null,
+      sec('Fonti', 'Sources (open in a new tab)'),
+      h('ul', { class: 'rc-sources' }, r.sources.filter((s) => !s.chef).map((s) => h('li', {}, link(s, s.name + ' ↗', true), meta(s)))),
+    ));
+    if (refresh) this.nav.refresh();
+  }
+
+  /** An intruder in a recipe: enemy, why, how loudly Italians complain, the other side, source, its crime card. */
+  private intruderRow(i: RecipeIntruder, r: RecipeDef): HTMLElement {
+    const d = ENEMIES[i.enemy];
+    const from = i.fromDish ? recipeById(i.fromDish) : undefined;
+    const en = enLine(i.it, i.en);
+    // the enemy's own card in the crimes tab (once it has been met), and back here from it
+    let card: HTMLElement | null = null;
+    if (d && this.app.save.seen.includes('e:' + i.enemy)) {
+      card = h('span', { class: 'tag crime-link', 'data-nav': '', title: 'Open its card in Crimini' }, '⚖ Crimine ›');
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        audio.sfx('ui_click');
+        this.showCollection('crimes', i.enemy, { tab: 'recipes', focus: r.id });
+      });
+    }
+    const row = h('div', { class: 'rc-intr', 'data-nav': '' },
+      img(icon(d?.sprite ?? ''), 'foe', i.it),
+      h('div', { class: 'body' },
+        h('div', { class: 'top' }, h('b', {}, i.it), en ? h('span', { class: 'en' }, en) : null),
+        h('div', { class: 'meta' },
+          h('span', { class: 'pop', title: `How loudly Italians complain: ${i.popularity}/5` }, 'Indignazione ', [1, 2, 3, 4, 5].map((n) => h('i', { class: n <= i.popularity ? 'on' : '' }))),
+          i.contested ? h('span', { class: 'tag contested', title: 'Italians genuinely disagree, or it has real historical roots' }, 'Discusso') : null,
+          from ? h('span', { class: 'tag from' }, 'da ' + shortDishName(from)) : null,
+          card,
+        ),
+        h('p', { class: 'why' }, i.why),
+        i.note ? h('p', { class: 'note' }, h('b', {}, 'L’altra campana: '), i.note) : null,
+        h('div', { class: 'src' }, 'Fonte: ', h('a', { href: i.source.url, target: '_blank', rel: 'noopener noreferrer', title: i.source.name, 'data-nav': '' }, i.source.name + ' ↗'), i.chef ? h('span', { class: 'chef' }, ' · 👨‍🍳 ' + i.chef) : null),
+      ),
+    );
+    this.innerOnActivate(row);
+    return row;
+  }
+
+  /**
+   * Enter / A on a block with links inside (an intruder, the quote, a chef) selects its first
+   * link instead of leaving the game for a website: a second press opens it, Left / Right pick
+   * another, Esc goes back to the block. A mouse click on the block's text does nothing.
+   */
+  private innerOnActivate(el: HTMLElement) {
+    el.addEventListener('click', (e) => {
+      if (e.isTrusted || (e.target as HTMLElement) !== el) return;
+      const first = this.innerItems(el)[0];
+      if (first) this.nav.focus(first, false);
+    });
   }
 
   // ------------------------------------------------------------------ settings

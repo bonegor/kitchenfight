@@ -3,9 +3,18 @@ import { envForStage } from '../gfx/envvariants';
 import { getSprite, drawSprite, hasSprite } from '../gfx/sprites';
 import { hash2, seededRandom } from '../core/math';
 import { ENEMIES } from '../game/enemies';
+import { recipeById } from '../game/recipes';
 import type { StageDef } from '../game/stages';
 
-export function renderStagePreview(cv: HTMLCanvasElement, stage: StageDef, chefSprite = 'chef.enzo') {
+export interface PreviewOptions {
+  /**
+   * Il Menù cards: no chef in the middle (the dish is plated there, in the DOM) and the
+   * dish's intruders closing in on it in a ring, each facing the plate.
+   */
+  ring?: boolean;
+}
+
+export function renderStagePreview(cv: HTMLCanvasElement, stage: StageDef, chefSprite = 'chef.enzo', opts: PreviewOptions = {}) {
   const env = envForStage(stage); // the dish's variant (light + decor) of its environment
   const W = cv.width, H = cv.height;
   const ctx = cv.getContext('2d')!;
@@ -38,13 +47,29 @@ export function renderStagePreview(cv: HTMLCanvasElement, stage: StageDef, chefS
   const rnd = seededRandom(stage.num * 1337);
   const pool = stage.waves[4]?.pool ?? [];
   const actors: { sprite: string; x: number; y: number; flip: boolean }[] = [];
-  for (let i = 0; i < 7 && pool.length; i++) {
-    const id = pool[Math.floor(rnd() * pool.length)][0];
-    const def = ENEMIES[id];
-    if (!def || !hasSprite(def.sprite)) continue;
-    actors.push({ sprite: def.sprite, x: ox + vw * (0.12 + rnd() * 0.76), y: oy + vh * (0.25 + rnd() * 0.65), flip: rnd() < 0.5 });
+  if (opts.ring) {
+    // every intruder of the dish once (the finale: the first eight), around the plate
+    const ids = (recipeById(stage.recipe)?.intruders.map((i) => i.enemy) ?? pool.map((p) => p[0])).slice(0, 8);
+    const n = Math.max(ids.length, 5);
+    const cx = ox + vw * 0.5, cy = oy + vh * 0.56;
+    const a0 = rnd() * Math.PI * 2;
+    for (let i = 0; i < n; i++) {
+      const def = ENEMIES[ids[i % ids.length]];
+      if (!def || !hasSprite(def.sprite)) continue;
+      const a = a0 + (i / n) * Math.PI * 2 + (rnd() - 0.5) * 0.35;
+      const x = cx + Math.cos(a) * vw * (0.37 + rnd() * 0.06);
+      const y = cy + Math.sin(a) * vh * (0.33 + rnd() * 0.05);
+      actors.push({ sprite: def.sprite, x, y, flip: x > cx });
+    }
+  } else {
+    for (let i = 0; i < 7 && pool.length; i++) {
+      const id = pool[Math.floor(rnd() * pool.length)][0];
+      const def = ENEMIES[id];
+      if (!def || !hasSprite(def.sprite)) continue;
+      actors.push({ sprite: def.sprite, x: ox + vw * (0.12 + rnd() * 0.76), y: oy + vh * (0.25 + rnd() * 0.65), flip: rnd() < 0.5 });
+    }
+    if (hasSprite(chefSprite)) actors.push({ sprite: chefSprite, x: ox + vw * 0.5, y: oy + vh * 0.62, flip: false });
   }
-  if (hasSprite(chefSprite)) actors.push({ sprite: chefSprite, x: ox + vw * 0.5, y: oy + vh * 0.62, flip: false });
   const floor = props.filter((p) => p.layer === 'floor');
   const sorted = [...props.filter((p) => !p.layer || p.layer === 'sorted').map((p) => ({ ...p, a: false })), ...actors.map((a) => ({ ...a, a: true }))].sort((a, b) => a.y - b.y);
   for (const p of floor) if (hasSprite(p.sprite)) drawSprite(ctx, p.sprite, p.frame ?? 0, p.x, p.y, p.flip ? -1 : 1, 1);

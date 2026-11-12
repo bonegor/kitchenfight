@@ -18,7 +18,6 @@ import { Run, RunHooks } from './game/run';
 import { Renderer } from './game/render';
 import { UI } from './ui/ui';
 import { stageById, STAGES, isDishUnlocked, refreshUnlocks } from './game/stages';
-import { recipeById } from './game/recipes';
 import { charById, CHARACTERS } from './game/passives';
 import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
 import type { Enemy } from './game/entities';
@@ -210,11 +209,12 @@ class App {
         onRevive: () => this.ui.toast('Bis! A second helping of life.', 'good'),
         onToast: (t, k) => this.ui.toast(t, k),
         onIngredient: (index: number, complete: boolean) => {
+          // the HUD recipe strip pops its ✓ by itself (it watches run.recipeGot)
           const r = run.recipe;
           if (!r) return;
           const ing = r.ingredients[index];
-          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false);
-          else this.ui.banner(`${ing.it} ✓ ${run.ingredientsGot()}/${r.ingredients.length}`, ing.buff, false);
+          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false, { icon: r.sprite, cls: 'complete', ms: 3400, hold: true });
+          else this.ui.banner(`${ing.it} ✓ ${run.ingredientsGot()}/${r.ingredients.length}`, ing.buff, false, { icon: ing.sprite, cls: 'ingr' });
         },
       };
       const run = new Run(st, ch, this.save, hooks);
@@ -233,8 +233,8 @@ class App {
           if (run.fx.bubblesEnabled) audio.voice(line, ch.voice);
         }
       }, 400);
-      const recipe = recipeById(st.recipe);
-      this.ui.banner(st.name, recipe ? 'Ingredienti veri: ' + recipe.ingredients.map((i) => i.it.toLowerCase()).join(', ') : st.subtitle + ' — survive 15:00');
+      // the dish, plated, with its real ingredients (held: nothing cuts it short but a boss)
+      this.ui.dishBanner(run);
       if (this.save.runs === 0) {
         const touch = matchMedia('(pointer: coarse)').matches;
         const tips: [number, string][] = [
@@ -263,9 +263,11 @@ class App {
     run.state = victory ? 'victory' : 'dead';
     const prev = this.save.records[run.stage.id];
     const newRecord = !prev || run.time > prev.bestTime + 0.5;
+    const wasPerfect = !!prev?.perfect; // commitResults sets perfect on this same record
     run.commitResults(victory);
     const unlocks: { icon: string; text: string }[] = [];
-    if (run.recipeComplete) unlocks.push({ icon: run.recipe?.sprite ?? 'icon.star', text: `Ricetta completa: ${run.stage.name}! ★` });
+    // the results screen shows the recipe either way; the first ★ of a dish is also an unlock
+    if (run.recipeComplete && !wasPerfect) unlocks.push({ icon: run.recipe?.sprite ?? 'icon.star', text: `First ★ on the menu: ${run.stage.name}, ricetta completa!` });
     const fresh = refreshUnlocks(this.save);
     for (const s of fresh) unlocks.push({ icon: 'icon.star', text: `New dish on the menu: ${s.name}!` });
     if (fresh.length) {
