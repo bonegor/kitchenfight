@@ -5,6 +5,11 @@
  *
  * BALANCE: all difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves).
  * A level's waves only choose WHO comes (pools); HOW MANY and HOW TOUGH come from its tier.
+ *
+ * POOLS: over the whole run, each intruder's share of the spawn weight follows the order of
+ * recipe.intruders (the spec's "weight order": the loudest crime comes most often), checked
+ * by stageRuleProblems(). Exempt: ORDER_EXEMPT (support enemies that buff the horde around
+ * them, so they stay a seasoning whatever their rank: garlic is first in the Amatriciana).
  */
 import type { MusicId } from '../audio/audio';
 import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
@@ -89,6 +94,29 @@ export const BASE_RATE = [0.9, 1.45, 2.0, 2.45, 2.85, 2.5, 3.25, 3.55, 3.95, 4.3
 export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 182, 202, 222, 128];
 /** Max share of a minute's spawn weight that may come from non-intruder extras. */
 export const MAX_EXTRA_SHARE = 0.2;
+/** Intruders left out of the weight-order check (support enemies: see the header). */
+export const ORDER_EXEMPT = new Set(['aglio']);
+/** Weight-order check tolerance: an intruder may have up to 8 % (relative) more than the one ranked above it. */
+const ORDER_TOL = 1.08;
+
+/** Each intruder's share of a dish's spawn weight over the 16 minutes (aliases folded in; extras excluded). */
+export function intruderShares(st: StageDef, r: RecipeDef): Map<string, number> {
+  const tot = new Map<string, number>();
+  let all = 0;
+  for (const w of st.waves) {
+    const sum = w.pool.reduce((a, [, x]) => a + x, 0);
+    if (sum <= 0) continue;
+    for (const [id, x] of w.pool) {
+      const intr = intruderIn(r, id);
+      if (!intr) continue;
+      const v = (w.rate * x) / sum;
+      tot.set(intr.enemy, (tot.get(intr.enemy) ?? 0) + v);
+      all += v;
+    }
+  }
+  for (const [k, v] of tot) tot.set(k, all > 0 ? v / all : 0);
+  return tot;
+}
 
 export interface StageDef {
   id: string;
@@ -218,22 +246,22 @@ const SPECS: StageSpec[] = [
     id: 'pomodoro', env: 'kitchen', tier: 'T1', bosses: ['b_scatolone', 'b_microonde', 'b_ketchup'], unlock: null, accent: '#e8442f',
     variant: { label: 'morning', tint: '#fff6e8', darkness: 0, vignette: 0.22, particles: 'dust', decor: 'tomatoes' },
     minutes: [
-      M([['ketchup', 3], ['pollo', 2]], ['spezzato'], 0.2),
-      M([['ketchup', 3], ['pollo', 2]], ['spezzato'], 0.2),
-      M([['pollo', 3], ['ketchup', 2]], ['spezzato', 'forbici'], 0.2),
-      M([['ketchup', 3], ['pollo', 2], ['polpetta', 1]], ['spezzato'], 0.2),
-      M([['polpetta', 2], ['pollo', 3], ['ketchup', 2]], ['scotta'], 0.2),
-      M([['ketchup', 3], ['pollo', 2]], ['spezzato'], 0.2),
-      M([['polpetta', 3], ['ketchup', 3], ['pollo', 1]], ['scotta', 'forbici'], 0.2),
-      M([['pollo', 3], ['polpetta', 2], ['ketchup', 2]], ['pentola'], 0.15),
-      M([['ketchup', 4], ['polpetta', 2], ['pollo', 2]], ['scotta'], 0.2),
-      M([['polpetta', 3], ['pollo', 3], ['ketchup', 2]], ['forbici', 'pentola'], 0.2),
-      M([['ketchup', 3], ['pollo', 3]], ['spezzato'], 0.2),
-      M([['polpetta', 3], ['ketchup', 3], ['pollo', 3]], ['scotta', 'pentola'], 0.2),
-      M([['pollo', 4], ['ketchup', 3], ['polpetta', 2]], ['forbici'], 0.15),
-      M([['polpetta', 4], ['ketchup', 3], ['pollo', 3]], ['pentola', 'scotta'], 0.2),
-      M([['ketchup', 4], ['polpetta', 3], ['pollo', 3]], ['forbici', 'scotta'], 0.2),
-      M([['ketchup', 3], ['pollo', 2]], ['spezzato'], 0.2),
+      M([['ketchup', 3], ['pollo', 1.5]], ['spezzato'], 0.2),
+      M([['ketchup', 3], ['pollo', 1.5]], ['spezzato'], 0.2),
+      M([['pollo', 2.5], ['ketchup', 2]], ['spezzato', 'forbici'], 0.2),
+      M([['ketchup', 3], ['pollo', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2),
+      M([['polpetta', 2.5], ['pollo', 2.5], ['ketchup', 2]], ['scotta'], 0.2),
+      M([['ketchup', 3], ['pollo', 1.5]], ['spezzato'], 0.2),
+      M([['polpetta', 4], ['ketchup', 3], ['pollo', 1]], ['scotta', 'forbici'], 0.2),
+      M([['pollo', 2.5], ['polpetta', 2.5], ['ketchup', 2]], ['pentola'], 0.15),
+      M([['ketchup', 4], ['polpetta', 2.5], ['pollo', 1.5]], ['scotta'], 0.2),
+      M([['polpetta', 4], ['pollo', 2.5], ['ketchup', 2]], ['forbici', 'pentola'], 0.2),
+      M([['ketchup', 3], ['pollo', 2.5]], ['spezzato'], 0.2),
+      M([['polpetta', 4], ['ketchup', 3], ['pollo', 2.5]], ['scotta', 'pentola'], 0.2),
+      M([['pollo', 3], ['ketchup', 3], ['polpetta', 2.5]], ['forbici'], 0.15),
+      M([['polpetta', 5.5], ['ketchup', 3], ['pollo', 2.5]], ['pentola', 'scotta'], 0.2),
+      M([['ketchup', 4], ['polpetta', 4], ['pollo', 2.5]], ['forbici', 'scotta'], 0.2),
+      M([['ketchup', 3], ['pollo', 1.5]], ['spezzato'], 0.2),
     ],
     events: [
       T(20, 'Spaghetti al pomodoro: tomato, oil, garlic, basil. Keep the ketchup OUT!'),
@@ -258,22 +286,22 @@ const SPECS: StageSpec[] = [
     id: 'carbonara', env: 'kitchen', tier: 'T2', bosses: ['b_influencer', 'b_alfredo', 'b_panna'], unlock: { anyOf: ['pomodoro'] }, accent: '#f2b632',
     variant: { label: 'warm', tint: '#ffe9cf', darkness: 0, vignette: 0.3, particles: 'flour', decor: 'pantry' },
     minutes: [
-      M([['piselli', 4], ['bacon', 2]]),
-      M([['piselli', 4], ['bacon', 2], ['panna', 2]]),
-      M([['panna', 3], ['piselli', 3], ['prosciutto', 2]]),
-      M([['panna', 3], ['bacon', 3], ['funghi', 1], ['piselli', 2]]),
-      M([['prosciutto', 3], ['funghi', 2], ['panna', 2], ['cipolla', 1], ['bacon', 2]]),
-      M([['piselli', 4], ['panna', 2], ['burro', 2]]),
-      M([['cipolla', 3], ['burro', 2], ['bacon', 2], ['funghi', 2]], ['scatoletta'], 0.1),
-      M([['cipolla', 2], ['aglio', 1], ['panna', 3], ['prosciutto', 2], ['pollo', 2]]),
-      M([['aglio', 2], ['cipolla', 3], ['funghi', 2], ['burro', 2], ['piselli', 2]], ['scatoletta'], 0.1),
-      M([['parmesan', 2], ['panna', 3], ['cipolla', 3], ['pollo', 2], ['bacon', 2]], ['pentolaunica'], 0.08),
-      M([['panna', 3], ['burro', 2], ['prosciutto', 3], ['piselli', 3]]),
-      M([['parmesan', 2], ['cipolla', 3], ['funghi', 2], ['pollo', 3], ['aglio', 2]], ['scatoletta'], 0.12),
-      M([['panna', 3], ['bacon', 3], ['burro', 2], ['prosciutto', 2], ['parmesan', 2]], ['pentolaunica', 'scatoletta'], 0.12),
-      M([['cipolla', 3], ['aglio', 2], ['funghi', 3], ['pollo', 3], ['panna', 2]], ['scatoletta'], 0.12),
-      M([['panna', 4], ['cipolla', 3], ['parmesan', 2], ['burro', 2], ['bacon', 3], ['prosciutto', 2]], ['pentolaunica'], 0.1),
-      M([['panna', 3], ['piselli', 3], ['bacon', 2]]),
+      M([['piselli', 2], ['bacon', 2]]),
+      M([['piselli', 2], ['bacon', 2], ['panna', 2]]),
+      M([['panna', 2.5], ['piselli', 1.5], ['prosciutto', 1.5]]),
+      M([['panna', 2.5], ['bacon', 2.5], ['funghi', 1], ['piselli', 1]]),
+      M([['prosciutto', 2.5], ['funghi', 2.5], ['panna', 2], ['cipolla', 1], ['bacon', 2]]),
+      M([['piselli', 2], ['panna', 2], ['burro', 2]]),
+      M([['cipolla', 3.5], ['burro', 2], ['bacon', 2], ['funghi', 2.5]], ['scatoletta'], 0.1),
+      M([['cipolla', 2], ['aglio', 1], ['panna', 2.5], ['prosciutto', 1.5], ['pollo', 3]]),
+      M([['aglio', 2], ['cipolla', 3.5], ['funghi', 2.5], ['burro', 2], ['piselli', 1]], ['scatoletta'], 0.1),
+      M([['parmesan', 3.5], ['panna', 2.5], ['cipolla', 3.5], ['pollo', 3], ['bacon', 2]], ['pentolaunica'], 0.08),
+      M([['panna', 2.5], ['burro', 2], ['prosciutto', 2.5], ['piselli', 1.5]]),
+      M([['parmesan', 3.5], ['cipolla', 3.5], ['funghi', 2.5], ['pollo', 4.5], ['aglio', 2]], ['scatoletta'], 0.12),
+      M([['panna', 2.5], ['bacon', 2.5], ['burro', 2], ['prosciutto', 1.5], ['parmesan', 3.5]], ['pentolaunica', 'scatoletta'], 0.12),
+      M([['cipolla', 3.5], ['aglio', 2], ['funghi', 3.5], ['pollo', 4.5], ['panna', 2]], ['scatoletta'], 0.12),
+      M([['panna', 3.5], ['cipolla', 3.5], ['parmesan', 3.5], ['burro', 2], ['bacon', 2.5], ['prosciutto', 1.5]], ['pentolaunica'], 0.1),
+      M([['panna', 2.5], ['piselli', 1.5], ['bacon', 2]]),
     ],
     events: [
       T(20, 'Guanciale, yolks, Pecorino, pepper. Not a drop of cream!'),
@@ -297,22 +325,22 @@ const SPECS: StageSpec[] = [
     id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
     variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
     minutes: [
-      M([['gamberi', 3], ['pollo', 2]], ['scotta'], 0.1),
-      M([['gamberi', 3], ['pollo', 2], ['panna', 2]]),
-      M([['panna', 3], ['broccoli', 2], ['gamberi', 3]]),
-      M([['pollo', 3], ['broccoli', 2], ['panna', 2], ['aglio', 1]], ['scotta'], 0.12),
-      M([['alfredo', 1], ['gamberi', 3], ['panna', 3], ['broccoli', 2]]),
-      M([['gamberi', 3], ['pollo', 3]], ['scotta'], 0.12),
-      M([['alfredo', 2], ['broccoli', 3], ['aglio', 2], ['pollo', 2]]),
-      M([['parmesan', 2], ['panna', 3], ['gamberi', 3], ['aglio', 2]], ['scotta'], 0.12),
-      M([['alfredo', 2], ['pollo', 3], ['broccoli', 2], ['parmesan', 2], ['gamberi', 2]]),
-      M([['panna', 3], ['gamberi', 3], ['alfredo', 2], ['aglio', 2]], ['scotta'], 0.12),
-      M([['pollo', 3], ['gamberi', 3], ['broccoli', 2]]),
-      M([['alfredo', 3], ['parmesan', 2], ['panna', 3], ['pollo', 3]], ['scotta'], 0.12),
-      M([['broccoli', 3], ['gamberi', 3], ['aglio', 2], ['alfredo', 2], ['parmesan', 2]]),
-      M([['panna', 4], ['pollo', 3], ['alfredo', 3], ['broccoli', 2]], ['scotta'], 0.12),
-      M([['alfredo', 3], ['gamberi', 3], ['parmesan', 3], ['panna', 3], ['pollo', 3], ['aglio', 2]], ['scotta'], 0.1),
-      M([['gamberi', 3], ['pollo', 3], ['panna', 2]]),
+      M([['gamberi', 2], ['pollo', 1.5]], ['scotta'], 0.1),
+      M([['gamberi', 2], ['pollo', 1.5], ['panna', 2]]),
+      M([['panna', 3], ['broccoli', 2.5], ['gamberi', 2]]),
+      M([['pollo', 2.5], ['broccoli', 2.5], ['panna', 2], ['aglio', 1]], ['scotta'], 0.12),
+      M([['alfredo', 1.5], ['gamberi', 2], ['panna', 3], ['broccoli', 2.5]]),
+      M([['gamberi', 2], ['pollo', 2.5]], ['scotta'], 0.12),
+      M([['alfredo', 2.5], ['broccoli', 4], ['aglio', 2], ['pollo', 1.5]]),
+      M([['parmesan', 2], ['panna', 3], ['gamberi', 2], ['aglio', 2]], ['scotta'], 0.12),
+      M([['alfredo', 2.5], ['pollo', 2.5], ['broccoli', 2.5], ['parmesan', 2], ['gamberi', 1]]),
+      M([['panna', 3], ['gamberi', 2], ['alfredo', 2.5], ['aglio', 2]], ['scotta'], 0.12),
+      M([['pollo', 2.5], ['gamberi', 2], ['broccoli', 2.5]]),
+      M([['alfredo', 4], ['parmesan', 2], ['panna', 3], ['pollo', 2.5]], ['scotta'], 0.12),
+      M([['broccoli', 4], ['gamberi', 2], ['aglio', 2], ['alfredo', 2.5], ['parmesan', 2]]),
+      M([['panna', 4.5], ['pollo', 2.5], ['alfredo', 4], ['broccoli', 2.5]], ['scotta'], 0.12),
+      M([['alfredo', 4], ['gamberi', 2], ['parmesan', 3], ['panna', 3], ['pollo', 2.5], ['aglio', 2]], ['scotta'], 0.1),
+      M([['gamberi', 2], ['pollo', 2.5], ['panna', 2]]),
     ],
     events: [
       T(20, "Fettuccine, butter, Parmigiano, pasta water. Alfredo's dining room is open."),
@@ -336,22 +364,22 @@ const SPECS: StageSpec[] = [
     id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
     variant: { label: 'evening', tint: '#ffd6a8', darkness: 0.46, darkColor: '#2a120a', vignette: 0.45, particles: 'embers', decor: 'embers' },
     minutes: [
-      M([['bacon', 4], ['cipolla', 1]], ['spezzato'], 0.2),
-      M([['bacon', 4], ['cipolla', 2]], ['spezzato'], 0.2),
-      M([['bacon', 3], ['cipolla', 2], ['aglio', 1]], ['spezzato'], 0.2),
-      M([['cipolla', 3], ['bacon', 3], ['parmesan', 1]], ['scotta'], 0.15),
-      M([['aglio', 2], ['bacon', 4], ['cipolla', 2], ['parmesan', 1]], ['spezzato'], 0.15),
-      M([['bacon', 4], ['cipolla', 2]], ['spezzato'], 0.2),
-      M([['cipolla', 3], ['aglio', 2], ['parmesan', 2], ['bacon', 3]], ['scotta'], 0.15),
-      M([['bacon', 4], ['aglio', 2], ['cipolla', 3]], ['spezzato'], 0.15),
-      M([['parmesan', 2], ['cipolla', 3], ['bacon', 3], ['aglio', 2]], ['scotta'], 0.15),
-      M([['aglio', 3], ['cipolla', 3], ['bacon', 4], ['parmesan', 2]], ['spezzato', 'scotta'], 0.15),
-      M([['bacon', 4], ['cipolla', 2]], ['spezzato'], 0.2),
-      M([['cipolla', 4], ['aglio', 3], ['parmesan', 2], ['bacon', 3]], ['scotta'], 0.15),
-      M([['bacon', 5], ['aglio', 3], ['cipolla', 3], ['parmesan', 2]], ['spezzato'], 0.15),
-      M([['cipolla', 4], ['parmesan', 3], ['aglio', 3], ['bacon', 3]], ['scotta', 'spezzato'], 0.15),
-      M([['aglio', 3], ['cipolla', 4], ['bacon', 4], ['parmesan', 3]], ['spezzato', 'scotta'], 0.15),
-      M([['bacon', 4], ['cipolla', 3]], ['spezzato'], 0.2),
+      M([['bacon', 3.5], ['cipolla', 1]], ['spezzato'], 0.2),
+      M([['bacon', 3.5], ['cipolla', 2.5]], ['spezzato'], 0.2),
+      M([['bacon', 2.5], ['cipolla', 2.5], ['aglio', 1]], ['spezzato'], 0.2),
+      M([['cipolla', 3.5], ['bacon', 2.5], ['parmesan', 1]], ['scotta'], 0.15),
+      M([['aglio', 2], ['bacon', 3.5], ['cipolla', 2.5], ['parmesan', 1]], ['spezzato'], 0.15),
+      M([['bacon', 3.5], ['cipolla', 2.5]], ['spezzato'], 0.2),
+      M([['cipolla', 3.5], ['aglio', 2], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
+      M([['bacon', 3.5], ['aglio', 2], ['cipolla', 3.5]], ['spezzato'], 0.15),
+      M([['parmesan', 2], ['cipolla', 3.5], ['bacon', 2.5], ['aglio', 2]], ['scotta'], 0.15),
+      M([['aglio', 3], ['cipolla', 3.5], ['bacon', 3.5], ['parmesan', 2]], ['spezzato', 'scotta'], 0.15),
+      M([['bacon', 3.5], ['cipolla', 2.5]], ['spezzato'], 0.2),
+      M([['cipolla', 4.5], ['aglio', 3], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
+      M([['bacon', 4.5], ['aglio', 3], ['cipolla', 3.5], ['parmesan', 2]], ['spezzato'], 0.15),
+      M([['cipolla', 4.5], ['parmesan', 3], ['aglio', 3], ['bacon', 2.5]], ['scotta', 'spezzato'], 0.15),
+      M([['aglio', 3], ['cipolla', 4.5], ['bacon', 3.5], ['parmesan', 3]], ['spezzato', 'scotta'], 0.15),
+      M([['bacon', 3.5], ['cipolla', 3.5]], ['spezzato'], 0.2),
     ],
     events: [
       T(20, "Amatrice's recipe: guanciale, tomato, pecorino. No garlic, no onion, no pancetta."),
@@ -414,20 +442,20 @@ const SPECS: StageSpec[] = [
     variant: { label: 'sunset to night', nightRamp: [0.15, 0.62], decor: 'basil' },
     minutes: [
       M([['pepperoni', 3], ['ananas_pezzo', 3], ['hawaiana', 1]]),
-      M([['hawaiana', 3], ['pepperoni', 3], ['cheddar', 2]]),
-      M([['pollo', 3], ['cheddar', 2], ['ananas_pezzo', 3], ['macchiata', 1]]),
+      M([['hawaiana', 3], ['pepperoni', 3], ['cheddar', 1.5]]),
+      M([['pollo', 2.5], ['cheddar', 1.5], ['ananas_pezzo', 3], ['macchiata', 1.5]]),
       M([['ananas', 2], ['pollo', 2], ['hawaiana', 3], ['bbq', 2]]),
-      M([['bbq', 2], ['ananas', 2], ['cheddar', 3], ['pepperoni', 3], ['macchiata', 1]]),
+      M([['bbq', 2], ['ananas', 2], ['cheddar', 2.5], ['pepperoni', 3], ['macchiata', 1.5]]),
       M([['hawaiana', 3], ['ananas_pezzo', 3], ['pepperoni', 2]]),
-      M([['macchiata', 2], ['cheddar', 3], ['ananas', 2], ['bbq', 2], ['pollo', 2]]),
-      M([['ananas', 3], ['pollo', 3], ['hawaiana', 2], ['bbq', 2]]),
-      M([['cheddar', 3], ['hawaiana', 3], ['ananas', 2], ['macchiata', 2], ['pepperoni', 2]]),
-      M([['ananas', 3], ['bbq', 3], ['pollo', 3], ['cheddar', 2]]),
-      M([['hawaiana', 3], ['pollo', 3], ['pepperoni', 3]]),
-      M([['ananas', 3], ['macchiata', 2], ['bbq', 3], ['cheddar', 3]]),
-      M([['ananas', 3], ['pollo', 3], ['hawaiana', 3], ['macchiata', 2], ['pepperoni', 2]]),
-      M([['ananas', 4], ['cheddar', 3], ['bbq', 3], ['hawaiana', 3]]),
-      M([['ananas', 4], ['macchiata', 3], ['pollo', 3], ['bbq', 3], ['cheddar', 2]]),
+      M([['macchiata', 3.5], ['cheddar', 2.5], ['ananas', 2], ['bbq', 2], ['pollo', 2]]),
+      M([['ananas', 3], ['pollo', 2.5], ['hawaiana', 2], ['bbq', 2]]),
+      M([['cheddar', 2.5], ['hawaiana', 3], ['ananas', 2], ['macchiata', 3.5], ['pepperoni', 2]]),
+      M([['ananas', 3], ['bbq', 2.5], ['pollo', 2.5], ['cheddar', 1.5]]),
+      M([['hawaiana', 3], ['pollo', 2.5], ['pepperoni', 3]]),
+      M([['ananas', 3], ['macchiata', 3.5], ['bbq', 2.5], ['cheddar', 2.5]]),
+      M([['ananas', 3], ['pollo', 2.5], ['hawaiana', 3], ['macchiata', 3.5], ['pepperoni', 2]]),
+      M([['ananas', 4], ['cheddar', 2.5], ['bbq', 2.5], ['hawaiana', 3]]),
+      M([['ananas', 4], ['macchiata', 5], ['pollo', 2.5], ['bbq', 2.5], ['cheddar', 1.5]]),
       M([['ananas_pezzo', 4], ['hawaiana', 3], ['pepperoni', 3]]),
     ],
     events: [
@@ -490,22 +518,22 @@ const SPECS: StageSpec[] = [
     id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
     variant: { label: 'Bologna afternoon', tint: '#ffe2b8', darkness: 0.16, darkColor: '#2a160c', vignette: 0.36, particles: 'dust', decor: 'osteria' },
     minutes: [
-      M([['bacon', 4], ['fantasma', 1]], ['polpetta'], 0.1),
-      M([['bacon', 4], ['fantasma', 2]], ['polpetta'], 0.12),
-      M([['fantasma', 3], ['bacon', 3], ['panna', 1]], ['polpetta'], 0.12),
-      M([['panna', 2], ['fantasma', 3], ['bacon', 3], ['aglio', 1]], ['surgelata'], 0.1),
-      M([['fantasma', 3], ['aglio', 2], ['bacon', 3], ['panna', 2]], ['polpetta'], 0.15),
-      M([['bacon', 4], ['fantasma', 2]], ['polpetta'], 0.15),
-      M([['fantasma', 3], ['panna', 3], ['aglio', 2], ['bacon', 2]], ['surgelata'], 0.12),
-      M([['bacon', 4], ['fantasma', 3], ['aglio', 2]], ['polpetta'], 0.15),
-      M([['panna', 3], ['fantasma', 3], ['bacon', 3], ['aglio', 2]], ['surgelata', 'polpetta'], 0.15),
-      M([['fantasma', 4], ['aglio', 3], ['bacon', 3], ['panna', 2]], ['polpetta'], 0.15),
-      M([['bacon', 4], ['fantasma', 3]], ['polpetta'], 0.15),
-      M([['fantasma', 4], ['panna', 3], ['aglio', 3], ['bacon', 3]], ['surgelata'], 0.12),
-      M([['bacon', 5], ['fantasma', 3], ['panna', 3], ['aglio', 2]], ['polpetta', 'surgelata'], 0.15),
-      M([['fantasma', 4], ['aglio', 3], ['panna', 3], ['bacon', 3]], ['surgelata', 'polpetta'], 0.15),
-      M([['fantasma', 5], ['bacon', 4], ['panna', 3], ['aglio', 3]], ['surgelata', 'polpetta'], 0.15),
-      M([['bacon', 4], ['fantasma', 3]], ['polpetta'], 0.15),
+      M([['bacon', 2.5], ['fantasma', 1]], ['polpetta'], 0.1),
+      M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.12),
+      M([['fantasma', 3], ['bacon', 2], ['panna', 1.5]], ['polpetta'], 0.12),
+      M([['panna', 3.5], ['fantasma', 3], ['bacon', 2], ['aglio', 1]], ['surgelata'], 0.1),
+      M([['fantasma', 3], ['aglio', 2], ['bacon', 2], ['panna', 3.5]], ['polpetta'], 0.15),
+      M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.15),
+      M([['fantasma', 3], ['panna', 5], ['aglio', 2], ['bacon', 1]], ['surgelata'], 0.12),
+      M([['bacon', 2.5], ['fantasma', 3], ['aglio', 2]], ['polpetta'], 0.15),
+      M([['panna', 5], ['fantasma', 3], ['bacon', 2], ['aglio', 2]], ['surgelata', 'polpetta'], 0.15),
+      M([['fantasma', 3.5], ['aglio', 3], ['bacon', 2], ['panna', 3.5]], ['polpetta'], 0.15),
+      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.15),
+      M([['fantasma', 3.5], ['panna', 5], ['aglio', 3], ['bacon', 2]], ['surgelata'], 0.12),
+      M([['bacon', 3], ['fantasma', 3], ['panna', 5], ['aglio', 2]], ['polpetta', 'surgelata'], 0.15),
+      M([['fantasma', 3.5], ['aglio', 3], ['panna', 5], ['bacon', 2]], ['surgelata', 'polpetta'], 0.15),
+      M([['fantasma', 4.5], ['bacon', 2.5], ['panna', 5], ['aglio', 3]], ['surgelata', 'polpetta'], 0.15),
+      M([['bacon', 2.5], ['fantasma', 3]], ['polpetta'], 0.15),
     ],
     events: [
       T(20, 'Bologna: the ragù simmers for hours. Spaghetti? That dish does not exist here.'),
@@ -528,22 +556,22 @@ const SPECS: StageSpec[] = [
     id: 'pesto', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_influencer', 'b_frullatore'], unlock: { anyOf: ['ragu'] }, accent: '#4fa82e',
     variant: { label: 'Ligurian day', tint: '#e4f7d0', darkness: 0.04, darkColor: '#10241a', vignette: 0.3, particles: 'dust', decor: 'basil' },
     minutes: [
-      M([['anacardo', 4], ['olio', 1]], ['smartphone'], 0.08),
-      M([['anacardo', 4], ['olio', 2], ['panna', 1]]),
-      M([['anacardo', 3], ['panna', 2], ['olio', 2]], ['smartphone'], 0.1),
-      M([['burro', 2], ['anacardo', 3], ['panna', 2], ['olio', 2]]),
-      M([['parmesan', 2], ['anacardo', 3], ['burro', 2], ['olio', 2]], ['smartphone'], 0.1),
-      M([['anacardo', 4], ['panna', 2]], ['smartphone'], 0.12),
-      M([['olio', 3], ['burro', 2], ['parmesan', 2], ['anacardo', 3]]),
-      M([['panna', 3], ['anacardo', 4], ['olio', 2], ['burro', 2]], ['smartphone'], 0.12),
-      M([['parmesan', 3], ['olio', 3], ['anacardo', 3], ['panna', 2]], ['smartphone'], 0.1),
-      M([['burro', 3], ['panna', 3], ['anacardo', 4], ['parmesan', 2]], ['smartphone'], 0.12),
-      M([['anacardo', 4], ['olio', 3]], ['smartphone'], 0.12),
-      M([['parmesan', 3], ['burro', 3], ['olio', 3], ['anacardo', 4]], ['smartphone'], 0.12),
-      M([['panna', 4], ['anacardo', 4], ['parmesan', 3], ['burro', 2]], ['smartphone'], 0.12),
-      M([['olio', 3], ['burro', 3], ['panna', 3], ['anacardo', 5], ['parmesan', 2]], ['smartphone'], 0.12),
-      M([['anacardo', 5], ['panna', 4], ['burro', 3], ['olio', 3], ['parmesan', 3]], ['smartphone'], 0.12),
-      M([['anacardo', 4], ['panna', 3]], ['smartphone'], 0.12),
+      M([['anacardo', 3], ['olio', 1]], ['smartphone'], 0.08),
+      M([['anacardo', 3], ['olio', 2], ['panna', 1.5]]),
+      M([['anacardo', 2], ['panna', 3.5], ['olio', 2]], ['smartphone'], 0.1),
+      M([['burro', 2], ['anacardo', 2], ['panna', 3.5], ['olio', 2]]),
+      M([['parmesan', 2], ['anacardo', 2], ['burro', 2], ['olio', 2]], ['smartphone'], 0.1),
+      M([['anacardo', 3], ['panna', 3.5]], ['smartphone'], 0.12),
+      M([['olio', 3], ['burro', 2], ['parmesan', 2], ['anacardo', 2]]),
+      M([['panna', 5], ['anacardo', 3], ['olio', 2], ['burro', 2]], ['smartphone'], 0.12),
+      M([['parmesan', 3], ['olio', 3], ['anacardo', 2], ['panna', 3.5]], ['smartphone'], 0.1),
+      M([['burro', 3], ['panna', 5], ['anacardo', 3], ['parmesan', 2]], ['smartphone'], 0.12),
+      M([['anacardo', 3], ['olio', 3]], ['smartphone'], 0.12),
+      M([['parmesan', 3], ['burro', 3], ['olio', 3], ['anacardo', 3]], ['smartphone'], 0.12),
+      M([['panna', 6.5], ['anacardo', 3], ['parmesan', 3], ['burro', 2]], ['smartphone'], 0.12),
+      M([['olio', 3], ['burro', 3], ['panna', 5], ['anacardo', 3.5], ['parmesan', 2]], ['smartphone'], 0.12),
+      M([['anacardo', 3.5], ['panna', 6.5], ['burro', 3], ['olio', 3], ['parmesan', 3]], ['smartphone'], 0.12),
+      M([['anacardo', 3], ['panna', 5]], ['smartphone'], 0.12),
     ],
     events: [
       T(20, 'Genoa: basil in the marble mortar. Cream? Cashews? Not today.'),
@@ -737,6 +765,14 @@ export function stageRuleProblems(): string[] {
       if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(100 * intr / tot).toFixed(0)}% < 80%`);
     });
     for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast' && !intruderIn(r, ev.enemy) && !r.extras.includes(ev.enemy)) out.push(`${st.id} @${ev.at}: event enemy ${ev.enemy} not an intruder`);
+    // weight order (see the header)
+    const sh = intruderShares(st, r);
+    const ranked = r.intruders.map((i) => i.enemy).filter((id) => !ORDER_EXEMPT.has(id));
+    for (let i = 0; i + 1 < ranked.length; i++) {
+      const a = sh.get(ranked[i]) ?? 0, b = sh.get(ranked[i + 1]) ?? 0;
+      if (b > a * ORDER_TOL + 0.005) out.push(`${st.id}: ${ranked[i + 1]} ${(b * 100).toFixed(0)}% outweighs ${ranked[i]} ${(a * 100).toFixed(0)}% (weight order)`);
+    }
+    for (const id of ranked) if (!sh.get(id)) out.push(`${st.id}: intruder ${id} never spawns`);
   }
   if (STAGES.length !== RECIPES.length) out.push(`stages ${STAGES.length} vs recipes ${RECIPES.length}`);
   return out;
