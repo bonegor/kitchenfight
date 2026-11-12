@@ -6,14 +6,22 @@ scissors, cappuccino after 11 a.m.… A top-down **survivors-like** arena game
 (you steer; your kitchen arsenal fires on its own) that runs in any modern browser,
 on desktop and mobile.
 
+**Every level is an Italian dish** — carbonara, cacio e pepe, the Margherita, ragù, pesto,
+spaghetti alle vongole… — plus a finale in the food court where the crimes are born. The enemies
+are the ingredients that do **not** belong in the dish: cream and smoked bacon in the carbonara,
+butter in the cacio e pepe, pineapple on the Margherita, cheese on the clams. The dish's real
+ingredients are on the map, waiting to be collected.
+
 Every enemy is a real Italian food pet peeve, researched from Italian chefs,
 institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RESEARCH.md)**
 (54 documented "crimes" with sources, e.g. Italians rank *ketchup on pasta* as their
-#1 food crime in a 2022 YouGov survey).
+#1 food crime in a 2022 YouGov survey) — and every level follows the proper recipe, with
+the intruders Italians complain about, how loudly, and who says so (official specifications,
+Italian food media and Italian influencer chefs): **[docs/RECIPES.md](docs/RECIPES.md)**.
 
 <p align="center">
   <img src="docs/screenshots/title.jpg" width="49%" alt="Title screen" />
-  <img src="docs/screenshots/kitchen.jpg" width="49%" alt="La Cucina — the kitchen stage" />
+  <img src="docs/screenshots/kitchen.jpg" width="49%" alt="La Cucina, the kitchen" />
   <img src="docs/screenshots/trattoria.jpg" width="49%" alt="La Trattoria at night" />
   <img src="docs/screenshots/streets.jpg" width="49%" alt="I Vicoli di Napoli with the Cappuccino Clock Tower boss" />
   <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="La Food Court with the Cursed Microwave" />
@@ -38,19 +46,30 @@ institutions and social-media controversies — see **[docs/RESEARCH.md](docs/RE
 
 ## 🍅 The game
 
-- **4 stages** (15 minutes each, mini-bosses at 5:00 and 10:00, a final boss at 15:00):
-  *La Cucina* (the kitchen) → *La Trattoria* (dining room by candlelight) →
-  *I Vicoli di Napoli* (Naples alleys, sunset turning to night) → *La Food Court* (the lair where crimes are born).
+- **Il Menù: 10 real Italian dishes and a finale** (15 minutes each, mini-bosses at 5:00 and 10:00, a final boss at 15:00),
+  in six courses: *Le Basi* (Spaghetti al Pomodoro) → *Primi Romani* (Carbonara, Fettuccine Alfredo, Amatriciana,
+  Cacio e Pepe) → *Le Pizze* (Margherita, Marinara) → *Dal Nord* (Tagliatelle al Ragù, Trofie al Pesto Genovese) →
+  *Dal Sud e dal Mare* (Spaghetti alle Vongole) → *Il Gran Finale* (*Il Menù degli Orrori*, the food court where crimes
+  are born). Each dish is cooked in the kitchen, the trattoria or the Naples alleys, with its own light, from a
+  morning kitchen to a late-night osteria; winning dishes unlocks the next ones.
+- **Every level is a recipe.** The waves are the dish's intruders (cream, onion, bacon and peas in the carbonara;
+  cashews and seed oil in the pesto; "spaghetti bolognese" in Bologna…), each with *why Italians object* when it
+  first shows up. The dish's **real ingredients** appear on the map one by one, each with a small buff for the
+  rest of the run; collect them all for **RICETTA COMPLETA** and a ★ on the menu. Some ingredients are friend
+  *and* foe: garlic belongs in pesto but not in amatriciana, butter in Alfredo but not in cacio e pepe.
 - **7 chefs** with their own starting weapon and bonus — Chef Enzo, Nonna Pina (and her legendary flying slipper),
   Peppe il Pizzaiolo, Sofia la Romana, Fra' Tommaso the cheesemaking monk, Zia Concetta from Calabria, and Micio the trattoria cat.
 - **14 weapons**, each evolving with a matching ingredient into **14 evolutions** (e.g. *Olive* + *Olio Extra Vergine* → *Olive d'Oro*;
   *Forma di Parmigiano* + *Salvadanaio* → *Forma d'Oro* — Parmigiano really is accepted as bank collateral in Emilia).
 - **14 passive ingredients** (San Marzano tomatoes, Espresso, Nonna's apron, the lucky Cornicello…).
-- **30 crimes + 10 bosses**, each with its own behaviour: the *Cold Pot* slows you down (Italians' #2 crime: starting pasta in cold water),
+- **40 crimes + 15 bosses**, each with its own behaviour: the *Cold Pot* slows you down (Italians' #2 crime: starting pasta in cold water),
   *La Pentola Unica* (the infamous one-pot carbonara video) eats other enemies to grow, *Spaghetti Fantasma* (spaghetti bolognese
-  "doesn't exist", says Bologna's former mayor) phases in and out, and the *Latecomer Cappuccino* only appears after 11:00.
-- **La Dispensa** — spend coins on permanent power-ups. **Il Ricettario** — an illustrated encyclopedia of every crime with
-  *why Italians object* and real quotes. Unlockable chefs and stages, records, settings (volume, shake, flashes, quality…).
+  "doesn't exist", says Bologna's former mayor) phases in and out, the *Sneaky Butter* leaves butter puddles that slow you down, and the
+  *Latecomer Cappuccino* only appears after 11:00. New bosses for the new dishes: the Garlic King (amatriciana), the Supreme
+  Butter Block (cacio e pepe), the Great Spaghetti Bolognese, the Red-Hot Blender (pesto) and the Bag of Pre-Grated Cheese (vongole).
+- **La Dispensa** — spend coins on permanent power-ups. **Il Ricettario** — an illustrated encyclopedia of every recipe
+  (the proper ingredients, the intruders, the sources) and of every crime, with *why Italians object* and real quotes.
+  Unlockable chefs and dishes, records, medals, settings (volume, shake, flashes, quality…).
 
 ## 🎨 How it's made
 
@@ -74,7 +93,8 @@ src/
              (assets/inst, assets/sfx)
   game/      run simulation, weapons, passives, enemies, AI, bosses, waves, renderer, effects
   ui/        menus, HUD, level-up, chests, shop, encyclopedia
-docs/        DESIGN.md (game design), RESEARCH.md (the food crimes), ART_GUIDE.md, MUSIC.md (music tools),
+docs/        DESIGN.md (game design), RECIPES.md (the dishes: proper recipes, intruders, sources),
+             RESEARCH.md (the food crimes), ART_GUIDE.md, MUSIC.md (music tools),
              music/ (one file per track: sources, proofs, form), credits/ (sample and SFX sources)
 ```
 
@@ -86,7 +106,7 @@ docs/        DESIGN.md (game design), RESEARCH.md (the food crimes), ART_GUIDE.m
 | `npm run build:single` | one self-contained HTML file → `dist-single/index.html` |
 | `npm run build:play` | rebuilds the downloadable `play/kitchenfight.html` |
 | `npm run typecheck` | TypeScript check |
-| `/gallery.html` (dev) | sprite gallery & stage previews for art QA (`?prefix=enemy.&zoom=2`, `?stage=kitchen`) |
+| `/gallery.html` (dev) | sprite gallery & stage previews for art QA (`?prefix=enemy.&zoom=2`, `?stage=kitchen`, a dish's variant: `?stage=carbonara`) |
 
 Dev helpers in `scripts/`: `shot.mjs` (screenshots), `play.mjs` (automated playtest), `sim.mjs` (headless 15-minute
 balance simulation with a bot), `screens.mjs` (screenshots of every menu).
@@ -99,10 +119,10 @@ Fonts: Lobster, Lilita One, Playfair Display — SIL Open Font License.
 - Title: Funiculì, Funiculà, Luigi Denza (1880)
 - Menus: 'O sole mio, Eduardo di Capua and Alfredo Mazzucchi (1898). Mazzucchi (d. 1972) was recognised as
   co-composer in Italy, so the music may still be protected in the EU until 2042: a placeholder (see below).
-- La Cucina: Anvil Chorus (Il trovatore), Giuseppe Verdi (1853)
-- La Trattoria: Brindisi “Libiamo ne' lieti calici” (La traviata), Giuseppe Verdi (1853)
-- I Vicoli di Napoli: La Danza, with the traditional Tarantella Napoletana, Gioachino Rossini (1835)
-- La Food Court: Torna a Surriento, Ernesto De Curtis (1902)
+- La Cucina (Pomodoro, Carbonara, Amatriciana): Anvil Chorus (Il trovatore), Giuseppe Verdi (1853)
+- La Trattoria (Alfredo, Cacio e Pepe, Ragù): Brindisi “Libiamo ne' lieti calici” (La traviata), Giuseppe Verdi (1853)
+- I Vicoli di Napoli (Margherita, Marinara, Pesto, Vongole): La Danza, with the traditional Tarantella Napoletana, Gioachino Rossini (1835)
+- La Food Court (the finale): Torna a Surriento, Ernesto De Curtis (1902)
 - Bosses: Galop from the William Tell Overture, Gioachino Rossini (1829)
 - Final boss: Dies irae (Messa da Requiem), Giuseppe Verdi (1874)
 - Victory: Triumphal March (Aida), Giuseppe Verdi (1871)
