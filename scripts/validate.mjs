@@ -57,7 +57,7 @@ const res = await page.evaluate(async () => {
     if (!envForStage(st)) problems.push(`${st.id}: env ${st.env} missing`);
   }
   problems.push(...stageRuleProblems());
-  ['fx.butter_puddle', 'fx.seedoil_puddle'].forEach((i) => need.add(i));
+  ['fx.butter_puddle', 'fx.seedoil_puddle', 'fx.floret_patch'].forEach((i) => need.add(i));
   ['pickup.xp1','pickup.xp2','pickup.xp3','pickup.xp4','pickup.coin','pickup.coinbag','pickup.cannolo','pickup.lasagna','pickup.bell','pickup.spumante','pickup.gelato','pickup.chest','pickup.chest_gold','ui.chest','ui.emblem','icon.coin','icon.kill','icon.star','fx.puff','fx.steam','fx.spark','fx.heart','fx.confetti','fx.feather','fx.coffee_cloud','fx.lava_crater','fx.fire_patch','fx.oil_slick','fx.pesto','fx.cream_puddle','fx.ketchup_puddle','proj.e_cream','proj.e_seed','proj.e_pepperoni','proj.e_generic','proj.e_ketchup','proj.mattarello','proj.mattarello_nonna','proj.ciabatta','proj.ciabatta_oro','proj.coltello','proj.coltello_mille','proj.olive','proj.olive_oro','proj.forchetta','proj.tridente','proj.pizza','proj.pizza_celeste','proj.rotella','proj.rotella_oro','proj.peperoncino','proj.moka','proj.moka_turbo','proj.vesuvio','proj.meteor','proj.forma','proj.forma_oro','proj.basilico','fx.pigeon_fly'].forEach((i) => need.add(i));
   // stage env props (base envs + every dish's variant with its decor)
   for (const st of STAGES) envForStage(st);

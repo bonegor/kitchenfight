@@ -217,9 +217,9 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | Scatoletta Maledetta | The Cursed Little Can | kamikaze | Canned carbonara | extra in the Carbonara |
 | Spaghetti Fantasma | Ghost Spaghetti | ghost | Spaghetti bolognese | Ragù |
 | **Burro Furbetto** (new) | Sneaky Butter | puddler (butter slick) | Butter where it does not belong | Carbonara, Cacio e Pepe, Pesto, Vongole |
-| **Funghi Abusivi** (new) | Bootleg Mushrooms | burster (spore shots) | Mushrooms in carbonara | Carbonara |
+| **Funghi Abusivi** (new) | Bootleg Mushrooms | burster (spore shots; hovers over props) | Mushrooms in carbonara | Carbonara |
 | **Prosciutto Impostore** (new) | Impostor Ham | chase | Cooked ham instead of guanciale | Carbonara |
-| **Broccolo Americano** (new) | American Broccoli | lobber (florets) | Broccoli in Fettuccine Alfredo | Alfredo |
+| **Broccolo Americano** (new) | American Broccoli | lobber (florets that leave slowing mashed broccoli) | Broccoli in Fettuccine Alfredo | Alfredo |
 | **Gambero Saltatore** (new) | Hopping Shrimp | leaper | Shrimp in Alfredo (and seafood on the Marinara) | Alfredo, Marinara |
 | **Anacardo Abusivo** (new) | Bootleg Cashew | swarm | Cashews in pesto | Pesto |
 | **Olio Sbagliato** (new) | Wrong Oil | puddler (seed-oil slick) | The wrong oil | Cacio e Pepe, Pesto |
@@ -270,15 +270,15 @@ Checked at the end of every run (`src/game/medals.ts`).
 | Primo Servizio | Finish your first service. |
 | Al Dente | Survive 5 minutes. |
 | Cottura Perfetta | Survive 10 minutes. |
-| Chef Stellato | Win any stage. |
+| Chef Stellato | Win any dish on the menu. |
 | Mille Crimini | Stop 1,000 crimes in a single run. |
 | Evoluzione! | Evolve a weapon. |
 | Cucina Completa | Carry 6 weapons at once. |
 | Niente Ananas | Defeat 500 pineapples (in total). |
 | Il Boss sono Io | Defeat 10 bosses (in total). |
-| Senza Panna | Win a stage taking less than 150 damage. |
-| La Nonna Approva | Win a stage as Nonna Pina. |
-| Gatto Chef | Win a stage as Micio. |
+| Senza Panna | Win a dish taking less than 150 damage. |
+| La Nonna Approva | Win a dish as Nonna Pina. |
+| Gatto Chef | Win a dish as Micio. |
 | Tutti a Tavola | Unlock every chef. |
 | Giro d'Italia | Win every dish on the menu (was: all four stages). |
 | **Ricetta Perfetta** (new) | Collect every real ingredient and win the dish. |

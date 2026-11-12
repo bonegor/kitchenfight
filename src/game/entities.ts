@@ -232,8 +232,8 @@ export class Pickup {
   age = 0;
 }
 
-/** 'oil' = the chef's olive-oil slick; 'seedoil' / 'butter' / 'stink' are enemy hazards (Il Menù). */
-export type AreaKind = 'fire' | 'oil' | 'pesto' | 'cream' | 'ketchup' | 'cheese' | 'warning' | 'crater' | 'steam' | 'butter' | 'seedoil' | 'stink';
+/** 'oil' = the chef's olive-oil slick; 'seedoil' / 'butter' / 'stink' / 'floret' are enemy hazards (Il Menù). */
+export type AreaKind = 'fire' | 'oil' | 'pesto' | 'cream' | 'ketchup' | 'cheese' | 'warning' | 'crater' | 'steam' | 'butter' | 'seedoil' | 'stink' | 'floret';
 
 export class Area {
   alive = false;

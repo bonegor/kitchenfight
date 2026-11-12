@@ -4,12 +4,17 @@
 import type { Run } from './run';
 import type { Enemy, Projectile, Pickup, Area } from './entities';
 import type { PropInst } from './world';
-import { getSprite, drawSprite, getTinted, hasSprite, drawSpriteCanvas, setFastBase, clearFastBase } from '../gfx/sprites';
+import { getSprite, drawSprite, getTinted, getTintedSparingGreen, hasSprite, drawSpriteCanvas, setFastBase, clearFastBase } from '../gfx/sprites';
 import { TAU, clamp } from '../core/math';
 import { rgba } from '../gfx/painter';
 import type { Input } from '../core/input';
 
 export const FONT = "'Lilita One', 'Trebuchet MS', system-ui, sans-serif";
+
+/** The red flicker on an enemy that is winding up an attack. */
+const TELL_RED = '#ff2a1a';
+/** Bosses whose own wind-up cue is green: the red tell is not laid over those green pixels. */
+const SPARE_GREEN = new Set(['b_aglio']);
 
 interface DrawItem {
   y: number;
@@ -190,8 +195,13 @@ export class Renderer {
     // ------------------------------------------------ shadows
     ctx.fillStyle = 'rgba(30,16,10,0.26)';
     ctx.beginPath();
+    let phased = false;
     for (const e of run.enemies) {
       if (!e.alive || e.x < x0 - 80 || e.x > x1 + 80 || e.y < y0 - 80 || e.y > y1 + 120) continue;
+      if (e.fade > 0) {
+        phased = true; // drawn below, fading with the body
+        continue;
+      }
       const sh = (e.def.shadow ?? 1) * e.r;
       const k = 1 - Math.min(0.5, e.z / 120);
       ctx.moveTo(e.x + sh * 1.05 * k, e.y + e.r * 0.92);
@@ -201,6 +211,19 @@ export class Renderer {
     ctx.moveTo(pl.x + 16, pl.y + 19);
     ctx.ellipse(pl.x, pl.y + 19, 16, 6, 0, 0, TAU);
     ctx.fill();
+    // a phased-out boss (the Bolognese "doesn't exist") loses its shadow as it fades
+    if (phased) {
+      for (const e of run.enemies) {
+        if (!e.alive || e.fade <= 0 || e.x < x0 - 80 || e.x > x1 + 80 || e.y < y0 - 80 || e.y > y1 + 120) continue;
+        const sh = (e.def.shadow ?? 1) * e.r;
+        const k = 1 - Math.min(0.5, e.z / 120);
+        ctx.globalAlpha = clamp(1 - e.fade, 0, 1);
+        ctx.beginPath();
+        ctx.ellipse(e.x, e.y + e.r * 0.92, sh * 1.05 * k, sh * 0.4 * k, 0, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
 
     // ------------------------------------------------ y-sorted
     const items = this.items;
@@ -318,6 +341,8 @@ export class Renderer {
       frame = Math.floor(this.t * 11 + e.id) & 3; // spin / waving hem play on a timer
     } else if (def.behavior === 'kamikaze' && e.state === 1) {
       frame = Math.floor(this.t * 16) & 1 ? 1 : 3; // rattling fuse
+    } else if (def.behavior === 'leaper' && e.state === 1) {
+      frame = 1; // airborne: hold the widest stride (chicken legs apart, shrimp tail flicked)
     }
     if (e.boss && e.attackPose > 0 && hasSprite(sid + '.attack')) {
       sid = sid + '.attack';
@@ -348,7 +373,16 @@ export class Renderer {
     }
     const moving = Math.abs(e.vx) + Math.abs(e.vy) > 8;
     const bob = moving && e.z === 0 ? -Math.abs(Math.sin(e.anim * Math.PI * 0.5)) * 1.6 : 0;
-    const tilt = moving && !e.boss ? Math.sin(e.anim * Math.PI * 0.5) * 0.06 : 0;
+    let tilt = moving && !e.boss ? Math.sin(e.anim * Math.PI * 0.5) * 0.06 : 0;
+    if (def.behavior === 'leaper' && e.state === 1 && e.aux > 0) {
+      // mid-leap: stretched at take-off and landing, nose up on the way up and down on the way down
+      // (the ground shadow already shrinks with the height)
+      const k = clamp(1 - e.timer / e.aux, 0, 1);
+      const air = Math.sin(k * Math.PI);
+      scx *= 1 - 0.08 * (1 - air);
+      scy *= 1 + 0.1 * (1 - air);
+      tilt = -e.face * (0.5 - k) * 0.7;
+    }
     let x = e.x, y = e.y - e.z + bob;
     // telegraph shake
     if (e.telegraph > 0) x += Math.sin(this.t * 80) * 1.5;
@@ -371,14 +405,17 @@ export class Renderer {
     let tint: string | null = null;
     let ta = 0;
     if (e.flash > 0) { tint = '#ffffff'; ta = Math.min(1, e.flash / 0.08); }
-    else if (e.telegraph > 0) { tint = '#ff2a1a'; ta = 0.35 + 0.3 * Math.sin(this.t * 30); }
+    else if (e.telegraph > 0) { tint = TELL_RED; ta = 0.35 + 0.3 * Math.sin(this.t * 30); }
     else if (frozen) { tint = '#8fd4ff'; ta = 0.55; }
     else if (e.burn > 0) { tint = '#ff7a1a'; ta = 0.18 + 0.12 * Math.sin(this.t * 20 + e.id); }
     else if (e.buff > 0) { tint = '#b5f05a'; ta = 0.22; }
     else if (e.slow > 0 && e.slowAmt > 0.2) { tint = '#7de38a'; ta = 0.2; }
     if (tint) {
       ctx.globalAlpha = ta * alpha;
-      drawSpriteCanvas(ctx, s, getTinted(sid, tint, frame % s.frames.length), x, y, scx, scy, tilt);
+      // the Garlic King's wind-up glows green (sceptre, stink-filled cheeks): the red tell leaves that green alone
+      const f = frame % s.frames.length;
+      const img = tint === TELL_RED && SPARE_GREEN.has(def.id) ? getTintedSparingGreen(sid, tint, f) : getTinted(sid, tint, f);
+      drawSpriteCanvas(ctx, s, img, x, y, scx, scy, tilt);
     }
     ctx.globalAlpha = 1;
     // charge telegraph: show the dash lane
@@ -546,7 +583,7 @@ export class Renderer {
     const k = a.life / a.max;
     const fadeIn = clamp((a.max - a.life) / 0.2, 0, 1);
     const fade = Math.min(fadeIn, clamp(a.life / 0.5, 0, 1));
-    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle', butter: 'fx.butter_puddle', seedoil: 'fx.seedoil_puddle' };
+    const spriteFor: Record<string, string> = { fire: 'fx.fire_patch', oil: 'fx.oil_slick', pesto: 'fx.pesto', cream: 'fx.cream_puddle', ketchup: 'fx.ketchup_puddle', butter: 'fx.butter_puddle', seedoil: 'fx.seedoil_puddle', floret: 'fx.floret_patch' };
     if (a.kind === 'warning') {
       const col = a.enemy ? '#ff3b2f' : '#ff9b3d';
       ctx.strokeStyle = rgba(col, 0.85);
@@ -568,6 +605,22 @@ export class Renderer {
       const gs = glowSprite(a.kind === 'stink' ? '#a8d84a' : '#f6ecc4');
       ctx.drawImage(gs, a.x - a.r * 1.3, a.y - a.r, a.r * 2.6, a.r * 2);
       ctx.globalAlpha = 1;
+      if (a.kind === 'cheese') {
+        // the pale glow alone vanishes on light floors, so every cheese cloud gets an amber rim where it
+        // slows, and a cream ring swells out to it every 0.42 s
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = rgba('#c9973a', 0.7 * fade);
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r, a.r * 0.78, 0, 0, TAU);
+        ctx.stroke();
+        const ph = ((this.t + a.rot) % 0.42) / 0.42;
+        const rr = a.r * (0.8 + 0.18 * ph);
+        ctx.lineWidth = 2.2 * (1 - ph) + 0.6;
+        ctx.strokeStyle = rgba('#fff3c8', 0.85 * (1 - ph) * fade);
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, rr, rr * 0.78, 0, 0, TAU);
+        ctx.stroke();
+      }
       return;
     }
     const sid = spriteFor[a.kind];

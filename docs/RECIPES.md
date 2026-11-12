@@ -129,6 +129,11 @@ chili: a free choice") · Basilico.
 - [Spaghetti al pomodoro (Giallo Zafferano blog, Amici in cucina)](https://blog.giallozafferano.it/amicincucina/spaghetti-al-pomodoro/) —
   garlic in oil as the base (shallot as an alternative), finished in the pan with a little pasta water.
   The search excerpt did not confirm which of two blog posts it was.
+- Chef sources (the Ricettario's *Gli chef*): Vincenzo's Plate's reaction video to the YouGov food
+  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food));
+  Antonino Cannavacciuolo ([Il Fatto Quotidiano, 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/))
+  and Irina Steccanella ([Trend Online](https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/))
+  against sugar in tomato sauce (see *Also researched, not in the game* below).
 
 **Intruders in the game**
 
@@ -417,6 +422,9 @@ return it at the end so it stays crisp. Toss with the pasta and finish with plen
   paraphrase: the Amatrice recipe calls for spaghetti, not bucatini;
   [the Amatrice De.C.O., delibera 27/2015 (Gazzetta del Gusto)](https://gazzettadelgusto.it/ricette/salse-sughi/storia-e-ricetta-originale-dellamatriciana/?print=pdf) —
   Amatrice formalised Amatriciana Rossa and Bianca.
+- Chef sources (the Ricettario's *Gli chef*): Carlo Cracco, the chef of the 2015 garlic row, as a source
+  of controversy, not of rules: [Amatrice's statement of the proper ingredients (Blitz Quotidiano, 2015)](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)
+  and [Dissapore (2015)](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/).
 
 **Intruders in the game**
 
@@ -570,6 +578,10 @@ wood-fired oven at about 485 °C (EU STG figures)
 - [Dissapore on Reg. (EU) 2022/2313](https://www.dissapore.com/notizie/pizza-napoletana-lue-elimina-dai-menu-quella-che-non-rispetta-il-disciplinare-di-produzione/)
   and [on hand stretching only](https://www.dissapore.com/alimentazione/pizza-napoletana-stg-cambia-il-disciplinare-e-si-conferma-unassurdita/);
   [Scatti di Gusto: mozzarella vs fiordilatte (2012)](https://www.scattidigusto.it/2012/07/05/bufala-vieni-a-vedere-se-sulla-pizza-ci-va-mozzarella-o-fiordilatte/).
+- Chef sources (the Ricettario's *Gli chef*), all on pineapple: Gino Sorbillo ([Open, 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/)),
+  Antonino Cannavacciuolo ([Gambero Rosso, 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/)),
+  Franco Pepe ([Gambero Rosso, 2019](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/)) and
+  Vincenzo's Plate ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)).
 
 **Intruders in the game**
 
@@ -648,6 +660,7 @@ mocks it). No cheese of any kind: the AVPN defines it as tomato, oil, oregano an
 (garlic and oregano are permitted, for the Marinara); [Wikipedia: Pizza marinara](https://en.wikipedia.org/wiki/Pizza_marinara)
 (the name comes from *marinaro*, of sailors); [Napolike](https://www.napolike.it/storia-della-pizza-napoletana-unesco)
 (paraphrase: the typical meal of sailors); [Scatti di Gusto: the best marinaras in Naples](https://www.scattidigusto.it/pizzerie/migliori-pizze-marinara-napoli).
+No chef or creator is credited for the Marinara: the research found none for this dish.
 
 **Intruders in the game**
 
@@ -731,6 +744,8 @@ milk. Toss with tagliatelle.
   ragù dresses dry pasta; for tagliatelle it is ruled out.) *The dish's in-game quote.*
 - [Dissapore (2023)](https://www.dissapore.com/notizie/ragu-alla-bolognese-aggiornata-la-ricetta-ufficiale-pancetta-e-manzo-al-posto-della-cartella/);
   [Sky TG24 (2023)](https://tg24.sky.it/lifestyle/2023/04/20/ragu-alla-bolognese-ricetta-originale).
+- Chef sources (the Ricettario's *Gli chef*): [Vincenzo's Plate on authentic Bolognese sauce](https://www.vincenzosplate.com/the-secret-to-authentic-bolognese-sauce/);
+  Bruno Barbieri's reply to the 2016 "white Bolognese" ([Travel Emilia-Romagna](https://www.travelemiliaromagna.it/en/?p=44632), a `?p=` shortlink, as found in search).
 
 **Intruders in the game**
 

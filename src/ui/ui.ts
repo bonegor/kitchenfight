@@ -5,7 +5,7 @@
 import { h, img, Nav } from './dom';
 import { SFX_CREDITS } from '../audio/sfxsamples';
 import { INSTRUMENT_CREDITS, MUSIC_PIECES } from '../audio/musiccredits';
-import { spriteURL, hasSprite } from '../gfx/sprites';
+import { spriteURL, spriteIconURL, hasSprite } from '../gfx/sprites';
 import { audio } from '../audio/audio';
 import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
@@ -38,6 +38,11 @@ export interface AppAPI {
 function icon(id: string): string {
   if (hasSprite(id)) return spriteURL(id);
   return 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="%23e8d5b0" stroke="%232b1712" stroke-width="3"/><text x="20" y="27" font-size="20" text-anchor="middle" fill="%232b1712">?</text></svg>');
+}
+
+/** An enemy or boss as an icon: cropped to the painted figure, so a boss whose box has room for its attack fills the cell. */
+function foeIcon(id: string): string {
+  return hasSprite(id) ? spriteIconURL(id) : icon(id);
 }
 
 const COIN = () => icon('icon.coin');
@@ -679,7 +684,7 @@ export class UI {
       rec?.perfect ? h('span', { class: 'perfect-badge', title: 'Ricetta completa' }, '★') : null,
     );
     const titled = (src: string, cls: string, title: string) => {
-      const im = img(icon(src), cls, title);
+      const im = img(cls.startsWith('foe') ? foeIcon(src) : icon(src), cls, title);
       im.title = title;
       return im;
     };
@@ -1301,7 +1306,7 @@ export class UI {
             h('div', { class: 'stat-box' }, h('div', { class: 'v' }, '+' + run.coins), h('div', { class: 'k' }, 'Coins')),
           ),
           // what this service earned comes before the weapon table (the body scrolls, the buttons stay)
-          unlocks.length ? h('div', { class: 'unlock-list' }, unlocks.map((u) => h('div', { class: 'unlock' }, img(icon(u.icon)), h('b', {}, u.text)))) : null,
+          unlocks.length ? h('div', { class: 'unlock-list' }, unlocks.map((u) => h('div', { class: 'unlock' }, img(icon(u.icon), u.icon.startsWith('dish.') ? 'dish' : ''), h('b', {}, u.text)))) : null,
           h('table', { class: 'dmg' },
             h('thead', {}, h('tr', {}, h('th', {}, 'Weapon'), h('th', { class: 'num' }, 'Lv'), h('th', { class: 'num' }, 'Damage'), h('th', { class: 'num' }, 'Kills'), h('th', { class: 'num' }, 'DPS'))),
             h('tbody', {}, rows),
@@ -1495,7 +1500,7 @@ export class UI {
         // the dishes this crime does not belong in: chips that open the recipe
         const dishes = dishesForIntruder(id);
         detail.append(
-          img(icon(d.sprite), 'big'),
+          img(foeIcon(d.sprite), 'big'),
           h('h3', {}, d.name),
           h('div', { class: 'en' }, d.en + (d.boss ? ' · BOSS' : '')),
           h('div', { class: 'crime' }, '⚖ ', h('b', {}, d.info.crime)),
@@ -1520,7 +1525,7 @@ export class UI {
       ids.forEach((id) => {
         const d = ENEMIES[id];
         const known = seen.has('e:' + id);
-        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(id === start ? { 'data-nav-default': '' } : {}) }, img(icon(d.sprite)));
+        const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(id === start ? { 'data-nav-default': '' } : {}) }, img(foeIcon(d.sprite)));
         it.addEventListener('navfocus', () => showE(id));
         it.addEventListener('click', (e) => {
           showE(id);
@@ -1732,7 +1737,7 @@ export class UI {
       });
     }
     const row = h('div', { class: 'rc-intr', 'data-nav': '' },
-      img(icon(d?.sprite ?? ''), 'foe', i.it),
+      img(foeIcon(d?.sprite ?? ''), 'foe', i.it),
       h('div', { class: 'body' },
         h('div', { class: 'top' }, h('b', {}, i.it), en ? h('span', { class: 'en' }, en) : null),
         h('div', { class: 'meta' },

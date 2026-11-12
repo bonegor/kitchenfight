@@ -148,6 +148,36 @@ export function getTinted(id: string, color: string, frame = 0): HTMLCanvasEleme
   return c;
 }
 
+/**
+ * Like getTinted, but strongly green pixels (a glow or a stink cloud painted into the sprite) are left
+ * out of the silhouette, so a tint laid over the sprite does not turn them another colour. Cached.
+ */
+export function getTintedSparingGreen(id: string, color: string, frame = 0): HTMLCanvasElement {
+  const key = id + '|' + color + '|' + frame + '|g';
+  let c = tintCache.get(key);
+  if (!c) {
+    const s = getSprite(id);
+    const src = s.frames[frame % s.frames.length];
+    c = silhouette(src, color);
+    const sctx = src.getContext('2d');
+    const cctx = c.getContext('2d');
+    if (sctx && cctx && c.width && c.height) {
+      const px = sctx.getImageData(0, 0, src.width, src.height).data;
+      const out = cctx.getImageData(0, 0, c.width, c.height);
+      const o = out.data;
+      for (let i = 0; i < px.length; i += 4) {
+        const g = px[i + 1];
+        // how far green leads the stronger of red and blue: 0 = not green, toward 1 = pure glow green
+        const lead = (g - Math.max(px[i], px[i + 2])) / Math.max(1, g);
+        if (g > 70 && lead > 0.05) o[i + 3] = Math.round(o[i + 3] * Math.max(0, 1 - (lead - 0.05) / 0.12));
+      }
+      cctx.putImageData(out, 0, 0);
+    }
+    tintCache.set(key, c);
+  }
+  return c;
+}
+
 /** Render all (or some) sprites up-front, yielding to the browser between batches. */
 export async function prerenderAll(prefixes: string[] | null, onProgress?: (p: number) => void): Promise<void> {
   const ids = [...specs.keys()].filter((id) => !prefixes || prefixes.some((p) => id.startsWith(p)));
@@ -239,6 +269,48 @@ export function spriteURL(id: string, frame = 0, pad = 0): string {
     u = c.toDataURL('image/png');
   } else {
     u = src.toDataURL('image/png');
+  }
+  urlCache.set(key, u);
+  return u;
+}
+
+/**
+ * PNG data URL of a sprite frame cropped to what is actually painted (plus a small margin), for DOM
+ * icons. A sprite's box also holds room for its attack poses (a boss's sceptre swing, a knife slash),
+ * so the plain frame would sit small and off centre in a square icon. Cached.
+ */
+export function spriteIconURL(id: string, frame = 0): string {
+  const key = id + '#' + frame + '#trim';
+  let u = urlCache.get(key);
+  if (u) return u;
+  const s = getSprite(id);
+  const src = s.frames[frame % s.frames.length];
+  const w = src.width, h = src.height;
+  const data = src.getContext('2d')?.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  if (data) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > 24) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+  }
+  if (x1 < 0) {
+    u = spriteURL(id, frame);
+  } else {
+    const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.04) + 1;
+    x0 = Math.max(0, x0 - m);
+    y0 = Math.max(0, y0 - m);
+    x1 = Math.min(w - 1, x1 + m);
+    y1 = Math.min(h - 1, y1 + m);
+    const c = makeCanvas(x1 - x0 + 1, y1 - y0 + 1);
+    c.getContext('2d')!.drawImage(src, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+    u = c.toDataURL('image/png');
   }
   urlCache.set(key, u);
   return u;
