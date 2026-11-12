@@ -8,28 +8,34 @@
  * feet/base at y ≈ +radius, facing right, no ground shadow, one dominant colour.
  *
  *   id                  box w×h   anchor (ax,ay)  radius  behaviour   look
- *   enemy.burro         46×52     (23,36)         14      puddler     pale-yellow butter brick in its opened foil wrapper
- *                                                                     (blue band, a peeled corner), golden melt dripping
- *                                                                     off the top; mischievous grin, tiptoes, hides a
- *                                                                     butter knife behind its back
+ *   enemy.burro         46×52     (23,36)         14      puddler     pale-yellow butter brick in its opened gold-foil wrapper
+ *                                                                     (red band), golden melt dripping off the top; sly
+ *                                                                     half-lidded side glance, cocked brow, closed lopsided
+ *                                                                     smirk, tiptoes, hides a butter knife behind its back
  *   enemy.funghi        46×50     (23,34)         13      burster     three dark-brown button mushrooms on one clump: the
- *                                                                     boss in a tiny black fedora, two henchmen (one in
- *                                                                     shades); spore puffs drift around. It hovers (the
- *                                                                     renderer lifts it), so rootlets dangle under the clump
- *   enemy.prosciutto    48×50     (24,34)         14      chase       pink cooked ham wrapped in a ham-slice cloak (white fat
- *                                                                     rim + golden rind) with a high collar pulled up over
- *                                                                     its mouth; shifty eyes, sweat, a fake "hello, my name
- *                                                                     is…" sticker (illegible scrawl, no readable text)
+ *                                                                     boss in a light tweed coppola (flat cap), two henchmen
+ *                                                                     (a toothpick; a sticking plaster); olive spore puffs
+ *                                                                     fade in and out. It hovers (the renderer lifts it), so
+ *                                                                     rootlets dangle under the clump
+ *   enemy.prosciutto    48×50     (24,34)         14      chase       pink cooked-ham loaf (white fat cap combed over the top)
+ *                                                                     wearing one round ham slice as a cape (white fat ring,
+ *                                                                     pale muscle seams); a FAKE guanciale label on its chest
+ *                                                                     (a swatch of guanciale stripes, no text); shifty eyes,
+ *                                                                     sweat, nervous clenched-teeth grin
  *   enemy.broccoli      50×58     (25,40)         15      lobber      dark-green floret head in a red baseball cap with a
  *                                                                     white star, "Alfredo" cream dripping off the top, pale
  *                                                                     stalk body, white sneakers; swings a floret underhand
  *   enemy.gamberi       44×40     (22,26)         12      leaper      coral-pink shrimp curled into a C like a spring, blue
- *                                                                     swim goggles, long antennae; the tail fan flips
+ *                                                                     swim goggles cut on a scowling slant, cocky toothy
+ *                                                                     grin, long antennae; the tail fan flips
  *
- *   fx.butter_puddle    76×56     (38,28)  1 frame, res 2: melted butter seen from above, a half-melted pat in the
- *                                          middle and milky foam at the rim (enemy hazard 'butter'; drawn scaled to
- *                                          the hazard radius at ~0.92 alpha, like fx.cream_puddle).
- *   proj.e_spore        24×24     (12,12)  1 frame: a dusty puff of mushroom spores (DANGER style: hot rim, red glow).
+ *   fx.butter_puddle    76×56     (38,28)  1 frame, res 2: soft butter smeared over the floor, seen from above: opaque
+ *                                          pale butter-yellow (the enemy's colour), knife-spread ridges, toasted flecks and
+ *                                          a half-melted pat in the middle; rounder than the other slicks so the renderer's
+ *                                          squash + spin keeps it a puddle (enemy hazard 'butter'; drawn scaled to the
+ *                                          hazard radius at ~0.92 alpha, like fx.cream_puddle).
+ *   proj.e_spore        24×24     (12,12)  1 frame: a dark olive-khaki puff of mushroom spores with sickly yellow-green
+ *                                          highlights (DANGER style: hot rim, red glow).
  *   proj.e_floret       24×24     (12,12)  1 frame: a round broccoli floret dripping cream, stalk stub at the back
  *                                          (lobbed and spun; lands as a cream puddle). DANGER style.
  */
@@ -39,7 +45,7 @@ import {
 } from '../painter';
 import { enemySprite, cyc, TAU, LIMB, mitt, hoseArm, cheeks, clipTo, wash } from './enemies_b_kit';
 import { danger } from './projectiles';
-import { fx, puddle } from './fx';
+import { fx, puddle, puddlePts } from './fx';
 import { S, radial } from './items_kit';
 
 const SHOE = '#2e1c15';
@@ -125,11 +131,12 @@ const BUT_HI = '#fffbe6';
 const BUT_LN = '#cf9c38';
 const MELT = '#f9d34a';
 const MELT_SH = '#e0a326';
-const FOIL = '#e2e7ee';
-const FOIL_SH = '#9ca8bb';
-const FOIL_DK = '#6d798d';
-const FOIL_BAND = '#2f60b8';
-const FOIL_GOLD = '#f2c14e';
+const FOIL = '#e8b445';
+const FOIL_SH = '#b07a22';
+const FOIL_DK = '#7a5216';
+const FOIL_HI = '#fff0b8';
+const FOIL_BAND = '#b8302e';
+const FOIL_GOLD = '#fff2c4';
 const KNIFE = '#e9eef5';
 const KNIFE_SH = '#8f9bb0';
 const WOOD = '#c7854c';
@@ -235,39 +242,24 @@ function drawBurro(ctx: Ctx, f: number) {
     ],
   });
 
-  // --- face: mischievous — pupils sliding to the corner, one brow down, one cocked
-  eye(ctx, -4.2, -12.2, 2.5, { look: [0.5, -0.12], pupil: 0.52, squash: 1.18 });
-  eye(ctx, 2.7, -12.5, 2.75, { look: [0.5, -0.12], pupil: 0.52, squash: 1.18 });
-  brow(ctx, -4.3, -16.0, 4.2, 0.38, 1.35);
-  brow(ctx, 3.0, -17.9, 4.6, 0.22, 1.35); // cocked
-  cheeks(ctx, [[-7.4, -8.4], [5.8, -8.8]], 1.8, 1.0, '#f2a35a', 0.5);
-  // lopsided grin
-  const grin = (c: Ctx) => {
-    c.moveTo(-5.4, -7.7);
-    c.quadraticCurveTo(0.2, -6.0, 5.6, -9.6);
-    c.quadraticCurveTo(4.6, -4.0, 0.2, -3.8);
-    c.quadraticCurveTo(-3.8, -4.0, -5.4, -7.7);
-    c.closePath();
+  // --- face: sly — half-lidded eyes glancing sideways, one brow cocked, a closed lopsided smirk
+  const lidC = mix(BUT, BUT_SH, 0.55);
+  const slyEye = (x: number, y: number, r: number) => {
+    eye(ctx, x, y, r, { look: [0.62, 0.12], pupil: 0.56, squash: 1.1, lid: 'half', lidColor: lidC });
+    // heavy lid line across the eye
+    const ry = r * 1.1, ly = y - ry * 0.25;
+    line(ctx, [[x - r * 1.12, ly + 0.5], [x, ly - 0.25], [x + r * 1.12, ly + 0.3]], 1.15, INK, true);
   };
-  shape(ctx, grin, { fill: '#5b1320', ink: 1.0, shadow: 'none' });
-  clipTo(ctx, grin, () => {
-    ctx.fillStyle = '#fff8ea';
-    ctx.beginPath();
-    ctx.moveTo(-6, -8.8);
-    ctx.quadraticCurveTo(0.2, -7.2, 6.4, -10.8);
-    ctx.lineTo(6.4, -7.7);
-    ctx.quadraticCurveTo(0.2, -4.8, -6, -6.4);
-    ctx.closePath();
-    ctx.fill();
-    line(ctx, [[-2.4, -7.8], [-2.2, -5.8]], 0.35, 'rgba(80,40,30,0.4)');
-    line(ctx, [[0.6, -7.8], [0.8, -5.6]], 0.35, 'rgba(80,40,30,0.4)');
-    line(ctx, [[3.4, -8.8], [3.4, -6.4]], 0.35, 'rgba(80,40,30,0.4)');
-    ctx.fillStyle = '#e8616e';
-    ctx.beginPath();
-    ellipsePath(ctx, 1.2, -3.4, 2.6, 1.3);
-    ctx.fill();
-  });
-  line(ctx, [[5.4, -9.6], [6.6, -10.6]], 0.8, INK, false);
+  slyEye(-4.2, -12.0, 2.6);
+  slyEye(2.9, -12.2, 2.85);
+  brow(ctx, -4.3, -15.2, 4.4, 0.16, 1.45); // low and flat
+  brow(ctx, 3.1, -18.6, 4.8, -0.2, 1.45); // cocked high
+  cheeks(ctx, [[-7.4, -8.4], [6.2, -8.6]], 1.8, 1.0, '#f2a35a', 0.55);
+  // closed, lopsided smirk: flat on the left, hitched up into the right cheek
+  line(ctx, [[-4.6, -6.4], [-0.6, -6.0], [3.0, -6.8], [5.6, -8.8]], 1.35, INK, true);
+  line(ctx, [[5.0, -9.6], [6.2, -8.4], [5.8, -7.2]], 0.8, INK, true);
+  // a hint of the lower lip under the hitched side
+  line(ctx, [[0.8, -5.2], [3.2, -5.6]], 0.6, BUT_LN, true, 0.8);
 
   // --- the foil wrapper, opened down to its waist
   const FT = -1.6;
@@ -277,12 +269,12 @@ function drawBurro(ctx: Ctx, f: number) {
   for (let i = 1; i <= 3; i++) top.push([R + 0.6 + (i / 3) * (DX + 0.4), FT + (i / 3) * DY + (i % 2 ? 0.4 : -0.4)]);
   const foilPts: Pt[] = [...top, [R + DX + 1.0, B + DY + 1.0], [R + 0.6, B + 1.1], [L - 1.0, B + 1.1]];
   const foil = (c: Ctx) => roundPoly(c, foilPts, 0.7);
-  shape(ctx, foil, { fill: FOIL, ink: 1.7, shadow: 'none' });
+  shape(ctx, foil, { fill: FOIL, ink: 1.9, shadow: 'none' });
   clipTo(ctx, foil, () => {
     const g = ctx.createLinearGradient(L, FT, R, B + 2);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(0.5, FOIL);
-    g.addColorStop(1, mix(FOIL, FOIL_SH, 0.45));
+    g.addColorStop(0, FOIL_HI);
+    g.addColorStop(0.45, FOIL);
+    g.addColorStop(1, mix(FOIL, FOIL_SH, 0.5));
     ctx.fillStyle = g;
     ctx.fillRect(L - 3, FT - 8, R - L + DX + 6, 20);
     // side panel in shadow
@@ -290,14 +282,14 @@ function drawBurro(ctx: Ctx, f: number) {
     ctx.beginPath();
     polyPath(ctx, [[R + 0.6, FT - 1], [R + DX + 3, FT + DY - 3], [R + DX + 3, B + 4], [R + 0.6, B + 4]]);
     ctx.fill();
-    // printed band (blue with gold pinstripes), following the block's perspective
+    // printed band (red with cream pinstripes), following the block's perspective
     const y0 = FT + 2.4, y1 = FT + 5.4;
     const side = (y: number, k: number): Pt => [R + 0.6 + k * (DX + 2), y + k * (DY - 1.4)];
     ctx.fillStyle = FOIL_BAND;
     ctx.beginPath();
     polyPath(ctx, [[L - 3, y0], [R + 0.6, y0], side(y0, 1), side(y1, 1), [R + 0.6, y1], [L - 3, y1]]);
     ctx.fill();
-    ctx.fillStyle = rgba('#173b80', 0.55);
+    ctx.fillStyle = rgba('#6e1418', 0.5);
     ctx.beginPath();
     polyPath(ctx, [[R + 0.6, y0], side(y0, 1), side(y1, 1), [R + 0.6, y1]]);
     ctx.fill();
@@ -320,7 +312,7 @@ function drawBurro(ctx: Ctx, f: number) {
     for (let i = 0; i < 12; i++) {
       const x = L + Rn() * (R + DX - L), y = FT + Rn() * (B - FT);
       const a = Rn() * TAU, l = 1.4 + Rn() * 2.2;
-      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.5)' : rgba(FOIL_DK, 0.2);
+      ctx.fillStyle = i % 2 ? rgba(FOIL_HI, 0.6) : rgba(FOIL_DK, 0.22);
       ctx.beginPath();
       polyPath(ctx, [[x, y], [x + Math.cos(a) * l, y + Math.sin(a) * l], [x + Math.cos(a + 1.2) * l * 0.7, y + Math.sin(a + 1.2) * l * 0.7]]);
       ctx.fill();
@@ -330,21 +322,12 @@ function drawBurro(ctx: Ctx, f: number) {
       [[-2.4, FT], [-2.9, FT + 2.2]],
       [[2.6, FT], [3.2, FT + 2.4]],
       [[R + 3.6, FT - 2.2], [R + 3.2, B - 1.6]],
-    ] as Pt[][]) line(ctx, pts, 0.5, FOIL_DK, true, 0.5);
+    ] as Pt[][]) line(ctx, pts, 0.5, FOIL_DK, true, 0.6);
     // bright vertical sheen on the front
-    line(ctx, [[L + 2.4, FT + 1], [L + 2.2, B]], 1.3, '#ffffff', false, 0.7);
+    line(ctx, [[L + 2.4, FT + 1], [L + 2.2, B]], 1.3, '#fffbe8', false, 0.8);
     // crumpled bright rim along the top
-    line(ctx, top, 0.8, '#ffffff', false, 0.85);
+    line(ctx, top, 0.8, '#fffbe8', false, 0.9);
   });
-  // corner flap peeled outward (shows the foil's matte underside)
-  shape(ctx, (c) => {
-    c.moveTo(L - 1.0, FT + 0.2);
-    c.quadraticCurveTo(L + 1.8, FT - 0.6, L + 4.0, FT - 0.2);
-    c.quadraticCurveTo(L - 1.4, FT + 1.6, L - 5.4, FT + 5.0);
-    c.quadraticCurveTo(L - 3.6, FT + 1.6, L - 1.0, FT + 0.2);
-    c.closePath();
-  }, { fill: '#c9d0dc', ink: 1.1, shadow: FOIL_SH, shadowOffset: [-0.6, -0.8], gloss: [{ x: L - 1.6, y: FT + 1.6, rx: 1.6, ry: 0.4, rot: -0.6, alpha: 0.8 }] });
-
   // --- near arm: an innocent little wave
   const wx = 16.8 + s * 0.6, wy = -7.2 + co * 0.6;
   hoseArm(ctx, 10.2, -5.8, wx, wy, { thick: 2.0, bend: -0.2, handR: 2.4 });
@@ -354,8 +337,9 @@ enemySprite('burro', 46, 52, 36, drawBurro);
 
 // ===========================================================================
 // 2. FUNGHI ABUSIVI — r13. Three brown button mushrooms grown from one clump:
-//    the boss in the middle wears a tiny black fedora, his two henchmen flank
-//    him (one in shades). Spore puffs drift around. (Burster: spore shots.)
+//    the boss in the middle wears a light tweed coppola (flat cap), his two
+//    henchmen flank him (one chewing a toothpick, one with a sticking plaster
+//    on his cap). Olive spore puffs drift around. (Burster: spore shots.)
 // ===========================================================================
 
 const CAP = '#8e5634';
@@ -364,14 +348,15 @@ const CAP_HI = '#c98e5e';
 const STEM = '#f4e8d4';
 const STEM_SH = '#cdb593';
 const GILL = '#6e4a32';
-const HAT = '#312d38';
-const HAT_SH = '#17151c';
-const HAT_BAND = '#efe1c2';
-const SPORE = '#d9c79a';
-const SPORE_INK = '#8a7350';
+const TWEED = '#cfc6b0';
+const TWEED_SH = '#9d927a';
+const TWEED_DK = '#7a705c';
+const SPORE = '#8f7a45';
+const SPORE_SH = '#5e4e2a';
+const SPORE_HI = '#b8c24a';
 
 /** Mushroom: cap centre (x,y), cap radii rx/ry, stem width w down to yBot. */
-function mushroom(ctx: Ctx, x: number, y: number, rx: number, ry: number, w: number, yBot: number, tilt: number, seed: number) {
+function mushroom(ctx: Ctx, x: number, y: number, rx: number, ry: number, w: number, yBot: number, tilt: number, seed: number, ink = 2.2) {
   // stem (slightly bulging)
   const stem = (c: Ctx) => {
     c.moveTo(x - w * 0.42, y);
@@ -380,10 +365,10 @@ function mushroom(ctx: Ctx, x: number, y: number, rx: number, ry: number, w: num
     c.bezierCurveTo(x + w * 0.58, yBot - 1.0, x + w * 0.62, y + (yBot - y) * 0.45, x + w * 0.42, y);
     c.closePath();
   };
-  shape(ctx, stem, { fill: STEM, shadow: STEM_SH, ink: 1.6, shadowOffset: [-w * 0.24, -0.6], gloss: [{ x: x - w * 0.26, y: y + (yBot - y) * 0.5, rx: w * 0.08, ry: (yBot - y) * 0.22, alpha: 0.75 }] });
+  shape(ctx, stem, { fill: STEM, shadow: STEM_SH, ink: ink - 0.2, shadowOffset: [-w * 0.24, -0.6], gloss: [{ x: x - w * 0.26, y: y + (yBot - y) * 0.5, rx: w * 0.08, ry: (yBot - y) * 0.22, alpha: 0.75 }] });
   rot(ctx, x, y, tilt, () => {
     // dark gill rim showing under the cap
-    shape(ctx, (c) => ellipsePath(c, 0, ry * 0.1, rx * 0.86, ry * 0.32), { fill: GILL, ink: 1.2, shadow: 'none' });
+    shape(ctx, (c) => ellipsePath(c, 0, ry * 0.1, rx * 0.86, ry * 0.32), { fill: GILL, ink: 1.3, shadow: 'none' });
     for (let i = -3; i <= 3; i++) line(ctx, [[i * rx * 0.1, ry * 0.32], [i * rx * 0.2, -ry * 0.02]], 0.35, '#a07c5c', false, 0.7);
     // the dome
     const dome = (c: Ctx) => {
@@ -394,8 +379,8 @@ function mushroom(ctx: Ctx, x: number, y: number, rx: number, ry: number, w: num
       c.closePath();
     };
     shape(ctx, dome, {
-      fill: CAP, shadow: CAP_SH, ink: 1.8, shadowOffset: [-rx * 0.22, -ry * 0.3],
-      gloss: [{ x: -rx * 0.42, y: -ry * 0.56, rx: rx * 0.3, ry: ry * 0.17, rot: -0.45, alpha: 0.7 }],
+      fill: CAP, shadow: CAP_SH, ink, shadowOffset: [-rx * 0.22, -ry * 0.3],
+      gloss: [{ x: -rx * 0.42, y: -ry * 0.56, rx: rx * 0.3, ry: ry * 0.17, rot: -0.45, alpha: 0.75 }],
     });
     clipTo(ctx, dome, () => {
       speckle(ctx, rx * 0.05, -ry * 0.35, rx * 0.8, ry * 0.5, Math.round(rx * 1.4), CAP_HI, 0.45, seed, 0.6);
@@ -406,8 +391,9 @@ function mushroom(ctx: Ctx, x: number, y: number, rx: number, ry: number, w: num
   });
 }
 
-/** A tiny puff of spores (3 blobs + dots). */
+/** A small puff of spores (3 blobs + dark specks), olive like the spore shots. */
 function sporePuff(ctx: Ctx, x: number, y: number, r: number, alpha: number) {
+  if (alpha <= 0.02) return;
   ctx.save();
   ctx.globalAlpha = alpha;
   const build = (c: Ctx) => {
@@ -415,69 +401,74 @@ function sporePuff(ctx: Ctx, x: number, y: number, r: number, alpha: number) {
     circlePath(c, x - r * 0.8, y + r * 0.35, r * 0.68);
     circlePath(c, x + r * 0.75, y + r * 0.3, r * 0.62);
   };
-  shape(ctx, build, { fill: SPORE, ink: 0.75, inkColor: SPORE_INK, shadow: '#b9a170', shadowOffset: [-r * 0.3, -r * 0.35] });
-  ctx.fillStyle = '#6d5236';
-  for (const [dx, dy] of [[-0.4, 0.1], [0.35, -0.3], [0.1, 0.45]] as Pt[]) {
-    ctx.beginPath();
-    circlePath(ctx, x + dx * r, y + dy * r, r * 0.16);
-    ctx.fill();
-  }
+  shape(ctx, build, { fill: SPORE, ink: 0.7, inkColor: SPORE_SH, shadow: SPORE_SH, shadowOffset: [-r * 0.3, -r * 0.35] });
+  ctx.fillStyle = SPORE_HI;
+  ctx.beginPath();
+  circlePath(ctx, x - r * 0.3, y - r * 0.35, r * 0.32);
+  ctx.fill();
   ctx.restore();
 }
 
-function fedora(ctx: Ctx, x: number, y: number, tilt: number) {
+/** Light tweed coppola (Sicilian flat cap): a wedge, high at the back, snapped down over a short brim. */
+function coppola(ctx: Ctx, x: number, y: number, tilt: number) {
   rot(ctx, x, y, tilt, () => {
-    group(ctx, [
-      {
-        build: (c) => {
-          c.moveTo(-4.6, 0.2);
-          c.quadraticCurveTo(-5.2, -4.6, -2.8, -6.0);
-          c.quadraticCurveTo(-0.6, -4.8, 0.6, -6.2);
-          c.quadraticCurveTo(4.0, -5.6, 4.6, 0.0);
-          c.closePath();
-        },
-        style: { fill: HAT, shadow: HAT_SH, shadowOffset: [-1.2, -0.6], gloss: [{ x: -2.8, y: -4.2, rx: 1.0, ry: 0.5, rot: -0.5, alpha: 0.4 }] },
-      },
-      {
-        build: (c) => {
-          c.moveTo(-8.2, 0.6);
-          c.quadraticCurveTo(-0.6, -1.8, 8.4, 0.2);
-          c.quadraticCurveTo(9.4, 2.0, 7.2, 2.0);
-          c.quadraticCurveTo(-0.6, 0.9, -7.6, 2.4);
-          c.quadraticCurveTo(-9.4, 2.2, -8.2, 0.6);
-          c.closePath();
-        },
-        style: { fill: HAT, shadow: HAT_SH, shadowOffset: [-0.6, -0.8] },
-      },
-    ], 1.4);
-    // cream band
-    shape(ctx, (c) => {
-      c.moveTo(-4.7, -0.4);
-      c.quadraticCurveTo(0, -1.8, 4.6, -0.6);
-      c.lineTo(4.5, -2.0);
-      c.quadraticCurveTo(0, -3.2, -4.8, -1.8);
+    const cap = (c: Ctx) => {
+      c.moveTo(-8.0, 0.8);
+      c.bezierCurveTo(-9.2, -2.4, -7.6, -5.4, -3.6, -5.4);
+      c.bezierCurveTo(1.0, -5.4, 6.4, -3.6, 9.4, -1.2);
+      c.quadraticCurveTo(11.6, 0.2, 10.6, 1.2);
+      c.quadraticCurveTo(8.0, 1.8, 5.2, 1.4);
+      c.quadraticCurveTo(-1.6, 1.6, -8.0, 0.8);
       c.closePath();
-    }, { fill: HAT_BAND, ink: 0, shadow: 'none' });
-    // pinch + pinstripes
-    line(ctx, [[-1.8, -5.0], [-0.4, -4.4], [0.8, -5.2]], 0.5, '#5a5566', true, 0.9);
-    for (const px of [-2.6, 0.2, 2.8]) line(ctx, [[px, -2.4], [px * 0.85, -4.8]], 0.3, '#6f6a7c', false, 0.6);
-    line(ctx, [[-7.2, 1.0], [-2, 0.0]], 0.5, '#6f6a7c', false, 0.7);
+    };
+    shape(ctx, cap, {
+      fill: TWEED, shadow: TWEED_SH, ink: 1.7, shadowOffset: [-1.2, -1.2],
+      gloss: [{ x: -4.2, y: -4.0, rx: 2.2, ry: 0.6, rot: -0.1, alpha: 0.55 }],
+    });
+    // herringbone tweed: rows of little chevrons
+    clipTo(ctx, cap, () => {
+      ctx.strokeStyle = rgba(TWEED_DK, 0.5);
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      for (let row = 0; row < 4; row++) {
+        const yy = -5.0 + row * 1.5;
+        for (let xx = -9 + (row % 2) * 0.8; xx < 11; xx += 1.6) {
+          ctx.moveTo(xx, yy);
+          ctx.lineTo(xx + 0.8, yy + 0.6);
+          ctx.lineTo(xx + 1.6, yy);
+        }
+      }
+      ctx.stroke();
+      // the brim under the snapped-down front, in shade
+      ctx.fillStyle = rgba(TWEED_DK, 0.45);
+      ctx.beginPath();
+      ctx.moveTo(4.2, 2);
+      ctx.quadraticCurveTo(6.6, -0.6, 11.4, -0.2);
+      ctx.lineTo(12, 2.4);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // the seam where the crown snaps down onto the brim
+    line(ctx, [[3.8, 1.2], [6.4, -0.4], [10.4, -0.2]], 0.7, TWEED_DK, true, 0.9);
+    line(ctx, [[-7.0, -1.0], [-2.0, -0.6], [3.8, 0.6]], 0.45, TWEED_DK, true, 0.6);
   });
 }
 
 function drawFunghi(ctx: Ctx, f: number) {
   const { ph, s } = cyc(f);
-  // drifting spores behind
-  for (let i = 0; i < 3; i++) {
-    const t = ((f / 4) + i / 3) % 1;
-    const bx = [-16.2, 15.6, -7.6][i], by = [-11, -14, -22][i];
-    sporePuff(ctx, bx + Math.sin(ph + i) * 0.8, by - t * 6, 1.5 + t * 0.7, 0.9 - t * 0.55);
-  }
+  // drifting spore puffs behind: each fades in, rises a little and fades out (no snap at the loop)
+  const puff = (bx: number, by: number, i: number, off: number, r0: number) => {
+    const t = ((f / 4) + i / 3 + off) % 1;
+    sporePuff(ctx, bx + Math.sin(ph + i) * 0.5, by - t * 3.2, r0 + t * 0.5, 0.5 * Math.sin(t * Math.PI));
+  };
+  puff(-16.0, -10, 0, 0, 1.4);
+  puff(15.6, -13, 1, 0, 1.4);
+  puff(-7.6, -24, 2, 0, 1.3);
 
   // root clump (it hovers: rootlets dangle)
   for (const [x, l, a] of [[-7, 3.4, -0.3], [-2, 4.2, 0.1], [3.4, 3.6, 0.25], [8, 2.8, 0.5]] as [number, number, number][]) {
     const sw = Math.sin(ph + x) * 0.5;
-    inkLine(ctx, [[x, 8.6], [x + a * 2 + sw, 8.6 + l * 0.6], [x + a * 3 + sw * 1.6, 8.6 + l]], 0.7, '#e9dcc2', true, 0.6);
+    inkLine(ctx, [[x, 8.6], [x + a * 2 + sw, 8.6 + l * 0.6], [x + a * 3 + sw * 1.6, 8.6 + l]], 0.8, '#e9dcc2', true, 0.7);
   }
   shape(ctx, (c) => {
     c.moveTo(-14, 8.2);
@@ -487,197 +478,288 @@ function drawFunghi(ctx: Ctx, f: number) {
     c.quadraticCurveTo(7, 11.4, 0, 10.6);
     c.quadraticCurveTo(-8, 11.4, -14, 8.2);
     c.closePath();
-  }, { fill: '#7a5538', shadow: '#55372a', ink: 1.6, shadowOffset: [-1.4, -1.2] });
+  }, { fill: '#7a5538', shadow: '#55372a', ink: 2.0, shadowOffset: [-1.4, -1.2] });
   speckle(ctx, 0, 8.4, 12, 1.8, 14, '#a07650', 0.4, 9, 0.8);
 
   const bob = [0, -0.4, 0, 0.4][f];
-  // left henchman (behind)
-  mushroom(ctx, -12.4, -4.8 + bob * 0.5, 6.6, 4.8, 6.4, 8.0, -0.18 + s * 0.04, 21);
-  eye(ctx, -14.4, 1.8, 1.45, { look: [0.4, 0.1], lid: 'angry-l', pupil: 0.58 });
-  eye(ctx, -10.8, 1.7, 1.55, { look: [0.4, 0.1], lid: 'angry-r', pupil: 0.58 });
-  line(ctx, [[-13.6, 5.0], [-12.4, 4.4], [-11.0, 5.0]], 0.8, INK, true);
+  // left henchman (behind), a sticking plaster on his cap
+  mushroom(ctx, -11.6, -4.8 + bob * 0.5, 6.8, 5.0, 7.0, 8.0, -0.18 + s * 0.04, 21);
+  rot(ctx, -12.8, -7.6 + bob * 0.5, -0.5, () => {
+    for (const a of [0.7, -0.7]) {
+      rot(ctx, 0, 0, a, () => {
+        shape(ctx, (c) => roundPoly(c, [[-3.0, -1.0], [3.0, -1.0], [3.0, 1.0], [-3.0, 1.0]], 0.9), { fill: '#f2c9a0', ink: 0.8, shadow: '#d7a77a', shadowOffset: [-0.3, -0.4] });
+        ctx.fillStyle = rgba('#b9875a', 0.6);
+        for (const px of [-1.8, 1.8]) {
+          ctx.beginPath();
+          circlePath(ctx, px, 0, 0.3);
+          ctx.fill();
+        }
+      });
+    }
+  });
+  eye(ctx, -13.8, 1.8, 1.7, { look: [0.4, 0.1], lid: 'angry-l', pupil: 0.6 });
+  eye(ctx, -9.8, 1.7, 1.8, { look: [0.4, 0.1], lid: 'angry-r', pupil: 0.6 });
+  line(ctx, [[-13.0, 5.4], [-11.6, 4.6], [-10.0, 5.3]], 0.9, INK, true);
 
   // the boss (middle)
-  mushroom(ctx, -0.6, -13.6 + bob, 12.2, 8.0, 11.6, 7.6, 0.04 + s * 0.03, 11);
-  fedora(ctx, 1.2, -21.2 + bob, -0.22 + s * 0.03);
+  mushroom(ctx, -0.6, -13.6 + bob, 12.4, 8.0, 13.0, 7.6, 0.04 + s * 0.03, 11, 2.4);
+  coppola(ctx, -0.4, -19.6 + bob, -0.1 + s * 0.03);
   // face on the stem: heavy-lidded don
-  const fy = -6.0 + bob * 0.5;
-  eye(ctx, -2.8, fy, 2.35, { look: [0.45, 0.15], lid: 'half', pupil: 0.6 });
-  eye(ctx, 3.0, fy - 0.1, 2.55, { look: [0.45, 0.15], lid: 'half', pupil: 0.6 });
-  brow(ctx, -3.0, fy - 3.4, 4.2, 0.42, 1.5);
-  brow(ctx, 3.3, fy - 3.6, 4.4, -0.42, 1.5);
-  // jowly frown + pencil moustache
+  const fy = -5.8 + bob * 0.5;
+  eye(ctx, -3.6, fy, 2.6, { look: [0.45, 0.15], lid: 'half', pupil: 0.62 });
+  eye(ctx, 2.4, fy - 0.1, 2.8, { look: [0.45, 0.15], lid: 'half', pupil: 0.62 });
+  brow(ctx, -3.8, fy - 3.4, 4.6, 0.42, 1.7);
+  brow(ctx, 2.7, fy - 3.6, 4.8, -0.42, 1.7);
+  // jowly frown under a pencil moustache
   shape(ctx, (c) => {
-    c.moveTo(-3.2, fy + 3.8);
-    c.quadraticCurveTo(0.4, fy + 2.2, 4.2, fy + 3.6);
-    c.quadraticCurveTo(0.4, fy + 3.4, -3.2, fy + 3.8);
+    c.moveTo(-4.0, fy + 4.0);
+    c.quadraticCurveTo(-0.2, fy + 2.3, 3.8, fy + 3.8);
+    c.quadraticCurveTo(-0.2, fy + 3.5, -4.0, fy + 4.0);
     c.closePath();
-  }, { fill: '#3a2418', ink: 0.6, shadow: 'none' });
-  line(ctx, [[-2.2, fy + 6.2], [0.6, fy + 5.0], [3.4, fy + 6.0]], 1.0, INK, true);
-  line(ctx, [[-4.6, fy + 4.4], [-3.8, fy + 6.8]], 0.55, STEM_SH, true, 0.9);
-  line(ctx, [[5.6, fy + 4.2], [5.0, fy + 6.6]], 0.55, STEM_SH, true, 0.9);
+  }, { fill: '#3a2418', ink: 0.7, shadow: 'none' });
+  line(ctx, [[-3.0, fy + 6.6], [0.0, fy + 5.2], [3.0, fy + 6.4]], 1.15, INK, true);
+  line(ctx, [[-5.4, fy + 4.6], [-4.6, fy + 7.0]], 0.6, STEM_SH, true, 0.9);
+  line(ctx, [[5.2, fy + 4.4], [4.6, fy + 6.8]], 0.6, STEM_SH, true, 0.9);
 
-  // right henchman (front) in shades
-  mushroom(ctx, 11.6, -1.4 + bob * 0.5, 7.0, 5.0, 6.8, 9.2, 0.2 + s * 0.05, 31);
-  shape(ctx, (c) => {
-    c.moveTo(8.6, 3.6);
-    c.lineTo(15.2, 3.2);
-    c.quadraticCurveTo(15.0, 5.8, 13.2, 5.8);
-    c.quadraticCurveTo(12.0, 5.6, 12.0, 4.4);
-    c.quadraticCurveTo(11.6, 6.0, 10.2, 5.8);
-    c.quadraticCurveTo(8.6, 5.6, 8.6, 3.6);
-    c.closePath();
-  }, { fill: '#1d1a22', ink: 0.8, shadow: 'none', gloss: [{ x: 10.0, y: 4.2, rx: 0.8, ry: 0.35, alpha: 0.7 }, { x: 13.5, y: 4.0, rx: 0.8, ry: 0.35, alpha: 0.7 }] });
-  line(ctx, [[10.4, 7.4], [12.2, 7.0], [13.6, 7.6]], 0.75, INK, true);
+  // right henchman (front), chewing a toothpick
+  mushroom(ctx, 11.6, -0.2 + bob * 0.5, 6.6, 5.0, 7.2, 9.4, 0.2 + s * 0.05, 31);
+  eye(ctx, 9.6, 5.2, 1.7, { look: [0.45, 0.1], lid: 'angry-l', pupil: 0.6 });
+  eye(ctx, 13.6, 5.0, 1.8, { look: [0.45, 0.1], lid: 'angry-r', pupil: 0.6 });
+  line(ctx, [[10.0, 8.2], [11.8, 8.5], [13.4, 7.8]], 0.9, INK, true);
+  // the toothpick out of the corner of his smirk, wagging
+  const tp = 0.12 + s * 0.12;
+  inkLine(ctx, [[13.0, 8.0], [13.0 + Math.cos(tp) * 4.2, 8.0 - Math.sin(tp) * 4.2]], 0.7, '#e8c98a', false, 0.6);
 
-  // spores in front
-  for (let i = 0; i < 3; i++) {
-    const t = ((f / 4) + i / 3 + 0.17) % 1;
-    const bx = [17.4, -17.0, 9.6][i], by = [-6, 3, -23][i];
-    sporePuff(ctx, bx + Math.cos(ph + i * 2) * 0.7, by - t * 5, 1.2 + t * 0.6, 0.95 - t * 0.6);
-  }
+  // spore puffs in front
+  puff(17.6, -5, 0, 0.17, 1.2);
+  puff(-17.2, 2, 1, 0.17, 1.1);
+  puff(9.0, -24, 2, 0.17, 1.1);
 }
 
 enemySprite('funghi', 46, 50, 34, drawFunghi);
 
 // ===========================================================================
 // 3. PROSCIUTTO IMPOSTORE — r14. Plain cooked ham pretending to be guanciale:
-//    wrapped in a ham-slice cloak (white fat rim) with the collar pulled up
-//    over its mouth and a fake name sticker on its chest. Shifty, sweaty, fast.
+//    a pink ham loaf (white fat cap combed over the top) wearing one big round
+//    ham slice as a cape, with a FAKE guanciale label taped to its chest (a
+//    swatch of guanciale stripes, no text). Shifty eyes, sweat, a nervous
+//    clenched-teeth grin. (Chase, knock-resistant.)
 // ===========================================================================
 
-const HAM = '#f4a2a7';
-const HAM_SH = '#d6707d';
-const HAM_HI = '#ffd3d0';
+const HAM = '#f49aa2';
+const HAM_SH = '#d6697a';
+const HAM_HI = '#ffd0cf';
 const HAM_DK = '#b9505f';
-const FAT = '#fff4ee';
+const HAM_SEAM = '#ffe2df';
+const FAT = '#fff6f0';
 const FAT_SH = '#efc9c4';
 const RIND = '#dda56a';
-const TAG_RED = '#d23a3f';
 const TAG = '#fdf8ee';
+const GUA_LEAN = '#9e2f35';
+const GUA_FAT = '#fbeee2';
+const GUA_RIND = '#5a2a1e';
 
-/**
- * White fat rim along a ham edge, drawn inside the clip of the ham shape. `centre` points inward.
- * inner = true for an edge that lies inside the shape (an overlapping flap): the band then sits
- * wholly on the inner side and the edge itself gets a fine ink line.
- */
-function fatRim(ctx: Ctx, pts: Pt[], w: number, centre: Pt, inner = false) {
-  const toward = (p: Pt, k: number): Pt => {
-    const dx = centre[0] - p[0], dy = centre[1] - p[1], d = Math.hypot(dx, dy) || 1;
-    return [p[0] + (dx / d) * k, p[1] + (dy / d) * k];
-  };
-  const band = inner ? pts.map((p) => toward(p, w * 0.5)) : pts;
-  line(ctx, band, w, FAT, true);
-  // soft shading on the inner side of the fat + the thin golden rind at the very edge
-  line(ctx, band.map((p) => toward(p, w * 0.42)), w * 0.3, FAT_SH, true, 0.85);
-  line(ctx, pts, w * 0.42, RIND, true, 0.9);
-  if (inner) line(ctx, pts.map((p) => toward(p, -w * 0.2)), 0.6, INK, true, 0.8);
+/** The round ham-slice cape: centre (x,y), radii rx/ry tilted by tilt, edge ripple phase ph. */
+function hamSlice(ctx: Ctx, x: number, y: number, rx: number, ry: number, tilt: number, ph: number, seed: number) {
+  const N = 26;
+  const pts: Pt[] = [];
+  const ct = Math.cos(tilt), st = Math.sin(tilt);
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * TAU;
+    // the trailing (left/bottom) edge ripples as it runs; the edge tucked behind the neck stays put
+    const trail = Math.max(0, -Math.cos(a - 0.5));
+    const k = 1 + (Math.sin(a * 3 + ph) * 0.05 + Math.sin(a * 5 - ph * 2) * 0.025) * trail;
+    const u = Math.cos(a) * rx * k, v = Math.sin(a) * ry * k;
+    pts.push([x + u * ct - v * st, y + u * st + v * ct]);
+  }
+  const disc = (c: Ctx) => smoothPath(c, pts, true, 0.5);
+  const r = Math.max(rx, ry);
+  shape(ctx, disc, {
+    fill: radial(ctx, x - r * 0.35, y - r * 0.4, r * 1.25, [[0, '#ffc4c4'], [0.55, HAM], [1, mix(HAM, HAM_SH, 0.45)]]),
+    shadow: 'none', ink: 2.2,
+  });
+  clipTo(ctx, disc, () => {
+    // pale seams between the muscles (the classic cooked-ham "map")
+    const R = rng(seed);
+    for (const seam of [
+      [[-0.78, -0.25], [-0.42, -0.05], [-0.2, 0.3], [-0.12, 0.8]],
+      [[-0.42, -0.05], [-0.3, -0.5], [-0.05, -0.85]],
+      [[-0.2, 0.3], [-0.55, 0.55], [-0.85, 0.5]],
+    ] as Pt[][]) {
+      const p = seam.map(([u, v]): Pt => [x + u * rx + (R() - 0.5) * 0.6, y + v * ry + (R() - 0.5) * 0.6]);
+      line(ctx, p, 1.4, HAM_SEAM, true, 0.9);
+      line(ctx, p.map(([px, py]): Pt => [px + 0.55, py + 0.65]), 0.5, HAM_SH, true, 0.5);
+    }
+    speckle(ctx, x, y, rx * 0.75, ry * 0.75, 18, HAM_DK, 0.32, seed + 1, 0.3);
+    speckle(ctx, x, y, rx * 0.75, ry * 0.75, 10, HAM_HI, 0.4, seed + 2, 0.5);
+    // the white fat ring (+ golden rind outside it)
+    ctx.beginPath();
+    smoothPath(ctx, pts, true, 0.5);
+    ctx.lineWidth = 5.2;
+    ctx.strokeStyle = FAT;
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = RIND;
+    ctx.stroke();
+    // shading on the fat ring's inner edge
+    ctx.beginPath();
+    smoothPath(ctx, pts.map(([px, py]): Pt => [x + (px - x) * 0.83, y + (py - y) * 0.83]), true, 0.5);
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = rgba(FAT_SH, 0.9);
+    ctx.stroke();
+    // cel shadow: the body casts a soft shade on the slice near its edge
+    ctx.fillStyle = rgba(HAM_DK, 0.3);
+    ctx.beginPath();
+    ellipsePath(ctx, x + rx * 0.95, y + ry * 0.1, rx * 0.5, ry * 1.1);
+    ctx.fill();
+  });
+  // gloss on the fat ring, upper-left
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = 0.9;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx * 0.86, ry * 0.86, tilt, Math.PI * 1.02, Math.PI * 1.3);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** The fake guanciale label: a cream tag showing a swatch of guanciale stripes, stuck on askew. */
+function fakeLabel(ctx: Ctx, x: number, y: number, a: number) {
+  rot(ctx, x, y, a, () => {
+    const tag = (c: Ctx) => roundPoly(c, [[-5.0, -3.6], [5.0, -3.6], [5.0, 3.6], [-5.0, 3.6]], 1.0);
+    shape(ctx, tag, { fill: TAG, ink: 1.0, shadow: '#e2d6c2', shadowOffset: [-0.7, -0.7] });
+    // the swatch: peppered rind, then fat / lean / fat / lean layers
+    const sw = (c: Ctx) => roundPoly(c, [[-3.8, -2.5], [3.8, -2.5], [3.8, 2.5], [-3.8, 2.5]], 0.6);
+    clipTo(ctx, sw, () => {
+      const bands: [number, number, string][] = [
+        [-2.6, -1.5, GUA_RIND], [-1.5, -0.5, GUA_FAT], [-0.5, 0.5, GUA_LEAN], [0.5, 1.3, GUA_FAT], [1.3, 2.6, GUA_LEAN],
+      ];
+      for (const [y0, y1, col] of bands) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        // a gentle wave so the layers read as meat, not a flag
+        ctx.moveTo(-4, y0 + 0.15);
+        ctx.quadraticCurveTo(0, y0 - 0.35, 4, y0 + 0.1);
+        ctx.lineTo(4, y1 + 0.1);
+        ctx.quadraticCurveTo(0, y1 - 0.35, -4, y1 + 0.15);
+        ctx.closePath();
+        ctx.fill();
+      }
+      speckle(ctx, 0, -2.0, 3.6, 0.6, 9, '#1c1210', 0.28, 77, 1);
+      speckle(ctx, 0, -1.0, 3.6, 0.4, 4, '#3a2a22', 0.2, 78, 0.8);
+    });
+    ctx.save();
+    ctx.beginPath();
+    sw(ctx);
+    ctx.lineWidth = 0.55;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 function drawProsciutto(ctx: Ctx, f: number) {
+  const { ph, s, c: co } = cyc(f);
   ctx.save();
-  ctx.translate(2.6, -0.6);
-  const { ph } = cyc(f);
-  const w = (k: number) => Math.sin(ph + k) * 1.4;
+  ctx.translate(2.2, -0.4); // the cape trails behind, so the body sits a little right of the anchor
 
-  // --- the ham-slice cloak: high collar behind the head, streaming out behind as it runs
-  const flare: Pt[] = [
-    [-1.6, -15.4], [-5.8, -20.6], [-9.0, -26.2], [-11.6, -20.4], [-16.6, -15.0 + w(0) * 0.5], [-21.0, -8.0 + w(0.7)],
-    [-19.0, -2.4 + w(1.4)], [-21.2, 3.6 + w(2.1)], [-16.0, 4.0 + w(2.8)], [-16.6, 9.8 + w(3.5) * 0.7], [-10.6, 7.4],
-    [-6.6, 9.6], [-3.6, 1.0],
-  ];
-  const flareB = (c: Ctx) => smoothPath(c, flare, true, 0.42);
-  shape(ctx, flareB, { fill: mix(HAM, HAM_SH, 0.18), shadow: HAM_SH, ink: 2.0, shadowOffset: [-2.4, -2.8], gloss: [{ x: -15.6, y: -11.6, rx: 1.0, ry: 3.0, rot: 0.6, alpha: 0.4 }] });
-  clipTo(ctx, flareB, () => {
-    for (const pts of [
-      [[-8.6, -14.4], [-13.4, -9.4], [-13.0, -3.2]],
-      [[-16.6, -7.0], [-17.2, -1.0], [-14.6, 2.6]],
-      [[-8.6, -21.4], [-9.4, -16.6]],
-    ] as Pt[][]) line(ctx, pts, 0.85, HAM_HI, true, 0.75);
-    speckle(ctx, -13, -4, 6, 9, 12, HAM_DK, 0.32, 47, 0.3);
-    fatRim(ctx, flare.slice(1, 12), 3.4, [-9, -4]);
-  });
+  // --- the cape: one big round ham slice tied at the neck, streaming out behind
+  hamSlice(ctx, -8.2 - Math.abs(s) * 0.3, -8.6 + co * 0.3, 11.6, 14.6, 0.3, ph, 47);
+
+  // --- far arm (behind the body), pumping
+  hoseArm(ctx, -7.6, -6.0, -11.4 - s * 1.6, -0.4 + co * 0.8, { thick: 2.0, bend: 0.3, handR: 2.3 });
 
   // --- running legs
-  legs(ctx, 0.8, 6.2, f, { len: 4.6, spread: 8.2, thick: 2.8, color: LIMB, shoe: SHOE, stride: 4.6 });
+  legs(ctx, 0.4, 6.4, f, { len: 4.6, spread: 8.4, thick: 2.9, color: LIMB, shoe: SHOE, stride: 4.6 });
 
-  // --- the head (lighter ham, marbled), peeking over the collar
-  const hx = 3.2, hy = -18.4;
-  const head = (c: Ctx) => ellipsePath(c, hx, hy, 8.4, 8.6);
-  shape(ctx, head, {
-    fill: radial(ctx, hx - 3, hy - 4, 12, [[0, '#ffd9d6'], [0.45, '#f8b2b5'], [1, HAM]]),
-    shadow: HAM_SH, ink: 2.0, shadowOffset: [-2.4, -2.0],
-    gloss: [{ x: hx - 3.8, y: hy - 4.8, rx: 2.6, ry: 1.3, rot: -0.6, alpha: 0.65 }],
-  });
-  clipTo(ctx, head, () => {
-    line(ctx, [[hx - 7, hy - 2], [hx - 3.6, hy - 0.6], [hx - 3.2, hy + 4]], 0.8, HAM_HI, true, 0.8);
-    speckle(ctx, hx, hy, 7, 7, 10, HAM_DK, 0.3, 51, 0.3);
-    // the slice's fat edge across the top, like a slicked comb-over
-    const arc: Pt[] = [];
-    for (let i = 0; i <= 8; i++) {
-      const a = Math.PI * (1.08 + i * 0.075);
-      arc.push([hx + Math.cos(a) * 8.4, hy + Math.sin(a) * 8.6]);
-    }
-    fatRim(ctx, arc, 6.0, [hx, hy]);
-  });
-
-  // --- shifty eyes (sliding right), one brow up, sweat
-  eye(ctx, hx - 2.8, hy - 1.6, 2.4, { look: [0.6, 0.0], pupil: 0.55 });
-  eye(ctx, hx + 3.4, hy - 1.8, 2.6, { look: [0.6, 0.0], pupil: 0.55 });
-  brow(ctx, hx - 3.0, hy - 5.6, 4.0, -0.32, 1.25); // raised, worried
-  brow(ctx, hx + 3.8, hy - 5.2, 4.2, -0.38, 1.25); // pulled down: sly
-  sweat(ctx, hx - 8.8, hy - 4.8 + [0, 0.7, 1.4, 0.7][f], 1.3);
-
-  // --- the cloak body (one big folded ham slice), fat rim at the hem and front edge
-  const cloak: Pt[] = [
-    [-7.0, -12.6], [-1.0, -11.8], [7.0, -12.4], [11.6, -10.6], [12.6, -3.0], [11.8, 4.6], [6.8, 7.8], [-1.0, 8.6], [-7.8, 7.8], [-10.8, 4.0], [-10.0, -5.6],
+  // --- the ham loaf body
+  const body: Pt[] = [
+    [-8.0, -21.8], [-1.4, -26.0], [6.8, -25.6], [11.6, -20.4], [12.8, -9.0], [11.8, 3.6], [6.6, 8.4], [-1.6, 9.0], [-8.4, 6.4], [-10.2, -4.0], [-10.2, -14.8],
   ];
-  const cloakB = (c: Ctx) => smoothPath(c, cloak, true, 0.5);
-  shape(ctx, cloakB, {
-    fill: HAM, shadow: HAM_SH, ink: 2.1, shadowOffset: [-3.0, -2.4],
-    gloss: [{ x: -7.6, y: -5.6, rx: 1.0, ry: 3.2, rot: 0.15, alpha: 0.45 }],
+  const bodyB = (c: Ctx) => smoothPath(c, body, true, 0.5);
+  shape(ctx, bodyB, {
+    fill: radial(ctx, -3.5, -17, 26, [[0, '#ffc9c8'], [0.38, '#f6a7ad'], [1, HAM]]),
+    shadow: HAM_SH, ink: 2.3, shadowOffset: [-3.2, -2.8],
+    gloss: [{ x: -6.2, y: -14.2, rx: 1.3, ry: 3.2, rot: 0.25, alpha: 0.55 }],
   });
-  clipTo(ctx, cloakB, () => {
-    // overlapping front flap edge + hem: the slice's white fat rim
-    fatRim(ctx, [[6.4, -12.0], [7.6, -4.0], [7.0, 2.6], [5.0, 9.4]], 2.4, [-4, -2], true);
-    fatRim(ctx, [[-12.0, 4.6], [-7.8, 8.2], [-1.0, 9.0], [6.8, 8.2], [12.4, 4.8]], 2.6, [0, -4]);
-    // marbling (connective-tissue seams) + meat grain
-    line(ctx, [[-8.6, -8.4], [-5.2, -6.2], [-4.6, -1.0], [-7.0, 3.4]], 0.9, HAM_HI, true, 0.75);
-    line(ctx, [[8.4, -8.6], [10.6, -4.0], [9.8, 1.6]], 0.8, HAM_HI, true, 0.65);
-    speckle(ctx, 0, -2, 10, 8, 18, HAM_DK, 0.3, 53, 0.28);
+  clipTo(ctx, bodyB, () => {
+    // muscle seams + meat grain
+    line(ctx, [[-8.4, -9.4], [-5.0, -6.4], [-5.6, 0.6], [-8.6, 4.4]], 1.0, HAM_SEAM, true, 0.75);
+    line(ctx, [[-5.0, -6.4], [-1.2, -5.2]], 0.8, HAM_SEAM, true, 0.6);
+    line(ctx, [[8.6, 0.8], [6.0, 4.4], [6.8, 8.4]], 0.9, HAM_SEAM, true, 0.6);
+    speckle(ctx, 0, -6, 10, 13, 22, HAM_DK, 0.3, 53, 0.28);
+    // the fat cap on top, combed over like a slicked hairdo (+ thin golden rind at the edge)
+    const fatLine: Pt[] = [[-13.0, -12.4], [-9.6, -17.0], [-4.6, -20.6], [1.0, -22.0], [6.6, -21.6], [10.8, -19.8], [14.0, -17.0]];
+    const fatB = (c: Ctx) => {
+      smoothPath(c, fatLine, false, 0.5);
+      c.lineTo(14, -32);
+      c.lineTo(-13, -32);
+      c.closePath();
+    };
+    ctx.fillStyle = FAT;
+    ctx.beginPath();
+    fatB(ctx);
+    ctx.fill();
+    clipTo(ctx, fatB, () => {
+      ctx.save();
+      ctx.beginPath();
+      bodyB(ctx);
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = RIND;
+      ctx.stroke();
+      ctx.restore();
+      // cel shade on the fat's lower-right
+      ctx.fillStyle = rgba(FAT_SH, 0.75);
+      ctx.beginPath();
+      ellipsePath(ctx, 12, -16, 5, 7);
+      ctx.fill();
+    });
+    line(ctx, fatLine.map(([x, y]): Pt => [x, y - 0.5]), 1.0, FAT_SH, true, 0.95);
+    line(ctx, fatLine, 0.5, HAM_SH, true, 0.6);
+    // comb lines in the fat
+    for (const [x0, y0, x1, y1] of [[-9.4, -19.2, -3.8, -23.0], [-3.6, -22.4, 3.4, -24.4], [3.6, -23.6, 9.4, -22.2]]) {
+      line(ctx, [[x0, y0], [(x0 + x1) / 2, Math.min(y0, y1) - 0.6], [x1, y1]], 0.5, FAT_SH, true, 0.95);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ellipsePath(ctx, -4.4, -23.4, 2.6, 0.75, -0.35);
+    ctx.fill();
   });
 
-  // --- near collar flap, pulled up over the mouth (fat rim along its top)
-  const nearCol = (c: Ctx) => {
-    c.moveTo(-4.4, -10.8);
-    c.quadraticCurveTo(-3.6, -14.6, 0.4, -14.6);
-    c.quadraticCurveTo(6.6, -14.2, 13.6, -17.4);
-    c.quadraticCurveTo(13.6, -12.4, 11.6, -9.6);
-    c.quadraticCurveTo(3.4, -9.0, -4.4, -10.8);
+  // --- face: shifty eyes glancing back over its shoulder, one worried brow
+  const lk: Pt = [-0.55, 0.08];
+  eye(ctx, 0.6, -14.6, 2.7, { look: lk, pupil: 0.56 });
+  eye(ctx, 7.0, -14.8, 2.9, { look: lk, pupil: 0.56 });
+  brow(ctx, 0.4, -19.4, 4.2, -0.36, 1.45); // raised, worried
+  brow(ctx, 7.4, -19.6, 4.4, 0.28, 1.45); // pulled down
+  cheeks(ctx, [[-2.8, -10.6], [10.2, -10.8]], 1.7, 1.0, '#e8606e', 0.45);
+  // nervous clenched-teeth grin (both rows, wobbly corners)
+  const gm = (c: Ctx) => {
+    c.moveTo(-0.8, -9.0);
+    c.quadraticCurveTo(4.2, -10.0, 9.4, -9.4);
+    c.quadraticCurveTo(10.2, -7.8, 9.2, -6.0);
+    c.quadraticCurveTo(4.0, -5.0, -0.6, -6.2);
+    c.quadraticCurveTo(-1.6, -7.6, -0.8, -9.0);
     c.closePath();
   };
-  shape(ctx, nearCol, { fill: HAM, shadow: HAM_SH, ink: 1.8, shadowOffset: [-1.2, -1.6] });
-  clipTo(ctx, nearCol, () => {
-    fatRim(ctx, [[-4.0, -13.4], [-1.0, -15.0], [6.6, -14.6], [13.8, -17.6]], 2.6, [4, -9]);
-    line(ctx, [[0.0, -11.2], [5.4, -11.6], [10.4, -11.4]], 0.7, HAM_HI, true, 0.7);
+  shape(ctx, gm, { fill: '#fff8ea', ink: 1.1, shadow: 'none' });
+  clipTo(ctx, gm, () => {
+    line(ctx, [[-1.4, -7.6], [4.2, -7.9], [10, -7.7]], 0.55, 'rgba(80,40,30,0.75)', true);
+    for (const tx of [1.6, 4.0, 6.4]) line(ctx, [[tx, -10.2], [tx + 0.1, -4.8]], 0.4, 'rgba(80,40,30,0.5)');
+    ctx.fillStyle = rgba('#e3cdbb', 0.8);
+    ctx.fillRect(-2, -6.6, 13, 2);
   });
+  // squiggly corner (nervous twitch)
+  line(ctx, [[9.4, -9.4], [10.4, -10.2], [10.0, -11.0]], 0.7, INK, true);
+  sweat(ctx, -6.6, -17.6 + [0, 0.7, 1.4, 0.7][f], 1.35);
+  sweat(ctx, 12.8, -21.8 + [0.7, 1.4, 0.7, 0][f], 1.0);
 
-  // --- the fake label: a "hello, my name is…" sticker with an illegible scrawl
-  rot(ctx, 0.6, -3.6, -0.14, () => {
-    const tag = (c: Ctx) => roundPoly(c, [[-4.8, -3.2], [4.8, -3.2], [4.8, 3.2], [-4.8, 3.2]], 1.0);
-    shape(ctx, tag, { fill: TAG, ink: 0.95, shadow: '#e6dccb', shadowOffset: [-0.6, -0.6] });
-    clipTo(ctx, tag, () => {
-      ctx.fillStyle = TAG_RED;
-      ctx.fillRect(-5, -3.4, 10, 2.6);
-      line(ctx, [[-3.0, -2.0], [-2.0, -2.3], [-1.0, -1.9], [0.2, -2.3], [1.4, -1.9], [2.8, -2.2]], 0.35, '#ffffff', false, 0.9);
-      line(ctx, [[-3.6, 1.0], [-2.6, -0.1], [-1.8, 1.4], [-0.8, 0.0], [0.2, 1.3], [1.2, 0.1], [2.2, 1.2], [3.4, 0.4]], 0.55, '#2a2a3a', true, 0.95);
-      line(ctx, [[-3.2, 2.3], [3.0, 2.0]], 0.35, '#2a2a3a', false, 0.6);
-    });
-  });
+  // --- the fake guanciale label, taped on the chest
+  fakeLabel(ctx, 3.8, 0.8, -0.12);
 
-  // --- near hand, out of the cloak's opening, clutching the collar closed
-  mitt(ctx, 10.8, -11.6, 2.5);
-  line(ctx, [[9.4, -12.6], [10.2, -10.2]], 0.5, '#c9cede', false, 0.9);
+  // --- near arm, pumping at its side
+  hoseArm(ctx, 11.4, -5.4, 15.0 + s * 1.2, -0.6 - co * 1.0, { thick: 2.0, bend: -0.3, handR: 2.4 });
   ctx.restore();
 }
 
@@ -1004,41 +1086,68 @@ function drawGamberi(ctx: Ctx, f: number) {
   // --- swim goggles: strap round the head, two lenses
   line(ctx, [[hx - 6.4, hy - 1.6], [hx - 1, hy - 3.4], [hx + 2, hy - 3.2]], 2.6, INK, true);
   line(ctx, [[hx - 6.4, hy - 1.6], [hx - 1, hy - 3.4], [hx + 2, hy - 3.2]], 1.4, GOG, true);
-  const lens = (x: number, y: number, r: number) => {
-    shape(ctx, (c) => circlePath(c, x, y, r + 1.4), { fill: GOG, ink: 1.0, shadow: '#195a9e', shadowOffset: [-0.5, -0.6], gloss: [{ x: x - r * 0.8, y: y - r * 0.9, rx: r * 0.35, ry: r * 0.18, rot: -0.6, alpha: 0.7 }] });
-    eye(ctx, x, y, r, { look: [0.45, 0.12], lid: 'angry-' + (x < hx + 4 ? 'l' : 'r') as 'angry-l' | 'angry-r', pupil: 0.55, sclera: '#f4fcff', ink: 0.7 });
-    wash(ctx, (c) => circlePath(c, x, y, r), LENS, 0.28);
-    glint(ctx, x - r * 0.4, y - r * 0.45, r * 0.32, r * 0.18, -0.6, 0.95);
+  // scowling goggles: each lens is a circle with its top cut on a slant (low at the nose), so the
+  // bright blue frames themselves make the angry V
+  const cutLens = (c: Ctx, x: number, y: number, R: number, inner: number) => {
+    const pts: Pt[] = [];
+    const lineY = (px: number) => y - 0.5 * R + ((px - (x - inner * R)) / (2 * inner * R)) * 0.62 * R;
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * TAU;
+      const px = x + Math.cos(a) * R;
+      pts.push([px, Math.max(y + Math.sin(a) * R, lineY(px))]);
+    }
+    polyPath(c, pts);
   };
-  line(ctx, [[hx + 2.0, hy - 2.6], [hx + 3.8, hy - 2.8]], 1.4, GOG, false);
-  lens(hx + 0.8, hy - 2.2, 2.2);
-  lens(hx + 6.2, hy - 2.6, 2.4);
-  brow(ctx, hx + 0.8, hy - 6.4, 3.6, 0.4, 1.15);
-  brow(ctx, hx + 6.2, hy - 6.8, 3.8, -0.4, 1.15);
+  const lens = (x: number, y: number, r: number, inner: 1 | -1) => {
+    shape(ctx, (c) => cutLens(c, x, y, r + 1.4, inner), { fill: GOG, ink: 1.05, shadow: '#195a9e', shadowOffset: [-0.5, -0.6] });
+    clipTo(ctx, (c) => cutLens(c, x, y + 0.2, r, inner), () => {
+      eye(ctx, x, y + 0.2, r, { look: [0.5, 0.25], pupil: 0.62, sclera: '#f4fcff', ink: 0.7 });
+    });
+    ctx.save();
+    ctx.beginPath();
+    cutLens(ctx, x, y + 0.2, r, inner);
+    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.restore();
+    wash(ctx, (c) => cutLens(c, x, y + 0.2, r, inner), LENS, 0.2);
+    glint(ctx, x - r * 0.45, y + r * 0.45, r * 0.3, r * 0.16, -0.6, 0.9);
+    // a heavy brow riding the slanted top of the frame
+    const R = r + 1.4;
+    const lineY = (px: number) => y - 0.5 * R + ((px - (x - inner * R)) / (2 * inner * R)) * 0.62 * R;
+    const x0 = x - inner * (R + 0.6), x1 = x + inner * (R * 0.9);
+    line(ctx, [[x0, lineY(x0) - 1.0], [x1, lineY(x1) - 0.9]], 1.6, INK, false);
+  };
+  line(ctx, [[hx + 2.0, hy - 2.0], [hx + 3.8, hy - 2.2]], 1.4, GOG, false);
+  lens(hx + 0.8, hy - 2.2, 2.3, 1);
+  lens(hx + 6.4, hy - 2.6, 2.5, -1);
 
-  // --- mouth: "wheee!" toothy grin under the goggles
+  // --- mouth: cocky toothy grin, hitched up on the near side
   const m = (c: Ctx) => {
-    c.moveTo(hx + 1.4, hy + 2.0);
-    c.quadraticCurveTo(hx + 4.6, hy + 2.8, hx + 7.4, hy + 1.0);
-    c.quadraticCurveTo(hx + 6.6, hy + 5.4, hx + 3.8, hy + 5.0);
-    c.quadraticCurveTo(hx + 1.8, hy + 4.6, hx + 1.4, hy + 2.0);
+    c.moveTo(hx + 0.8, hy + 2.6);
+    c.quadraticCurveTo(hx + 4.4, hy + 3.0, hx + 8.0, hy + 0.4);
+    c.quadraticCurveTo(hx + 7.6, hy + 5.6, hx + 4.0, hy + 5.4);
+    c.quadraticCurveTo(hx + 1.4, hy + 5.0, hx + 0.8, hy + 2.6);
     c.closePath();
   };
-  shape(ctx, m, { fill: '#5b1320', ink: 0.9, shadow: 'none' });
+  shape(ctx, m, { fill: '#5b1320', ink: 1.0, shadow: 'none' });
   clipTo(ctx, m, () => {
     ctx.fillStyle = '#fff8ea';
     ctx.beginPath();
-    ctx.moveTo(hx, hy + 1.2);
-    ctx.quadraticCurveTo(hx + 4.6, hy + 2.2, hx + 8, hy + 0.2);
-    ctx.lineTo(hx + 8, hy + 2.4);
-    ctx.quadraticCurveTo(hx + 4.6, hy + 4.0, hx, hy + 3.0);
+    ctx.moveTo(hx, hy + 1.8);
+    ctx.quadraticCurveTo(hx + 4.4, hy + 2.4, hx + 8.6, hy - 0.4);
+    ctx.lineTo(hx + 8.6, hy + 2.4);
+    ctx.quadraticCurveTo(hx + 4.4, hy + 4.4, hx, hy + 3.8);
     ctx.closePath();
     ctx.fill();
+    for (const tx of [2.6, 4.6, 6.4]) line(ctx, [[hx + tx, hy + 1.2], [hx + tx, hy + 4.0]], 0.35, 'rgba(80,40,30,0.45)');
     ctx.fillStyle = '#e8616e';
     ctx.beginPath();
-    ellipsePath(ctx, hx + 4.4, hy + 5.0, 1.8, 1.0);
+    ellipsePath(ctx, hx + 4.0, hy + 5.6, 1.8, 1.0);
     ctx.fill();
   });
+  // smirk crease at the raised corner
+  line(ctx, [[hx + 7.8, hy - 0.4], [hx + 8.8, hy + 0.2], [hx + 8.6, hy + 1.2]], 0.7, INK, true);
 
   ctx.restore();
 }
@@ -1050,34 +1159,42 @@ enemySprite('gamberi', 44, 40, 26, drawGamberi);
 // ===========================================================================
 
 fx('fx.butter_puddle', 76, 56, (ctx) => {
-  puddle(ctx, 31, 20, 47, { base: '#f8d867', rim: '#b7861f', glossA: 0.9, satellites: 4 });
-  // milky foam where the butter melts (clusters of tiny bubbles at the rim)
-  const R = rng(48);
-  for (const [cx, cy, n] of [[-18, 6, 7], [16, -9, 6], [20, 7, 5], [-12, -11, 5]] as [number, number, number][]) {
-    for (let i = 0; i < n; i++) {
-      const x = cx + (R() - 0.5) * 7, y = cy + (R() - 0.5) * 3.6, r = 0.7 + R() * 1.0;
+  // soft butter smeared over the floor: opaque, pale butter-yellow (the enemy's own colour), knife-spread
+  // ridges, toasted brown-butter flecks at the rim and a half-melted pat in the middle. Rounder than the
+  // other slicks, so the renderer's squash + spin keeps it a puddle, not a lemon.
+  puddle(ctx, 29, 22, 52, { base: '#fbe08a', rim: '#a8711f', glossA: 0.75, satellites: 3 });
+  const lob = puddlePts(29, 22, 52);
+  clipTo(ctx, (c) => smoothPath(c, lob, true, 0.6), () => {
+    // toasted ring just inside the rim (brown butter)
+    ctx.save();
+    ctx.beginPath();
+    smoothPath(ctx, lob, true, 0.6);
+    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = rgba('#d99a3c', 0.55);
+    ctx.stroke();
+    ctx.restore();
+    speckle(ctx, 0, 0, 26, 19, 14, '#b9782c', 0.6, 57, 0.5);
+    // knife-spread ridges: pairs of curved strokes (a highlight with its shadow just below)
+    for (const [cx, cy, rx, ry, a0, a1] of [
+      [-6, 6, 18, 10, 3.5, 5.4], [8, -4, 15, 9, 0.2, 1.9], [-12, -5, 11, 6, 3.9, 5.6], [12, 9, 10, 6, 4.1, 5.5],
+    ] as [number, number, number, number, number, number][]) {
       ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = rgba('#fff6cf', 0.9);
       ctx.beginPath();
-      circlePath(ctx, x, y, r);
-      ctx.fillStyle = rgba('#fffbe8', 0.85);
-      ctx.fill();
-      ctx.lineWidth = 0.35;
-      ctx.strokeStyle = rgba('#c9a040', 0.6);
+      ctx.ellipse(cx, cy, rx, ry, 0.08, a0, a1);
+      ctx.stroke();
+      ctx.lineWidth = 0.9;
+      ctx.strokeStyle = rgba('#d9a43c', 0.7);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 1.3, rx, ry, 0.08, a0 + 0.05, a1 - 0.05);
       ctx.stroke();
       ctx.restore();
     }
-  }
-  // a swirl of golden melt
-  ctx.save();
-  ctx.strokeStyle = rgba('#e4b02c', 0.55);
-  ctx.lineWidth = 1.2;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.ellipse(-2, 3, 17, 8, 0.08, 0.4, Math.PI * 1.25);
-  ctx.stroke();
-  ctx.restore();
-  // the half-melted pat in the middle, slumping into the slick
-  rot(ctx, 3, -1, -0.18, () => {
+  });
+  // the half-melted pat in the middle, slumping into the smear
+  rot(ctx, 2, -1, -0.18, () => {
     const pat = (c: Ctx) => {
       c.moveTo(-8.4, 1.8);
       c.quadraticCurveTo(-9.0, -4.2, -6.2, -4.8);
@@ -1089,8 +1206,8 @@ fx('fx.butter_puddle', 76, 56, (ctx) => {
       c.closePath();
     };
     S(ctx, pat, {
-      fill: radial(ctx, -3, -3, 12, [[0, '#fffbe0'], [0.5, '#fde98f'], [1, '#efc75a']]),
-      ink: 1.1, inkColor: '#a8791c', shadow: '#e2b648', shadowOffset: [-1.4, -1.6],
+      fill: radial(ctx, -3, -3, 12, [[0, '#fffbe6'], [0.5, '#fde98f'], [1, '#efc75a']]),
+      ink: 1.3, inkColor: '#8f6118', shadow: '#e2b648', shadowOffset: [-1.4, -1.6],
       gloss: [{ x: -3.6, y: -2.6, rx: 3.4, ry: 1.0, rot: -0.1, alpha: 0.9 }],
     });
     // top face edge (the pat is a soft block seen from above)
@@ -1104,26 +1221,31 @@ fx('fx.butter_puddle', 76, 56, (ctx) => {
 // ===========================================================================
 
 danger('proj.e_spore', 12, (ctx) => {
-  // a soft, dusty puff of mushroom spores (lighter cloud, dark spore specks, a few strays around it)
+  // a lumpy puff of mushroom spores: dark olive-khaki cloud, sickly yellow-green highlights, a darker
+  // spore core and a few strays — dark enough to read on the pale kitchen and food-court floors
   const puffs: [number, number, number][] = [[0.2, 0.4, 4.4], [-3.4, 1.8, 2.9], [3.4, 1.6, 2.9], [-2.0, -2.8, 3.0], [2.4, -2.8, 2.8], [0.4, 3.4, 2.6]];
   group(ctx, puffs.map(([x, y, r]) => ({
     build: (c: Ctx) => circlePath(c, x, y, r),
-    style: { fill: '#d4bb8c', shadow: '#a07a50', shadowOffset: [-r * 0.32, -r * 0.38] as Pt },
-  })), 1.1);
+    style: { fill: SPORE, shadow: SPORE_SH, shadowOffset: [-r * 0.32, -r * 0.38] as Pt },
+  })), 1.2);
   ctx.save();
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = '#f4e6c6';
+  ctx.fillStyle = rgba('#3e3218', 0.55);
   ctx.beginPath();
-  circlePath(ctx, -2.4, -3.2, 1.5);
-  circlePath(ctx, -4.0, 0.9, 0.9);
-  circlePath(ctx, 1.6, -3.6, 0.8);
+  circlePath(ctx, 0.8, 1.2, 2.4);
+  ctx.fill();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = SPORE_HI;
+  ctx.beginPath();
+  circlePath(ctx, -2.4, -3.3, 1.35);
+  circlePath(ctx, -4.0, 0.8, 0.85);
+  circlePath(ctx, 1.8, -3.6, 0.8);
   ctx.fill();
   ctx.restore();
-  speckle(ctx, 0.6, 1.0, 4.6, 3.6, 12, '#5a3c24', 0.42, 71, 0.95);
+  speckle(ctx, 0.6, 1.0, 4.6, 3.6, 12, '#2c2210', 0.42, 71, 0.95);
   // stray spores
   ctx.save();
-  ctx.fillStyle = '#5a3c24';
-  for (const [x, y, r] of [[6.4, -3.6, 0.55], [-6.6, -2.2, 0.5], [5.4, 4.6, 0.45]] as [number, number, number][]) {
+  ctx.fillStyle = '#3e3218';
+  for (const [x, y, r] of [[6.4, -3.6, 0.6], [-6.6, -2.2, 0.55], [5.4, 4.6, 0.5]] as [number, number, number][]) {
     ctx.beginPath();
     circlePath(ctx, x, y, r);
     ctx.fill();
