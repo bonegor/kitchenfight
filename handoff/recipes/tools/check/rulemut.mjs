@@ -1,0 +1,20 @@
+import { createRequire } from 'module';
+const require = createRequire('/home/user/kitchenfight/package.json');
+const { chromium } = require('playwright');
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(`http://localhost:5405/`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.press-start', { timeout: 120000 });
+const r = await page.evaluate(async () => {
+  const S = await import('/src/game/stages.ts');
+  const out = {};
+  const fc = S.STAGES.find((s) => s.id === 'foodcourt');
+  const strip = (st, id) => { const saved = { w: st.waves.map((w) => w.pool.slice()), e: st.events.slice() }; st.waves.forEach((w) => { w.pool = w.pool.filter(([x]) => x !== id); }); st.events = st.events.filter((e) => e.enemy !== id); const p = S.stageRuleProblems(); st.waves.forEach((w, i) => { w.pool = saved.w[i]; }); st.events = saved.e; return p; };
+  for (const id of ['pollo', 'bacon', 'aglio', 'scotta_mini', 'scotta', 'funghi']) out['finale-' + id] = strip(fc, id);
+  const am = S.STAGES.find((s) => s.id === 'amatriciana');
+  out['amatriciana-aglio'] = strip(am, 'aglio');
+  out.clean = S.stageRuleProblems();
+  return out;
+});
+for (const [k, v] of Object.entries(r)) console.log(k, JSON.stringify(v));
+await browser.close();

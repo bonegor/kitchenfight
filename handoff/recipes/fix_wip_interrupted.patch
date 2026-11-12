@@ -1,0 +1,348 @@
+diff --git a/docs/RECIPES.md b/docs/RECIPES.md
+index 21c34a6..5b27b49 100644
+--- a/docs/RECIPES.md
++++ b/docs/RECIPES.md
+@@ -578,10 +578,13 @@ wood-fired oven at about 485 °C (EU STG figures)
+ - [Dissapore on Reg. (EU) 2022/2313](https://www.dissapore.com/notizie/pizza-napoletana-lue-elimina-dai-menu-quella-che-non-rispetta-il-disciplinare-di-produzione/)
+   and [on hand stretching only](https://www.dissapore.com/alimentazione/pizza-napoletana-stg-cambia-il-disciplinare-e-si-conferma-unassurdita/);
+   [Scatti di Gusto: mozzarella vs fiordilatte (2012)](https://www.scattidigusto.it/2012/07/05/bufala-vieni-a-vedere-se-sulla-pizza-ci-va-mozzarella-o-fiordilatte/).
+-- Chef sources (the Ricettario's *Gli chef*), all on pineapple: Gino Sorbillo ([Open, 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/)),
+-  Antonino Cannavacciuolo ([Gambero Rosso, 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/)),
+-  Franco Pepe ([Gambero Rosso, 2019](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/)) and
++- Chef sources (the Ricettario's *Gli chef*), both on pineapple: Antonino Cannavacciuolo
++  ([Gambero Rosso, 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/)) and
+   Vincenzo's Plate ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)).
++  Gino Sorbillo ([Open, 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/)) and
++  Franco Pepe ([Gambero Rosso, 2019](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/)) defend
++  pineapple, so their articles are listed as plain sources, not as chef credits (the same rule that leaves
++  Max Mariola out of the Ragù's).
+ 
+ **Intruders in the game**
+ 
+diff --git a/src/game/ai.ts b/src/game/ai.ts
+index 51b9770..c1c9369 100644
+--- a/src/game/ai.ts
++++ b/src/game/ai.ts
+@@ -763,7 +763,8 @@ const PATTERNS: Record<string, Pattern> = {
+         if (t > 0.9 && Math.floor((t - dt) * 2) !== Math.floor(t * 2)) {
+           for (let i = 0; i < 5; i++) {
+             const p = run.player;
+-            danger(run, p.x + (Math.random() - 0.5) * 300, p.y + (Math.random() - 0.5) * 220, 50, 0.8, e.damage * 0.8);
++            // softer than the slam: five circles a beat, so a careless step can catch two or three
++            danger(run, p.x + (Math.random() - 0.5) * 300, p.y + (Math.random() - 0.5) * 220, 50, 0.8, e.damage * 0.6);
+           }
+           run.fx.shake(0.2);
+         }
+diff --git a/src/game/director.ts b/src/game/director.ts
+index fd050e0..a552457 100644
+--- a/src/game/director.ts
++++ b/src/game/director.ts
+@@ -3,7 +3,7 @@
+  * events (rings, walls, stampedes, elites, toasts) and the boss schedule.
+  */
+ import type { Run } from './run';
+-import type { StageDef, WaveMinute } from './stages';
++import { BOSS_DMG_SHARE, DMG_RAMP, type StageDef, type WaveMinute } from './stages';
+ import { ENEMIES } from './enemies';
+ import { TAU } from '../core/math';
+ import { audio } from '../audio/audio';
+@@ -31,10 +31,21 @@ export class Director {
+     return base * (1 + t * this.stage.hpGrowth + Math.max(0, t - 10) * this.stage.hpGrowth * 0.6);
+   }
+ 
+-  dmgScale() {
++  /**
++   * Enemy damage. A dmgBase above 1 phases in over DMG_RAMP (minutes 2–7), later than HP, so the
++   * openings stay gentle; a dmgBase below 1 (the first dish) applies over the HP ramp.
++   * @param share the part of the extra damage (dmgBase − 1) that applies (bosses: BOSS_DMG_SHARE)
++   */
++  dmgScale(share = 1) {
+     const t = this.run.time / 60;
+-    const base = 1 + (this.stage.dmgBase - 1) * this.ramp();
+-    return base * (1 + t * 0.045);
++    const db = this.stage.dmgBase;
++    const k = db > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) * share : this.ramp();
++    return (1 + (db - 1) * k) * (1 + t * 0.045);
++  }
++
++  /** Boss damage: the boss's own attacks set its threat, so it takes only part of the tier's dmgBase. */
++  bossDmgScale() {
++    return this.dmgScale(BOSS_DMG_SHARE);
+   }
+ 
+   wave(): WaveMinute {
+@@ -151,6 +162,7 @@ export class Director {
+     const lvlMul = 1 + (run.level - 1) * 0.035;
+     const slot = slotHp ? slotHp / def.hp : 1;
+     const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) * slot });
++    e.damage = def.damage * this.bossDmgScale();
+     e.spawnT = 0.6;
+     const final = lastSlot && id === this.stage.finalBoss;
+     e.isFinal = final;
+diff --git a/src/game/enemies.ts b/src/game/enemies.ts
+index e3b3f12..5846c01 100644
+--- a/src/game/enemies.ts
++++ b/src/game/enemies.ts
+@@ -194,7 +194,7 @@ E({
+ });
+ E({
+   id: 'parmesan', name: 'Spargipolvere', en: 'The Dust-Sprinkler', sprite: 'enemy.parmesan',
+-  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 6, area: 'cheese', r: 22, slow: 0.25 },
++  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 6, shot: 'proj.e_cheese', area: 'cheese', r: 22, slow: 0.25 },
+   color: 'cream', juice: '#f5ecc8', chunk: 'plastic',
+   info: { crime: 'Powdered "parmesan", or Parmigiano where it does not belong', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months, and it is the hero of Alfredo and pesto. But Rome\'s carbonara, amatriciana and cacio e pepe want Pecorino Romano, seafood pasta wants no cheese at all, and some shelf-stable "parmesan" isn\'t even the same cheese: US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
+ });
+diff --git a/src/game/recipes.ts b/src/game/recipes.ts
+index 6a51816..c77874a 100644
+--- a/src/game/recipes.ts
++++ b/src/game/recipes.ts
+@@ -730,9 +730,9 @@ export const RECIPES: RecipeDef[] = [
+       { name: "Dissapore: Pizza Napoletana, the EU removes from menus pizza that does not follow the disciplinare (Reg. 2022/2313)", url: "https://www.dissapore.com/notizie/pizza-napoletana-lue-elimina-dai-menu-quella-che-non-rispetta-il-disciplinare-di-produzione/", lang: "it", year: "2022" },
+       { name: "Dissapore: Pizza napoletana STG, the disciplinare changes (hand stretching only: no rolling pin, no mechanical press)", url: "https://www.dissapore.com/alimentazione/pizza-napoletana-stg-cambia-il-disciplinare-e-si-conferma-unassurdita/", lang: "it" },
+       { name: "Scatti di Gusto: Mozzarella vs fiordilatte on pizza", url: "https://www.scattidigusto.it/2012/07/05/bufala-vieni-a-vedere-se-sulla-pizza-ci-va-mozzarella-o-fiordilatte/", lang: "it", year: "2012" },
+-      { name: "Sorbillo pizza ananas, la reazione degli utenti (Open)", url: "https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/", lang: "it", year: "2023", chef: "Gino Sorbillo" },
++      { name: "Sorbillo pizza ananas, la reazione degli utenti (Open)", url: "https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/", lang: "it", year: "2023" },
+       { name: "Pineapple pizza at MasterChef, Cannavacciuolo (Gambero Rosso)", url: "https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/", lang: "it", year: "2024", chef: "Antonino Cannavacciuolo" },
+-      { name: "Franco Pepe's pineapple pizza (Gambero Rosso)", url: "https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/", lang: "it", year: "2019", chef: "Franco Pepe" },
++      { name: "Franco Pepe's pineapple pizza (Gambero Rosso)", url: "https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/", lang: "it", year: "2019" },
+       { name: "Angry chef reacts to the 11 worst crimes committed against Italian food (Euronews)", url: "https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food", lang: "en", year: "2022", chef: "Vincenzo's Plate (Vincenzo Prosperi)" },
+     ],
+     funFact: "The Margherita and the Marinara are the only pizzas codified by the EU 'Pizza Napoletana' STG, and since 2022 the name 'Pizza Napoletana' itself is reserved for pizza made to that specification.",
+diff --git a/src/game/run.ts b/src/game/run.ts
+index 7ff4857..3586e72 100644
+--- a/src/game/run.ts
++++ b/src/game/run.ts
+@@ -646,26 +646,33 @@ export class Run {
+   /** whether the last hitEnemy() call was a critical hit */
+   lastCrit = false;
+ 
+-  hurtPlayer(dmg: number, sx: number, sy: number, src = '?') {
++  /**
++   * @param tick a damage-over-time tick (standing in an enemy hazard): it is stopped by iframes but
++   *   grants none and pushes nothing, so a cloud underfoot never shields the chef from the next hit
++   */
++  hurtPlayer(dmg: number, sx: number, sy: number, src = '?', tick = false) {
+     const p = this.player;
+     if (p.iframes > 0 || this.state !== 'playing' || p.hp <= 0 || this.finalBossDefeated) return;
+     const d = Math.max(1, dmg - this.stats.armor);
+     p.hp -= d;
+     this.damageTaken += d;
+     this.dmgBy[src] = (this.dmgBy[src] ?? 0) + d;
+-    p.iframes = 0.5;
++    if (!tick) p.iframes = 0.5;
+     p.hurtT = 0.3;
+-    this.fx.hurt = Math.min(1, this.fx.hurt + 0.35 + d / 40);
+-    this.fx.shake(0.18 + Math.min(0.3, d / 60));
++    // a hazard tick (every 0.6 s while standing in it) only tints the screen a little and never shakes it
++    this.fx.hurt = Math.min(1, this.fx.hurt + (tick ? 0.12 : 0.35 + d / 40));
++    if (!tick) this.fx.shake(0.18 + Math.min(0.3, d / 60));
+     this.fx.number(p.x, p.y - 40, d, false, '#ff5a4f');
+-    this.sfx('player_hurt', { volume: 0.8 });
++    this.sfx('player_hurt', { volume: tick ? 0.45 : 0.8 });
+     if (p.hp < this.stats.maxHp * 0.3 && this.rng.next() < 0.3) this.say(['Aiuto!', 'Mannaggia!', 'Ahia!', 'Porca miseria!'], false, '#ffd0c8');
+     else if (this.rng.next() < 0.06) this.say(['Che schifo!', 'Vergogna!', 'Ma che fai?!', 'Non si fa!'], false, '#ffd0c8');
+-    // push nearby enemies back a little so you can escape
+-    const dx = p.x - sx, dy = p.y - sy;
+-    const l = Math.hypot(dx, dy) || 1;
+-    p.vx += (dx / l) * 80;
+-    p.vy += (dy / l) * 80;
++    // push the chef back a little so he can escape
++    if (!tick) {
++      const dx = p.x - sx, dy = p.y - sy;
++      const l = Math.hypot(dx, dy) || 1;
++      p.vx += (dx / l) * 80;
++      p.vy += (dy / l) * 80;
++    }
+     if (p.hp <= 0) this.playerDown();
+   }
+ 
+@@ -1599,7 +1606,7 @@ export class Run {
+             a.tickT -= dt;
+             if (a.tickT <= 0) {
+               a.tickT = a.tick;
+-              this.hurtPlayer(a.damage, a.x, a.y, 'area:' + a.kind);
++              this.hurtPlayer(a.damage, a.x, a.y, 'area:' + a.kind, true);
+             }
+           }
+         }
+diff --git a/src/game/stages.ts b/src/game/stages.ts
+index 2319e51..601e24f 100644
+--- a/src/game/stages.ts
++++ b/src/game/stages.ts
+@@ -15,6 +15,7 @@
+ import type { MusicId } from '../audio/audio';
+ import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
+ import type { StageAmbient } from '../gfx/stageenv';
++import { ENEMIES } from './enemies';
+ 
+ export interface WaveMinute {
+   /** [enemyId, weight] */
+@@ -102,10 +103,10 @@ export interface Tier {
+ export const TIERS: Record<TierId, Tier> = {
+   T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, rate: 0.74, max: 0.8, bossHp: [1300, 2100, 3300] },
+   T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, rate: 0.93, max: 0.94, bossHp: [1400, 2300, 3600] },
+-  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 1.7, rate: 1.12, max: 1.05, bossHp: [1500, 2700, 4800] },
+-  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.33, dmgBase: 2.35, rate: 1.3, max: 1.12, bossHp: [1600, 3000, 4800] },
+-  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.4, dmgBase: 2.55, rate: 1.4, max: 1.2, bossHp: [1600, 3000, 5000] },
+-  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.6, rate: 1.4, max: 1.2, bossHp: [1800, 3200, 6000] },
++  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 1.7, rate: 1.12, max: 1.05, bossHp: [1500, 2500, 4400] },
++  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.33, dmgBase: 2.35, rate: 1.3, max: 1.12, bossHp: [1600, 2600, 4400] },
++  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.4, dmgBase: 2.55, rate: 1.4, max: 1.2, bossHp: [1600, 2600, 4400] },
++  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.6, rate: 1.4, max: 1.2, bossHp: [1800, 2800, 4400] },
+ };
+ 
+ /** Spawns per second, minute by minute (×tier.rate). Minutes 5 and 10 breathe (boss); minute 15 is the final boss. */
+@@ -114,6 +115,10 @@ export const BASE_RATE = [0.9, 1.45, 2.0, 2.45, 2.85, 2.5, 3.25, 3.55, 3.95, 4.3
+ export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 182, 202, 222, 128];
+ /** A spawn-rate factor above 1 (tier × dish) is ×1 up to the first minute here and phases in linearly to full at the second. */
+ export const RATE_RAMP: [number, number] = [1, 5];
++/** A dmgBase above 1 is ×1 up to the first second here and phases in linearly to full at the second (Director.dmgScale). */
++export const DMG_RAMP: [number, number] = [120, 420];
++/** Boss hits take this share of the extra damage (dmgBase − 1): a boss's own pattern already sets its threat. */
++export const BOSS_DMG_SHARE = 0.5;
+ /** Max share of a minute's spawn weight that may come from non-intruder extras. */
+ export const MAX_EXTRA_SHARE = 0.2;
+ /** Intruders left out of the weight-order check (support enemies: see the header). */
+@@ -204,7 +209,7 @@ function waves(tier: TierId, minutes: MinuteSpec[], rateMul = 1): WaveMinute[] {
+  * build and no waves it took 1.3× as long as the other ragù-tier finals at equal HP.
+  */
+ export const BOSS_HP_FACTOR: Record<string, number> = {
+-  b_influencer: 0.6, b_campanile: 0.5, b_burro: 0.7, b_microonde: 0.65, b_scatolone: 0.7, b_grattugiato: 0.6, b_frullatore: 0.65, b_aglio: 0.8, b_bolognese: 0.8,
++  b_influencer: 0.5, b_campanile: 0.5, b_burro: 0.7, b_microonde: 0.65, b_scatolone: 0.7, b_grattugiato: 0.5, b_frullatore: 0.55, b_aglio: 0.7, b_bolognese: 0.7,
+ };
+ 
+ const bosses = (tier: TierId, ids: [string, string, string], mul: [number, number, number] = [1, 1, 1]) => {
+@@ -326,7 +331,7 @@ const SPECS: StageSpec[] = [
+   },
+   // ------------------------------------------------------------------ 2 · Primi Romani
+   {
+-    id: 'carbonara', env: 'kitchen', tier: 'T2', bosses: ['b_influencer', 'b_alfredo', 'b_panna'], unlock: { anyOf: ['pomodoro'] }, accent: '#f2b632',
++    id: 'carbonara', env: 'kitchen', tier: 'T2', bosses: ['b_influencer', 'b_alfredo', 'b_panna'], bossHpMul: [1.2, 1, 1], unlock: { anyOf: ['pomodoro'] }, accent: '#f2b632',
+     variant: { label: 'warm', tint: '#ffe9cf', darkness: 0, vignette: 0.3, particles: 'flour', decor: 'pantry' },
+     minutes: [
+       M([['piselli', 2], ['bacon', 2]]),
+@@ -368,10 +373,11 @@ const SPECS: StageSpec[] = [
+     id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
+     variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
+     minutes: [
+-      // cream opens with a few shrimp; the broccoli lobs from minute 2, the leaping chicken from minute 3
++      // cream opens with a few shrimp; the broccoli lobs and the gluey Alfredo puddles from minute 2,
++      // the leaping chicken comes from minute 3
+       M([['panna', 3], ['gamberi', 0.3]], ['scotta'], 0.1),
+-      M([['panna', 3], ['alfredo', 0.5], ['gamberi', 0.5]]),
+-      M([['panna', 3], ['alfredo', 1], ['broccoli', 1], ['gamberi', 0.3]]),
++      M([['panna', 3], ['gamberi', 0.3]], ['scotta'], 0.12),
++      M([['panna', 2.5], ['broccoli', 1], ['alfredo', 0.5], ['gamberi', 0.3]], ['scotta'], 0.12),
+       M([['pollo', 0.5], ['panna', 2.5], ['broccoli', 1.5], ['alfredo', 1]], ['scotta'], 0.12),
+       M([['alfredo', 2], ['gamberi', 1.2], ['panna', 3], ['pollo', 1.5], ['broccoli', 1.5]]),
+       M([['panna', 2.5], ['pollo', 1.5], ['gamberi', 1.5]], ['scotta'], 0.12),
+@@ -467,9 +473,9 @@ const SPECS: StageSpec[] = [
+     events: [
+       T(20, 'Pecorino, pepper, pasta water. Three ingredients and nowhere to hide.'),
+       E(100, 'wall', 'burro', 12),
+-      E(160, 'elite', 'panna'),
++      E(160, 'elite', 'scotta'),
+       E(220, 'stampede', 'panna', 14),
+-      E(270, 'elite', 'olio'),
++      E(270, 'elite', 'panna'),
+       E(400, 'ring', 'panna', 22),
+       E(460, 'elite', 'parmesan'),
+       E(520, 'ring', 'scotta', 16),
+@@ -561,7 +567,7 @@ const SPECS: StageSpec[] = [
+   },
+   // ------------------------------------------------------------------ Dal Nord
+   {
+-    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.65, 0.6, 1], rateMul: 1.05, unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
++    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.65, 0.55, 1], rateMul: 1.05, unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
+     variant: { label: 'Bologna afternoon', tint: '#ffe2b8', darkness: 0.16, darkColor: '#2a160c', vignette: 0.36, particles: 'dust', decor: 'osteria' },
+     minutes: [
+       // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff, the meatballs
+@@ -640,7 +646,7 @@ const SPECS: StageSpec[] = [
+   },
+   // ------------------------------------------------------------------ Dal Sud e dal Mare
+   {
+-    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
++    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], bossHpMul: [1, 0.8, 1], unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
+     variant: { label: 'seaside morning', tint: '#dcecff', darkness: 0.04, darkColor: '#0c1a30', vignette: 0.3, particles: 'dust', decor: 'sea' },
+     minutes: [
+       // the clams lead, butter and cream join early; the grated cheese waits for minute 3 and builds late
+@@ -689,13 +695,13 @@ const SPECS: StageSpec[] = [
+       M([['surgelata', 1], ['glassa', 2], ['frappe', 1], ['scatoletta', 1], ['panna', 2], ['ketchup', 1]]),
+       M([['pentola', 1], ['fantasma', 2], ['smartphone', 2], ['ananas', 2], ['parmesan', 2], ['cheddar', 2]]),
+       M([['scatoletta', 3], ['ketchup', 3], ['pastachips', 3], ['pollo', 2]]),
+-      M([['surgelata', 2], ['pentolaunica', 2], ['alfredo', 2], ['forbici', 2], ['bbq', 2]]),
++      M([['surgelata', 2], ['pentolaunica', 1], ['alfredo', 2], ['forbici', 2], ['bbq', 2]]),
+       M([['fantasma', 3], ['scatoletta', 2], ['cipolla', 2], ['polpetta', 2], ['pentola', 1], ['aglio', 1]]),
+       M([['surgelata', 2], ['ananas', 3], ['macchiata', 2], ['frappe', 3], ['gamberi', 2], ['bacon', 1.5]]),
+       M([['vongola', 2], ['scatoletta', 3], ['smartphone', 3], ['glassa', 2], ['pentolaunica', 1], ['funghi', 2]]),
+       M([['ananas', 3], ['hawaiana', 3], ['pepperoni', 3]]),
+       M([['cappuccino', 3], ['surgelata', 2], ['fantasma', 2], ['pentola', 1], ['macchiata', 2], ['prosciutto', 2], ['pollo', 2]]),
+-      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 2], ['forbici', 2], ['olio', 2], ['aglio', 1]]),
++      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 1], ['forbici', 2], ['olio', 2], ['aglio', 1]]),
+       M([['cappuccino', 3], ['surgelata', 3], ['ananas', 3], ['smartphone', 3], ['glassa', 2], ['broccoli', 2]]),
+       M([['cappuccino', 3], ['surgelata', 3], ['fantasma', 3], ['pentola', 2], ['alfredo', 2], ['frappe', 2], ['filante', 2], ['bacon', 2]]),
+       M([['panna', 2], ['ketchup', 3], ['ananas_pezzo', 3], ['pastachips', 3]]),
+@@ -703,9 +709,9 @@ const SPECS: StageSpec[] = [
+     events: [
+       T(20, 'Welcome to the Food Court. Everything here is a crime.'),
+       E(100, 'ring', 'pastachips', 24),
+-      E(160, 'elite', 'surgelata'),
++      E(160, 'elite', 'glassa'),
+       E(230, 'stampede', 'pastachips', 26),
+-      E(275, 'elite', 'pentolaunica'),
++      E(275, 'elite', 'frappe'),
+       E(400, 'ring', 'pastachips', 40),
+       E(460, 'elite', 'fantasma'),
+       E(520, 'wall', 'scatoletta', 20),
+@@ -815,6 +821,8 @@ export function stageRuleProblems(): string[] {
+       const spawned = new Set<string>();
+       for (const w of st.waves) for (const [id, wt] of w.pool) if (wt > 0) spawned.add(id);
+       for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast') spawned.add(ev.enemy);
++      // an enemy that splits on death spawns its pieces too (the mushy pasta's pasta-rinsers)
++      for (const id of [...spawned]) { const into = ENEMIES[id]?.split?.into; if (into) spawned.add(into); }
+       for (const i of r.intruders) if (![i.enemy, ...(i.alias ?? [])].some((id) => spawned.has(id))) out.push(`${st.id}: listed intruder ${i.enemy} never spawns`);
+       for (const id of r.extras) if (!spawned.has(id)) out.push(`${st.id}: listed extra ${id} never spawns`);
+       continue;
+@@ -826,7 +834,7 @@ export function stageRuleProblems(): string[] {
+         if (intruderIn(r, id)) intr += wt;
+         else if (!r.extras.includes(id)) out.push(`${st.id} m${m}: ${id} is neither an intruder nor an extra`);
+       }
+-      if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(100 * intr / tot).toFixed(0)}% < 80%`);
++      if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(100 * intr / tot).toFixed(1)}% < ${100 - 100 * MAX_EXTRA_SHARE}%`);
+     });
+     for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast' && !intruderIn(r, ev.enemy) && !r.extras.includes(ev.enemy)) out.push(`${st.id} @${ev.at}: event enemy ${ev.enemy} not an intruder`);
+     // weight order (see the header)
+diff --git a/src/gfx/art/recipes_enemies_a.ts b/src/gfx/art/recipes_enemies_a.ts
+index 27a0a48..0a2c92b 100644
+--- a/src/gfx/art/recipes_enemies_a.ts
++++ b/src/gfx/art/recipes_enemies_a.ts
+@@ -772,7 +772,7 @@ enemySprite('prosciutto', 48, 50, 34, drawProsciutto);
+ // ===========================================================================
+ // 4. BROCCOLO AMERICANO — r15. A dark-green floret head in a red baseball cap,
+ //    dunked in "Alfredo" cream that drips off the top; pale stalk body, white
+-//    sneakers. Swings a floret underhand to lob it. (Lobber: florets → cream puddles.)
++//    sneakers. Swings a floret underhand to lob it. (Lobber: florets → patches of mashed broccoli, fx.floret_patch.)
+ // ===========================================================================
+ 
+ const BROC = '#3e8c39';
+diff --git a/src/main.ts b/src/main.ts
+index 1544ab8..57655cb 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -22,6 +22,7 @@ import { charById, CHARACTERS } from './game/passives';
+ import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
+ import type { Enemy } from './game/entities';
+ import { awardMedals } from './game/medals';
++import { recipeById } from './game/recipes';
+ 
+ /** Unlock every dish the save's wins allow (also completes a v1 → v2 migration) and keep lastStage valid. */
+ function prepareSave(s: SaveData): SaveData {
+@@ -269,7 +270,7 @@ class App {
+     // the results screen shows the recipe either way; the first ★ of a dish is also an unlock
+     if (run.recipeComplete && !wasPerfect) unlocks.push({ icon: run.recipe?.sprite ?? 'icon.star', text: `First ★ on the menu: ${run.stage.name}, ricetta completa!` });
+     const fresh = refreshUnlocks(this.save);
+-    for (const s of fresh) unlocks.push({ icon: 'icon.star', text: `New dish on the menu: ${s.name}!` });
++    for (const s of fresh) unlocks.push({ icon: recipeById(s.recipe)?.sprite ?? 'icon.star', text: `New dish on the menu: ${s.name}!` });
+     if (fresh.length) {
+       // the menu opens on the new dish (and warms its music) next time
+       this.save.lastStage = fresh[0].id;

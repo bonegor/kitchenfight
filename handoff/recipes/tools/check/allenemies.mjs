@@ -1,0 +1,13 @@
+import { createRequire } from 'module';
+import fs from 'fs';
+const require = createRequire('/home/user/kitchenfight/package.json');
+const { chromium } = require('playwright');
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(`http://localhost:5405/`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.press-start', { timeout: 120000 });
+const ids = await page.evaluate(async () => Object.values((await import('/src/game/enemies.ts')).ENEMIES).filter((e) => !e.boss).map((e) => e.id));
+const t = fs.readFileSync('out/finale.json', 'utf8');
+const d = JSON.parse(t.slice(0, t.lastIndexOf('errors')));
+console.log('non-boss', ids.length, 'not spawned in finale:', ids.filter((i) => !d.spawned[i]));
+await browser.close();
