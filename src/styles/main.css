@@ -173,6 +173,8 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 /* ------------------------------------------------------------------ panels & headers */
 .panel { width: min(1100px, 100%); max-height: 100%; display: flex; flex-direction: column; flex: none; min-height: 0; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px 8px; }
+/* only the body gives way when a panel is taller than the window (the head and buttons stay put) */
+.panel > .checker-strip, .panel > .panel-head, .panel > .panel-foot { flex-shrink: 0; }
 .panel-head h2 { font-family: var(--font-title); font-size: clamp(30px, calc(4.6vw / var(--z, 1)), 48px); color: var(--red); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 rgba(43, 23, 18, 0.25); }
 .panel-body { padding: 6px 20px 18px; overflow-y: auto; touch-action: pan-y; }
 .panel-foot { display: flex; gap: 12px; justify-content: center; padding: 10px 16px 18px; flex-wrap: wrap; }
@@ -220,9 +222,10 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 /* courses flow side by side when they fit (5 cards per row on a 1280 screen) */
 .menu-courses { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: stretch; }
 .course { flex: var(--n) 1 calc(var(--n) * 226px - 14px); min-width: 0; max-width: 100%; display: flex; flex-direction: column; }
-.course-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 2px dashed rgba(43, 23, 18, 0.3); margin: 2px 0 10px; padding-bottom: 1px; min-width: 0; }
-.course-head h3 { font-family: var(--font-title); font-size: 26px; color: var(--green-d); line-height: 1.15; white-space: nowrap; }
-.course-head .en { font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* the English gloss sits under the course name (courses side by side keep equal heads) */
+.course-head { display: flex; flex-direction: column; align-items: flex-start; border-bottom: 2px dashed rgba(43, 23, 18, 0.3); margin: 2px 0 10px; padding-bottom: 2px; min-width: 0; }
+.course-head h3 { font-family: var(--font-title); font-size: 26px; color: var(--green-d); line-height: 1.1; white-space: nowrap; }
+.course-head .en { font-family: var(--font-serif); font-style: italic; font-size: 14px; line-height: 1.15; color: var(--muted); min-width: 0; max-width: 100%; }
 .course-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); gap: 14px; margin-bottom: 12px; flex: 1; }
 .dish-card {
   container: dish / inline-size;
@@ -309,6 +312,8 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .toast.warn { background: #ffd2c9; }
 .toast.good { background: #d6f5c9; }
 .toast b { color: var(--red-d); font-weight: normal; }
+/* a level-up, a chest or the pause menu: banners and toasts wait (ui.ts times them on game time) */
+#hud.frozen .big-banner, #hud.frozen .toast { animation-play-state: paused; }
 
 /* the dish being cooked, under the timer: one badge per real ingredient */
 .recipe-strip { position: absolute; top: calc(74px + var(--safe-top)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 3px 9px 3px 5px; border-radius: 999px; border: 2px solid var(--ink); background: rgba(30, 14, 10, 0.72); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); transition: box-shadow 0.3s, border-color 0.3s; }
@@ -340,24 +345,33 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .big-banner.boss { color: #ff6b5a; }
 .big-banner .bn-t { display: block; }
 .big-banner .bn-ico { display: block; margin: 0 auto -0.06em; }
-.big-banner.ingr .bn-ico { width: 0.95em; height: 0.95em; border-radius: 50%; border: 4px solid var(--ink); background: radial-gradient(circle at 40% 35%, #fffef4, #ffd65a); box-shadow: 0 4px 0 var(--ink), 0 0 0 4px var(--gold); display: grid; place-items: center; }
+/* an ingredient collected / the recipe complete: 5-7 times a run, so smaller, the icon beside
+   the text, and below the player (the top band keeps the timer, recipe strip and warnings) */
+.big-banner.ingr, .big-banner.complete { top: 62%; display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; column-gap: 0.22em; text-align: left; line-height: 1.05; }
+.big-banner.ingr .bn-ico, .big-banner.complete .bn-ico { grid-row: 1 / span 2; margin: 0; }
+.big-banner.ingr small, .big-banner.complete small { font-size: clamp(14px, 0.36em, 22px); margin-top: 2px; }
+.big-banner.ingr { font-size: clamp(30px, calc(5vw / var(--z, 1)), 56px); }
+.big-banner.ingr .bn-ico { width: 1.05em; height: 1.05em; border-radius: 50%; border: 3px solid var(--ink); background: radial-gradient(circle at 40% 35%, #fffef4, #ffd65a); box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--gold); display: grid; place-items: center; }
 .big-banner.ingr .bn-ico img { width: 78%; height: 78%; object-fit: contain; }
 .big-banner.ingr small { color: #c9ffb0; }
-.big-banner.complete { color: var(--gold); }
-.big-banner.complete .bn-ico img { width: 2.3em; max-width: calc(60vw / var(--z, 1)); height: auto; filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.5)); }
+.big-banner.complete { top: 61%; color: var(--gold); font-size: clamp(34px, calc(6vw / var(--z, 1)), 70px); }
+.big-banner.complete .bn-ico img { display: block; width: 1.9em; height: auto; filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.5)); }
 .big-banner.complete small { color: #fff3d6; }
 /* run start: the plated dish and its real ingredients */
-.dish-banner { top: 11%; left: 50%; right: auto; transform: translateX(-50%); width: min(720px, calc(94vw / var(--z, 1))); font-size: 16px; padding: 10px 18px 14px; border: 3px solid var(--ink); border-radius: 18px; color: var(--ink); -webkit-text-stroke: 0; text-shadow: none; box-shadow: 0 6px 0 var(--ink), 0 18px 40px rgba(0, 0, 0, 0.5); animation-name: dishIn; animation-timing-function: ease-out;
+.dish-banner { top: calc(6% + 8px); left: 50%; right: auto; transform: translateX(-50%); width: min(720px, calc(94vw / var(--z, 1))); font-size: 16px; padding: 10px 18px 14px; border: 3px solid var(--ink); border-radius: 18px; color: var(--ink); -webkit-text-stroke: 0; text-shadow: none; box-shadow: 0 6px 0 var(--ink), 0 18px 40px rgba(0, 0, 0, 0.5); animation-name: dishIn; animation-timing-function: ease-out;
   background: radial-gradient(ellipse at 25% 15%, rgba(255, 255, 255, 0.6), transparent 55%), linear-gradient(180deg, #fcf5e6, #f0e0c0); }
 .dish-banner::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 12px; border-bottom: 3px solid var(--ink); border-radius: 15px 15px 0 0; background: repeating-conic-gradient(var(--red) 0% 25%, #fdf6ea 0% 50%) 50% / 14px 14px; }
-.dish-banner .db-art { display: block; width: 124px; height: auto; margin: 6px auto -6px; filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.35)); }
-.dish-banner .db-name { font-family: var(--font-title); font-size: 40px; line-height: 1.05; color: var(--red); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 rgba(43, 23, 18, 0.25); }
+.dish-banner .db-art { display: block; width: 104px; height: auto; margin: 6px auto -6px; filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.35)); }
+.dish-banner .db-txt { min-width: 0; }
+.dish-banner .db-name { font-family: var(--font-title); font-size: 38px; line-height: 1.05; color: var(--red); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 rgba(43, 23, 18, 0.25); }
 .dish-banner .db-lbl { font-family: var(--font-ui); font-size: 14px; color: var(--green-d); letter-spacing: 1.5px; text-transform: uppercase; margin: 4px 0 6px; }
 .dish-banner .db-ings { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 8px; }
 .dish-banner .db-ing { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 92px; font-family: var(--font-ui); font-size: 13px; line-height: 1.1; }
 .dish-banner .badge { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: radial-gradient(circle at 40% 35%, #fffef4, #ffe08a); box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; }
 .dish-banner .badge img { width: 34px; height: 34px; object-fit: contain; }
 @keyframes dishIn { 0% { transform: translateX(-50%) translateY(-30px) scale(0.7); opacity: 0; } 9% { transform: translateX(-50%) scale(1.03); opacity: 1; } 13% { transform: translateX(-50%) scale(1); } 88% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(0.96); } }
+/* phones: the run-start card rises from the bottom edge */
+@keyframes dishInLow { 0% { transform: translateX(-50%) translateY(30px) scale(0.8); opacity: 0; } 9% { transform: translateX(-50%) scale(1.02); opacity: 1; } 13% { transform: translateX(-50%) scale(1); } 88% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.96); } }
 @keyframes bannerFade { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bannerIn { 0% { transform: scale(2.2) rotate(-6deg); opacity: 0; } 12% { transform: scale(1) rotate(-3deg); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.95) rotate(-3deg); } }
 
@@ -409,7 +423,8 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .chest-title { font-family: var(--font-title); font-size: min(60px, calc(6vw / var(--z, 1)), calc(7vh / var(--z, 1))); color: var(--gold); -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); z-index: 1; }
 
 /* ------------------------------------------------------------------ results */
-.results .panel { width: min(900px, 100%); }
+.results .panel { width: min(900px, 100%); flex: 0 1 auto; min-height: 0; }
+.results .panel-foot { flex: none; }
 .res-title { font-family: var(--font-title); font-size: clamp(48px, calc(9vw / var(--z, 1)), 96px); text-align: center; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
 .res-title.win { color: var(--gold); }
 .res-title.lose { color: var(--red); }
@@ -426,7 +441,7 @@ table.dmg th { text-align: left; font-size: 13px; color: var(--muted); font-weig
 table.dmg td { padding: 4px 6px; border-bottom: 1px dashed rgba(43, 23, 18, 0.18); }
 table.dmg td img { width: 28px; height: 28px; vertical-align: middle; }
 table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.unlock-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.unlock-list { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 12px; }
 .unlock { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; border: 3px solid var(--ink); background: linear-gradient(90deg, #fff3b0, #ffe08a); animation: cardIn 0.5s both; }
 .unlock img { width: 48px; height: 48px; object-fit: contain; }
 /* the dish of the run: real ingredients collected */
@@ -547,8 +562,24 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .rc-sources a { display: block; padding: 2px 6px; margin: 0 -6px; }
 .rc-sources .chef { font-family: var(--font-ui); font-weight: normal; font-size: 15px; color: var(--ink); }
 .dish-td { white-space: nowrap; }
+.dish-td .short { display: none; }
 table.dmg td img.td-dish { width: 39px; height: 26px; object-fit: contain; margin-right: 6px; }
-table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
+table.dmg th.num { text-align: right; }
+table.dmg th.star, table.dmg td.star { text-align: center; width: 30px; padding-left: 2px; padding-right: 2px; }
+table.dmg td.star { color: var(--gold-d); font-size: 18px; -webkit-text-stroke: 0.5px var(--ink); }
+@media (max-width: 480px) {
+  table.records .opt { display: none; }
+  table.records .dish-td .long { display: none; }
+  table.records .dish-td .short { display: inline; }
+  table.records td, table.records th { padding-left: 4px; padding-right: 4px; }
+}
+/* chefs: one row each, their links inline; an intruder's link to its crime card */
+.rc-sources.chefs li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 3px 6px; margin: 0 -6px; }
+.rc-sources.chefs .links { display: inline-flex; flex-wrap: wrap; gap: 2px 10px; }
+.rc-sources.chefs .links a { display: inline; padding: 1px 4px; margin: 0 -4px; }
+.rc-intr .src a { padding: 1px 3px; margin: 0 -3px; }
+.tag.crime-link { background: #ffe3dc; cursor: pointer; }
+.tag.crime-link:hover { background: #ffd0c4; }
 
 /* ------------------------------------------------------------------ settings */
 .settings-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px 18px; align-items: center; font-size: 19px; max-width: 560px; margin: 0 auto; }
@@ -691,12 +722,15 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
   #hud.has-recipe .toasts { top: calc(212px + var(--safe-top)); }
   .recipe-strip .ri { width: 25px; height: 25px; }
   .recipe-strip .ri img { width: 20px; height: 20px; }
-  .dish-banner { top: 22%; padding: 8px 10px 12px; }
+  /* portrait phones: under the chef, the lower half of the screen is free */
+  .dish-banner { top: auto; bottom: calc(4% + var(--safe-bottom)); padding: 8px 10px 12px; animation-name: dishInLow; }
   .dish-banner .db-name { font-size: 32px; }
   .dish-banner .db-art { width: 120px; }
   .dish-banner .db-ing { width: 74px; font-size: 12px; }
   .dish-banner .badge { width: 38px; height: 38px; }
   .dish-banner .badge img { width: 29px; height: 29px; }
+  /* five or six ingredients: 3 + 2 / 3 + 3, not 4 + 1 */
+  .dish-banner.n5 .db-ings, .dish-banner.n6 .db-ings { max-width: 250px; margin: 0 auto; }
   .res-dish { gap: 8px; padding-right: 8px; }
   .res-dish-art { width: 84px; height: 56px; }
   .res-dish-info .nm { font-size: 21px; }
@@ -707,11 +741,30 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
   .story-lineup { gap: 0; }
   .story-lineup img { width: 44px; height: 44px; }
   .story-dishes img { width: 92px; height: 62px; }
+  .story p { font-size: 17px; }
+}
+/* phones and short screens: dish cards with the picture beside the text (a 390-wide phone
+   shows two to three dishes per screen instead of one) */
+@media (max-width: 600px), (max-height: 520px) {
+  .course-cards { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-bottom: 8px; }
+  .dish-card { scroll-margin: 40px 0 10px; }
+  @container dish (min-width: 290px) and (max-width: 639.9px) {
+    .dc { flex-direction: row; }
+    .dish-pic { width: 40%; aspect-ratio: auto; min-height: 124px; border-bottom: 0; border-right: 3px solid var(--ink); }
+    .dish-art { width: 84%; }
+    .dish-info { padding: 6px 9px 9px 9px; gap: 3px; }
+    .dish-info h4 { font-size: 22px; }
+    .dish-info .en { font-size: 13px; }
+    .icon-row { min-height: 26px; padding: 1px 5px 1px 2px; }
+    .icon-row img { width: 22px; height: 22px; }
+    .icon-row .lbl { width: 18px; height: 18px; font-size: 11px; }
+  }
 }
 @media (max-height: 520px) {
   #hud.has-recipe .recipe-strip { top: calc(62px + var(--safe-top)); }
   #hud.has-recipe .boss-bar { top: calc(96px + var(--safe-top)); }
-  #hud.has-recipe .toasts { top: calc(146px + var(--safe-top)); }
+  /* landscape phones: the chef fills the middle of a short screen, the bottom edge is free */
+  .toasts, #hud.has-recipe .toasts { top: auto; bottom: calc(6px + var(--safe-bottom)); }
   .toasts { width: min(calc(92vw / var(--z, 1)), 760px); gap: 5px; }
   .toast { font-size: 15px; padding: 5px 12px; }
   .recipe-strip { padding: 2px 7px 2px 4px; gap: 3px; }
@@ -719,16 +772,51 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
   .recipe-strip .ri { width: 23px; height: 23px; }
   .recipe-strip .ri img { width: 18px; height: 18px; }
   .big-banner { top: 32%; }
-  .dish-banner { top: 5%; padding: 6px 12px 8px; width: min(660px, calc(94vw / var(--z, 1))); }
-  .dish-banner::before { height: 9px; }
-  .dish-banner .db-art { width: 92px; margin: 4px auto -4px; }
-  .dish-banner .db-name { font-size: 30px; }
-  .dish-banner .db-lbl { margin: 1px 0 3px; font-size: 12px; }
-  .dish-banner .db-ing { width: 80px; font-size: 12px; }
-  .dish-banner .badge { width: 32px; height: 32px; border-width: 2.5px; }
-  .dish-banner .badge img { width: 25px; height: 25px; }
-  .res-dish { margin-bottom: 8px; }
-  .res-dish-art { width: 84px; height: 56px; }
+  /* the run-start card goes to the bottom edge, plate beside the text: the top band holds the
+     HUD and the chef stands in the middle */
+  .dish-banner { top: auto; bottom: calc(6px + var(--safe-bottom)); display: flex; align-items: center; gap: 10px; padding: 14px 12px 7px; width: auto; max-width: calc(96vw / var(--z, 1)); }
+  .dish-banner::before { height: 8px; }
+  .dish-banner .db-art { width: 96px; margin: 0; flex: none; }
+  .dish-banner .db-txt { text-align: left; }
+  .dish-banner .db-name { font-size: 26px; white-space: nowrap; }
+  .dish-banner .db-lbl { margin: 0; font-size: 11px; }
+  .dish-banner .db-ings { justify-content: flex-start; flex-wrap: nowrap; gap: 4px 8px; margin-top: 3px; }
+  .dish-banner .db-ing { width: auto; font-size: 11px; white-space: nowrap; }
+  /* ingredient / complete banners: lower, clear of the chef and the warnings above him */
+  .big-banner.ingr, .big-banner.complete { top: 60%; }
+  .dish-banner .badge { width: 30px; height: 30px; border-width: 2.5px; box-shadow: 0 2px 0 var(--ink); }
+  .dish-banner .badge img { width: 23px; height: 23px; }
+  .dish-banner.n5 .db-ings, .dish-banner.n6 .db-ings { max-width: none; margin: 3px 0 0; }
+  .dish-banner { animation-name: dishInLow; }
+  /* results: the dish on one compact line */
+  .res-dish { margin-bottom: 6px; gap: 8px; padding: 2px 10px 2px 4px; }
+  .res-dish-art { width: 60px; height: 40px; }
+  .res-dish-info { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+  .res-dish-info .nm { font-size: 20px; }
+  .res-ings { gap: 3px; }
+  .res-ings .ri { width: 26px; height: 26px; }
+  .res-ings .ri img { width: 20px; height: 20px; }
+  .res-ings .ri .ck { width: 13px; height: 13px; font-size: 8px; line-height: 10px; }
+  .res-dish .cnt { font-size: 15px; }
+  .res-dish .cnt.done { font-size: 17px; }
+  .res-dish .cnt .sub { display: none; }
+  .results .res-sub { margin-bottom: 4px; font-size: 15px; }
+  .results .stats-row { margin: 4px 0 8px; gap: 6px; }
+  .results .stat-box { padding: 3px 6px; }
+  .results .stat-box .v { font-size: 21px; }
+  .results .panel-foot { padding: 6px 12px 10px; }
+  .results .panel-foot .btn { font-size: 18px; padding: 6px 18px 7px; }
+  .results .panel-foot .btn > div { display: none; }
+  .unlock { padding: 4px 10px; }
+  .unlock img { width: 34px; height: 34px; }
+  /* story: the text that explains the dishes stays on screen (the parade waits for taller screens) */
+  .story .story-lineup, .story .story-dishes { display: none; }
+  .story .story-kicker { font-size: 28px; margin-top: 0; }
+  .story p { font-size: 15px; line-height: 1.4; margin: 6px 4px; }
+  .story .story-quote { font-size: 22px !important; margin: 4px; }
+  .story .panel-foot { padding: 6px 12px 10px; }
+  .story .panel-foot .btn.big { font-size: 22px; padding: 7px 22px; }
+  .story .panel-foot .btn > div { display: none; }
   /* Il Menù and Il Ricettario: compact head and foot */
   .menu-panel .panel-head, .coll-panel .panel-head { padding: 6px 14px 2px; }
   .menu-panel .panel-head h2, .coll-panel .panel-head h2 { font-size: 30px; }
@@ -742,25 +830,27 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
   .coll-item.dish img { height: 40px; }
   .rc-art { width: 105px; height: 70px; }
   .coll-detail .rc-title h3 { font-size: 28px; }
-  /* side-by-side dish cards */
-  .course-cards { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-bottom: 8px; }
-  .course-head { margin-bottom: 6px; }
+  /* course name and gloss on one line (a course is a full-width row here) */
+  .course-head { flex-direction: row; align-items: baseline; gap: 10px; margin-bottom: 6px; }
   .course-head h3 { font-size: 22px; }
-  .dish-card { scroll-margin: 40px 0 10px; }
-  @container dish (min-width: 290px) and (max-width: 639.9px) {
-    .dc { flex-direction: row; }
-    .dish-pic { width: 42%; aspect-ratio: auto; min-height: 128px; border-bottom: 0; border-right: 3px solid var(--ink); }
-    .dish-art { width: 80%; }
-    .dish-info h4 { font-size: 22px; }
-  }
+  .course-head .en { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (max-height: 520px) and (min-width: 721px) {
   .coll.recipes { grid-template-columns: minmax(170px, 210px) 1fr; gap: 10px; }
 }
 /* very short (568×320): the plate leaves the run-start banner, the panel heads shrink */
 @media (max-height: 360px) {
-  .dish-banner .db-art { display: none; }
-  .dish-banner { padding-top: 14px; }
+  .dish-banner .db-art { width: 72px; }
+  .dish-banner .db-name { font-size: 22px; }
+  .dish-banner .db-lbl { display: none; }
+  .dish-banner .db-ing { font-size: 10px; }
+  .dish-banner .badge { width: 26px; height: 26px; }
+  .dish-banner .badge img { width: 20px; height: 20px; }
+  .dish-card .origin { display: none; }
+  .story .story-kicker { font-size: 24px; }
+  .story p { font-size: 14px; line-height: 1.35; margin: 4px; }
+  .story .story-quote { font-size: 19px !important; }
+  .results .res-title { font-size: 38px; }
   .menu-panel .panel-head .sub { display: none; }
   .menu-panel .panel-head h2, .coll-panel .panel-head h2 { font-size: 26px; }
   .menu-panel > .checker-strip, .coll-panel > .checker-strip { height: 10px; }
@@ -771,7 +861,6 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; text-align: center; }
   .hud-left { top: calc(32px + var(--safe-top)); }
   #hud.has-recipe .recipe-strip { top: calc(60px + var(--safe-top)); }
   #hud.has-recipe .boss-bar { top: calc(92px + var(--safe-top)); }
-  #hud.has-recipe .toasts { top: calc(140px + var(--safe-top)); }
   .recipe-strip .rs-dish { width: 30px; height: 20px; }
   .recipe-strip .ri { width: 21px; height: 21px; border-width: 1.5px; }
   .recipe-strip .ri img { width: 17px; height: 17px; }

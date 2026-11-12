@@ -16,7 +16,7 @@ import type { StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
-import { sightingToast } from '../ui/recipetext';
+import { sightingToast } from './sightings';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
 import type { SaveData } from '../core/save';
