@@ -2,6 +2,10 @@
 
 > What Italians actually object to, turned into enemies, bosses, items, barks and maps.
 > Compiled 5 November 2026 for design, art, writing and the in-game **Ricettario** (bestiary).
+>
+> **Levels are dishes now.** For the per-dish research behind *Il Menù* (the proper recipe of each dish,
+> its intruders with popularity and sources including Italian influencer chefs, what Italians accept,
+> and the verification limits), see **[RECIPES.md](RECIPES.md)**. This file stays the general catalogue of crimes.
 
 ## Contents
 0. [How to use this file](#0-how-to-use-this-file)
@@ -493,7 +497,9 @@
 - **Look:** A towering figure of dust and cellulose flakes with a shaker-can head.
 - **Attack pattern:** (1) *Tempesta*: a sandstorm that cuts visibility. (2) *Ricomposizione*: it reforms from dust unless hit by the Grattugia or the Forma di Parmigiano. (3) *Mattoni di Cellulosa*: filler bricks that turn into obstacles. (4) Summons Spargipolvere flyers. The real Parmigiano wheel deals triple damage.
 
-**Suggested stage mapping** (mini-bosses at 5:00 and 10:00, final boss at 15:00, per `DESIGN.md`):
+**Suggested stage mapping** (mini-bosses at 5:00 and 10:00, final boss at 15:00, per `DESIGN.md`).
+This was the original proposal; the boss line-up of each dish in the game is in
+[DESIGN.md](DESIGN.md#il-menù-the-levels).
 
 | Stage | 5:00 | 10:00 | 15:00 final |
 |---|---|---|---|
@@ -624,6 +630,7 @@ All are family-friendly. Avoid religious exclamations (they can tip into *bestem
 ## 5. Settings
 
 The first three match `DESIGN.md` stages. Later entries are candidates for future stages.
+(The four built environments now host the dishes of [Il Menù](DESIGN.md#il-menù-the-levels).)
 
 #### S1. **La Cucina**: the trattoria kitchen (Stage 1)
 - Flour-dusted marble worktop, a wooden *spianatoia* and a long mattarello.

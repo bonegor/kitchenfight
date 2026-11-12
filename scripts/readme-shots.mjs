@@ -1,9 +1,12 @@
-// Capture README screenshots into docs/screenshots (JPEG).
+// Capture README screenshots into docs/screenshots (JPEG): PORT=5175 node scripts/readme-shots.mjs
+// OUT=<dir> writes them somewhere else (e.g. a scratch folder to check them first).
+// Gameplay shots are named after the dish (Il Menù): carbonara (kitchen), alfredo (trattoria),
+// margherita and vongole (the Naples alleys, two light variants), foodcourt (the finale).
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const port = process.env.PORT || '5175';
-const OUT = 'docs/screenshots';
+const OUT = process.env.OUT || 'docs/screenshots';
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.setDefaultTimeout(0);
@@ -19,16 +22,21 @@ await shot('title');
 await page.evaluate(() => window.__kf.ui.showCharSelect());
 await page.waitForTimeout(600);
 await shot('chefs');
+// Il Menù: the dish picker
+await page.evaluate(() => window.__kf.ui.showStageSelect());
+await page.waitForTimeout(900);
+await shot('menu');
 await page.evaluate(() => { window.__kf.ui.showCollection('crimes'); });
 await page.waitForTimeout(500);
 await page.evaluate(() => { const it = [...document.querySelectorAll('.coll-item')][10]; it && it.click(); });
 await page.waitForTimeout(300);
 await shot('ricettario');
-// gameplay showcase helper
-const play = async (stage, char, weapons, t, secs) => {
+// gameplay showcase helper: `got` real ingredients already collected (HUD recipe strip),
+// and the next one placed on the map (green arrow)
+const play = async (stage, char, weapons, t, secs, got = 2) => {
   await page.evaluate(([s, c]) => window.__kf.startRun(c, s), [stage, char]);
   await page.waitForTimeout(1800);
-  await page.evaluate(([ws, tt]) => { const r = window.__kf.run; r.player.hp = 1e6; r.stats.maxHp = 1e6; for (const id of ws.split(',')) r.addWeapon(id); for (const w of r.weapons) w.level = 6; r.time = tt; r.level = 24; }, [weapons, t]);
+  await page.evaluate(([ws, tt, g]) => { const r = window.__kf.run; r.player.hp = 1e6; r.stats.maxHp = 1e6; for (const id of ws.split(',')) r.addWeapon(id); for (const w of r.weapons) w.level = 6; r.time = tt; r.level = 24; for (let i = 0; i < g; i++) r.collectIngredient(i); r.spawnIngredient(g); }, [weapons, t, got]);
   const keys = ['KeyD', 'KeyS', 'KeyA', 'KeyW'];
   for (let i = 0; i < secs; i++) {
     await page.keyboard.down(keys[i % 4]); await page.waitForTimeout(650); await page.keyboard.up(keys[i % 4]);
@@ -36,15 +44,18 @@ const play = async (stage, char, weapons, t, secs) => {
   }
 };
 await play('carbonara', 'enzo', 'olive,forchette,rotella,forno', 250, 7);
-await shot('kitchen');
+await shot('carbonara');
 await page.evaluate(() => window.__kf.quitRun());
-await play('margherita', 'nonna', 'pizza,peperoncino,moka,basilico', 520, 7);
-await shot('trattoria');
+await play('alfredo', 'sofia', 'coltelli,forma,moka,basilico', 420, 7);
+await shot('alfredo');
 await page.evaluate(() => window.__kf.quitRun());
-await play('marinara', 'peppe', 'vesuvio,forma,coltelli,spaghetti', 830, 8);
-await shot('streets');
+await play('margherita', 'nonna', 'pizza,peperoncino,moka,basilico', 520, 7, 3);
+await shot('margherita');
 await page.evaluate(() => window.__kf.quitRun());
-await play('foodcourt', 'concetta', 'olive,moka,rotella,basilico', 590, 7);
+await play('vongole', 'peppe', 'vesuvio,forma,coltelli,spaghetti', 400, 8, 4);
+await shot('vongole');
+await page.evaluate(() => window.__kf.quitRun());
+await play('foodcourt', 'concetta', 'olive,moka,rotella,basilico', 590, 7, 3);
 await shot('foodcourt');
 await page.evaluate(() => { const r = window.__kf.run; r.pendingLevels = 1; });
 await page.waitForTimeout(1300);
