@@ -170,7 +170,7 @@ E({
 });
 E({
   id: 'polpetta', name: 'Polpetta Rotolante', en: 'Rolling Meatball', sprite: 'enemy.polpetta',
-  radius: 14, hp: 26, speed: 140, damage: 7, xp: 3, behavior: 'roller', params: { accel: 220, turn: 2.2 }, knockResist: 0.4,
+  radius: 14, hp: 22, speed: 118, damage: 7, xp: 3, behavior: 'roller', params: { accel: 150, turn: 2.2 }, knockResist: 0.4,
   color: 'brown', juice: '#8a4a2a', chunk: 'bread',
   info: { crime: 'Spaghetti and meatballs', why: 'An Italian-American invention from around 1900. In Italy polpette are a main course on their own — never piled on spaghetti.', severity: 2, quote: '"You\'ll never find spaghetti and meatballs in Italy, at least outside of the most obvious tourist traps." — Tasting Table' },
 });
@@ -194,7 +194,7 @@ E({
 });
 E({
   id: 'parmesan', name: 'Spargipolvere', en: 'The Dust-Sprinkler', sprite: 'enemy.parmesan',
-  radius: 14, hp: 20, speed: 46, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 300, cd: 3, area: 'cheese', r: 34, slow: 0.3 },
+  radius: 14, hp: 20, speed: 46, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, area: 'cheese', r: 26, slow: 0.25 },
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic',
   info: { crime: 'Powdered "parmesan", or Parmigiano where it does not belong', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months, and it is the hero of Alfredo and pesto. But Rome\'s carbonara, amatriciana and cacio e pepe want Pecorino Romano, seafood pasta wants no cheese at all, and some shelf-stable "parmesan" isn\'t even the same cheese: US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
 });
@@ -278,7 +278,7 @@ E({
 });
 E({
   id: 'funghi', name: 'Funghi Abusivi', en: 'Bootleg Mushrooms', sprite: 'enemy.funghi',
-  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.4, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
+  radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
   color: 'brown', juice: '#d9c3a0', chunk: 'bread',
   info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef\'s 2020 carbonara video with mushrooms, peas and crème fraîche.', severity: 2 },
 });
@@ -290,13 +290,13 @@ E({
 });
 E({
   id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
-  radius: 15, hp: 22, speed: 44, damage: 6, xp: 3, behavior: 'lobber', params: { min: 170, max: 290, cd: 3.2, shot: 'proj.e_floret', area: 'cream', r: 26, slow: 0.3 },
+  radius: 15, hp: 22, speed: 44, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, shot: 'proj.e_floret', area: 'cream', r: 24, slow: 0.25 },
   color: 'green', juice: '#4f9a3a', chunk: 'tomato',
   info: { crime: 'Broccoli in Fettuccine Alfredo', why: 'Broccoli is a common American add-on to "Alfredo" and is unknown in the Roman dish, which is only egg fettuccine, butter and Parmigiano. Italians love pasta with broccoli, just in other dishes.', severity: 2 },
 });
 E({
   id: 'gamberi', name: 'Gambero Saltatore', en: 'Hopping Shrimp', sprite: 'enemy.gamberi',
-  radius: 12, hp: 14, speed: 96, damage: 6, xp: 2, behavior: 'leaper', params: { range: 200, time: 0.5, cd: 2.1, height: 34 },
+  radius: 12, hp: 12, speed: 84, damage: 5, xp: 2, behavior: 'leaper', params: { range: 190, time: 0.55, cd: 2.7, height: 30 },
   color: 'orange', juice: '#ff9a7a', chunk: 'tomato',
   info: { crime: 'Shrimp in Alfredo (and seafood on the Marinara)', why: 'Fettuccine Alfredo has no protein at all: shrimp is a US restaurant add-on. And despite its name, the pizza marinara has no seafood: "marinara" refers to the sailors who carried its long-lasting ingredients on board.', severity: 2 },
 });
@@ -365,7 +365,7 @@ E({
 });
 E({
   id: 'b_deepdish', name: 'Il Pizzone Abissale', en: 'The Abyssal Deep-Dish', sprite: 'boss.deepdish',
-  radius: 74, hp: 5200, speed: 30, damage: 26, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 74, hp: 5200, speed: 30, damage: 23, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'red', juice: '#c8321e', chunk: 'bread', shadow: 1.2,
   boss: { title: 'Il Pizzone Abissale', taunt: 'I AM pizza! Five centimetres of pizza!', pattern: 'deepdish' },
   info: { crime: 'Chicago deep-dish "pizza"', why: 'Italian pizza is thin and blisters in ninety seconds. Deep dish is a tall crust filled with cheese and topped with sauce — closer to a pie.', severity: 3, quote: 'Even a Chicago chef called it "a lasagna with a crust".' },
