@@ -273,3 +273,45 @@ export function spriteURL(id: string, frame = 0, pad = 0): string {
   urlCache.set(key, u);
   return u;
 }
+
+/**
+ * PNG data URL of a sprite frame cropped to what is actually painted (plus a small margin), for DOM
+ * icons. A sprite's box also holds room for its attack poses (a boss's sceptre swing, a knife slash),
+ * so the plain frame would sit small and off centre in a square icon. Cached.
+ */
+export function spriteIconURL(id: string, frame = 0): string {
+  const key = id + '#' + frame + '#trim';
+  let u = urlCache.get(key);
+  if (u) return u;
+  const s = getSprite(id);
+  const src = s.frames[frame % s.frames.length];
+  const w = src.width, h = src.height;
+  const data = src.getContext('2d')?.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  if (data) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > 24) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+  }
+  if (x1 < 0) {
+    u = spriteURL(id, frame);
+  } else {
+    const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.04) + 1;
+    x0 = Math.max(0, x0 - m);
+    y0 = Math.max(0, y0 - m);
+    x1 = Math.min(w - 1, x1 + m);
+    y1 = Math.min(h - 1, y1 + m);
+    const c = makeCanvas(x1 - x0 + 1, y1 - y0 + 1);
+    c.getContext('2d')!.drawImage(src, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+    u = c.toDataURL('image/png');
+  }
+  urlCache.set(key, u);
+  return u;
+}
