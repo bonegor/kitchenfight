@@ -7,29 +7,35 @@
  * Anchor = centre of the collision circle; feet at y ≈ +radius; face front-right; outline 3–4.
  *
  *   id            box w×h   anchor (ax,ay)  radius  look
- *   boss.aglio    246×234   (104,170)       56      Il Re dell'Aglio: a huge garlic bulb king. Mauve cape and high
+ *   boss.aglio    254×238   (109,168)       56      Il Re dell'Aglio: a huge garlic bulb king. Mauve cape and high
  *                                                   collar of papery garlic skin, gold crown with clove finials, a
- *                                                   curled root moustache and root beard, purple tights. One gloved
+ *                                                   curled root moustache and a wiry root beard, purple tights. One gloved
  *                                                   finger up ("solo uno spicchio!"), the sceptre is a single clove
  *                                                   "in camicia" in a gold claw. Wind-up: sceptre raised, cheeks
  *                                                   puffed with stink, the clove glows. Attack: ROAR, a green stink
- *                                                   breath and a fan of cloves. (Enraged he sheds his skin: the code
- *                                                   shows a burst; the sprite stays the same.)
- *   boss.burro    262×196   (106,134)       54      Il Panetto Supremo: a soft butter block melting over its front
+ *                                                   breath; the sceptre head bursts with light (the real cloves fly
+ *                                                   from there: no painted shots in the frames). Enraged he sheds his
+ *                                                   skin: b_aglio.ts drops fx.aglio_skin flakes and keeps green fumes
+ *                                                   rising behind his crown and at his feet; the sprite stays the same.
+ *   boss.burro    284×196   (111,133)       54      Il Panetto Supremo: a soft butter block melting over its front
  *                                                   edge, on a blue-and-white ceramic butter dish that trots on four
- *                                                   little feet; a silver foil wrapper peeled down like a skirt, a
- *                                                   butter-curl quiff, the dish lid as a shield and a butter knife as a
- *                                                   sword. Wind-up: knife raised high, shield up, glare, gritted teeth,
- *                                                   sweating butter. Attack: the knife slashes forward, butter pats fly.
- *                                                   (Enraged it melts: the code draws it at 0.9 scale.)
+ *                                                   blue bun feet; a silver foil wrapper peeled down like a skirt, a
+ *                                                   butter-curl quiff, the dish lid as a shield and a big butter knife
+ *                                                   (cobalt handle, broad steel blade) as a sword. Wind-up: knife raised high, shield up, glare, gritted teeth,
+ *                                                   sweating butter. Attack: the knife slashes forward (the real pats
+ *                                                   fly from the knife tip / around him: no painted shots in the
+ *                                                   frames). Enraged it melts: b_burro.ts draws it at 0.9 scale, it
+ *                                                   drips and leaves butter puddles.
  *   The boxes are wider than the placeholders' on the right: the attack poses swing the sceptre / knife there.
+ *   Each box is the union of all six frames' painted pixels plus ~4 px (nothing touches an edge).
  *
- *   proj.e_clove      24×24  (12,12)  1 frame: a garlic clove in its papery shirt, tip forward, a stink trail. DANGER style.
+ *   proj.e_clove      26×26  (13,13)  1 frame: a garlic clove in its papery shirt, tip forward, a stink trail. DANGER style.
  *   proj.e_butterpat  24×24  (12,12)  1 frame: a stamped butter pat. DANGER style.
  *
  *   Extra fx for the b_aglio pattern (not placeholders):
  *   fx.aglio_stink    34×30  (17,15)  3 frames: a green stink puff rising from the stink clouds.
- *   fx.aglio_skin     16×16  (8,8)    4 frames: papery skin flakes he sheds when enraged.
+ *   fx.aglio_skin     18×16  (9,8)    4 frames: papery skin flakes he sheds when enraged (no ink: harmless debris).
+ *   fx.aglio_glint    18×18  (9,9)    2 frames: green glints rushing into the sceptre (clove-fan tell).
  */
 import { defineSprite } from '../sprites';
 import { registerBoss, type Pose as BossPose } from './bosses_a';
@@ -124,7 +130,7 @@ function glove(ctx: Ctx, x: number, y: number, r: number, rot: number, o: { fing
 // ===========================================================================
 
 export const AGLIO_R = 56;
-const AG_W = 246, AG_H = 234, AG_AX = 104, AG_AY = 170;
+const AG_W = 254, AG_H = 238, AG_AX = 109, AG_AY = 168;
 
 const GAR = '#f8f0dd';
 const GAR_SH = '#dcc6a0';
@@ -319,28 +325,33 @@ function agBulb(ctx: Ctx) {
   clipTo(ctx, cloveB(2), () => fillPath(ctx, (c) => ellipsePath(c, -42, -20, 4, 13, 0.4), '#ffffff', 0.5));
 }
 
-/** Root plate + wiry root beard under the bulb. */
+/**
+ * Wiry root beard under the bulb, drawn BEHIND the bulb so only a splayed fringe of curly roots shows
+ * (the basal plate stays tucked under the cloves: at 1x a visible plate read as a little drum).
+ */
 function agBeard(ctx: Ctx, f: number, blow: number) {
   const ph = phase(f);
   const sway = Math.sin(ph) * 1.4 + blow * 4;
   const R = rng(17);
   const roots: Pt[][] = [];
-  for (let i = 0; i < 9; i++) {
-    const x0 = -14 + i * 3.8;
-    const len = 12 + R() * 6 - Math.abs(i - 4) * 0.9;
+  const n = 13;
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1) - 0.5; // -0.5..0.5
+    const x0 = 6 + u * 44;
+    const len = 15 + R() * 7 - Math.abs(u) * 8;
     const pts: Pt[] = [];
-    for (let k = 0; k <= 4; k++) {
-      const t = k / 4;
-      pts.push([x0 + (x0 - 2) * 0.12 * t + Math.sin(t * 5 + i) * 1.6 + sway * t, 40 + t * len]);
+    for (let k = 0; k <= 5; k++) {
+      const t = k / 5;
+      pts.push([x0 + u * 26 * t + Math.sin(t * 6 + i * 1.7) * 1.8 * t + sway * t, 36 + Math.abs(u) * -4 + t * len]);
     }
     roots.push(pts);
   }
-  for (const pts of roots) line(ctx, pts, 3.6 + OUT_S * 2, INK, true);
+  S(ctx, (c) => ellipsePath(c, 6, 38, 22, 6), { fill: ROOT_SH, ink: OUT_S, shadow: '#7d5d38', shadowOffset: [-2, -1.5] });
+  for (const pts of roots) line(ctx, pts, 2.8 + OUT_S * 2, INK, true);
   roots.forEach((pts, i) => {
-    line(ctx, pts, 3.6, i % 2 ? ROOT : '#e2c597', true);
-    line(ctx, pts.slice(0, 3).map(([x, y]) => [x - 0.7, y] as Pt), 1, '#f6e7c4', true, 0.7);
+    line(ctx, pts, 2.8, i % 2 ? ROOT : '#e2c597', true);
+    line(ctx, pts.slice(1, 4).map(([x, y]) => [x - 0.5, y] as Pt), 0.9, '#f6e7c4', true, 0.7);
   });
-  S(ctx, (c) => ellipsePath(c, 2, 40, 17, 5.2), { fill: ROOT, ink: OUT_IN, shadow: ROOT_SH, shadowOffset: [-2, -2] });
 }
 
 /** Handlebar moustache of dried roots, centred at (x,y). lift raises the curls (roar). */
@@ -584,8 +595,8 @@ function drawAglioKing(ctx: Ctx, p: AgPose) {
     burstLines(ctx, -80, -36, 15, 23, 5, '#ffffff', 2.2, 3, -2.7, -0.5, 0.85);
   }
 
-  agBulb(ctx);
   agBeard(ctx, f, p.mouth === 'roar' ? 1 : 0);
+  agBulb(ctx);
   agFace(ctx, p);
 
   // near arm + sceptre
@@ -634,16 +645,10 @@ function drawAglioPose(ctx: Ctx, f: number, pose: BossPose) {
   stinkPuff(ctx, 58, 18, 12, 22, 0.8);
   stinkPuff(ctx, 86, 14, 14, 23, 0.65);
   stinkPuff(ctx, 114, 6, 12, 24, 0.45);
-  burstLines(ctx, 96, -118, 22, 32, 8, '#f2ffd0', 2.6, 13, -2.2, 0.9, 0.95);
+  // the sceptre head bursts with stink power (the real cloves fly from here: see b_aglio.ts)
+  softGlow(ctx, 102, -104, 30, '#efffc0', 0.55);
+  burstLines(ctx, 102, -104, 26, 38, 9, '#f2ffd0', 2.8, 13, -2.6, 1.0, 0.95);
   ctx.restore();
-  for (const [cx, cy, rot, s] of [[126, -122, -0.5, 1], [128, -90, 0.25, 0.95], [100, -150, -1.2, 0.85]] as [number, number, number, number][]) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    ctx.scale(s * 1.3, s * 1.3);
-    cloveShot(ctx);
-    ctx.restore();
-  }
 }
 
 registerBoss('aglio', AG_W, AG_H, AG_AX, AG_AY, drawAglioPose);
@@ -653,8 +658,9 @@ registerBoss('aglio', AG_W, AG_H, AG_AX, AG_AY, drawAglioPose);
 // ---------------------------------------------------------------------------
 function cloveShot(ctx: Ctx) {
   // a little green stink trail behind it
-  line(ctx, [[-6, 0.6], [-8.4, -1.4], [-10.6, 0.4]], 3, STINK, true, 0.55);
-  line(ctx, [[-6, 0.6], [-8.4, -1.4], [-10.6, 0.4]], 1.2, '#eaffc0', true, 0.7);
+  line(ctx, [[-6, 0.6], [-9.2, -1.7], [-12.2, 0.3]], 3.8, STINK_DK, true, 0.6);
+  line(ctx, [[-6, 0.6], [-9.2, -1.7], [-12.2, 0.3]], 2.6, STINK, true, 0.95);
+  line(ctx, [[-5, 0.4], [-8, -2]], 1.1, '#eaffc0', true, 0.9);
   const cl = (c: Ctx) => {
     c.moveTo(8.8, -0.8);
     c.bezierCurveTo(4.4, -6.4, -2.2, -7, -6.8, -4.6);
@@ -674,7 +680,11 @@ function cloveShot(ctx: Ctx) {
   // papery tip wisp
   line(ctx, [[8.2, -0.8], [10.6, -1.8], [11.2, -0.2]], 1.2, PAPER_SH, true, 0.95);
 }
-danger('proj.e_clove', 12, cloveShot);
+danger('proj.e_clove', 14, (ctx) => {
+  ctx.scale(0.86, 0.86);
+  ctx.translate(1.4, 0);
+  cloveShot(ctx);
+});
 
 // ---------------------------------------------------------------------------
 // fx used by the Garlic King's pattern (b_aglio.ts): rising stink puffs and papery skin flakes
@@ -696,22 +706,36 @@ defineSprite({
     line(ctx, [[-3, 1], [-1, -1.6], [1.4, 0.4], [3.6, -1.6]], 1, STINK_DK, true, 0.7);
   },
 });
+// papery skin flakes: no ink outline and pale, so they never read as the (outlined, glowing) cloves
 defineSprite({
-  id: 'fx.aglio_skin', w: 16, h: 16, ax: 8, ay: 8, frames: 4,
+  id: 'fx.aglio_skin', w: 18, h: 16, ax: 9, ay: 8, frames: 4,
   draw: (ctx, f) => {
     const R = rng(91 + f * 7);
     const pts: Pt[] = [];
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * TAU;
-      const k = 0.65 + R() * 0.45;
-      pts.push([Math.cos(a) * 6 * k, Math.sin(a) * 4.2 * k]);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      const k = 0.6 + R() * 0.5;
+      pts.push([Math.cos(a) * 7 * k, Math.sin(a) * 4.4 * k + Math.cos(a) * 1.4]);
     }
-    const flake = (c: Ctx) => polyPath(c, pts);
-    S(ctx, flake, { fill: f % 2 ? PAPER : '#f6ead2', ink: 1, shadow: PAPER_SH, shadowOffset: [-1, -1] });
+    const flake = (c: Ctx) => smoothPath(c, pts, true, 0.3);
+    // ivory inner skin (frames 0, 2) and mauve cape skin (frames 1, 3)
+    const mauve = f % 2 === 1;
+    fillPath(ctx, flake, mauve ? '#e2b2d8' : '#fbf3e2', 0.88);
     clipTo(ctx, flake, () => {
-      line(ctx, [[-5, -1], [0, -2], [5, 0]], 0.7, VIO, true, 0.7);
-      line(ctx, [[-4, 2], [1, 1.4], [5, 2.6]], 0.6, VIO, true, 0.5);
+      fillPath(ctx, (c) => ellipsePath(c, 2, 2.4, 6, 2.6), mauve ? '#c487b8' : '#e3cfae', 0.6);
+      line(ctx, [[-6, -1], [0, -2], [6, 0]], 0.7, mauve ? '#9a4f94' : '#c99ac0', true, 0.75);
+      line(ctx, [[-5, 2], [1, 1.4], [6, 2.6]], 0.6, mauve ? '#9a4f94' : '#c99ac0', true, 0.5);
+      line(ctx, [[-4, -2.6], [2, -3.2]], 0.8, '#ffffff', true, 0.8);
     });
+  },
+});
+// green glints that rush into the sceptre while it charges the clove fan (b_aglio.ts)
+defineSprite({
+  id: 'fx.aglio_glint', w: 18, h: 18, ax: 9, ay: 9, frames: 2,
+  draw: (ctx, f) => {
+    softGlow(ctx, 0, 0, 8, STINK, 0.9);
+    sparkle(ctx, 0, 0, f ? 6 : 7.5, '#f4ffd8', 1, 0.16);
+    sparkle(ctx, 0, 0, 3, '#ffffff', 1, 0.3);
   },
 });
 
@@ -719,7 +743,7 @@ defineSprite({
 // IL PANETTO SUPREMO — The Supreme Butter Block (r 54)
 // ===========================================================================
 export const BURRO_R = 54;
-const BU_W = 262, BU_H = 196, BU_AX = 106, BU_AY = 134;
+const BU_W = 284, BU_H = 196, BU_AX = 111, BU_AY = 133;
 
 const BUT = '#fde48a';
 const BUT_TOP = '#fff3bd';
@@ -736,6 +760,8 @@ const FOIL_SH = '#8f9bb0';
 const STEEL = '#e4eaf1';
 const STEEL_SH = '#98a4b6';
 const BU_BROW = '#6a3a12';
+const ARM = '#efc04e'; // arms a shade darker than the block, so they separate from it
+const ARM_SH = '#c9922a';
 
 // block: front face + depth toward the upper-left (we see its left side and its top)
 const FX0 = -40, FX1 = 56, FY0 = -62, FY1 = 30;
@@ -773,24 +799,28 @@ const bSide = (c: Ctx) => {
   c.closePath();
 };
 
-/** Short ceramic legs with blue bun feet, 4-frame trot. */
+/** Short ceramic legs with big blue bun feet, 4-frame trot (the feet must read at 1x). */
 function dishLegs(ctx: Ctx, f: number) {
   const ph = phase(f);
-  const xs = [-70, -30, 14, 54];
+  const xs = [-72, -32, 14, 56];
   xs.forEach((x, i) => {
     const pp = ph + (i % 2 ? Math.PI : 0);
-    const lift = Math.max(0, -Math.cos(pp)) * 4;
-    const fx = x + Math.sin(pp) * 3.5;
-    const top = DISH_Y + DISH_T + 6;
-    line(ctx, [[x, top], [fx, BURRO_R - 5 - lift]], 7 + OUT_IN * 2, INK, true);
-    line(ctx, [[x, top], [fx, BURRO_R - 5 - lift]], 7, CER, true);
-    line(ctx, [[x + 2, top], [fx + 2, BURRO_R - 6 - lift]], 2.2, CER_SH, true, 0.9);
+    const lift = Math.max(0, -Math.cos(pp)) * 7;
+    const fx = x + Math.sin(pp) * 4.5;
+    const top = DISH_Y + DISH_T + 4;
+    const fy = BURRO_R - lift;
+    line(ctx, [[x, top], [fx, fy - 8]], 8 + OUT_IN * 2, INK, true);
+    line(ctx, [[x, top], [fx, fy - 8]], 8, CER, true);
+    line(ctx, [[x + 2.2, top], [fx + 2.2, fy - 9]], 2.4, CER_SH, true, 0.9);
+    // bun foot: a fat blue dome with a white glaze highlight and a toe line
     S(ctx, (c) => {
-      c.moveTo(fx - 8, BURRO_R - lift);
-      c.quadraticCurveTo(fx - 8, BURRO_R - 8 - lift, fx + 1, BURRO_R - 8 - lift);
-      c.quadraticCurveTo(fx + 10, BURRO_R - 8 - lift, fx + 10, BURRO_R - lift);
+      c.moveTo(fx - 12, fy);
+      c.quadraticCurveTo(fx - 12.5, fy - 12, fx + 1, fy - 12);
+      c.quadraticCurveTo(fx + 14, fy - 12, fx + 14, fy);
+      c.quadraticCurveTo(fx + 1, fy + 2.2, fx - 12, fy);
       c.closePath();
-    }, { fill: BLUE, ink: OUT_IN, shadow: '#1d3f80', shadowOffset: [-1.6, -1.6], gloss: [{ x: fx - 2, y: BURRO_R - 5.6 - lift, rx: 2.6, ry: 1.1, alpha: 0.55 }] });
+    }, { fill: BLUE, ink: OUT_IN, shadow: '#1d3f80', shadowOffset: [-2.4, -2.2], gloss: [{ x: fx - 3, y: fy - 8, rx: 4, ry: 1.6, rot: -0.15, alpha: 0.75 }] });
+    line(ctx, [[fx + 4, fy - 1.5], [fx + 6, fy - 7]], 1.2, '#1d3f80', true, 0.8);
   });
 }
 
@@ -1005,39 +1035,53 @@ function butterFace(ctx: Ctx, p: BuPose) {
   }
 }
 
-/** Butter knife in local coords: grip at (0,0), handle along +y, blade along −y. */
+const HANDLE = '#21448f';
+const HANDLE_SH = '#11285c';
+const STEEL_DK = '#66738a';
+
+/**
+ * Butter knife in local coords: grip at (0,0), handle along +y, blade along −y. A big table-knife
+ * silhouette that reads at 1x: dark cobalt handle with rivets, a steel bolster, a broad blade with a
+ * straight spine (left), a curved belly edge (right) and a rounded tip, dark steel shading, a bright
+ * bevel along the edge.
+ */
 function butterKnife(ctx: Ctx, f: number, shine: boolean) {
-  // handle: ceramic, blue bands (matches the dish)
-  S(ctx, (c) => roundRectPath(c, -5, 0, 10, 28, 5), { fill: CER, ink: OUT_IN, shadow: CER_SH, shadowOffset: [-2.2, -1], gloss: [{ x: -2, y: 12, rx: 1.2, ry: 8, alpha: 0.8 }] });
-  for (const yy of [6, 21]) fillPath(ctx, (c) => c.rect(-5, yy, 10, 2.6), BLUE);
+  // handle: cobalt (matches the dish), held in the middle, a rivet showing under the fist
+  S(ctx, (c) => roundRectPath(c, -6, -11, 12, 31, 6), { fill: HANDLE, ink: OUT_IN, shadow: HANDLE_SH, shadowOffset: [-3, -1], gloss: [{ x: -2.4, y: 8, rx: 1.4, ry: 8, alpha: 0.55 }] });
+  ball(ctx, 0.4, 14, 2.1, '#dfe6f2', 1);
   // bolster
-  S(ctx, (c) => roundRectPath(c, -6.5, -6, 13, 7, 2.4), { fill: STEEL, ink: OUT_S + 0.3, shadow: STEEL_SH, shadowOffset: [-1.4, -1] });
-  // broad round-tipped blade
+  S(ctx, (c) => roundRectPath(c, -8, -18, 16, 8, 3), { fill: STEEL, ink: OUT_S + 0.4, shadow: STEEL_SH, shadowOffset: [-2, -1.2] });
+  // the blade
   const blade = (c: Ctx) => {
-    c.moveTo(-5.5, -5);
-    c.lineTo(-7, -56);
-    c.quadraticCurveTo(-7.5, -72, 2, -73);
-    c.quadraticCurveTo(10, -72, 9, -56);
-    c.quadraticCurveTo(7.6, -30, 5.5, -5);
+    c.moveTo(-6.5, -17);
+    c.lineTo(-6.5, -88); // straight spine
+    c.quadraticCurveTo(-6.5, -101, 3, -99); // rounded tip
+    c.quadraticCurveTo(14, -92, 14.5, -70); // belly
+    c.quadraticCurveTo(14.5, -38, 7, -17); // edge back to the bolster
     c.closePath();
   };
-  S(ctx, blade, { fill: STEEL, ink: OUT_IN, shadow: STEEL_SH, shadowOffset: [-4, -1], gloss: [{ x: -2.6, y: -40, rx: 1.4, ry: 22, alpha: 0.9 }] });
-  line(ctx, [[3, -12], [4.6, -58]], 1, '#ffffff', false, 0.5);
-  // a generous smear of butter on the blade
+  S(ctx, blade, { fill: STEEL, ink: OUT_IN, shadow: STEEL_SH, shadowOffset: [-6, -1.2] });
+  clipTo(ctx, blade, () => {
+    // dark steel along the spine, a cool reflection band, the bright bevel along the edge
+    fillPath(ctx, (c) => c.rect(-8, -102, 5, 86), STEEL_DK, 0.55);
+    fillPath(ctx, (c) => polyPath(c, [[-6, -52], [16, -74], [16, -64], [-6, -42]]), '#ffffff', 0.45);
+    line(ctx, [[5.5, -20], [11.2, -40], [11.6, -70], [9.6, -88], [3, -95.6]], 2.2, '#ffffff', true, 0.95);
+  });
+  line(ctx, [[-3.4, -22], [-3.4, -86]], 1, '#c4ccd8', false, 0.8);
+  // a smear of butter on the flat of the blade
   S(ctx, (c) => {
-    c.moveTo(-7.4, -50);
-    c.quadraticCurveTo(-10, -60, -3, -64);
-    c.quadraticCurveTo(6, -68, 9.6, -60);
-    c.quadraticCurveTo(10, -52, 6, -50);
-    c.quadraticCurveTo(0, -46, -7.4, -50);
+    c.moveTo(-6.5, -66);
+    c.quadraticCurveTo(-1, -71, 5, -68);
+    c.quadraticCurveTo(8.5, -64, 6, -60);
+    c.quadraticCurveTo(1, -57.5, -6.5, -59);
     c.closePath();
-  }, { fill: BUT, ink: OUT_S, shadow: BUT_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: -2, y: -60, rx: 3.2, ry: 1.4, rot: -0.3, alpha: 0.9 }] });
+  }, { fill: BUT, ink: OUT_S, shadow: BUT_SH, shadowOffset: [-1.4, -1.4], gloss: [{ x: 0, y: -67, rx: 2.6, ry: 1, rot: -0.2, alpha: 0.9 }] });
   if (shine) {
-    sparkle(ctx, 4, -70, 8, '#ffffff', 1);
-    sparkle(ctx, -6, -30, 4.6, '#ffffff', 0.85);
+    sparkle(ctx, 6, -94, 9, '#ffffff', 1);
+    sparkle(ctx, 11, -46, 5, '#ffffff', 0.9);
   } else {
-    const tw = [[-3, -66], [5, -36], [-4, -20], [6, -60]][((f % 4) + 4) % 4];
-    sparkle(ctx, tw[0], tw[1], 4.2, '#ffffff', 0.9);
+    const tw = [[8, -90], [12, -46], [-2, -30], [11, -74]][((f % 4) + 4) % 4];
+    sparkle(ctx, tw[0], tw[1], 4.6, '#ffffff', 0.95);
   }
 }
 
@@ -1113,7 +1157,7 @@ function drawButter(ctx: Ctx, p: BuPose) {
 
   // far arm (holding the shield) — behind the shield, from the left side
   const [sx, sy] = p.shield;
-  limb(ctx, [[FX0 + BDX * 0.5, -6], [sx + 10, sy + 10], [sx + 4, sy + 2]], 12, BUT_SIDE, OUT_IN, BUT_SH);
+  limb(ctx, [[FX0 + BDX * 0.5, -6], [sx + 10, sy + 10], [sx + 4, sy + 2]], 12, ARM, OUT_IN, ARM_SH);
   butterBlock(ctx, p);
   butterCurl(ctx, 4, FY0 - 12, f);
   butterFace(ctx, p);
@@ -1131,7 +1175,7 @@ function drawButter(ctx: Ctx, p: BuPose) {
     for (const k of [-1, 0, 1]) line(ctx, [[k * 24 + 2, FY0 - 34], [k * 24 + 6, FY0 - 40], [k * 24 + 2, FY0 - 46], [k * 24 + 6, FY0 - 52]], 1.8, '#ffffff', true, 0.55);
   }
   lidShield(ctx, sx, sy, p.shieldTilt);
-  glove(ctx, sx + 20, sy + 4, 7.5, 0.2, {});
+  glove(ctx, sx + 20, sy + 4, 7.5, 0.2, { cuff: BLUE });
 
   // near arm + knife
   const [gx, gy] = p.grip;
@@ -1141,8 +1185,8 @@ function drawButter(ctx: Ctx, p: BuPose) {
   butterKnife(ctx, f, p.eyes !== 'smug');
   ctx.restore();
   const ex = gy > -30 ? gx - 6 : gx + 8, ey = gy > -30 ? gy + 14 : (gy - 6) / 2 + 6;
-  limb(ctx, [[FX1 - 4, -4], [ex, ey + Math.sin(ph) * 1.2], [gx - 1, gy + 2]], 12, BUT, OUT_IN, BUT_SH);
-  glove(ctx, gx, gy, 9, p.knife + Math.PI / 2, {});
+  limb(ctx, [[FX1 - 4, -4], [ex, ey + Math.sin(ph) * 1.2], [gx - 1, gy + 2]], 12, ARM, OUT_IN, ARM_SH);
+  glove(ctx, gx, gy, 9, p.knife + Math.PI / 2, { cuff: BLUE });
   ctx.restore();
 }
 
@@ -1159,25 +1203,18 @@ function drawButterPose(ctx: Ctx, f: number, pose: BossPose) {
     softGlow(ctx, 6, -20, 92, '#ffe680', 0.35, 70);
     drawButter(ctx, {
       f: 1, lean: -0.05, crouch: 4, eyes: 'glare', mouth: 'clench',
-      grip: [74, -48], knife: -0.3, shield: [-64, -8], shieldTilt: -0.18, sweat: true, melt: 0.4,
+      grip: [76, -36], knife: -0.32, shield: [-64, -8], shieldTilt: -0.18, sweat: true, melt: 0.4,
     });
     return;
   }
-  // the slash: knife swung forward, butter pats flying
-  swoosh(ctx, 56, -22, 82, -2.3, 0.45, 26, '#ffffff', 0.75);
-  swoosh(ctx, 56, -22, 70, -2.0, 0.3, 12, '#fff3b0', 0.8);
+  // the slash: knife swung forward (the real pats fly from the knife tip / around him: see b_burro.ts)
+  swoosh(ctx, 60, -16, 96, -2.25, 0.5, 28, '#ffffff', 0.75);
+  swoosh(ctx, 60, -16, 84, -2.0, 0.36, 12, '#fff3b0', 0.85);
   drawButter(ctx, {
     f: 2, lean: 0.06, crouch: -2, eyes: 'fierce', mouth: 'shout',
-    grip: [70, -8], knife: 1.95, shield: [-70, 0], shieldTilt: 0.06, sweat: false, melt: 0.7,
+    grip: [66, -6], knife: 2.0, shield: [-70, 0], shieldTilt: 0.06, sweat: false, melt: 0.7,
   });
-  burstLines(ctx, 138, 18, 14, 24, 7, '#fff6c8', 2.4, 9, -1.6, 1.4, 0.95);
-  for (const [px, py, rot, s] of [[120, -52, 0.4, 1.25], [142, -22, -0.3, 1.1], [100, -80, 0.9, 1]] as [number, number, number, number][]) {
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(rot);
-    butterPat(ctx, s);
-    ctx.restore();
-  }
+  burstLines(ctx, 148, 30, 10, 18, 7, '#fff6c8', 2.4, 9, -1.4, 1.5, 0.95);
 }
 
 registerBoss('burro', BU_W, BU_H, BU_AX, BU_AY, drawButterPose);
