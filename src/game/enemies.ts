@@ -194,7 +194,7 @@ E({
 });
 E({
   id: 'parmesan', name: 'Spargipolvere', en: 'The Dust-Sprinkler', sprite: 'enemy.parmesan',
-  radius: 14, hp: 20, speed: 46, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, area: 'cheese', r: 26, slow: 0.25 },
+  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 6, area: 'cheese', r: 22, slow: 0.25 },
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic',
   info: { crime: 'Powdered "parmesan", or Parmigiano where it does not belong', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months, and it is the hero of Alfredo and pesto. But Rome\'s carbonara, amatriciana and cacio e pepe want Pecorino Romano, seafood pasta wants no cheese at all, and some shelf-stable "parmesan" isn\'t even the same cheese: US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
 });
@@ -224,7 +224,7 @@ E({
 });
 E({
   id: 'vongola', name: 'Vongola Formaggiosa', en: 'The Cheesy Clam', sprite: 'enemy.vongola',
-  radius: 13, hp: 18, speed: 70, damage: 7, xp: 2, behavior: 'strafe', params: { period: 0.9 },
+  radius: 13, hp: 18, speed: 76, damage: 7, xp: 2, behavior: 'strafe', params: { period: 0.9 },
   color: 'cream', juice: '#f5ecc8', chunk: 'cheese',
   info: { crime: 'Grated cheese on seafood pasta (and seafood on the Marinara)', why: 'By unwritten rule, aged cheese drowns delicate seafood: spaghetti alle vongole is garlic, oil, parsley and the clams\' own juice. (The Parmigiano consortium itself lists a few exceptions.) Italians rate it −39. And the pizza marinara is named after sailors, not seafood: no clams on it.', severity: 3 },
 });
@@ -290,13 +290,13 @@ E({
 });
 E({
   id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
-  radius: 15, hp: 22, speed: 44, damage: 4, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 5, shot: 'proj.e_floret', area: 'cream', r: 24, slow: 0.25 },
+  radius: 15, hp: 22, speed: 44, damage: 4, xp: 3, behavior: 'lobber', params: { min: 150, max: 240, cd: 4.2, shot: 'proj.e_floret', area: 'cream', r: 20, slow: 0.2 },
   color: 'green', juice: '#4f9a3a', chunk: 'tomato',
   info: { crime: 'Broccoli in Fettuccine Alfredo', why: 'Broccoli is a common American add-on to "Alfredo" and is unknown in the Roman dish, which is only egg fettuccine, butter and Parmigiano. Italians love pasta with broccoli, just in other dishes.', severity: 2 },
 });
 E({
   id: 'gamberi', name: 'Gambero Saltatore', en: 'Hopping Shrimp', sprite: 'enemy.gamberi',
-  radius: 12, hp: 12, speed: 84, damage: 5, xp: 2, behavior: 'leaper', params: { range: 190, time: 0.55, cd: 2.7, height: 30 },
+  radius: 12, hp: 13, speed: 86, damage: 6, xp: 2, behavior: 'leaper', params: { range: 195, time: 0.55, cd: 2.6, height: 30 },
   color: 'orange', juice: '#ff9a7a', chunk: 'tomato',
   info: { crime: 'Shrimp in Alfredo (and seafood on the Marinara)', why: 'Fettuccine Alfredo has no protein at all: shrimp is a US restaurant add-on. And despite its name, the pizza marinara has no seafood: "marinara" refers to the sailors who carried its long-lasting ingredients on board.', severity: 2 },
 });
@@ -337,70 +337,70 @@ E({
 
 E({
   id: 'b_ketchup', name: 'Il Barone del Ketchup', en: 'The Ketchup Baron', sprite: 'boss.ketchup',
-  radius: 46, hp: 1400, speed: 48, damage: 18, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 46, hp: 1400, speed: 48, damage: 14, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'red', juice: '#d8231f', chunk: 'plastic', shadow: 1.1,
   boss: { title: 'Il Barone del Ketchup', taunt: 'Ketchup goes on EVERYTHING!', pattern: 'ketchup' },
   info: { crime: 'Ketchup on pasta — Italy\'s #1 food crime', why: 'The YouGov survey\'s runaway winner at −82. Ketchup is fine on fries. Only on fries.', severity: 5 },
 });
 E({
   id: 'b_alfredo', name: 'Il Barattolo Alfredo', en: 'The Alfredo Jar', sprite: 'boss.alfredo',
-  radius: 54, hp: 2300, speed: 42, damage: 20, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 54, hp: 2300, speed: 42, damage: 16, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'cream', juice: '#fff1cf', chunk: 'glass', shadow: 1.1,
   boss: { title: 'Il Barattolo Alfredo', taunt: 'More cream! MORE GARLIC!', pattern: 'alfredo' },
   info: { crime: 'Jarred "Alfredo" sauce', why: 'The Roman original is butter, Parmigiano and a splash of pasta water tossed at the table — not a jar of thickened cream and garlic powder.', severity: 4 },
 });
 E({
   id: 'b_panna', name: 'Il Colosso di Panna', en: 'The Cream Colossus', sprite: 'boss.panna',
-  radius: 58, hp: 3600, speed: 40, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 58, hp: 3600, speed: 40, damage: 18, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'cream', juice: '#fff4dc', chunk: 'plastic', shadow: 1.15,
   boss: { title: 'Il Colosso di Panna', taunt: 'Carbonara needs CREAM!', final: true, pattern: 'panna' },
   info: { crime: 'Cream in carbonara — the original sin', why: 'Guanciale, Pecorino Romano, eggs, black pepper. That is the recipe. The Colossus disagrees, loudly.', severity: 5, quote: '"Basta con la panna nella carbonara!" — Trevi Fountain, 2023' },
 });
 E({
   id: 'b_scatolone', name: 'Lo Scatolone', en: 'The Big Can', sprite: 'boss.scatolone',
-  radius: 54, hp: 3000, speed: 44, damage: 20, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 54, hp: 3000, speed: 44, damage: 16, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'orange', juice: '#e8742a', chunk: 'glass', shadow: 1.1,
   boss: { title: 'Lo Scatolone', taunt: 'Pasta… in a CAN!', pattern: 'scatolone' },
   info: { crime: 'Canned spaghetti in sweet sauce', why: 'Pre-cooked, soft, sugary pasta, hermetically sealed. Everything wrong in one tin.', severity: 4 },
 });
 E({
   id: 'b_deepdish', name: 'Il Pizzone Abissale', en: 'The Abyssal Deep-Dish', sprite: 'boss.deepdish',
-  radius: 74, hp: 5200, speed: 30, damage: 23, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 74, hp: 5200, speed: 30, damage: 21, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'red', juice: '#c8321e', chunk: 'bread', shadow: 1.2,
   boss: { title: 'Il Pizzone Abissale', taunt: 'I AM pizza! Five centimetres of pizza!', pattern: 'deepdish' },
   info: { crime: 'Chicago deep-dish "pizza"', why: 'Italian pizza is thin and blisters in ninety seconds. Deep dish is a tall crust filled with cheese and topped with sauce — closer to a pie.', severity: 3, quote: 'Even a Chicago chef called it "a lasagna with a crust".' },
 });
 E({
   id: 'b_ananas', name: 'Il Re Ananas', en: 'The Pineapple King', sprite: 'boss.ananas',
-  radius: 60, hp: 6200, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 60, hp: 6200, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', shadow: 1.15,
   boss: { title: 'Il Re Ananas', taunt: 'Pineapple belongs on pizza!!', final: true, pattern: 'ananas' },
   info: { crime: 'The King of all pizza crimes', why: 'Crowned by the internet, hated by Naples (mostly). Defeat him and the Margherita sleeps soundly again.', severity: 5 },
 });
 E({
   id: 'b_campanile', name: 'Il Campanile del Cappuccino', en: 'The Cappuccino Clock Tower', sprite: 'boss.campanile',
-  radius: 52, hp: 5000, speed: 40, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 52, hp: 5000, speed: 40, damage: 18, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'brown', juice: '#a8714a', chunk: 'glass', shadow: 1.1,
   boss: { title: 'Il Campanile del Cappuccino', taunt: 'DONG! It is always 11 o\'clock somewhere!', pattern: 'campanile' },
   info: { crime: 'Cappuccino after lunch, with dinner, with pizza…', why: 'A bell tower of milk foam whose clock is stuck at 11:00. Every toll is a cappuccino ordered with a plate of pasta.', severity: 3, quote: '"Please no cappuccino after 12 pm" — viral sign in central Rome, 2023' },
 });
 E({
   id: 'b_influencer', name: "L'Influencer della Padella Unica", en: 'The One-Pan Influencer', sprite: 'boss.influencer',
-  radius: 52, hp: 8400, speed: 46, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 52, hp: 8400, speed: 46, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'pink', juice: '#9ad7ff', chunk: 'glass', shadow: 1.1,
   boss: { title: "L'Influencer della Padella Unica", taunt: 'Smash that like! One-pan carbonara with cream!', final: true, pattern: 'influencer' },
   info: { crime: 'The viral recipe factory', why: 'Ring light on, tradition off. Nearly every crime in this game went viral somewhere first.', severity: 5 },
 });
 E({
   id: 'b_microonde', name: 'Il Microonde Maledetto', en: 'The Cursed Microwave', sprite: 'boss.microonde',
-  radius: 56, hp: 7600, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 56, hp: 7600, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'orange', juice: '#ffcf6a', chunk: 'glass', shadow: 1.15,
   boss: { title: 'Il Microonde Maledetto', taunt: 'DING! Your pasta is ready in 90 seconds!', pattern: 'microonde' },
   info: { crime: 'Microwaving pasta', why: 'Leftover pasta becomes a crispy frittata di pasta in a pan. The microwave turns it into rubber.', severity: 3 },
 });
 E({
   id: 'b_fusione', name: 'Il Mostro della Fusione', en: 'The Fusion Abomination', sprite: 'boss.fusione',
-  radius: 70, hp: 14000, speed: 44, damage: 30, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 70, hp: 14000, speed: 44, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'pink', juice: '#ff5a8a', chunk: 'pineapple', shadow: 1.25,
   boss: { title: 'Il Mostro della Fusione', taunt: 'Pineapple-ketchup-cream carbonara PIZZA!', final: true, pattern: 'fusione' },
   info: { crime: 'Every crime at once', why: 'Pineapple, ketchup, cream, chicken and a stuffed crust, served on snapped spaghetti. The final boss of bad cooking.', severity: 5 },
@@ -409,35 +409,35 @@ E({
 // Il Menù bosses (patterns in src/game/bosses/, art in src/gfx/art/recipes_bosses_{a,b}.ts)
 E({
   id: 'b_aglio', name: "Il Re dell'Aglio", en: 'The Garlic King', sprite: 'boss.aglio',
-  radius: 56, hp: 5600, speed: 42, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 56, hp: 5600, speed: 42, damage: 18, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'cream', juice: '#f4ecd6', chunk: 'cheese', shadow: 1.1,
   boss: { title: "Il Re dell'Aglio", taunt: 'Solo uno spicchio… in camicia!', final: true, pattern: 'aglio' },
   info: { crime: 'Garlic in amatriciana', why: 'The EU specification says Amatriciana Tradizionale, unlike similar sauces, uses no garlic, onion or pancetta. When a celebrity chef revealed on Italian TV in 2015 that he adds a clove "in its shirt", Amatrice\'s town council answered with a formal statement and the chef apologised.', severity: 5 },
 });
 E({
   id: 'b_burro', name: 'Il Panetto Supremo', en: 'The Supreme Butter Block', sprite: 'boss.burro',
-  radius: 54, hp: 5200, speed: 44, damage: 22, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 54, hp: 5200, speed: 44, damage: 18, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'yellow', juice: '#fbe58a', chunk: 'cheese', shadow: 1.15,
   boss: { title: 'Il Panetto Supremo', taunt: 'Un pochino di burro, per la cremosità!', final: true, pattern: 'burro' },
   info: { crime: 'Butter in cacio e pepe', why: 'Cacio e pepe is only Pecorino Romano, black pepper and pasta water whipped into a cream. In 2025 Rome\'s restaurateurs protested a British food website\'s recipe with butter and Parmesan, all the way to a complaint to an embassy, until it was rewritten.', severity: 5 },
 });
 E({
   id: 'b_bolognese', name: "Lo Spaghettone alla Bolognese", en: 'The Great Spaghetti Bolognese', sprite: 'boss.bolognese',
-  radius: 62, hp: 8400, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 62, hp: 8400, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'red', juice: '#c8421e', chunk: 'bread', shadow: 1.2,
   boss: { title: "Lo Spaghettone alla Bolognese", taunt: 'Io esisto! I EXIST!', final: true, pattern: 'bolognese' },
   info: { crime: 'Spaghetti bolognese', why: 'In Bologna, ragù goes on fresh egg tagliatelle, whose porous surface holds the sauce. In 2019 Bologna\'s mayor called spaghetti bolognese a dish that does not exist. (Most Italians in a 2022 YouGov poll actually shrugged and rated it acceptable.) It phases in and out of existence: hit it while it is solid.', severity: 4, quote: '"Spaghetti Bolognese doesn\'t actually exist; yet, it\'s famous the world over" — the mayor of Bologna, 2019 (via CBC)' },
 });
 E({
   id: 'b_frullatore', name: 'Il Frullatore Rovente', en: 'The Red-Hot Blender', sprite: 'boss.frullatore',
-  radius: 56, hp: 8400, speed: 42, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 56, hp: 8400, speed: 42, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'green', juice: '#4fa82e', chunk: 'glass', shadow: 1.1,
   boss: { title: 'Il Frullatore Rovente', taunt: 'Pesto in trenta secondi! Con anacardi e panna!', final: true, pattern: 'frullatore' },
   info: { crime: 'Instant pesto with cream and cashews', why: 'Genoese pesto is a raw sauce pounded in a marble mortar from basil, olive oil, pine nuts, garlic, salt, Parmigiano and Sardinian pecorino. Cream drowns the basil, cheap seed oil replaces the olive oil, and cashews are the mark of an imitation jar.', severity: 4 },
 });
 E({
   id: 'b_grattugiato', name: 'Il Sacco del Grattugiato', en: 'The Bag of Pre-Grated Cheese', sprite: 'boss.grattugiato',
-  radius: 58, hp: 8400, speed: 40, damage: 24, xp: 0, behavior: 'boss', knockResist: 1,
+  radius: 58, hp: 8400, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic', shadow: 1.15,
   boss: { title: 'Il Sacco del Grattugiato', taunt: 'Formaggio sulle vongole? Abbondante!', final: true, pattern: 'grattugiato' },
   info: { crime: 'Pre-grated cheese on clams', why: 'Italians widely follow an unwritten rule: no grated aged cheese on fish and shellfish pasta, because it covers the delicate taste of the clams. In a 2022 YouGov survey Italians gave cheese on seafood pasta a net −39. A bag of imitation "Parmesan" makes it worse still.', severity: 5 },
