@@ -9,26 +9,37 @@
  *   id                box w×h   anchor (ax,ay)  radius  look
  *   boss.bolognese    240×220   (120,150)       62      Lo Spaghettone alla Bolognese: a ghostly mountain of spaghetti
  *                                                       draped like a sheet, ragù ladled over the top with two meatballs and
- *                                                       a fork planted in it, hollow glowing eyes, noodle-bundle ghost arms
- *                                                       and a hem of dangling strands (it floats). A pale ectoplasm halo and a
- *                                                       cyan "double" flicker behind it: it doesn't exist. The code fades it
+ *                                                       a fork planted in it, hollow glowing eyes, noodle-bundle ghost arms,
+ *                                                       loose noodles drooping off its sides (they break the ghost-sheet
+ *                                                       silhouette) and a hem of dangling strands (it floats). A wide cool
+ *                                                       ectoplasm halo and rising wisps: it doesn't exist. The code fades it
  *                                                       (alpha ≈ 0.26) while it phases, so it is painted fully opaque with a
  *                                                       heavy outline and high-contrast eyes that still read when faded.
  *   boss.frullatore   170×236   (85,172)        56      Il Frullatore Rovente: a candy-red blender base on chrome legs, a
  *                                                       glass jar of pale creamy-green sludge with cashews and cream swirls,
  *                                                       an angry face in the sludge, a steel blade, steam from the lid cap,
  *                                                       a spatula in one gloved hand. Wind-up: the sludge spins into a
- *                                                       vortex and the cap rattles; attack: the cap blows off in a geyser.
- *   boss.grattugiato  200×226   (100,160)       58      Il Sacco del Grattugiato: a fat industrial pouch of pre-grated
+ *                                                       vortex and the cap rattles; attack: it bellows, the cap blows off
+ *                                                       and the sludge pours forward over the spout (the spray leaves
+ *                                                       from the jet's tip at (72,-112)).
+ *   boss.grattugiato  200×226   (100,160)       58      Il Sacco del Grattugiato: a stand-up pouch of pre-grated
  *                                                       "parmesan" (no brand, no text): crimped top seal with a hang hole,
- *                                                       a fake-Italian tricolour ribbon, a window full of grated cheese, a
- *                                                       torn top corner snowing cheese, a steel scoop heaped with it.
+ *                                                       a fake-Italian tricolour ribbon, a navy printed lower panel with a
+ *                                                       bottom gusset and a window full of grated cheese, plastic crinkles,
+ *                                                       a torn top corner snowing cheese, a steel scoop heaped with it. It
+ *                                                       waddles (sway, squash and bounce on every step).
  *
  *   proj.e_meatball  24×24  (12,12)  a meatball in ragù (lobbed). DANGER style (projectiles.ts).
  *   proj.e_pesto     24×24  (12,12)  a blob of green sludge with a cream swirl and a cashew bit. DANGER style.
  *   proj.e_cheese    24×24  (12,12)  a clump of grated cheese "snow". DANGER style.
+ *
+ *   Fight effects (drawn by the patterns with run.fx.sprite):
+ *   fx.noodle_lash        492×64  (18,32)   the noodle whip laid along a Bolognese lash lane (4 frames).
+ *   fx.cheese_flake       16×16   centre    a shred falling inside a Grattugiato cheese cloud (3 shapes).
+ *   fx.frullatore_heat    170×236 (85,172)  additive red-hot glow over the overheated (enraged) Frullatore.
  */
 import { registerBoss, type Pose } from './bosses_a';
+import { defineSprite } from '../sprites';
 import { danger, sauceBlob } from './projectiles';
 import {
   Ctx, Pt, shape, line, inkLine, ellipsePath, circlePath, roundRectPath, smoothPath, polyPath, speckle, rng, brow, glint,
@@ -221,6 +232,27 @@ function boloHemStrands(ctx: Ctx, ph: number, flare: number) {
       shape(ctx, (c) => circlePath(c, ex, ey + 1, 2.1), { fill: RAGU, ink: 1, shadow: 'none', gloss: [{ x: ex - 0.6, y: ey + 0.3, rx: 0.7, ry: 0.4, alpha: 0.8 }] });
     }
   }
+}
+
+/**
+ * Loose spaghetti drooping off the heap in a U (it leaves the body at `a`, sags outward and tucks
+ * back in at `b`): two strands, so the bell silhouette breaks into noodles. `out` = the sag.
+ */
+function noodleDroop(ctx: Ctx, a: Pt, b: Pt, out: Pt, ph: number, seed: number) {
+  for (let k = 0; k < 2; k++) {
+    const sw = Math.sin(ph + seed + k * 1.4) * 2.2;
+    const m: Pt = [(a[0] + b[0]) / 2 + out[0] * (1 - k * 0.32) + sw * 0.4, (a[1] + b[1]) / 2 + out[1] * (1 - k * 0.25) + sw];
+    const pts = quadPts([a[0], a[1] + k * 4], [m[0] * 2 - (a[0] + b[0]) / 2, m[1] * 2 - (a[1] + b[1]) / 2], [b[0], b[1] - k * 3], 10);
+    inkLine(ctx, pts, 3.1, k ? NOODLE_SH : NOODLE, true, 1.25);
+    if (!k) line(ctx, pts.map(([px, py]) => [px - 0.5, py - 0.6] as Pt), 0.9, NOODLE_HI, true, 0.85);
+  }
+}
+
+/** A loose noodle end hanging off the heap, curling at the tip. */
+function noodleEnd(ctx: Ctx, x: number, y: number, dx: number, len: number, ph: number, seed: number) {
+  const sw = Math.sin(ph + seed) * 3;
+  const pts: Pt[] = [[x, y], [x + dx * 0.6, y + len * 0.35], [x + dx + sw * 0.5, y + len * 0.75], [x + dx * 0.8 + sw, y + len], [x + dx * 0.55 + sw, y + len - 4]];
+  inkLine(ctx, pts, 2.6, NOODLE, true, 1.15);
 }
 
 /** A noodle-bundle ghost arm from the shoulder along a curve; the bundle frays into drooping noodle fingers. */
@@ -467,19 +499,26 @@ function drawBolognese(ctx: Ctx, p: BoloPose) {
   const ph = phase(f);
   const flare = p.hemFlare;
 
-  // ---- ectoplasm halo + the "doesn't exist" double flickering behind
-  softGlow(ctx, 0, -26 + p.lift, 116, ECTO, 0.42, 104);
-  const dbl = [[8, -4], [-7, -5], [6, 4], [-8, 2]][f & 3];
-  ctx.save();
-  ctx.translate(dbl[0], dbl[1] + p.lift);
-  pivot(ctx, 0, 40, p.lean);
-  fillPath(ctx, (c) => smoothPath(c, boloBodyPts(ph + 0.8, flare), true), ECTO, 0.5);
-  strokePath(ctx, (c) => smoothPath(c, boloBodyPts(ph + 0.8, flare), true), ECTO_DK, 2, 0.55, [10, 7]);
-  ctx.restore();
+  // ---- a wide, cool ectoplasm halo (it still reads when the whole sprite is faded) + rising wisps
+  softGlow(ctx, 0, -30 + p.lift, 118, ECTO, 0.5, 112);
+  softGlow(ctx, 0, -20 + p.lift, 96, '#e8fbff', 0.32, 88);
+  const rise = (f & 3) * 6;
+  for (const [wx, wy, h, s] of [[-96, -10, 26, 0], [98, -24, 24, 1.7], [-70, -96, 20, 3.1], [76, -104, 18, 4.4]] as [number, number, number, number][]) {
+    steamWisp(ctx, wx, wy - rise + p.lift, h, ph + s, 6, 0.55, ECTO_DK);
+    steamWisp(ctx, wx - 1, wy - rise - 1 + p.lift, h, ph + s, 4, 0.85, '#e8fbff');
+  }
 
   ctx.save();
   ctx.translate(0, p.lift);
   pivot(ctx, 0, 40, p.lean);
+
+  // ---- loose spaghetti drooping off the heap (breaks the bell silhouette into noodles)
+  noodleDroop(ctx, [60, -64], [70, -40], [15, 9], ph, 0);
+  noodleDroop(ctx, [-58, -66], [-68, -42], [-15, 9], ph, 2.1);
+  noodleDroop(ctx, [76, -6], [82, 28], [28, 8], ph, 1.3);
+  noodleDroop(ctx, [-76, -10], [-82, 26], [-28, 8], ph, 3.4);
+  noodleEnd(ctx, 82, 20, 12, 24, ph, 5);
+  noodleEnd(ctx, -82, 16, -12, 22, ph, 6);
 
   // ---- back arm (behind the sheet)
   if (p.arms === 'boo') {
@@ -551,7 +590,7 @@ registerBoss('bolognese', 240, 220, 120, 150, (ctx, f, pose: Pose) => {
   // attack: lunges forward, the arm cracks like a whip, "IO ESISTO!"
   swoosh(ctx, 64, -30, 46, -2.0, 0.9, 12, '#fff3c4', 0.8);
   swoosh(ctx, 64, -30, 35, -1.8, 0.7, 6, '#ffffff', 0.65);
-  drawBolognese(ctx, { f: 2, lean: 0.07, lift: 2, arms: 'lash', eyes: 'wide', mouth: 'roar', hemFlare: 1 });
+  drawBolognese(ctx, { f: 2, lean: 0.07, lift: 2, arms: 'lash', eyes: 'hot', mouth: 'roar', hemFlare: 1 });
   burstLines(ctx, 104, -12, 6, 12, 5, '#ffffff', 2.2, 3, -1.0, 1.4, 0.85);
   // sauce flung off the whip
   for (const [x, y, r] of [[102, -44, 3.4], [112, -26, 2.6], [108, 30, 2.2], [86, -58, 2]] as [number, number, number][]) {
@@ -723,11 +762,33 @@ function frullaFace(ctx: Ctx, p: FrullaPose) {
   brow(ctx, fx + 15, fy - 16, 18, -ba, 4.6);
   const my = fy + 26;
   if (p.mouth === 'roar') {
-    const maw = (c: Ctx) => ellipsePath(c, fx + 2, my + 4, 15, 12);
+    // an angry bellow: wide square maw, corners pulled down, fangs top and bottom
+    const maw = (c: Ctx) => {
+      c.moveTo(fx - 19, my - 5);
+      c.quadraticCurveTo(fx + 2, my - 10, fx + 23, my - 6);
+      c.quadraticCurveTo(fx + 25, my + 10, fx + 17, my + 19);
+      c.quadraticCurveTo(fx + 2, my + 23, fx - 13, my + 18);
+      c.quadraticCurveTo(fx - 21, my + 9, fx - 19, my - 5);
+      c.closePath();
+    };
     shape(ctx, maw, { fill: '#2a0e10', ink: OUT_IN - 0.4, shadow: 'none' });
     clipTo(ctx, maw, () => {
-      fillPath(ctx, (c) => c.rect(fx - 16, my - 10, 34, 6), '#fff8ea');
-      fillPath(ctx, (c) => ellipsePath(c, fx + 4, my + 13, 10, 5), '#d8505e');
+      fillPath(ctx, (c) => ellipsePath(c, fx + 4, my + 19, 13, 6), '#d8505e');
+      ctx.fillStyle = '#fff8ea';
+      ctx.beginPath();
+      ctx.moveTo(fx - 22, my - 12);
+      ctx.lineTo(fx + 26, my - 12);
+      ctx.lineTo(fx + 26, my - 2);
+      for (let i = 0; i <= 8; i++) ctx.lineTo(fx + 26 - i * 6, my - 2 + (i % 2 ? 3.5 : 0));
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(fx - 22, my + 26);
+      ctx.lineTo(fx + 26, my + 26);
+      ctx.lineTo(fx + 26, my + 16);
+      for (let i = 0; i <= 8; i++) ctx.lineTo(fx + 26 - i * 6, my + 16 - (i % 2 ? 3.5 : 0));
+      ctx.closePath();
+      ctx.fill();
     });
     return;
   }
@@ -951,30 +1012,49 @@ registerBoss('frullatore', 170, 236, 85, 172, (ctx, f, pose: Pose) => {
     }
     return;
   }
-  // attack: FRULLA! the cap blows off and a geyser of sludge splashes out
-  drawFrullatore(ctx, { f: 2, crouch: -2, shake: false, eyes: 'wide', mouth: 'roar', swirl: 1, cap: 'off', arms: 'wide', heat: 1 });
-  const splash = (c: Ctx) => puffPath(c, [[-14, -153, 8.5], [0, -156, 9.5], [14, -153, 8.5], [-26, -150, 6], [26, -150, 6]]);
+  // attack: FRULLA! the cap blows off and the sludge pours out over the spout in a forward jet
+  // (the spray stream leaves from the jet's tip: SPOUT_X/SPOUT_Y = (72,-112) in b_frullatore.ts)
+  drawFrullatore(ctx, { f: 2, crouch: -2, shake: false, eyes: 'angry', mouth: 'roar', swirl: 1, cap: 'off', arms: 'wide', heat: 1 });
+  // a short eruption out of the open top
+  const splash = (c: Ctx) => puffPath(c, [[-16, -152, 7], [-4, -156, 8.5], [8, -156, 8], [-26, -149, 5]]);
   S(ctx, splash, { fill: SLUDGE, ink: OUT_IN, shadow: SLUDGE_SH, shadowOffset: [-2, -2] });
-  fillPath(ctx, (c) => ellipsePath(c, -4, -159, 5, 2, -0.2), '#e5f6b0', 0.9);
-  for (const [x, y, r] of [[-40, -160, 4.2], [38, -161, 4], [-54, -150, 3], [52, -150, 3.2], [-30, -165, 2.4], [28, -165, 2.4]] as [number, number, number][]) {
+  fillPath(ctx, (c) => ellipsePath(c, -8, -159, 4.5, 1.8, -0.2), '#e5f6b0', 0.9);
+  // the jet: up out of the mouth, over the spout lip, down toward the chef
+  const jetC: Pt[] = quadPts([10, -150], [60, -166], [72, -116], 14);
+  const jetW = jetC.map((_, i) => 17 - (i / 14) * 6);
+  const jet = (c: Ctx) => smoothPath(c, ribbon(jetC, jetW), true, 0.4);
+  S(ctx, jet, { fill: SLUDGE, ink: OUT_IN, shadow: SLUDGE_SH, shadowOffset: [-3, -2.4] });
+  clipTo(ctx, jet, () => {
+    line(ctx, offsetLine(jetC, 2.5, 0.1, 0.9), 2.6, CREAM, true, 0.75);
+    line(ctx, offsetLine(jetC, -4, 0.05, 0.6), 2, '#e5f6b0', true, 0.85);
+    cashew(ctx, 50, -158, 4.2, 0.9);
+  });
+  // a blob leading the stream + droplets
+  shape(ctx, (c) => circlePath(c, 72, -112, 7.5), { fill: SLUDGE, ink: OUT_IN, shadow: SLUDGE_SH, shadowOffset: [-1.6, -1.6], gloss: [{ x: 69.5, y: -115, rx: 2.4, ry: 1.2, alpha: 0.85 }] });
+  for (const [x, y, r] of [[77, -130, 3], [78, -98, 2.6], [62, -96, 2.4], [-34, -158, 3.4], [-28, -164, 2.2], [26, -164, 2.4]] as [number, number, number][]) {
     shape(ctx, (c) => circlePath(c, x, y, r), { fill: SLUDGE, ink: 1.4, shadow: SLUDGE_SH, shadowOffset: [-0.8, -0.8] });
   }
-  // the cap flying off
+  // the cap flying off behind
   ctx.save();
-  ctx.translate(58, -150);
-  ctx.rotate(0.7);
+  ctx.translate(-48, -155);
+  ctx.rotate(-0.7);
   S(ctx, (c) => roundRectPath(c, -12, -7, 24, 13, 4), { fill: RUBBER, ink: OUT_IN, shadow: RUBBER_SH, shadowOffset: [-1.8, -1.8] });
   ctx.restore();
-  burstLines(ctx, 0, -146, 16, 22, 7, '#ffffff', 2.4, 9, -2.9, -0.25, 0.8);
+  // speed lines along the jet
+  for (const [x, y] of [[40, -165], [54, -164]] as Pt[]) line(ctx, [[x - 10, y + 1], [x, y]], 2, '#ffffff', false, 0.7);
 });
 
 // ===========================================================================
 // 3. IL SACCO DEL GRATTUGIATO — r58, box 200×226, anchor (100,160)
 // ===========================================================================
 
-const BAG = '#f6f3ea';
-const BAG_SH = '#c4c9d6';
-const BAG_DK = '#9aa2b5';
+const BAG = '#f8f1df'; // warm plastic white
+const BAG_SH = '#c9c6cf';
+const BAG_DK = '#9a9aae';
+const NAVY = '#24467e'; // the printed lower panel (no brand, no text)
+const NAVY_SH = '#16305e';
+const NAVY_HI = '#3d65a8';
+const GOLD = '#e8b84a';
 const CHEESE = '#f7e3a2';
 const CHEESE_SH = '#dcb763';
 const CHEESE_DK = '#b98e3a';
@@ -991,17 +1071,19 @@ interface BagPose {
   mouth: 'grin' | 'clench' | 'roar';
   arms: 'walk' | 'up' | 'throw';
   spill: number; // 0..1 cheese bursting out of the tear
+  look: Pt;
+  bob: number; // 0..1 step bounce (squash at 0, stretch at 1)
 }
 
-/** Bag silhouette with the jagged torn top-right corner. */
+/** Bag silhouette with the jagged torn top-right corner (≈ 150 u wide). */
 function bagPts(puff: number): Pt[] {
   const k = 1 + puff * 0.06;
   return [
-    [-60, -146], [-20, -146], [24, -146],
+    [-54, -146], [-18, -146], [22, -146],
     // the tear (jagged)
-    [30, -141], [35, -144], [40, -136], [46, -139], [50, -130], [56, -131], [59, -122], [64, -116],
-    [66 * k, -100], [72 * k, -64], [80 * k, -24], [83 * k, 6], [78 * k, 28], [62 * k, 40], [30, 45], [0, 46], [-30, 45],
-    [-62 * k, 40], [-78 * k, 28], [-83 * k, 6], [-80 * k, -24], [-72 * k, -64], [-64 * k, -104], [-62, -126],
+    [27, -141], [32, -144], [36, -136], [41, -139], [45, -130], [50, -131], [53, -122], [58, -116],
+    [59 * k, -100], [65 * k, -64], [72 * k, -24], [75 * k, 6], [70 * k, 28], [56 * k, 40], [27, 45], [0, 46], [-27, 45],
+    [-56 * k, 40], [-70 * k, 28], [-75 * k, 6], [-72 * k, -24], [-65 * k, -64], [-58 * k, -104], [-56, -126],
   ];
 }
 function bagPath(c: Ctx, puff: number) {
@@ -1019,7 +1101,7 @@ function bagPath(c: Ctx, puff: number) {
     else c.quadraticCurveTo(p0[0], p0[1], mx, my);
   }
   const last = rest[rest.length - 1];
-  c.quadraticCurveTo(last[0], last[1], -61, -136);
+  c.quadraticCurveTo(last[0], last[1], -55, -136);
   c.lineTo(pts[0][0], pts[0][1]);
   c.closePath();
 }
@@ -1091,30 +1173,46 @@ function bigSpoon(ctx: Ctx, x: number, y: number, rot: number, heap: boolean, fl
 }
 
 function bagFace(ctx: Ctx, p: BagPose) {
-  const fx = 12, fy = -64;
+  const fx = 8, fy = -64;
   const lo = p.eyes === 'wide' ? 0.06 : p.eyes === 'slit' ? 0.32 : 0.2;
-  const li = p.eyes === 'wide' ? 0.1 : p.eyes === 'slit' ? 0.82 : 0.52;
-  const look: Pt = p.eyes === 'wide' ? [0.35, 0.05] : [0.3, 0.2];
+  const li = p.eyes === 'wide' ? 0.1 : p.eyes === 'slit' ? 0.82 : 0.56;
+  const look: Pt = p.look;
   lidEye(ctx, fx - 18, fy, 12, { side: -1, lidOuter: lo, lidInner: li, look, iris: '#3f86d8', pupil: 0.32, lidColor: BAG_SH, ink: 2.4 });
   lidEye(ctx, fx + 18, fy - 1, 13, { side: 1, lidOuter: lo, lidInner: li, look, iris: '#3f86d8', pupil: 0.32, lidColor: BAG_SH, ink: 2.4 });
-  const ba = p.eyes === 'wide' ? 0.08 : 0.46;
-  brow(ctx, fx - 19, fy - 18, 20, ba, 5.6);
-  brow(ctx, fx + 19, fy - 20, 22, -ba, 5.6);
+  const ba = p.eyes === 'wide' ? 0.08 : p.mouth === 'roar' ? 0.6 : 0.46;
+  brow(ctx, fx - 19, fy - 18 + (p.mouth === 'roar' ? 2 : 0), 20, ba, 5.8);
+  brow(ctx, fx + 19, fy - 20 + (p.mouth === 'roar' ? 2 : 0), 22, -ba, 5.8);
   const my = fy + 34;
   if (p.mouth === 'roar') {
+    // a furious bellow, fangs bared, spitting grated cheese
     const maw = (c: Ctx) => {
-      c.moveTo(fx - 22, my - 6);
-      c.quadraticCurveTo(fx + 2, my - 12, fx + 26, my - 6);
-      c.quadraticCurveTo(fx + 24, my + 22, fx + 2, my + 22);
-      c.quadraticCurveTo(fx - 22, my + 20, fx - 22, my - 6);
+      c.moveTo(fx - 24, my - 6);
+      c.quadraticCurveTo(fx + 2, my - 13, fx + 28, my - 7);
+      c.quadraticCurveTo(fx + 30, my + 12, fx + 18, my + 23);
+      c.quadraticCurveTo(fx + 2, my + 28, fx - 14, my + 22);
+      c.quadraticCurveTo(fx - 26, my + 12, fx - 24, my - 6);
       c.closePath();
     };
     shape(ctx, maw, { fill: '#4a0f18', ink: OUT_IN, shadow: 'none' });
     clipTo(ctx, maw, () => {
-      fillPath(ctx, (c) => c.rect(fx - 26, my - 14, 54, 10), '#fff8ea');
-      fillPath(ctx, (c) => ellipsePath(c, fx + 4, my + 18, 13, 7), '#d8505e');
+      fillPath(ctx, (c) => ellipsePath(c, fx + 4, my + 23, 15, 7), '#d8505e');
+      ctx.fillStyle = '#fff8ea';
+      ctx.beginPath();
+      ctx.moveTo(fx - 28, my - 16);
+      ctx.lineTo(fx + 32, my - 16);
+      ctx.lineTo(fx + 32, my - 3);
+      for (let i = 0; i <= 10; i++) ctx.lineTo(fx + 32 - i * 6, my - 3 + (i % 2 ? 4.5 : 0));
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(fx - 28, my + 32);
+      ctx.lineTo(fx + 32, my + 32);
+      ctx.lineTo(fx + 32, my + 21);
+      for (let i = 0; i <= 10; i++) ctx.lineTo(fx + 32 - i * 6, my + 21 - (i % 2 ? 4 : 0));
+      ctx.closePath();
+      ctx.fill();
       // a mouthful of grated cheese being spat out
-      shreds(ctx, fx + 4, my + 6, 14, 6, 26, 5, 2.2);
+      shreds(ctx, fx + 6, my + 9, 12, 5, 18, 5, 2.2);
     });
     return;
   }
@@ -1165,29 +1263,30 @@ function drawGrattugiato(ctx: Ctx, p: BagPose) {
   const FOOT = 60;
 
   stompLegs(ctx, 0, 34 + p.crouch, FOOT, f, {
-    spread: 30, thick: 11, color: LEGS, shade: '#241f29', stride: 6, lift: 6,
+    spread: 27, thick: 11, color: LEGS, shade: '#241f29', stride: 7, lift: 7,
     shoe: (x, y, side) => sneaker(ctx, x, y, side),
   });
 
   ctx.save();
   pivot(ctx, 0, FOOT, p.lean);
-  ctx.translate(0, p.crouch);
-  // inflate from the bottom (wind-up puff)
+  ctx.translate(0, p.crouch - p.bob * 3);
+  // inflate from the bottom (wind-up puff) + the step squash & stretch
+  const sq = (p.bob - 0.5) * 0.05;
   ctx.translate(0, 40);
-  ctx.scale(1 + p.puff * 0.04, 1 - p.puff * 0.05);
+  ctx.scale(1 + p.puff * 0.04 - sq, 1 - p.puff * 0.05 + sq);
   ctx.translate(0, -40);
 
-  const sw = Math.sin(ph) * 2.5;
+  const sw = Math.sin(ph) * 3.5;
   // ---- back arm (left)
   if (p.arms === 'walk') {
-    limb(ctx, [[-70, -18], [-84, -8 - sw], [-84, 6 - sw]], 9, BAG, OUT_IN, BAG_SH);
-    fist(ctx, -84, 10 - sw, 8.5, 1.8, { cuff: IT_GREEN, ink: OUT_IN });
+    limb(ctx, [[-63, -18], [-77, -8 + sw], [-77, 6 + sw]], 9, BAG, OUT_IN, BAG_SH);
+    fist(ctx, -77, 10 + sw, 8.5, 1.8, { cuff: IT_GREEN, ink: OUT_IN });
   } else if (p.arms === 'up') {
-    limb(ctx, [[-68, -30], [-82, -46], [-76, -70]], 9, BAG, OUT_IN, BAG_SH);
-    fist(ctx, -76, -74, 8.5, -1.6, { cuff: IT_GREEN, ink: OUT_IN });
+    limb(ctx, [[-61, -30], [-75, -46], [-69, -70]], 9, BAG, OUT_IN, BAG_SH);
+    fist(ctx, -69, -74, 8.5, -1.6, { cuff: IT_GREEN, ink: OUT_IN });
   } else {
-    limb(ctx, [[-70, -24], [-84, -30], [-84, -50]], 9, BAG, OUT_IN, BAG_SH);
-    fist(ctx, -84, -54, 8.5, -2, { cuff: IT_GREEN, ink: OUT_IN });
+    limb(ctx, [[-63, -24], [-77, -30], [-77, -50]], 9, BAG, OUT_IN, BAG_SH);
+    fist(ctx, -77, -54, 8.5, -2, { cuff: IT_GREEN, ink: OUT_IN });
   }
 
   // ---- the bag
@@ -1195,104 +1294,140 @@ function drawGrattugiato(ctx: Ctx, p: BagPose) {
   shape(ctx, body, { fill: BAG, ink: OUT, shadow: 'none' });
   clipTo(ctx, body, () => {
     // crimped heat-seal band with a hang hole
-    fillPath(ctx, (c) => c.rect(-90, -150, 180, 26), '#e9e5d8');
-    for (let x = -60; x <= 60; x += 4) line(ctx, [[x, -146], [x, -127]], 1.1, BAG_SH, false, 0.9);
+    fillPath(ctx, (c) => c.rect(-90, -150, 180, 26), '#ebe4d2');
+    for (let x = -54; x <= 56; x += 4) line(ctx, [[x, -146], [x, -127]], 1.1, BAG_SH, false, 0.9);
     line(ctx, [[-70, -124], [70, -124]], 2.2, BAG_DK, false, 0.8);
     S(ctx, (c) => roundRectPath(c, -11, -142, 22, 8, 4), { fill: '#5b4a3f', ink: OUT_S, shadow: 'none' });
-    // the fake-Italian tricolour ribbon sweeping across
+    // the fake-Italian tricolour ribbon sweeping across (it ripples as it walks)
+    const rip = Math.sin(ph) * 2;
     const band = (y0: number, col: string) => {
       fillPath(ctx, (c) => {
         c.moveTo(-90, y0 + 10);
-        c.bezierCurveTo(-40, y0 - 10, 20, y0 + 14, 90, y0 - 8);
+        c.bezierCurveTo(-40, y0 - 10 + rip, 20, y0 + 14 - rip, 90, y0 - 8);
         c.lineTo(90, y0 - 1);
-        c.bezierCurveTo(20, y0 + 21, -40, y0 - 3, -90, y0 + 17);
+        c.bezierCurveTo(20, y0 + 21 - rip, -40, y0 - 3 + rip, -90, y0 + 17);
         c.closePath();
       }, col);
     };
     band(-116, IT_GREEN);
     band(-109, '#ffffff');
     band(-102, IT_RED);
+    // the printed navy lower panel with a gold pinstripe
+    const panel = (c: Ctx) => {
+      c.moveTo(-90, -14);
+      c.bezierCurveTo(-40, -26, 30, -2, 90, -20);
+      c.lineTo(90, 60);
+      c.lineTo(-90, 60);
+      c.closePath();
+    };
+    fillPath(ctx, panel, NAVY);
+    strokePath(ctx, (c) => { c.moveTo(-90, -14); c.bezierCurveTo(-40, -26, 30, -2, 90, -20); }, GOLD, 2.6);
+    strokePath(ctx, (c) => { c.moveTo(-90, -9); c.bezierCurveTo(-40, -21, 30, 3, 90, -15); }, NAVY_HI, 1.4, 0.9);
+    // bottom gusset: the folded base of a stand-up pouch
+    fillPath(ctx, (c) => { c.moveTo(-90, 34); c.quadraticCurveTo(0, 22, 90, 34); c.lineTo(90, 60); c.lineTo(-90, 60); c.closePath(); }, NAVY_SH);
+    strokePath(ctx, (c) => { c.moveTo(-90, 34); c.quadraticCurveTo(0, 22, 90, 34); }, NAVY_HI, 1.4, 0.8);
     // window onto the cheese (belly)
     const win = (c: Ctx) => {
-      c.moveTo(-58, 2);
-      c.quadraticCurveTo(-60, -8, -46, -8);
-      c.quadraticCurveTo(0, -2, 48, -10);
-      c.quadraticCurveTo(64, -10, 64, 4);
-      c.quadraticCurveTo(66, 32, 46, 36);
-      c.quadraticCurveTo(0, 42, -44, 36);
-      c.quadraticCurveTo(-62, 32, -58, 2);
+      c.moveTo(-50, 0);
+      c.quadraticCurveTo(-52, -6, -40, -7);
+      c.quadraticCurveTo(0, -1, 38, -9);
+      c.quadraticCurveTo(52, -10, 52, 2);
+      c.quadraticCurveTo(54, 24, 38, 28);
+      c.quadraticCurveTo(0, 32, -38, 28);
+      c.quadraticCurveTo(-53, 24, -50, 0);
       c.closePath();
     };
     S(ctx, win, { fill: CHEESE, ink: OUT_IN, shadow: CHEESE_SH, shadowOffset: [-6, -5] });
     clipTo(ctx, win, () => {
-      shreds(ctx, 2, 18, 66, 34, 360, 99, 2.6);
+      shreds(ctx, 2, 12, 56, 26, 260, 99, 2.6);
+      // the cheese settles as it walks
+      fillPath(ctx, (c) => ellipsePath(c, 6, 30 - p.bob * 2, 50, 8), CHEESE_SH, 0.5);
       // plastic sheen over the window
-      fillPath(ctx, (c) => polyPath(c, [[-50, 38], [-30, -10], [-20, -10], [-40, 38]]), '#ffffff', 0.3);
+      fillPath(ctx, (c) => polyPath(c, [[-44, 30], [-26, -10], [-17, -10], [-35, 30]]), '#ffffff', 0.3);
     });
     // printed cheese wedge (with holes: definitely not Parmigiano)
-    const wx = -36, wy = 20;
-    const wedge = (c: Ctx) => { c.moveTo(wx - 13, wy + 8); c.lineTo(wx + 14, wy + 8); c.lineTo(wx + 14, wy - 4); c.lineTo(wx - 13, wy - 2); c.closePath(); };
-    const top = (c: Ctx) => { c.moveTo(wx - 13, wy - 2); c.lineTo(wx + 14, wy - 4); c.lineTo(wx + 6, wy - 12); c.closePath(); };
+    const wx = -30, wy = 14;
+    const wedge = (c: Ctx) => { c.moveTo(wx - 12, wy + 7); c.lineTo(wx + 13, wy + 7); c.lineTo(wx + 13, wy - 4); c.lineTo(wx - 12, wy - 2); c.closePath(); };
+    const top = (c: Ctx) => { c.moveTo(wx - 12, wy - 2); c.lineTo(wx + 13, wy - 4); c.lineTo(wx + 5, wy - 11); c.closePath(); };
     S(ctx, wedge, { fill: '#ffd23a', ink: 1.6, shadow: '#e09a1a', shadowOffset: [-1.4, -1.2] });
     S(ctx, top, { fill: '#ffe680', ink: 1.6, shadow: 'none' });
-    fillPath(ctx, (c) => { circlePath(c, wx - 4, wy + 3, 2); circlePath(c, wx + 7, wy + 1, 1.6); circlePath(c, wx + 3, wy - 6, 1.3); }, '#d88a12');
-    // cel shading of the plastic + crinkles
-    shadeOver(ctx, body, BAG_SH, [-12, -6], 0.6);
-    line(ctx, [[-62, -92], [-50, -84], [-56, -74]], 1.6, BAG_SH, true, 0.9);
-    line(ctx, [[62, -60], [52, -50], [60, -40]], 1.6, BAG_SH, true, 0.9);
-    line(ctx, [[-70, 20], [-60, 30]], 1.6, BAG_SH, true, 0.9);
-    // big plastic gloss streaks
-    fillPath(ctx, (c) => polyPath(c, [[-66, -40], [-56, -118], [-48, -118], [-58, -40]]), '#ffffff', 0.55);
-    fillPath(ctx, (c) => polyPath(c, [[-46, -96], [-42, -118], [-38, -118], [-42, -96]]), '#ffffff', 0.4);
+    fillPath(ctx, (c) => { circlePath(c, wx - 4, wy + 2.5, 1.9); circlePath(c, wx + 6, wy + 1, 1.5); circlePath(c, wx + 3, wy - 5.5, 1.2); }, '#d88a12');
+    // side gusset fold on the shadow side
+    strokePath(ctx, (c) => { c.moveTo(56, -100); c.quadraticCurveTo(66, -40, 62, 34); }, BAG_DK, 1.8, 0.55);
+    // cel shading of the plastic: a real crescent on the lower right, darker at the very edge
+    shadeOver(ctx, body, '#5c5f80', [-15, -9], 0.36);
+    shadeOver(ctx, body, '#2b2c45', [-30, -16], 0.24);
+    // crinkles in the plastic (a dark crease with a bright edge)
+    const crease = (pts: Pt[]) => {
+      line(ctx, pts, 1.7, BAG_DK, true, 0.85);
+      line(ctx, pts.map(([x, y]) => [x - 1.4, y - 1.2] as Pt), 1.1, '#ffffff', true, 0.8);
+    };
+    crease([[-58, -94], [-47, -86], [-52, -76]]);
+    crease([[54, -66], [45, -56], [52, -46]]);
+    crease([[-62, -36], [-55, -30], [-60, -22]]);
+    crease([[30, -118], [24, -112], [28, -104]]);
+    // big plastic gloss streaks (upper left)
+    fillPath(ctx, (c) => polyPath(c, [[-59, -40], [-50, -118], [-43, -118], [-52, -40]]), '#ffffff', 0.6);
+    fillPath(ctx, (c) => polyPath(c, [[-41, -96], [-38, -118], [-34, -118], [-37, -96]]), '#ffffff', 0.45);
+    fillPath(ctx, (c) => ellipsePath(c, -46, -128, 7, 2, -0.1), '#ffffff', 0.7);
     // the dark inside of the tear
-    fillPath(ctx, (c) => polyPath(c, [[24, -146], [30, -141], [35, -144], [40, -136], [46, -139], [50, -130], [56, -131], [59, -122], [64, -116], [52, -122], [40, -128], [28, -138]]), '#6b6050', 0.9);
+    fillPath(ctx, (c) => polyPath(c, [[22, -146], [27, -141], [32, -144], [36, -136], [41, -139], [45, -130], [50, -131], [53, -122], [58, -116], [47, -122], [36, -128], [25, -138]]), '#6b6050', 0.9);
   });
 
   // ---- cheese heap bursting out of the torn corner + flakes falling
   const sp = p.spill;
-  cheeseHeap(ctx, [[34, -140 - sp * 4, 7 + sp * 2], [44, -134 - sp * 3, 8 + sp * 3], [54, -126, 7 + sp * 2], [60, -118, 5 + sp], [48, -142 - sp * 6, 5 + sp * 2]], 17);
-  const fall = (f % 4) * 5;
-  flakes(ctx, [[66, -110 + fall, 2.6], [70, -96 + fall, 2.2], [64, -84 + fall * 0.8, 2.4], [72, -76 + fall, 1.8]]);
-  // torn plastic flap
-  S(ctx, (c) => polyPath(c, [[58, -124], [72, -118 + Math.sin(ph) * 2], [68, -106 + Math.sin(ph) * 2.5], [63, -116]]), { fill: '#e9e5d8', ink: OUT_S + 0.3, shadow: BAG_SH, shadowOffset: [-1.4, -1.4] });
+  const heave = Math.sin(ph) * 1.2;
+  cheeseHeap(ctx, [[30, -140 - sp * 4 - heave, 7 + sp * 2], [40, -134 - sp * 3, 8 + sp * 3], [49, -126, 7 + sp * 2], [55, -118, 5 + sp], [43, -142 - sp * 6 - heave, 5 + sp * 2]], 17);
+  // crumbs tumbling down the side, a new one every step
+  const fall = (f % 4) * 9;
+  flakes(ctx, [[61, -108 + fall, 2.6], [66 - fall * 0.1, -90 + fall, 2.2], [60 + fall * 0.15, -74 + fall * 0.8, 2.4], [68, -118 + fall * 1.2, 1.8]]);
+  // torn plastic flap, fluttering
+  const fl = Math.sin(ph * 2) * 3;
+  S(ctx, (c) => polyPath(c, [[53, -124], [67, -119 + fl], [64, -106 + fl * 1.2], [58, -116]]), { fill: '#ebe4d2', ink: OUT_S + 0.3, shadow: BAG_SH, shadowOffset: [-1.4, -1.4] });
 
   // ---- face
   bagFace(ctx, p);
 
   // ---- front arm (right) with the scoop
   if (p.arms === 'walk') {
-    limb(ctx, [[70, -26], [80, -4 + sw], [56, 14 + sw]], 9, BAG, OUT_IN, BAG_SH);
-    bigSpoon(ctx, 52, 16 + sw, -0.62 + sw * 0.02, true);
-    fist(ctx, 52, 16 + sw, 8.5, -0.62, { cuff: IT_RED, ink: OUT_IN });
+    const bobS = -sw;
+    limb(ctx, [[63, -26], [74, -4 + bobS], [50, 14 + bobS]], 9, BAG, OUT_IN, BAG_SH);
+    bigSpoon(ctx, 46, 16 + bobS, -0.62 + bobS * 0.03, true);
+    fist(ctx, 46, 16 + bobS, 8.5, -0.62, { cuff: IT_RED, ink: OUT_IN });
+    // a pinch of cheese dropping off the spoon
+    flakes(ctx, [[70 + (f % 2) * 2, 30 + (f % 4) * 6 + bobS, 2]]);
   } else if (p.arms === 'up') {
-    limb(ctx, [[70, -30], [88, -48], [78, -70]], 9, BAG, OUT_IN, BAG_SH);
-    bigSpoon(ctx, 76, -74, -2.45, true, true);
-    fist(ctx, 76, -74, 8.5, -1.5, { cuff: IT_RED, ink: OUT_IN });
+    limb(ctx, [[63, -30], [80, -48], [70, -70]], 9, BAG, OUT_IN, BAG_SH);
+    bigSpoon(ctx, 68, -74, -2.45, true, true);
+    fist(ctx, 68, -74, 8.5, -1.5, { cuff: IT_RED, ink: OUT_IN });
   } else {
-    limb(ctx, [[70, -24], [80, -16], [60, -2]], 9, BAG, OUT_IN, BAG_SH);
-    bigSpoon(ctx, 58, -2, -0.95, false);
-    fist(ctx, 58, -2, 8.5, -0.95, { cuff: IT_RED, ink: OUT_IN });
+    limb(ctx, [[63, -24], [74, -20], [56, -6]], 9, BAG, OUT_IN, BAG_SH);
+    bigSpoon(ctx, 52, -6, -0.82, false, false, 0.72);
+    fist(ctx, 52, -6, 8.5, -0.82, { cuff: IT_RED, ink: OUT_IN });
   }
   ctx.restore();
 }
 
-const BAG_IDLE = (f: number): BagPose => ({ f, crouch: 0, puff: 0, lean: 0, eyes: 'angry', mouth: 'grin', arms: 'walk', spill: 0 });
+const BAG_IDLE = (f: number): BagPose => ({
+  f, crouch: 0, puff: 0, lean: Math.sin(phase(f)) * 0.028, eyes: 'angry', mouth: 'grin', arms: 'walk', spill: 0,
+  look: [0.3 + Math.sin(phase(f)) * 0.08, 0.2], bob: (1 - Math.cos(phase(f) * 2)) / 2,
+});
 
 registerBoss('grattugiato', 200, 226, 100, 160, (ctx, f, pose: Pose) => {
   if (pose === 'idle') return drawGrattugiato(ctx, BAG_IDLE(f));
   if (pose === 'windup') {
     // puffs up, scoop raised high, cheese welling out of the tear
-    drawGrattugiato(ctx, { f: 1, crouch: 5, puff: 1, lean: -0.04, eyes: 'slit', mouth: 'clench', arms: 'up', spill: 0.6 });
+    drawGrattugiato(ctx, { f: 1, crouch: 5, puff: 1, lean: -0.04, eyes: 'slit', mouth: 'clench', arms: 'up', spill: 0.6, look: [0.3, 0.2], bob: 0.5 });
     for (const s of [-1, 1]) {
-      line(ctx, [[s * 88 + 4, -110], [s * 93 + 4, -102], [s * 88 + 4, -94]], 2.4, '#ffffff', false, 0.85);
+      line(ctx, [[s * 84 + 4, -110], [s * 89 + 4, -102], [s * 84 + 4, -94]], 2.4, '#ffffff', false, 0.85);
     }
     return;
   }
-  // attack: "ABBONDANTE!" the scoop flings a cloud of cheese, the tear bursts
-  drawGrattugiato(ctx, { f: 2, crouch: -2, puff: 0.4, lean: 0.05, eyes: 'wide', mouth: 'roar', arms: 'throw', spill: 1 });
-  cheeseHeap(ctx, [[84, -64, 6.5], [89, -54, 5.5], [80, -52, 5], [89, -70, 3.6]], 23);
-  flakes(ctx, [[90, -82, 2.6], [92, -42, 2.2], [76, -78, 2], [60, -150, 2.4], [74, -148, 2], [84, -136, 2.4]]);
-  burstLines(ctx, 78, -46, 12, 17, 5, '#ffffff', 2.2, 4, -1.6, 0.4, 0.85);
+  // attack: "ABBONDANTE!" it bellows and the scoop flings a spray of cheese forward, the tear bursts
+  drawGrattugiato(ctx, { f: 2, crouch: -2, puff: 0.4, lean: 0.06, eyes: 'angry', mouth: 'roar', arms: 'throw', spill: 1, look: [0.45, 0.1], bob: 0.5 });
+  cheeseHeap(ctx, [[80, -50, 6.5], [86, -40, 5.5], [76, -38, 5], [87, -56, 3.6]], 23);
+  flakes(ctx, [[90, -68, 2.6], [91, -26, 2.2], [74, -64, 2], [56, -150, 2.4], [70, -148, 2], [80, -136, 2.4]]);
+  burstLines(ctx, 72, -38, 12, 18, 5, '#ffffff', 2.2, 4, -1.4, 0.7, 0.85);
 });
 
 // ===========================================================================
@@ -1352,5 +1487,108 @@ danger('proj.e_cheese', 12, (ctx) => {
   cheeseHeap(ctx, [[-1.6, 0.6, 4.2], [2.2, -1.8, 4], [2.6, 2.6, 3.6], [-0.4, -3.2, 3]], 7, 1.1);
   // sparkle of "snow"
   sparkle(ctx, 3.2, -3.4, 2.2, '#ffffff', 0.95);
+});
+
+// ===========================================================================
+// fight effects (drawn by the boss patterns with run.fx.sprite)
+// ===========================================================================
+
+/**
+ * fx.noodle_lash — 492×64, anchor (18,32) = the root of the whip; it lies along +x and is rotated
+ * onto a lane. 4 frames played at 12 fps: 0 = the crack (taut, with a hot smear), 1–3 = the noodles
+ * relax and wave as it fades. Length matches the lane (432 u + the last warning circle).
+ */
+defineSprite({
+  id: 'fx.noodle_lash', w: 492, h: 64, ax: 18, ay: 32, frames: 4,
+  draw: (ctx, f) => {
+    const L = 450;
+    const amp = [2.2, 4.5, 6.5, 8][f];
+    const ph = f * 1.1;
+    const strand = (k: number): Pt[] => {
+      const pts: Pt[] = [];
+      for (let i = 0; i <= 44; i++) {
+        const t = i / 44, x = t * L;
+        const taper = 1 - t * 0.45;
+        const tw = Math.sin(t * 30 + k * 2.1 + ph) * 4.6 * taper; // the strands twist round each other
+        const wave = Math.sin(t * 9 - ph * 1.6) * amp * Math.min(1, t * 4);
+        const fray = t > 0.88 ? (t - 0.88) * 8.3 * (k - 1) * 9 : 0; // the tip frays apart
+        pts.push([x, tw + wave + fray]);
+      }
+      return pts;
+    };
+    const ss = [strand(0), strand(1), strand(2)];
+    if (f === 0) {
+      // the crack: a hot smear along the whole lane
+      line(ctx, ss[1], 30, '#fff3c4', true, 0.3);
+      line(ctx, ss[1], 18, '#ffffff', true, 0.35);
+    }
+    const widths = ss[0].map((_, i) => 7 * (1 - (i / 44) * 0.5));
+    const order = [0, 2, 1];
+    for (const k of order) {
+      const pts = ss[k];
+      const b = (c: Ctx) => smoothPath(c, ribbon(pts, widths), true, 0.4);
+      shape(ctx, b, { fill: k === 1 ? NOODLE : k === 0 ? '#f0c25e' : NOODLE, ink: 2, shadow: NOODLE_SH, shadowOffset: [0, -2.2] });
+      line(ctx, pts.map(([x, y]) => [x, y - 1.3] as Pt), 1.4, NOODLE_HI, true, 0.9);
+    }
+    // ragù clinging to the whip
+    const R = rng(404 + f);
+    for (let i = 0; i < 9; i++) {
+      const t = 0.06 + i * 0.1 + R() * 0.04;
+      const [x, y] = ss[i % 3][Math.round(t * 44)];
+      const r = 4 - t * 1.6;
+      shape(ctx, (c) => { ellipsePath(c, x, y, r * 1.5, r, 0); if (i % 2) dripPath(c, x + 1, y + r * 0.5, r * 0.9, r * 2.4); }, { fill: RAGU, ink: 1.2, shadow: RAGU_SH, shadowOffset: [-0.6, -0.6] });
+    }
+    // sauce flung off it as it settles
+    if (f > 0) {
+      for (let i = 0; i < 7; i++) {
+        const x = 40 + i * 58 + R() * 20, y = (R() < 0.5 ? -1 : 1) * (10 + f * 3 + R() * 6);
+        shape(ctx, (c) => circlePath(c, x, y, 2.4 - f * 0.3), { fill: RAGU, ink: 1, shadow: 'none' });
+      }
+    } else {
+      // crack sparks at the tip
+      burstLines(ctx, L - 4, 0, 6, 16, 6, '#ffffff', 2.2, 7);
+    }
+  },
+});
+
+/** fx.cheese_flake — 16×16: a curl of grated cheese drifting down in a cheese cloud (3 frames = 3 shapes). */
+defineSprite({
+  id: 'fx.cheese_flake', w: 16, h: 16, frames: 3,
+  draw: (ctx, f) => {
+    const pts: Pt[][] = [
+      [[-3.6, 1.4], [-1, -1.8], [1.6, -0.6], [3.4, -2.2]],
+      [[-3, -1.6], [0.4, 1.6], [3, -0.4]],
+      [[-3.2, 0.8], [-0.6, -1.2], [0.6, 1.4], [3.2, 0]],
+    ];
+    inkLine(ctx, pts[f], 2.2, f === 1 ? CHEESE_SH : CHEESE, true, 1);
+    line(ctx, pts[f].map(([x, y]) => [x - 0.3, y - 0.5] as Pt), 0.7, '#fffbe6', true, 0.9);
+  },
+});
+
+/**
+ * fx.frullatore_heat — same box/anchor as boss.frullatore: an orange-red glow in the shape of the
+ * blender, drawn ADDITIVELY over the boss every frame while it is overheated (enraged).
+ */
+defineSprite({
+  id: 'fx.frullatore_heat', w: 170, h: 236, ax: 85, ay: 172,
+  draw: (ctx) => {
+    // halo on the floor and around the body
+    softGlow(ctx, 0, -50, 84, '#ff2a0a', 0.6, 118);
+    // the motor base glowing
+    softGlow(ctx, 0, 12, 56, '#ff4a12', 0.9, 34);
+    clipTo(ctx, (c) => roundRectPath(c, -48, -14, 96, 50, 8), () => {
+      fillPath(ctx, (c) => c.rect(-50, -16, 100, 54), '#ff3a0e', 0.55);
+      softGlow(ctx, -30, 26, 18, '#ffd34d', 0.8);
+    });
+    // the jar: hot glass rims + a red heat in the sludge
+    clipTo(ctx, (c) => jarPath(c), () => {
+      fillPath(ctx, (c) => c.rect(-60, JT - 10, 120, 140), '#e01800', 0.18);
+      softGlow(ctx, 0, -60, 40, '#e01800', 0.25, 70);
+      softGlow(ctx, 0, -30, 30, '#ffb02e', 0.8, 14); // white-hot blade
+    });
+    strokePath(ctx, (c) => jarPath(c), '#ff5a1a', 9, 0.55);
+    strokePath(ctx, (c) => jarPath(c), '#ffb03a', 3.5, 0.9);
+    strokePath(ctx, (c) => roundRectPath(c, -48, -150, 96, 13, 5), '#ff5a1a', 6, 0.6);
+  },
 });
 
