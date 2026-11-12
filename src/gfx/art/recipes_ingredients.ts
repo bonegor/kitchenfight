@@ -40,23 +40,34 @@
  * with its own colour, inked at 1.5 (details 0.6–1.0), cel-shaded from the upper-left and glossy
  * where the real thing shines. Every painter is auto-fitted (centred, shrunk to FIT) and drawn
  * with a faint cream edge and a soft drop, so it sits inside the badge and also reads on the dark
- * HUD. The details that make each one the specific Italian product:
- *   - pasta: dry spaghetti tied with baker's string; fresh egg pasta as 3/4-view nests (one big
- *     floured fettuccine nest, two wider-ribboned tagliatelle nests, a tighter skein of thin
- *     square-cut tonnarelli dusted with semolina)
- *   - San Marzano: long plum shape with a pointed tip and shallow ribs; passata in a glass bottle
- *     with a plain tomato label; EVO oil in a cruet with a steel pourer and an olive sprig
+ * HUD. The HUD greys the ingredients still missing (grayscale, 40 % opacity, 17–22 px), so every
+ * icon must also be told apart by its SHAPE alone from the others in the same recipe strip.
+ * The details that make each one the specific Italian product:
+ *   - pasta, four different shapes: dry spaghetti tied with baker's string; a nest of fresh egg
+ *     fettuccine (a hollow in the middle) on two loose ribbons; fresh tagliatelle hung to dry over
+ *     a rolling pin; a hank of thick square-cut tonnarelli folded in two, the cut ends splayed
+ *   - San Marzano: long cylinder-plum, widest at mid-height, a blunt nib and a star calyx of thin
+ *     curled sepals, with a half cut lengthwise showing its two seed chambers; passata in a tall,
+ *     slim 700 g glass bottle (clear glass above the purée, steel twist cap) with a San Marzano at
+ *     its foot; EVO oil in a tall square-shouldered bottle with a long steel pourer and an olive sprig
  *   - garlic with red (Sulmona-style) streaks and a loose clove; cupped glossy Genoese basil;
- *     serrated flat-leaf parsley; a tied bunch of DRIED oregano with its papery flower heads
- *   - guanciale: a triangular cheek, black-pepper rind, mostly white fat, a string through the
- *     hole it hung from; pancetta: rolled slices with the spiral of fat (never a bacon rasher)
- *   - Pecorino Romano: white paste, black rind with the basket-weave print; Parmigiano
- *     Reggiano: grainy gold paste with crystals and the pin-dot rind
- *   - deep-orange yolks in a half shell; a wooden pepper mill with peppercorns; butter on its
- *     parchment with a curl; a steel ladle of cloudy pasta water (a spaghetto over the rim)
- *   - dry white wine (straw colour, white grapes); coarse mince on butcher paper; diced onion,
- *     carrot and celery; pine nuts with their cone; vongole veraci with their two siphons;
- *     two proofed panetti on flour; fior di latte cut open in its whey, with a basil leaf
+ *     serrated flat-leaf parsley; a tall, narrow tied bunch of DRIED oregano fanning to a flat top
+ *   - guanciale: a pear-shaped cheek, mostly creamy fat with one rosy seam, black pepper only on
+ *     the rind round its edge, a string through the hole it hung from; pancetta: a slice of
+ *     pancetta arrotolata (deep-red lean, irregular spiral of fat, dark rind, cracked pepper at the
+ *     heart) with three cubes — never a bacon rasher
+ *   - Pecorino Romano: a TALL wedge (the wheels are tall drums), chalk-white paste, a thick black
+ *     rind with the basket-weave print; Parmigiano Reggiano: a LOW, wide wedge, grainy gold paste
+ *     with crystals, a golden rind with the pin-dot print
+ *   - deep-orange yolks, one domed in its half shell and one in front; a wooden pepper mill with
+ *     peppercorns; a tall block of butter on its parchment with a curl; a steel ladle (round bowl,
+ *     long steep handle) of cloudy pasta water with a spaghetto in it
+ *   - a slender green bottle of dry white beside a stemmed glass of straw-coloured wine; coarse
+ *     mince on butcher paper; a carrot and a celery stalk crossed behind a heap of onion, carrot
+ *     and celery dice; a heap of long ivory pine nuts with a small cone; vongole veraci, one open
+ *     on its hinge (pale violet-stained inside, the clam and its short siphons) and one closed (the
+ *     decussate lattice); one big proofed panetto dusted with flour and dimpled by a fingertip;
+ *     one glossy fior di latte with its pulled tip in a pool of whey, a slice and a basil leaf
  */
 import { defineSprite } from '../sprites';
 import {
@@ -187,19 +198,19 @@ ingr('spaghetti', (ctx) => {
   const R = rng(11);
   rot(ctx, 0, 0.2, -0.74, () => {
     const L = 10.6;
-    const n = 9;
+    const n = 12;
     const prof = (y: number, x: number) => y * (0.42 + 0.58 * Math.min(1, Math.abs(x) / L));
-    const rods = Array.from({ length: n }, (_, i) => ({ y: (i - (n - 1) / 2) * 0.74, l0: L - R() * 1.6, l1: L - R() * 1.6 }));
+    const rods = Array.from({ length: n }, (_, i) => ({ y: (i - (n - 1) / 2) * 0.8, l0: L - R() * 1.6, l1: L - R() * 1.6 }));
     const pts = (r: { y: number; l0: number; l1: number }): Pt[] => [
       [-r.l0, prof(r.y, r.l0)], [-L * 0.55, prof(r.y, L * 0.55)], [0, prof(r.y, 0)], [L * 0.55, prof(r.y, L * 0.55)], [r.l1, prof(r.y, r.l1)],
     ];
     // one silhouette for the whole bundle
-    for (const r of rods) line(ctx, pts(r), 1.1 + K * 2, INK, true);
+    for (const r of rods) line(ctx, pts(r), 1.2 + K * 2, INK, true);
     // rods, back (top) to front (bottom): each with a darker edge so they read as separate strands
     rods.forEach((r, i) => {
       const lit = 1 - i / (n - 1);
-      line(ctx, pts(r), 1.1, '#c9952f', true);
-      line(ctx, pts(r), 0.62, i % 2 ? '#f0cf72' : '#f7dd8c', true);
+      line(ctx, pts(r), 1.2, '#c9952f', true);
+      line(ctx, pts(r), 0.7, i % 2 ? '#f0cf72' : '#f7dd8c', true);
       if (lit > 0.6) line(ctx, pts(r).slice(0, 4), 0.28, '#fff6cf', true, 0.8);
     });
     // twine: two wraps + a little bow (red baker's string)
@@ -227,11 +238,9 @@ interface NestOpts {
   rx?: number; ry?: number; h?: number;
   /** how much the coils tilt against each other */
   tangle?: number;
-  /** square-cut strands (tonnarelli): a flat lit face on every strand */
-  square?: boolean;
+  /** size of the hollow in the middle of the top (0..1 of the radius) */
+  hollow?: number;
   dust?: string; dustN?: number; dustR?: number;
-  /** loose ribbon ends (drawn in front of the nest) */
-  ends?: Pt[][];
   /** silhouette ink (raise it when the nest is drawn scaled down) */
   ink?: number;
 }
@@ -277,7 +286,7 @@ function extend(pts: Pt[], d: number): Pt[] {
 
 /**
  * A nest (nido) of fresh egg pasta in 3/4 view: a soft cushion whose top is wound with coils of
- * ribbon around a dimple, with bands of ribbon running round its side and a few loose ends.
+ * ribbon around a hollow, with bands of ribbon running round its side.
  * Every ribbon is cel-shaded along its length (lit from the upper-left) and edged in dark gold.
  */
 function nest(ctx: Ctx, o: NestOpts) {
@@ -309,8 +318,8 @@ function nest(ctx: Ctx, o: NestOpts) {
     };
     pts.forEach((p, i) => { if (lit[i] < -0.15) run.push(p); else flush(o.colD, w); });
     flush(o.colD, w);
-    pts.forEach((p, i) => { if (lit[i] > 0.2) run.push(p); else flush(o.colL, w * (o.square ? 0.4 : 0.32), [-w * 0.18, -w * 0.24], 0.95); });
-    flush(o.colL, w * (o.square ? 0.4 : 0.32), [-w * 0.18, -w * 0.24], 0.95);
+    pts.forEach((p, i) => { if (lit[i] > 0.2) run.push(p); else flush(o.colL, w * 0.32, [-w * 0.18, -w * 0.24], 0.95); });
+    flush(o.colL, w * 0.32, [-w * 0.18, -w * 0.24], 0.95);
   };
 
   // 1. silhouette and the dark between the ribbons
@@ -336,14 +345,16 @@ function nest(ctx: Ctx, o: NestOpts) {
   const top = (c: Ctx) => ellipsePath(c, 0, ty, rx * 1.02, ry * 1.04);
   ctx.save();
   ctx.beginPath();
-  ellipsePath(ctx, 0.2, ty + 0.2, rx * 0.2, ry * 0.2);
+  const hol = o.hollow ?? 0.2;
+  ellipsePath(ctx, 0.2, ty + 0.2, rx * hol, ry * hol);
   ctx.fillStyle = shade(o.gap, 0.3);
   ctx.fill();
   ctx.restore();
   type Piece = { pts: Pt[]; lit: number[]; key: number };
   const pieces: Piece[] = [];
   for (let i = 0; i < o.coils; i++) {
-    const k = 0.3 + 0.72 * (i / Math.max(1, o.coils - 1));
+    const k0 = Math.max(0.3, hol + 0.16);
+    const k = k0 + (1.02 - k0) * (i / Math.max(1, o.coils - 1));
     const rr = (o.tangle ?? 0.15) * (R() - 0.5) * 2;
     const cx = (R() - 0.5) * 1.2, cy = (R() - 0.5) * 0.6;
     const a0 = R() * Math.PI * 2, span = Math.PI * 2 * (0.8 + R() * 0.35);
@@ -374,174 +385,306 @@ function nest(ctx: Ctx, o: NestOpts) {
   // 4. volume: the whole nest darkens toward the lower right
   atopShade(ctx, body, shade(o.colD, 0.35), 0.3, [-2.6, -2.4]);
 
-  // 5. loose ends in front
-  for (const e of o.ends ?? []) {
-    const pts = sample(e, 18);
-    const lt = pts.map((_, i) => (i < pts.length * 0.5 ? 0.35 : -0.3));
-    strokePts(ctx, extend(pts, ink), o.w + ink * 2, INK);
-    ribbon(pts, lt, o.w);
-  }
-
-  // 6. flour or semolina
+  // 5. flour or semolina
   if (o.dust) {
     inside(ctx, body, () => speckle(ctx, -1.2, ty, rx * 0.85, ry * 0.85, o.dustN ?? 22, o.dust!, o.dustR ?? 0.3, o.seed + 3, 0.9));
   }
   glint(ctx, -rx * 0.5, ty - ry * 0.45, 1.8, 0.7, -0.35, 0.55);
 }
 
+/** A flat ribbon of fresh pasta that twists along its length (lit and shaded faces alternate). */
+function flatRibbon(ctx: Ctx, pts: Pt[], w: number, col: string, colD: string, colL: string, ink = 0.9, twist = 9) {
+  const P = sample(pts, 40);
+  strokePts(ctx, extend(P, ink * 0.7), w + ink * 2, INK);
+  strokePts(ctx, P, w, col);
+  let run: Pt[] = [];
+  const flush = (c: string, ww: number, off: Pt = [0, 0], a = 1) => { if (run.length > 1) strokePts(ctx, run.map(([x, y]) => [x + off[0], y + off[1]] as Pt), ww, c, 'butt', a); run = []; };
+  P.forEach((p, i) => { if (Math.floor(i / twist) % 2 === 1) run.push(p); else flush(colD, w); });
+  flush(colD, w);
+  P.forEach((p, i) => { if (Math.floor(i / twist) % 2 === 0 && i % twist > 1 && i % twist < twist - 1) run.push(p); else flush(colL, w * 0.28, [-w * 0.12, -w * 0.22], 0.95); });
+  flush(colL, w * 0.28, [-w * 0.12, -w * 0.22], 0.95);
+}
 ingr('fettuccine', (ctx) => {
+  // a nest of fresh egg fettuccine (a few bold, flat ribbons) sitting on two loose ribbons
+  ctx.translate(0, -2.6);
   nest(ctx, {
-    col: '#f8d878', colD: '#e2a944', colL: '#fff6cc', gap: '#6a3e0e', edge: '#8a5414',
-    w: 1.9, coils: 6, bands: 3, seed: 21, tangle: 0.22, dust: '#fffdf4', dustN: 30, dustR: 0.22,
+    col: '#ffe07e', colD: '#e6a63e', colL: '#fffbe0', gap: '#4e2a08', edge: '#4e2a08',
+    w: 2.6, coils: 3, bands: 2, seed: 21, tangle: 0.45, rx: 7.8, ry: 5.4, h: 3.4, hollow: 0.32, dust: '#fffdf4', dustN: 18, dustR: 0.24,
   });
+  flatRibbon(ctx, [[3.4, 4.6], [6.6, 5.4], [8.4, 3.6], [10.6, 4.4], [11.4, 7.2], [13.6, 7.4]], 2.2, '#ffe07e', '#e6a63e', '#fffbe0', 0.9, 7);
+  flatRibbon(ctx, [[-2.0, 5.6], [-5.4, 7.2], [-8.4, 6.0], [-10.6, 7.6], [-13.0, 7.0]], 2.2, '#ffe07e', '#e6a63e', '#fffbe0', 0.9, 7);
 });
 
 ingr('tagliatelle', (ctx) => {
-  // two nests, the way they are sold in Bologna
-  const T = { col: '#fbcb4e', colD: '#e0952a', colL: '#ffeca6', gap: '#62360a', edge: '#844610', w: 2.5, coils: 4, bands: 3, tangle: 0.25, dust: '#fff8e8', dustN: 12 };
-  rot(ctx, 4.2, -3.6, 0, () => nest(ctx, { ...T, seed: 41, ink: K / 0.62 }), 0.62);
-  rot(ctx, -1.4, 2.0, 0, () => nest(ctx, { ...T, seed: 37, ink: K / 0.82 }), 0.82);
+  // fresh tagliatelle hung to dry over a wooden rolling pin (mattarello), the Bologna way
+  const R = rng(41);
+  const pin = (c: Ctx) => roundRectPath(c, -11.0, -8.6, 22.0, 2.6, 1.3);
+  const col = '#fbcb4e', colD = '#d98f26', colL = '#fff0b8';
+  const ribbons = [-7.6, -4.8, -2.0, 0.8, 3.6, 6.4].map((x, i) => ({ x, len: 12.6 + R() * 4.6 - (i % 2) * 1.8, ph: R() * 6, sw: 1.3 + R() * 0.7 }));
+  const pts = (r: { x: number; len: number; ph: number; sw: number }, back: boolean): Pt[] => {
+    const out: Pt[] = [];
+    const y0 = -7.3;
+    const n = 12;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const y = y0 + t * (back ? r.len * 0.8 : r.len);
+      out.push([r.x + (back ? 1.1 : 0) + Math.sin(t * 4.6 + r.ph) * r.sw * Math.min(1, t * 2.2) + (back ? t * 0.8 : -t * 0.4), y]);
+    }
+    return out;
+  };
+  const W = 2.3;
+  // back halves (hanging behind the pin), darker
+  for (const r of ribbons) {
+    const p = pts(r, true);
+    strokePts(ctx, extend(p, 0.8), W + 1.6, INK);
+    strokePts(ctx, p, W, colD);
+    strokePts(ctx, p.map(([x, y]) => [x + 0.5, y] as Pt), W * 0.4, shade(colD, 0.15), 'butt', 0.8);
+  }
+  // the pin
+  S(ctx, pin, { fill: '#c98a4e', ink: K, shadow: '#8f5530', shadowOffset: [0, -1.0], gloss: [{ x: -4, y: -8.0, rx: 6, ry: 0.35, alpha: 0.6, color: '#ffd9a8' }] });
+  line(ctx, [[-8.6, -7.4], [8.6, -7.4]], 0.3, '#9a5f2e', false, 0.45);
+  // front halves, folded over the pin and falling in waves
+  for (const r of ribbons) {
+    const p = pts(r, false);
+    const fold: Pt[] = [[r.x + 0.9, -8.9], [r.x - 0.2, -8.6], ...p];
+    strokePts(ctx, extend(fold, 0.8), W + 1.6, INK);
+    strokePts(ctx, fold, W, col);
+    strokePts(ctx, fold.map(([x, y]) => [x + W * 0.28, y] as Pt), W * 0.36, colD, 'butt', 0.85);
+    strokePts(ctx, fold.map(([x, y]) => [x - W * 0.26, y] as Pt).slice(1, 8), W * 0.22, colL, 'round', 0.9);
+  }
+  // flour on the ribbons
+  speckle(ctx, -0.6, 0.0, 8.4, 5.0, 16, '#fffaf0', 0.24, 42, 0.9);
 });
 
 ingr('tonnarelli', (ctx) => {
-  nest(ctx, {
-    col: '#edbd4a', colD: '#c2862a', colL: '#ffe697', gap: '#4e300a', edge: '#6e4410',
-    w: 1.3, coils: 9, bands: 5, seed: 53, tangle: 0.5, square: true, dust: '#fff0c2', dustN: 44,
-  });
+  // a hank of fresh tonnarelli folded in two: thick, square-cut, deep egg-yellow strands, the cut ends splayed
+  const col = '#f7bf2a', colD = '#c47c16', colL = '#fff0a0';
+  const R = rng(53);
+  const n = 4, w = 1.65, gap = 1.6;
+  const fx = -5.2, fy = 0; // centre of the fold
+  for (let i = 0; i < n; i++) {
+    const r = 6.4 - i * gap; // outer strand first
+    const pts: Pt[] = [];
+    const endT = 9.0 + R() * 1.8;
+    const endB = 8.4 + R() * 2.2;
+    // upper arm, from its cut end back to the fold
+    pts.push([endT, -r - 2.6 + i * 0.5 + (R() - 0.5) * 0.6], [endT * 0.45, -r - 1.0 + i * 0.25], [fx + 1.2, -r]);
+    // round the fold
+    for (let j = 1; j < 8; j++) {
+      const a = -Math.PI / 2 - (j / 8) * Math.PI;
+      pts.push([fx + Math.cos(a) * r * 0.82, fy + Math.sin(a) * r]);
+    }
+    // lower arm, out to its cut end
+    pts.push([fx + 1.2, r], [endB * 0.45, r + 1.0 - i * 0.25], [endB, r + 2.4 - i * 0.5 + (R() - 0.5) * 0.6]);
+    const P = sample(pts, 40);
+    strokePts(ctx, extend(P, 0.8), w + 1.8, INK);
+    strokePts(ctx, P, w, colD);
+    strokePts(ctx, P.map(([x, y]) => [x - w * 0.12, y - w * 0.18] as Pt), w * 0.6, col);
+    strokePts(ctx, P.map(([x, y]) => [x - w * 0.24, y - w * 0.3] as Pt).slice(2, -2), w * 0.18, colL, 'round', 0.85);
+    // the square cut faces at both ends
+    for (const [z, y] of [[P[0], P[1]], [P[P.length - 1], P[P.length - 2]]] as [Pt, Pt][]) {
+      const a = Math.atan2(z[1] - y[1], z[0] - y[0]);
+      rot(ctx, z[0], z[1], a, () => S(ctx, (c) => roundRectPath(c, -w * 0.4, -w * 0.5, w * 0.8, w, w * 0.1), { fill: '#ffe07a', ink: 0.4, shadow: 'none' }));
+    }
+  }
+  // semolina dust
+  speckle(ctx, 0, 0, 9.0, 7.0, 30, '#fff6d6', 0.26, 54, 0.95);
 });
 
 // ===========================================================================
 // TOMATO, OIL, GARLIC, HERBS
 // ===========================================================================
 
-ingr('pomodoro', (ctx) => {
-  rot(ctx, 0.6, 0.8, -0.5, () => {
-    const body = (c: Ctx) => {
-      c.moveTo(0, -8.2);
-      c.bezierCurveTo(4.5, -8.6, 6.0, -4.8, 5.9, -0.4);
-      c.bezierCurveTo(5.8, 4.4, 3.2, 8.4, 0.3, 10.2);
-      c.bezierCurveTo(-2.8, 8.4, -5.9, 4.4, -5.9, -0.4);
-      c.bezierCurveTo(-6.0, -4.8, -4.5, -8.6, 0, -8.2);
+/** A San Marzano lying along +y (top at -L): long, cylinder-plum, widest at mid-height, blunt nib at the blossom end. */
+function sanMarzanoPath(c: Ctx, w: number, L: number) {
+  c.moveTo(0, -L * 0.98);
+  c.bezierCurveTo(w * 0.78, -L * 1.0, w, -L * 0.58, w, -L * 0.05);
+  c.bezierCurveTo(w, L * 0.5, w * 0.74, L * 0.86, w * 0.2, L * 0.96);
+  c.quadraticCurveTo(0, L * 1.06, -w * 0.2, L * 0.96);
+  c.bezierCurveTo(-w * 0.74, L * 0.86, -w, L * 0.5, -w, -L * 0.05);
+  c.bezierCurveTo(-w, -L * 0.58, -w * 0.78, -L * 1.0, 0, -L * 0.98);
+  c.closePath();
+}
+
+/** A star calyx of thin, curled sepals with a short stem, centred at (x,y). */
+function calyxStar(ctx: Ctx, x: number, y: number, r: number, ink = 0.8, n = 6, seed = 5) {
+  const R = rng(seed);
+  S(ctx, (c) => {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (i / n) * Math.PI * 2 + (R() - 0.5) * 0.3;
+      const l = r * (0.85 + R() * 0.3);
+      const ex = x + Math.cos(a) * l, ey = y + Math.sin(a) * l * 0.62;
+      const cx = x + Math.cos(a + 0.5) * l * 0.6, cy = y + Math.sin(a + 0.5) * l * 0.4;
+      const nx = -Math.sin(a) * r * 0.16, ny = Math.cos(a) * r * 0.1;
+      c.moveTo(x + nx, y + ny);
+      c.quadraticCurveTo(cx + nx, cy + ny, ex, ey);
+      c.quadraticCurveTo(cx - nx, cy - ny, x - nx, y - ny);
       c.closePath();
-    };
+    }
+    circlePath(c, x, y, r * 0.3);
+  }, { fill: '#3f9a36', ink, shadow: '#226b30', shadowOffset: [-0.3, -0.4] });
+}
+
+ingr('pomodoro', (ctx) => {
+  // the whole San Marzano, standing a little tilted
+  rot(ctx, -2.2, -0.6, 0.38, () => {
+    const w = 5.0, L = 10.2;
+    const body = (c: Ctx) => sanMarzanoPath(c, w, L);
     S(ctx, body, {
-      fill: '#ea3a2c',
+      fill: radial(ctx, -1.8, -3.2, 12, [[0, '#ff7559'], [0.45, '#e8352a'], [1, '#b01f24']]),
       ink: K,
-      shadow: '#b11f24',
-      shadowOffset: [-2.0, -2.2],
+      shadow: '#991a22',
+      shadowOffset: [-2.0, -1.6],
       gloss: [
-        { x: -2.9, y: -3.4, rx: 1.15, ry: 3.1, rot: 0.12, alpha: 0.85 },
-        { x: -1.7, y: 3.6, rx: 0.55, ry: 1.0, rot: 0.2, alpha: 0.55 },
+        { x: -2.4, y: -3.6, rx: 1.0, ry: 3.6, rot: 0.06, alpha: 0.85 },
+        { x: -2.9, y: 4.0, rx: 0.45, ry: 1.3, rot: 0.1, alpha: 0.5 },
       ],
     });
-    // the San Marzano's long shallow ribs
-    inside(ctx, body, () => {
-      line(ctx, [[1.6, -7.6], [3.2, -1.6], [2.4, 5.0], [0.6, 9.4]], 0.6, '#a91a22', true, 0.5);
-      line(ctx, [[-1.2, -7.8], [-2.0, -2.6], [-1.4, 4.4], [0.1, 9.6]], 0.5, '#ff9b80', true, 0.45);
-    });
-    // calyx: five curling sepals + a short stem
-    const sep: [number, number][] = [[Math.PI * 0.86, 3.9], [Math.PI * 1.14, 3.2], [Math.PI * 1.5, 2.2], [Math.PI * 1.86, 3.2], [Math.PI * 0.14, 3.9]];
-    S(ctx, (c) => {
-      for (const [a, l] of sep) {
-        const x0 = 0, y0 = -8.0;
-        const ex = x0 + Math.cos(a) * l, ey = y0 + Math.sin(a) * l * 0.75 + (Math.cos(a) !== 0 ? 0.7 : 0);
-        const nx = -Math.sin(a) * 0.75, ny = Math.cos(a) * 0.75;
-        c.moveTo(x0 + nx, y0 + ny);
-        c.quadraticCurveTo((x0 + ex) / 2 + nx * 1.1, (y0 + ey) / 2 + ny * 1.1 - 0.5, ex, ey);
-        c.quadraticCurveTo((x0 + ex) / 2 - nx * 1.1, (y0 + ey) / 2 - ny * 1.1 - 0.5, x0 - nx, y0 - ny);
-        c.closePath();
-      }
-      circlePath(c, 0, -8.1, 1.3);
-    }, { fill: '#46a83c', ink: 1.0, shadow: '#26773a', shadowOffset: [-0.5, -0.6] });
-    tube(ctx, [[0, -8.6], [0.4, -10.2], [1.4, -11.0]], 1.0, '#3d9636', 0.8, true, '#9be07a', 0.7);
+    // two long shallow lobes
+    inside(ctx, body, () => line(ctx, [[1.0, -9.4], [2.0, -2.0], [1.6, 5.0], [0.4, 9.6]], 0.55, '#a01a22', true, 0.55));
+    calyxStar(ctx, 0, -L * 0.92, 3.6, 0.8, 6, 5);
+    tube(ctx, [[0, -L * 0.95], [0.3, -L * 1.1], [1.2, -L * 1.2]], 0.9, '#3d9636', 0.7, true, '#9be07a', 0.7);
+  });
+  // a half, cut lengthwise, lying in front: red wall, two seed chambers in golden gel
+  rot(ctx, 4.4, 5.0, -1.05, () => {
+    const w = 3.6, L = 6.4;
+    const half = (c: Ctx) => sanMarzanoPath(c, w, L);
+    S(ctx, half, { fill: '#d92b26', ink: K, shadow: '#9c1a22', shadowOffset: [-1.0, -0.8] });
+    const flesh = (c: Ctx) => sanMarzanoPath(c, w - 0.85, L - 0.85);
+    S(ctx, flesh, { fill: '#f4604a', ink: 0, shadow: '#e4423a', shadowOffset: [0.6, 0.8] });
+    for (const sx of [-1, 1]) {
+      const cham = (c: Ctx) => ellipsePath(c, sx * 1.15, 0.6, 0.95, L * 0.62);
+      S(ctx, cham, { fill: '#f7c64a', ink: 0.35, inkColor: '#b8332a', shadow: '#e59a30', shadowOffset: [sx * 0.3, 0.4] });
+      for (let k = -2; k <= 2; k++) S(ctx, (c) => ellipsePath(c, sx * 1.15 + (k % 2 ? 0.25 : -0.25), 0.6 + k * 1.3, 0.42, 0.3), { fill: '#fff4c8', ink: 0.25, inkColor: '#a86a1c', shadow: 'none' });
+    }
+    // the core running down the middle
+    line(ctx, [[0, -L * 0.75], [0, L * 0.75]], 0.6, '#ffb09a', false, 0.9);
+    glint(ctx, -w * 0.62, -L * 0.3, 0.4, 1.3, 0.05, 0.85);
   });
 });
 
 ingr('passata', (ctx) => {
-  rot(ctx, 0, 0.2, -0.12, () => {
-    const body = (c: Ctx) => {
-      c.moveTo(-2.5, -7.0);
-      c.lineTo(-2.5, -5.6);
-      c.bezierCurveTo(-2.5, -3.8, -6.2, -3.6, -6.2, -0.2);
-      c.lineTo(-6.2, 8.0);
-      c.quadraticCurveTo(-6.2, 10.0, -4.2, 10.0);
-      c.lineTo(4.2, 10.0);
-      c.quadraticCurveTo(6.2, 10.0, 6.2, 8.0);
-      c.lineTo(6.2, -0.2);
-      c.bezierCurveTo(6.2, -3.6, 2.5, -3.8, 2.5, -5.6);
-      c.lineTo(2.5, -7.0);
+  // a tall, slim 700 g glass bottle: clear glass at the top, deep brick-red purée below
+  rot(ctx, 2.0, 0, 0.06, () => {
+    const hw = 3.7, nw = 2.1;
+    const bottle = (c: Ctx) => {
+      c.moveTo(-nw, -8.4);
+      c.lineTo(-nw, -6.6);
+      c.bezierCurveTo(-nw, -5.2, -hw, -5.0, -hw, -3.2);
+      c.lineTo(-hw, 9.6);
+      c.quadraticCurveTo(-hw, 10.8, -hw + 1.2, 10.8);
+      c.lineTo(hw - 1.2, 10.8);
+      c.quadraticCurveTo(hw, 10.8, hw, 9.6);
+      c.lineTo(hw, -3.2);
+      c.bezierCurveTo(hw, -5.0, nw, -5.2, nw, -6.6);
+      c.lineTo(nw, -8.4);
       c.closePath();
     };
-    S(ctx, body, {
-      fill: linear(ctx, -6, 0, 6, 0, [[0, '#f0503c'], [0.45, '#d42a22'], [1, '#9e1a1e']]),
-      ink: K,
-      shadow: 'none',
+    S(ctx, bottle, { fill: '#e6f0ee', ink: K, shadow: 'none' });
+    inside(ctx, bottle, () => {
+      // glass tint at the shoulder
+      ctx.fillStyle = '#cfdedd';
+      ctx.fillRect(1.2, -9, 4, 8);
+      // the purée, filled to just under the shoulder
+      ctx.fillStyle = linear(ctx, -hw, 0, hw, 0, [[0, '#e0462e'], [0.4, '#bd2a1e'], [1, '#7c1418']]);
+      ctx.fillRect(-5, -2.6, 10, 14);
+      ctx.beginPath();
+      ellipsePath(ctx, 0, -2.6, hw, 0.55);
+      ctx.fillStyle = '#e8573a';
+      ctx.fill();
+      // glass: one long vertical highlight band and a thin one on the right
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.beginPath();
+      roundRectPath(ctx, -2.9, -4.4, 1.05, 14.2, 0.5);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      roundRectPath(ctx, 2.5, -2.0, 0.5, 11.4, 0.25);
+      ctx.fill();
+      line(ctx, [[-1.0, -7.8], [-1.0, -6.0]], 0.55, '#ffffff', false, 0.9);
     });
-    crescent(ctx, body, '#6e0f16', 0.35, [-2, -1.6]);
-    // glass reflections
-    inside(ctx, body, () => {
-      line(ctx, [[-4.6, 0.2], [-4.8, 4], [-4.4, 8.4]], 1.0, '#ffffff', true, 0.6);
-      line(ctx, [[-1.6, -5.2], [-1.6, -3.8]], 0.7, '#ffffff', false, 0.65);
-      line(ctx, [[4.8, 1.0], [4.9, 7.8]], 0.45, '#ffb3a0', false, 0.6);
+    // label: an elongated San Marzano and a basil leaf, no text
+    const label = (c: Ctx) => roundRectPath(c, -hw - 0.1, 1.6, hw * 2 + 0.2, 5.6, 0.3);
+    inside(ctx, bottle, () => S(ctx, label, { fill: '#fbf1d8', ink: 0.65, shadow: '#e3d0a8', shadowOffset: [-1.4, -0.5] }));
+    rot(ctx, -0.3, 4.4, 1.25, () => {
+      S(ctx, (c) => sanMarzanoPath(c, 1.05, 2.3), { fill: '#e2352a', ink: 0.5, shadow: '#a81f24', shadowOffset: [-0.4, -0.3] });
     });
-    // label: a little tomato on cream (no text)
-    const label = (c: Ctx) => {
-      c.moveTo(-6.2, 1.2);
-      c.quadraticCurveTo(0, 2.0, 6.2, 1.2);
-      c.lineTo(6.2, 6.6);
-      c.quadraticCurveTo(0, 7.4, -6.2, 6.6);
-      c.closePath();
-    };
-    inside(ctx, body, () => S(ctx, label, { fill: '#fbf0d6', ink: 0.7, shadow: '#e2cfa6', shadowOffset: [-1.4, -0.6] }));
-    line(ctx, [[-6.0, 2.4], [0, 3.1], [6.0, 2.4]], 0.6, '#3d9636', true, 0.9);
-    S(ctx, (c) => circlePath(c, 0.2, 4.6, 1.75), { fill: '#e8382c', ink: 0.55, shadow: '#b11f24', shadowOffset: [-0.5, -0.5], gloss: [{ x: -0.4, y: 4.0, rx: 0.5, ry: 0.35, alpha: 0.9 }] });
-    S(ctx, (c) => { ellipsePath(c, -0.6, 2.9, 0.8, 0.35, -0.5); ellipsePath(c, 0.9, 2.9, 0.8, 0.35, 0.5); }, { fill: '#46a83c', ink: 0.4, shadow: 'none' });
-    // twist-off cap
-    const cap = (c: Ctx) => roundRectPath(c, -3.3, -10.4, 6.6, 3.7, 0.9);
-    S(ctx, cap, { fill: linear(ctx, -3.3, 0, 3.3, 0, [[0, '#fff1a6'], [0.35, '#f2c23e'], [1, '#b97a14']]), ink: K, shadow: 'none' });
-    for (let i = -2; i <= 2; i++) line(ctx, [[i * 1.25, -9.9], [i * 1.25, -7.2]], 0.35, '#8a5a0c', false, 0.55);
+    rot(ctx, 1.9, 3.3, -0.5, () => S(ctx, (c) => leafPath(c, 2.2, 1.3, 0.45), { fill: '#46a83c', ink: 0.4, shadow: 'none' }));
+    // steel twist-off cap
+    const cap = (c: Ctx) => roundRectPath(c, -2.6, -10.8, 5.2, 2.9, 0.7);
+    S(ctx, cap, { fill: linear(ctx, -2.6, 0, 2.6, 0, [[0, '#ffffff'], [0.35, '#d5dbe4'], [1, '#8592a6']]), ink: K, shadow: 'none' });
+    for (let i = -2; i <= 2; i++) line(ctx, [[i * 0.95, -10.4], [i * 0.95, -8.3]], 0.3, '#6f7c90', false, 0.6);
+  });
+  // a fresh San Marzano at its foot
+  rot(ctx, -5.4, 7.6, -1.42, () => {
+    S(ctx, (c) => sanMarzanoPath(c, 2.6, 5.0), {
+      fill: radial(ctx, -0.8, -1.6, 6, [[0, '#ff7559'], [0.5, '#e8352a'], [1, '#b01f24']]),
+      ink: 1.2,
+      shadow: '#991a22',
+      shadowOffset: [-1.0, -0.8],
+      gloss: [{ x: -1.2, y: -1.4, rx: 0.5, ry: 1.8, alpha: 0.85 }],
+    });
+    calyxStar(ctx, 0, -4.6, 2.0, 0.6, 5, 9);
   });
 });
 
 ingr('olio', (ctx) => {
-  const flask = (c: Ctx) => {
-    c.moveTo(-1.8, -6.4);
-    c.lineTo(-1.8, -4.6);
-    c.bezierCurveTo(-2.0, -3.0, -7.6, -2.0, -7.6, 3.0);
-    c.bezierCurveTo(-7.6, 7.6, -4.4, 9.8, -0.6, 9.8);
-    c.bezierCurveTo(3.2, 9.8, 6.4, 7.6, 6.4, 3.0);
-    c.bezierCurveTo(6.4, -2.0, 0.8, -3.0, 0.6, -4.6);
-    c.lineTo(0.6, -6.4);
-    c.closePath();
-  };
-  // steel pourer: collar + spout (behind the flask outline so it reads as one object)
-  tube(ctx, [[-0.6, -7.4], [0.8, -9.4], [3.2, -10.2], [5.6, -10.0]], 1.1, '#cfd6e0', 1.0, true, '#ffffff', 0.9);
-  S(ctx, flask, { fill: '#eef4dc', ink: K, shadow: 'none' });
-  // the oil: green-gold, filled to the shoulder
-  inside(ctx, flask, () => {
-    ctx.fillStyle = radial(ctx, -2.6, 1.6, 9.5, [[0, '#f4e46a'], [0.45, '#cdb733'], [1, '#7c8a1e']], -3.4, 0.6);
-    ctx.fillRect(-9, -1.2, 18, 12);
-    ctx.beginPath();
-    ellipsePath(ctx, -0.6, -1.2, 6.0, 0.8);
-    ctx.fillStyle = '#f7ec96';
-    ctx.fill();
+  // a tall, square-shouldered (dorica) bottle of green-gold extra-virgin oil with a steel pourer
+  rot(ctx, -1.6, 0, -0.08, () => {
+    const hw = 4.4, nw = 1.45, sx = 1.7;
+    const bottle = (c: Ctx) => {
+      c.moveTo(-nw, -7.0);
+      c.lineTo(-nw, -5.8);
+      c.lineTo(-hw + 0.6, -3.9);
+      c.quadraticCurveTo(-hw, -3.7, -hw, -3.0);
+      c.lineTo(-hw, 9.8);
+      c.quadraticCurveTo(-hw, 10.8, -hw + 1.0, 10.8);
+      c.lineTo(hw - 1.0, 10.8);
+      c.quadraticCurveTo(hw, 10.8, hw, 9.8);
+      c.lineTo(hw, -3.0);
+      c.quadraticCurveTo(hw, -3.7, hw - 0.6, -3.9);
+      c.lineTo(nw, -5.8);
+      c.lineTo(nw, -7.0);
+      c.closePath();
+    };
+    // the long thin spout (behind the collar)
+    tube(ctx, [[0, -8.6], [1.6, -10.0], [4.6, -11.0], [7.4, -11.2]], 0.9, '#d5dce6', 0.95, false, '#ffffff', 0.9);
+    S(ctx, bottle, { fill: '#eaf2d8', ink: K, shadow: 'none' });
+    inside(ctx, bottle, () => {
+      // oil up to the shoulder: lit front face, darker side face
+      ctx.fillStyle = linear(ctx, -hw, 0, sx, 0, [[0, '#f4e466'], [1, '#cdbb30']]);
+      ctx.fillRect(-6, -3.2, 6 + sx, 15);
+      ctx.fillStyle = linear(ctx, sx, 0, hw, 0, [[0, '#9aa024'], [1, '#68761a']]);
+      ctx.fillRect(sx, -3.2, 4, 15);
+      ctx.beginPath();
+      ellipsePath(ctx, 0, -3.2, hw, 0.5);
+      ctx.fillStyle = '#f7ec96';
+      ctx.fill();
+      // the square section: one vertical edge, and glass shine
+      line(ctx, [[sx, -3.8], [sx, 10.8]], 0.45, '#4f5a10', false, 0.55);
+      line(ctx, [[sx + 0.45, -3.4], [sx + 0.45, 10.4]], 0.35, '#fff6b0', false, 0.6);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      roundRectPath(ctx, -3.5, -2.6, 1.15, 12.4, 0.55);
+      ctx.fill();
+      line(ctx, [[-0.6, -6.6], [-0.6, -5.2]], 0.5, '#ffffff', false, 0.9);
+    });
+    // a plain label with an olive mark (no text)
+    inside(ctx, bottle, () => S(ctx, (c) => roundRectPath(c, -hw - 0.2, 2.6, hw * 2 + 0.4, 4.8, 0.3), { fill: '#fbf1d8', ink: 0.6, shadow: '#e3d0a8', shadowOffset: [-1.4, -0.4] }));
+    S(ctx, (c) => ellipsePath(c, -1.2, 5.1, 1.15, 0.85, -0.3), { fill: '#7fa437', ink: 0.45, shadow: 'none' });
+    rot(ctx, -0.3, 4.6, -0.6, () => S(ctx, (c) => leafPath(c, 2.4, 0.9, 0.45), { fill: '#5d7e3a', ink: 0.35, shadow: 'none' }));
+    // steel pourer collar
+    S(ctx, (c) => roundRectPath(c, -2.2, -8.8, 4.4, 2.2, 0.6), { fill: '#dfe5ee', ink: 1.0, shadow: '#99a6b9', shadowOffset: [-0.6, -0.6] });
+    // a golden drop at the spout
+    S(ctx, (c) => { c.moveTo(7.6, -10.6); c.quadraticCurveTo(8.7, -8.8, 7.9, -8.2); c.quadraticCurveTo(6.9, -8.6, 7.6, -10.6); c.closePath(); }, { fill: '#e8d44a', ink: 0.6, shadow: 'none', gloss: [{ x: 7.6, y: -8.9, rx: 0.3, ry: 0.3, alpha: 0.9 }] });
   });
-  crescent(ctx, flask, '#4f5a10', 0.35, [-2.0, -2.0]);
-  inside(ctx, flask, () => {
-    line(ctx, [[-5.6, 0.8], [-6.0, 3.8], [-4.6, 7.2]], 1.1, '#ffffff', true, 0.75);
-    glint(ctx, -1.0, -3.4, 0.7, 0.45, -0.4, 0.8);
+  // olive sprig at its foot: a silvery leaf and two olives
+  rot(ctx, 8.6, 5.6, 2.6, () => {
+    S(ctx, (c) => leafPath(c, 5.0, 1.7, 0.45), { fill: '#7e9b52', ink: 0.85, shadow: '#55703a', shadowOffset: [-0.5, -0.5] });
+    line(ctx, [[0.4, 0], [4.2, 0]], 0.3, '#d5e3b8', false, 0.9);
   });
-  // collar
-  S(ctx, (c) => roundRectPath(c, -2.5, -8.0, 3.8, 1.9, 0.6), { fill: '#dfe5ee', ink: 1.0, shadow: '#99a6b9', shadowOffset: [-0.6, -0.6] });
-  // a golden drop at the spout
-  S(ctx, (c) => { c.moveTo(5.9, -9.4); c.quadraticCurveTo(7.0, -7.8, 6.2, -7.2); c.quadraticCurveTo(5.2, -7.6, 5.9, -9.4); c.closePath(); }, { fill: '#e3cf4a', ink: 0.6, shadow: 'none', gloss: [{ x: 5.9, y: -7.9, rx: 0.3, ry: 0.3, alpha: 0.9 }] });
-  // olive sprig in front: two olives and a silvery leaf
-  rot(ctx, 6.4, 7.2, -2.5, () => {
-    S(ctx, (c) => leafPath(c, 6.0, 1.9, 0.45), { fill: '#7e9b52', ink: 0.9, shadow: '#55703a', shadowOffset: [-0.5, -0.5] });
-    line(ctx, [[0.4, 0], [5.2, 0]], 0.3, '#d5e3b8', false, 0.9);
-  });
-  S(ctx, (c) => ellipsePath(c, 4.6, 8.0, 2.2, 1.65, -0.4), { fill: '#8fb33d', ink: 1.0, shadow: '#5f8c25', shadowOffset: [-0.7, -0.7], gloss: [{ x: 3.9, y: 7.4, rx: 0.65, ry: 0.4, rot: -0.4, alpha: 0.9 }] });
-  S(ctx, (c) => ellipsePath(c, 7.6, 6.6, 2.0, 1.55, -0.6), { fill: '#4a2a42', ink: 1.0, shadow: '#2a1428', shadowOffset: [-0.7, -0.7], gloss: [{ x: 7.0, y: 6.0, rx: 0.6, ry: 0.38, rot: -0.6, alpha: 0.85 }] });
+  S(ctx, (c) => ellipsePath(c, 4.4, 9.2, 1.95, 1.5, -0.3), { fill: '#8fb33d', ink: 1.0, shadow: '#5f8c25', shadowOffset: [-0.7, -0.7], gloss: [{ x: 3.8, y: 8.6, rx: 0.6, ry: 0.38, rot: -0.3, alpha: 0.9 }] });
+  S(ctx, (c) => ellipsePath(c, 7.4, 8.4, 1.8, 1.4, -0.5), { fill: '#4a2a42', ink: 1.0, shadow: '#2a1428', shadowOffset: [-0.6, -0.6], gloss: [{ x: 6.8, y: 7.9, rx: 0.55, ry: 0.35, rot: -0.5, alpha: 0.85 }] });
 });
 
 ingr('aglio', (ctx) => {
@@ -652,52 +795,49 @@ ingr('prezzemolo', (ctx) => {
 });
 
 ingr('origano', (ctx) => {
+  // a tall, narrow tied bunch of DRIED oregano: straight stems fanning out to a flat top of papery flower heads
   const R = rng(91);
-  const base: Pt = [0, 6.4];
-  const tips: Pt[] = [[-8.0, -2.2], [-6.6, -6.6], [-3.4, -9.4], [0.2, -10.2], [3.8, -9.2], [6.8, -6.6], [8.2, -2.6]];
-  const mid = (t: Pt): Pt => [base[0] + (t[0] - base[0]) * 0.5 - t[0] * 0.04, base[1] + (t[1] - base[1]) * 0.5];
-  // leaf pairs along each stem, shrinking toward the tip
+  const base: Pt = [0, 6.6];
+  const tips: Pt[] = [[-6.0, -8.6], [-3.8, -10.0], [-1.2, -10.6], [1.4, -10.4], [3.8, -10.0], [6.0, -8.8]];
+  const stemTip = (t: Pt, f: number): Pt => [base[0] + (t[0] - base[0]) * f, base[1] + (t[1] - base[1]) * f];
+  // little leaves in pairs on the upper half of each stem
   const leaves: { x: number; y: number; a: number; s: number }[] = [];
   for (const t of tips) {
     const a = Math.atan2(t[1] - base[1], t[0] - base[0]);
-    for (const f of [0.4, 0.58, 0.75]) {
-      const x = base[0] + (t[0] - base[0]) * f, y = base[1] + (t[1] - base[1]) * f;
-      for (const side of [-1, 1]) leaves.push({ x, y, a: a + side * (0.8 + R() * 0.25), s: 1.05 - f * 0.35 });
+    for (const f of [0.4, 0.54, 0.68, 0.82]) {
+      const [x, y] = stemTip(t, f);
+      for (const side of [-1, 1]) leaves.push({ x, y, a: a + side * (0.85 + R() * 0.3), s: 1.2 - f * 0.4 });
     }
   }
-  const stemB = (c: Ctx) => { for (const t of tips) taperPath(c, [base, mid(t), t], (u) => 0.9 - u * 0.35, 10); };
+  const stemB = (c: Ctx) => { for (const t of tips) taperPath(c, [base, stemTip(t, 0.5), t], (u) => 0.85 - u * 0.3, 8); };
   const leafB = (c: Ctx) => {
     for (const L of leaves) {
       c.save();
       c.translate(L.x, L.y);
       c.rotate(L.a);
-      leafPath(c, 2.5 * L.s, 1.6 * L.s, 0.5);
+      leafPath(c, 2.5 * L.s, 1.75 * L.s, 0.5);
       c.restore();
     }
   };
-  // dried flower heads: little clusters of papery bracts
-  const heads = tips.map((t) => Array.from({ length: 4 }, (_, k): [number, number, number] => {
-    const a = (k / 4) * Math.PI * 2 + R();
-    return [t[0] + Math.cos(a) * 0.95, t[1] + Math.sin(a) * 0.85, 0.95 + R() * 0.25];
-  }));
-  const headB = (c: Ctx) => { for (const h of heads) for (const [x, y, r] of h) circlePath(c, x, y, r); };
+  // dried flower heads at the tips: small oval clusters of papery bracts
+  const heads = tips.map((t) => Array.from({ length: 3 }, (_, k): [number, number, number] => [t[0] + (k - 1) * 0.6, t[1] + (k === 1 ? -0.4 : 0.2), 0.7 + R() * 0.15]));
+  const headB = (c: Ctx) => { for (const h of heads) for (const [x, y, r] of h) ellipsePath(c, x, y, r * 0.8, r); };
   G(ctx, [
-    { build: stemB, style: { fill: '#9c8656', shadow: 'none' } },
-    { build: leafB, style: { fill: '#91a656', shadow: '#647a38', shadowOffset: [-0.55, -0.6] } },
-    { build: headB, style: { fill: '#d2c995', shadow: '#a39c66', shadowOffset: [-0.5, -0.55] } },
-  ], 1.1);
-  for (const L of leaves) line(ctx, [[L.x, L.y], [L.x + Math.cos(L.a) * 1.7 * L.s, L.y + Math.sin(L.a) * 1.7 * L.s]], 0.25, '#c8dc90', false, 0.8);
+    { build: stemB, style: { fill: '#a08a58', shadow: 'none' } },
+    { build: leafB, style: { fill: '#8fa454', shadow: '#647a38', shadowOffset: [-0.5, -0.55] } },
+    { build: headB, style: { fill: '#c9c486', shadow: '#99945a', shadowOffset: [-0.4, -0.45] } },
+  ], 1.0);
+  for (const L of leaves) line(ctx, [[L.x, L.y], [L.x + Math.cos(L.a) * 1.5 * L.s, L.y + Math.sin(L.a) * 1.5 * L.s]], 0.25, '#c8dc90', false, 0.8);
   for (const h of heads) {
-    const [x, y] = h[0];
-    speckle(ctx, x, y, 1.6, 1.4, 6, '#d99ab2', 0.3, Math.floor(R() * 100), 0.95);
-    speckle(ctx, x - 0.4, y - 0.4, 1.2, 1.0, 3, '#fffbe0', 0.28, Math.floor(R() * 100), 0.95);
+    const [x, y] = h[1];
+    speckle(ctx, x, y, 1.4, 1.1, 5, '#d99ab2', 0.28, Math.floor(R() * 100), 0.95);
   }
   // cut stems under the tie
-  for (let i = -2; i <= 2; i++) inkLine2(ctx, [[i * 0.45, 7.0], [i * 0.85, 9.8]], 0.7, '#9c8656', 0.6, INK, false);
+  for (let i = -2; i <= 2; i++) inkLine2(ctx, [[i * 0.4, 7.0], [i * 0.7, 10.4]], 0.7, '#a08a58', 0.6, INK, false);
   // twine tie with a bow
-  S(ctx, (c) => roundRectPath(c, -2.1, 5.8, 4.2, 2.3, 0.8), { fill: '#d9b47a', ink: 0.9, shadow: '#a87c42', shadowOffset: [-0.5, -0.5] });
-  line(ctx, [[-1.9, 6.9], [1.9, 7.1]], 0.35, '#8a6230', false, 0.8);
-  S(ctx, (c) => { ellipsePath(c, 3.1, 6.0, 1.4, 0.8, -0.5); ellipsePath(c, 3.3, 8.0, 1.3, 0.7, 0.5); }, { fill: '#d9b47a', ink: 0.7, shadow: 'none' });
+  S(ctx, (c) => roundRectPath(c, -1.9, 5.6, 3.8, 2.3, 0.8), { fill: '#d9b47a', ink: 0.9, shadow: '#a87c42', shadowOffset: [-0.5, -0.5] });
+  line(ctx, [[-1.7, 6.7], [1.7, 6.9]], 0.35, '#8a6230', false, 0.8);
+  S(ctx, (c) => { ellipsePath(c, 2.9, 5.8, 1.4, 0.8, -0.5); ellipsePath(c, 3.1, 7.8, 1.3, 0.7, 0.5); }, { fill: '#d9b47a', ink: 0.7, shadow: 'none' });
 });
 
 // ===========================================================================
@@ -705,75 +845,126 @@ ingr('origano', (ctx) => {
 // ===========================================================================
 
 ingr('guanciale', (ctx) => {
-  // a triangular slab of cured cheek: peppered rind on top, the cut face below
-  const top: Pt[] = [[-9.8, 0.6], [-6.0, -3.6], [-0.6, -9.6], [5.0, -6.4], [9.6, -2.6], [1.8, 2.2]];
-  const front: Pt[] = [[-9.8, 0.6], [1.8, 2.2], [9.6, -2.6], [9.4, 2.0], [1.8, 7.2], [-9.6, 5.4]];
-  const topB = (c: Ctx) => smoothPath(c, top, true, 0.3);
-  const frontB = (c: Ctx) => smoothPath(c, front, true, 0.12);
+  // a whole cured cheek: a pear-shaped slab, mostly creamy fat with one thin rosy seam of lean,
+  // the black-pepper rind only round its edge, a string through the hole it hung from
+  ctx.rotate(0.22);
+  const outline: Pt[] = [[-0.6, -10.2], [2.6, -8.0], [5.6, -4.6], [9.4, 0.6], [10.0, 5.4], [6.4, 8.6], [-1.0, 8.8], [-7.6, 7.2], [-9.6, 3.4], [-7.2, -1.6], [-3.6, -7.0]];
+  const face = (c: Ctx) => smoothPath(c, outline, true, 0.5);
+  const side = (c: Ctx) => smoothPath(c, outline.map(([x, y]) => [x + 0.9, y + 1.7] as Pt), true, 0.5);
+  const inset = (c: Ctx) => smoothPath(c, outline.map(([x, y]) => [0.6 + (x - 0.6) * 0.8, 1.4 + (y - 1.4) * 0.8] as Pt), true, 0.5);
   G(ctx, [
-    { build: frontB, style: { fill: '#faeee0', shadow: '#e2c9b6', shadowOffset: [-1.6, -1.6] } },
-    { build: topB, style: { fill: '#d4a47c', shadow: '#b07c54', shadowOffset: [-1.8, -1.8] } },
+    { build: side, style: { fill: '#8c5a36', shadow: 'none' } },
+    { build: face, style: { fill: '#fcefdc', shadow: '#efd6b8', shadowOffset: [-1.8, -1.8] } },
   ], K);
-  // the cut face: white fat with a seam of rosy lean
-  inside(ctx, frontB, () => {
-    const band = (dy: number, w: number, col: string, a = 1) =>
-      line(ctx, [[-10.4, 1.2 + dy], [-4, 2.4 + dy], [1.8, 3.0 + dy], [6, 0.8 + dy], [10.2, -1.8 + dy]], w, col, true, a);
-    band(0.15, 0.8, '#c08a5e', 0.95);
-    band(2.2, 1.8, '#e5787e');
-    band(1.9, 0.5, '#f6b0ae', 0.95);
-    band(4.2, 0.85, '#e78a8e', 0.85);
+  // the peppered rind on the slab's thickness
+  inside(ctx, side, () => {
+    ctx.save();
+    ctx.beginPath();
+    face(ctx);
+    ctx.rect(-20, -20, 40, 40);
+    ctx.clip('evenodd');
+    speckle(ctx, 1, 2, 11, 10, 90, '#1e1614', 0.36, 16, 0.95);
+    ctx.restore();
   });
-  // cured outside, rubbed with black pepper (and a pinch of chili)
-  inside(ctx, topB, () => {
-    speckle(ctx, 0, -3.4, 9.6, 6.0, 130, '#2b2220', 0.4, 17, 0.95);
-    speckle(ctx, 0, -3.4, 9.0, 5.4, 14, '#c0442a', 0.3, 18, 0.85);
-    speckle(ctx, -2, -3.6, 5.0, 2.6, 10, '#f0d0a8', 0.32, 19, 0.75);
+  // one rosy seam of lean through the fat
+  inside(ctx, face, () => {
+    const seam: Pt[] = [[-9.8, 2.6], [-5.0, 1.6], [-0.4, 3.2], [4.6, 1.8], [10.4, 3.0]];
+    line(ctx, seam, 2.2, '#d9606c', true);
+    line(ctx, seam.map(([x, y]) => [x, y - 0.6] as Pt), 0.6, '#f4a6a6', true, 0.95);
+    line(ctx, [[-7.0, 5.8], [-2.0, 6.6], [3.0, 5.6], [8.0, 6.4]], 0.8, '#e48a90', true, 0.75);
+    line(ctx, [[-4.0, -3.2], [-0.6, -2.4], [3.4, -3.0]], 0.45, '#eaa0a0', true, 0.55);
+    // the rind round the edge: a dark band dusted with cracked pepper
+    ctx.save();
+    ctx.beginPath();
+    face(ctx);
+    inset(ctx);
+    ctx.clip('evenodd');
+    ctx.fillStyle = '#a8683a';
+    ctx.fillRect(-20, -20, 40, 40);
+    speckle(ctx, 0.6, 0, 10.5, 10.5, 170, '#1e1614', 0.4, 17, 0.95);
+    speckle(ctx, 0.6, 0, 10.5, 10.5, 16, '#c0442a', 0.3, 18, 0.9);
+    ctx.restore();
+    ctx.beginPath();
+    inset(ctx);
+    ctx.lineWidth = 0.4;
+    ctx.strokeStyle = '#7a4a2a';
+    ctx.globalAlpha = 0.7;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   });
-  glint(ctx, -4.6, -2.6, 1.8, 0.6, -0.8, 0.5);
-  // the hole it hung from, with a twist of string
-  S(ctx, (c) => ellipsePath(c, -0.7, -7.4, 0.8, 0.62), { fill: '#5a2e22', ink: 0.55, shadow: 'none' });
-  inkLine2(ctx, [[-0.7, -7.4], [-1.8, -9.4], [-3.4, -10.2], [-3.8, -8.8], [-2.4, -7.8]], 0.5, '#efd7a6', 0.5);
+  glint(ctx, -3.0, -1.6, 2.4, 0.9, -0.8, 0.8);
+  glint(ctx, 2.2, 5.0, 1.2, 0.4, -0.2, 0.55);
+  // the hole near the tip, and a loop of string
+  S(ctx, (c) => ellipsePath(c, 0.6, -6.6, 0.8, 0.65), { fill: '#4a2a1c', ink: 0.5, shadow: 'none' });
+  inkLine2(ctx, [[0.6, -6.6], [-0.6, -9.0], [-2.2, -11.4], [-3.4, -10.6], [-2.6, -8.4], [-0.6, -7.0]], 0.55, '#efd7a6', 0.5);
 });
 
 ingr('pancetta', (ctx) => {
-  // a second rolled slice behind
-  const back = (c: Ctx) => ellipsePath(c, 3.6, -3.6, 6.4, 5.6, 0.2);
-  S(ctx, back, { fill: '#e57c86', ink: K, shadow: '#bd5662', shadowOffset: [-1.2, -1.2] });
-  inside(ctx, back, () => {
+  // a thick slice of rolled pancetta (arrotolata): deep-red lean, an irregular, marbled spiral of
+  // fat, a thin dark rind round it, cracked pepper at the heart; three cubes in front
+  const cx = -1.6, cy = -1.4;
+  const R = rng(61);
+  const wob = Array.from({ length: 7 }, () => R());
+  const rad = (a: number) => 1 + (wob[0] - 0.5) * 0.12 * Math.sin(a * 2 + wob[1] * 6) + (wob[2] - 0.5) * 0.1 * Math.sin(a * 3 + wob[3] * 6);
+  const disc = (dx: number, dy: number, k = 1) => (c: Ctx) => {
     const pts: Pt[] = [];
-    for (let t = 0.6; t < 11.6; t += 0.25) pts.push([3.6 + Math.cos(t) * t * 0.5, -3.6 + Math.sin(t) * t * 0.45]);
-    line(ctx, pts, 1.0, '#fbeee6', false, 0.95);
-  });
-  // the front slice: a disc with visible thickness
-  const cx = -1.6, cy = 1.6, rx = 8.0, ry = 7.2;
-  const side = (c: Ctx) => ellipsePath(c, cx + 0.9, cy + 1.5, rx, ry);
-  const face = (c: Ctx) => ellipsePath(c, cx, cy, rx, ry);
-  G(ctx, [
-    { build: side, style: { fill: '#e9a49c', shadow: '#c06a66', shadowOffset: [-1.4, -1.4] } },
-    { build: face, style: { fill: '#e8737f', shadow: 'none' } },
-  ], K);
-  // layered edge
-  inside(ctx, side, () => {
-    for (let i = 0; i < 9; i++) {
-      const a = 0.2 + i * 0.32;
-      line(ctx, [[cx + Math.cos(a) * rx * 0.95, cy + Math.sin(a) * ry * 0.95], [cx + 0.9 + Math.cos(a) * rx, cy + 1.5 + Math.sin(a) * ry]], 0.6, i % 2 ? '#fbeee6' : '#d9646e', false, 0.85);
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2;
+      pts.push([cx + dx + Math.cos(a) * 8.4 * k * rad(a), cy + dy + Math.sin(a) * 7.8 * k * rad(a)]);
     }
+    smoothPath(c, pts, true, 0.5);
+  };
+  const face = disc(0, 0), side = disc(0.8, 1.5);
+  G(ctx, [
+    { build: side, style: { fill: '#9a3a3c', shadow: 'none' } },
+    { build: face, style: { fill: '#b8323e', shadow: 'none' } },
+  ], K);
+  // layers on the slice's thickness
+  inside(ctx, side, () => {
+    for (let i = 0; i < 10; i++) {
+      const a = 0.1 + i * 0.3;
+      line(ctx, [[cx + Math.cos(a) * 8.0, cy + Math.sin(a) * 7.4], [cx + 0.8 + Math.cos(a) * 8.6, cy + 1.5 + Math.sin(a) * 8.0]], 0.7, i % 3 ? '#f3dccb' : '#b8484e', false, 0.85);
+  }
   });
   inside(ctx, face, () => {
-    // the spiral of fat in the pink meat
-    const pts: Pt[] = [];
-    for (let t = 0.5; t < 13.8; t += 0.2) pts.push([cx + Math.cos(t) * t * 0.56, cy + Math.sin(t) * t * 0.5]);
-    line(ctx, pts, 1.7, '#fdf1ea', false);
-    line(ctx, pts.map(([x, y]) => [x + 0.35, y + 0.4] as Pt), 0.45, '#c9545f', false, 0.6);
-    // rind ring
+    // the spiral of fat: irregular width, wobbling, with marbled flecks
+    const sp: Pt[] = [];
+    for (let t = 1.4; t < 13.2; t += 0.14) {
+      const r = t * 0.6 * (1 + Math.sin(t * 2.3 + 0.6) * 0.12 + Math.sin(t * 0.9) * 0.06);
+      sp.push([cx + Math.cos(t) * r * 1.05, cy + Math.sin(t) * r]);
+    }
+    for (let i = 0; i < sp.length - 1; i++) {
+      const w = 0.55 + 1.5 * Math.pow(0.5 + 0.5 * Math.sin(i * 0.19 + 1.0), 1.6);
+      line(ctx, [sp[i], sp[i + 1]], w, '#f4e2ce', false);
+    }
+    line(ctx, sp.map(([x, y]) => [x + 0.35, y + 0.35] as Pt), 0.35, '#e0b4a0', true, 0.55);
+    for (let i = 0; i < 14; i++) {
+      const a = R() * Math.PI * 2, r = 1.8 + R() * 5.6;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.93;
+      line(ctx, [[x, y], [x + Math.cos(a + 1.6) * (0.6 + R()), y + Math.sin(a + 1.6) * (0.6 + R())]], 0.3 + R() * 0.3, '#eec2b2', false, 0.75);
+    }
+    // lean shading toward the lower right
+    crescent(ctx, face, '#7a1824', 0.35, [-2.0, -2.0]);
+    // thin dark rind ring
     ctx.beginPath();
-    ellipsePath(ctx, cx, cy, rx - 0.5, ry - 0.5);
-    ctx.lineWidth = 1.0;
-    ctx.strokeStyle = '#c45a5a';
+    disc(0, 0, 0.965)(ctx);
+    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = '#7a2e24';
     ctx.stroke();
   });
-  crescent(ctx, face, '#9c2f3e', 0.3, [-2.0, -2.0]);
-  glint(ctx, cx - 4.0, cy - 3.8, 1.7, 0.75, -0.6, 0.7);
+  // cracked black pepper at the heart
+  speckle(ctx, cx + 0.2, cy, 1.6, 1.5, 12, '#1e1614', 0.32, 62, 1);
+  glint(ctx, cx - 4.2, cy - 4.0, 1.8, 0.7, -0.7, 0.75);
+  // three cubes in front
+  const cube = (x: number, y: number, s: number) => {
+    dice(ctx, x, y, s, '#c8404a', 0.8);
+    const a = s * 0.5;
+    line(ctx, [[x - a, y + a * 0.05], [x, y + a * 0.55], [x + a, y + a * 0.05]], 0.75, '#f7e6d6', false);
+    line(ctx, [[x - a * 0.5, y - a * 0.75], [x + a * 0.5, y - a * 0.25]], 0.55, '#f7e6d6', false, 0.9);
+  };
+  cube(6.4, 6.6, 4.0);
+  cube(9.4, 3.4, 3.4);
+  cube(2.6, 8.8, 3.4);
 });
 
 ingr('manzo', (ctx) => {
@@ -809,54 +1000,63 @@ ingr('manzo', (ctx) => {
   glint(ctx, -3.4, -3.8, 1.9, 0.8, -0.5, 0.5);
 });
 
-ingr('tuorli', (ctx) => {
-  // inside of the half shell
-  const rim = (c: Ctx) => ellipsePath(c, 0, 1.4, 9.0, 3.0);
-  S(ctx, rim, { fill: '#fff3df', ink: K, shadow: '#e8d2b4', shadowOffset: [1.6, 1.6] });
-  // two deep-orange yolks
-  const yolk = (x: number, y: number, r: number) => S(ctx, (c) => circlePath(c, x, y, r), {
-    fill: radial(ctx, x - r * 0.3, y - r * 0.35, r * 1.3, [[0, '#ffd45a'], [0.5, '#ffaa18'], [1, '#f08400']]),
+/** A glossy deep-orange egg yolk (a slightly flattened dome). */
+function yolk(ctx: Ctx, x: number, y: number, r: number, flat = 1) {
+  S(ctx, (c) => ellipsePath(c, x, y, r, r * flat), {
+    fill: radial(ctx, x - r * 0.3, y - r * 0.35 * flat, r * 1.3, [[0, '#ffd45a'], [0.5, '#ffaa18'], [1, '#f08400']]),
     ink: 1.25,
     shadow: '#e27200',
-    shadowOffset: [-1.3, -1.3],
+    shadowOffset: [-1.3, -1.3 * flat],
     gloss: [
-      { x: x - r * 0.38, y: y - r * 0.42, rx: r * 0.32, ry: r * 0.2, rot: -0.6, alpha: 0.95 },
-      { x: x + r * 0.42, y: y + r * 0.3, rx: r * 0.1, ry: r * 0.07, alpha: 0.7 },
+      { x: x - r * 0.38, y: y - r * 0.42 * flat, rx: r * 0.32, ry: r * 0.2, rot: -0.6, alpha: 0.95 },
+      { x: x + r * 0.42, y: y + r * 0.3 * flat, rx: r * 0.1, ry: r * 0.07, alpha: 0.7 },
     ],
   });
-  yolk(3.3, -2.5, 4.2);
-  yolk(-3.0, -1.0, 4.5);
-  // front of the shell with a broken rim
-  const front = (c: Ctx) => {
-    c.moveTo(-9.0, 1.4);
-    c.bezierCurveTo(-9.0, 7.6, -4.6, 10.0, 0, 10.0);
-    c.bezierCurveTo(4.6, 10.0, 9.0, 7.6, 9.0, 1.4);
-    const jag: Pt[] = [[7.8, 2.9], [6.6, 2.0], [5.2, 3.8], [3.6, 2.5], [2.0, 4.1], [0.2, 2.8], [-1.6, 4.3], [-3.4, 3.0], [-5.0, 4.1], [-6.6, 2.6], [-7.8, 3.1]];
-    for (const [x, y] of jag) c.lineTo(x, y);
-    c.closePath();
-  };
-  S(ctx, front, {
-    fill: '#f2d2ac',
-    ink: K,
-    shadow: '#d4a679',
-    shadowOffset: [-2.2, -2.0],
-    gloss: [{ x: -5.6, y: 5.6, rx: 1.0, ry: 2.0, rot: 0.6, alpha: 0.7 }],
+}
+
+ingr('tuorli', (ctx) => {
+  // a half eggshell standing tilted, its yolk domed over the broken rim; a second yolk in front of it
+  rot(ctx, 3.0, -1.0, 0.28, () => {
+    const cx = 0, rimY = -1.2, rx = 6.6, ry = 2.2;
+    const inner = (c: Ctx) => ellipsePath(c, cx, rimY, rx, ry);
+    S(ctx, inner, { fill: '#fff3df', ink: K, shadow: '#e8d2b4', shadowOffset: [1.4, 1.4] });
+    yolk(ctx, cx + 0.2, rimY - 2.2, 4.6, 0.92);
+    const shell = (c: Ctx) => {
+      c.moveTo(cx - rx, rimY);
+      c.bezierCurveTo(cx - rx, rimY + 7.0, cx - 3.6, rimY + 10.6, cx, rimY + 10.6);
+      c.bezierCurveTo(cx + 3.6, rimY + 10.6, cx + rx, rimY + 7.0, cx + rx, rimY);
+      const jag: Pt[] = [[5.6, 1.0], [4.4, 0.2], [3.0, 1.6], [1.6, 0.4], [0.2, 1.8], [-1.4, 0.6], [-2.8, 1.8], [-4.2, 0.4], [-5.6, 1.2]];
+      for (const [x, y] of jag) c.lineTo(cx + x, rimY + y);
+      c.closePath();
+    };
+    S(ctx, shell, {
+      fill: '#f4d6b2',
+      ink: K,
+      shadow: '#d6a87c',
+      shadowOffset: [-2.0, -1.6],
+      gloss: [{ x: cx - 4.0, y: rimY + 4.8, rx: 0.9, ry: 2.2, rot: 0.4, alpha: 0.75 }],
+    });
+    inside(ctx, shell, () => speckle(ctx, cx + 1, rimY + 6.5, 5, 3, 8, '#c98f5e', 0.25, 4, 0.7));
+    line(ctx, [[5.6, 1.3], [4.4, 0.5], [3.0, 1.9], [1.6, 0.7], [0.2, 2.1], [-1.4, 0.9], [-2.8, 2.1], [-4.2, 0.7], [-5.6, 1.5]].map(([x, y]) => [cx + x, rimY + y] as Pt), 0.5, '#fff6e6', false, 0.9);
   });
-  inside(ctx, front, () => speckle(ctx, 1, 7, 7, 3, 9, '#c98f5e', 0.25, 4, 0.7));
-  line(ctx, [[-7.6, 3.4], [-6.6, 2.9], [-5.0, 4.4], [-3.4, 3.3], [-1.6, 4.6], [0.2, 3.1], [2.0, 4.4], [3.6, 2.8], [5.2, 4.1], [6.6, 2.3], [7.8, 3.2]], 0.5, '#fff6e6', false, 0.9);
+  // the second yolk, resting in front
+  yolk(ctx, -5.4, 5.6, 4.4, 0.8);
 });
 
 /** A cheese wedge: tip on the left (or right when `flip`), rind on the curved back. */
 function wedge(ctx: Ctx, o: {
   paste: string; pasteTop: string; pasteSh: string; rind: string; rindL: string; seed: number;
   flip?: boolean; crag?: boolean;
+  /** depth of the top face (1 = default) and height of the cut face */
+  dk?: number; hf?: number;
   /** marks on the rind, called at points along it (x, y, i): basket weave, pin dots... */
   mark?: (x: number, y: number, i: number) => void;
 }) {
   const R = rng(o.seed);
   ctx.save();
   if (o.flip) ctx.scale(-1, 1);
-  const tipT: Pt = [-10, 0.6], A: Pt = [1.6, -8.6], C: Pt = [8.6, -8.4], B: Pt = [9.8, -2.8], Bb: Pt = [9.8, 4.4], tipB: Pt = [-10, 7.8];
+  const dk = o.dk ?? 1, hf = o.hf ?? 7.2, y0 = 0.6;
+  const tipT: Pt = [-10, y0], A: Pt = [1.6, y0 - 9.2 * dk], C: Pt = [8.6, y0 - 9.0 * dk], B: Pt = [9.8, y0 - 3.4 * dk], Bb: Pt = [9.8, B[1] + hf], tipB: Pt = [-10, y0 + hf];
   // front edge (jagged when the cheese is broken rather than cut)
   const edge: Pt[] = [tipT];
   const n = o.crag ? 7 : 1;
@@ -885,7 +1085,7 @@ function wedge(ctx: Ctx, o: {
     ctx.lineWidth = RW;
     ctx.strokeStyle = o.rind;
     ctx.stroke();
-    line(ctx, sample([A, [6.6, -7.6], [9.0, -5.2], B], 12).map(([x, y]) => [x - 1.5, y + 0.9] as Pt), 0.35, INK, true, 0.45);
+    line(ctx, sample([A, [6.6, A[1] + 1.0 * dk], [9.0, A[1] + 3.4 * dk], B], 12).map(([x, y]) => [x - 1.5, y + 0.9] as Pt), 0.35, INK, true, 0.45);
     if (o.mark) {
       for (let i = 1; i < 9; i++) {
         const t = i / 9;
@@ -896,49 +1096,91 @@ function wedge(ctx: Ctx, o: {
     }
   });
   // ...and the rind end of the front face
-  const rindEnd = (c: Ctx) => polyPath(c, [[7.6, -2.4], B, Bb, [7.6, 4.8]]);
+  const rindEnd = (c: Ctx) => polyPath(c, [[7.6, B[1] + 0.4], B, Bb, [7.6, Bb[1] + 0.4]]);
   inside(ctx, front, () => {
     S(ctx, rindEnd, { fill: o.rind, ink: 0, shadow: 'none' });
     inside(ctx, rindEnd, () => {
-      if (o.mark) for (let j = 0; j < 4; j++) o.mark(8.7, -1.0 + j * 1.6, j + 20);
+      if (o.mark) for (let j = 0; j < 4; j++) o.mark(8.7, B[1] + 1.8 + (j * (hf - 2)) / 3.4, j + 20);
     });
-    line(ctx, [[7.6, -2.2], [7.6, 4.8]], 0.5, INK, false, 0.6);
-    line(ctx, [[8.2, -1.8], [8.2, 4.2]], 0.4, o.rindL, false, 0.8);
+    line(ctx, [[7.6, B[1] + 0.6], [7.6, Bb[1] + 0.4]], 0.5, INK, false, 0.6);
+    line(ctx, [[8.2, B[1] + 1.0], [8.2, Bb[1] - 0.2]], 0.4, o.rindL, false, 0.8);
   });
   ctx.restore();
 }
 
 ingr('pecorino', (ctx) => {
-  ctx.translate(0, 0.6);
-  wedge(ctx, {
-    paste: '#f2ead5', pasteTop: '#fffaee', pasteSh: '#d6c9ae', rind: '#2a2422', rindL: '#7b726a', seed: 3,
-    // the basket-weave print of the mould on the black rind
-    mark: (x, y, i) => line(ctx, [[x - 0.45, y + (i % 2 ? -0.45 : 0.45)], [x + 0.45, y + (i % 2 ? 0.45 : -0.45)]], 0.32, '#6e6660', false, 0.9),
+  // a TALL wedge of Pecorino Romano (the wheels are tall drums): chalk-white paste, a thick black rind
+  // with the basket-weave print along the curved back and down the side
+  const T: Pt = [-8.0, -1.6], A: Pt = [-1.6, -10.4], C: Pt = [6.6, -11.4], B: Pt = [8.4, -4.2];
+  const T2: Pt = [-8.0, 10.2], B2: Pt = [8.4, 9.2];
+  const top = (c: Ctx) => {
+    c.moveTo(T[0], T[1]);
+    c.lineTo(A[0], A[1]);
+    c.quadraticCurveTo(C[0], C[1], B[0], B[1]);
+    c.closePath();
+  };
+  const front = (c: Ctx) => polyPath(c, [T, B, B2, T2]);
+  // the rind seen past the cut face: the curved back of the drum
+  const back = (c: Ctx) => {
+    c.moveTo(A[0], A[1]);
+    c.quadraticCurveTo(C[0], C[1], B[0], B[1]);
+    c.lineTo(B2[0], B2[1]);
+    c.lineTo(B2[0] + 1.2, B2[1] - 1.0);
+    c.lineTo(B[0] + 1.3, B[1] - 1.2);
+    c.quadraticCurveTo(C[0] + 1.0, C[1] - 0.9, A[0] + 0.2, A[1] - 0.7);
+    c.closePath();
+  };
+  G(ctx, [
+    { build: back, style: { fill: '#2a2422', shadow: 'none' } },
+    { build: front, style: { fill: '#ece2c8', shadow: '#d4c4a2', shadowOffset: [-1.8, -1.4] } },
+    { build: top, style: { fill: '#fffbf0', shadow: 'none' } },
+  ], K);
+  line(ctx, [T, B], 0.7, INK, false, 0.85);
+  // thick black rind band along the top's curved back, and down the cut face's far edge
+  inside(ctx, top, () => {
+    ctx.beginPath();
+    ctx.moveTo(A[0] - 1.0, A[1] - 0.3);
+    ctx.quadraticCurveTo(C[0], C[1], B[0] + 0.4, B[1] + 0.4);
+    ctx.lineWidth = 5.0;
+    ctx.strokeStyle = '#2a2422';
+    ctx.stroke();
+    line(ctx, sample([[A[0] + 0.4, A[1] + 2.6], [4.0, -7.8], [B[0] - 2.4, B[1] + 0.4]], 10), 0.4, '#9a8e7c', true, 0.7);
   });
-  // small, sparse eyes and a faint grain
-  for (const [x, y, r] of [[-3.6, 3.4, 0.55], [1.2, 2.4, 0.42], [4.0, 4.6, 0.5], [-0.8, -3.2, 0.42], [-5.6, 5.0, 0.36], [3.0, -5.4, 0.38], [-4.6, -0.8, 0.32]] as [number, number, number][]) {
+  const rindSide = (c: Ctx) => polyPath(c, [[6.0, -4.0], B, B2, [6.0, 9.4]]);
+  inside(ctx, front, () => {
+    S(ctx, rindSide, { fill: '#2a2422', ink: 0, shadow: 'none' });
+    line(ctx, [[6.0, -3.8], [6.0, 9.4]], 0.45, '#9a8e7c', false, 0.7);
+  });
+  // the basket-weave print of the moulds on the rind (grey criss-cross)
+  const R = rng(3);
+  const weave = (x: number, y: number, i: number) => line(ctx, [[x - 0.5, y + (i % 2 ? -0.5 : 0.5)], [x + 0.5, y + (i % 2 ? 0.5 : -0.5)]], 0.32, '#6e6660', false, 0.9);
+  inside(ctx, back, () => { for (let i = 0; i < 30; i++) weave(6.0 + R() * 4.0, -10.4 + R() * 19.0, i); });
+  inside(ctx, rindSide, () => { for (let i = 0; i < 12; i++) weave(6.6 + R() * 1.8, -3.0 + R() * 12.0, i); });
+  // small, sparse eyes and a faint grain in the paste
+  for (const [x, y, r] of [[-4.0, 4.0, 0.55], [0.6, 2.6, 0.42], [3.0, 6.2, 0.5], [-1.6, 7.6, 0.36], [-5.6, 7.8, 0.36], [-2.4, -5.0, 0.36], [1.2, -6.4, 0.32], [-4.2, -2.6, 0.3]] as [number, number, number][]) {
     S(ctx, (c) => ellipsePath(c, x, y, r, r * 0.75), { fill: '#d8caa8', ink: 0, shadow: 'none' });
     glint(ctx, x + r * 0.3, y + r * 0.35, r * 0.4, r * 0.25, 0, 0.8);
   }
-  speckle(ctx, -1, 4.4, 7.6, 2.6, 10, '#e2d6bc', 0.3, 5, 0.8);
-  glint(ctx, -3.0, -2.2, 2.6, 0.7, -0.36, 0.75);
+  speckle(ctx, -1, 4.0, 6.0, 5.0, 12, '#e2d6bc', 0.3, 5, 0.8);
+  glint(ctx, -5.2, 3.0, 0.7, 3.0, 0.02, 0.6);
 });
 
 ingr('parmigiano', (ctx) => {
-  ctx.translate(0, 0.6);
+  // a LOW, wide wedge of Parmigiano Reggiano: grainy gold paste, a thick golden rind with the pin-dot print
   wedge(ctx, {
     paste: '#f2cc6e', pasteTop: '#fbe3a0', pasteSh: '#d9a443', rind: '#c4842e', rindL: '#f1c27a', flip: true, crag: true, seed: 9,
+    dk: 0.62, hf: 5.6,
     // the pin-dot rind (puntinatura)
     mark: (x, y) => {
       for (const [dx, dy] of [[-0.5, -0.4], [0.5, 0.4]] as Pt[]) S(ctx, (c) => circlePath(c, x + dx, y + dy, 0.3), { fill: '#6e3c10', ink: 0, shadow: 'none' });
     },
   });
   // granular, craggy paste with tyrosine crystals
-  speckle(ctx, 0, 3.6, 8.5, 2.8, 26, '#d49a3a', 0.36, 12, 0.85);
-  speckle(ctx, 0, 3.6, 8.5, 2.8, 14, '#fff7da', 0.32, 13, 1);
-  speckle(ctx, -1, -3.6, 5, 2.4, 10, '#fffbe8', 0.3, 14, 1);
-  speckle(ctx, 1, -3.0, 6, 2.6, 10, '#e2b250', 0.3, 15, 0.8);
-  glint(ctx, 3.0, -2.6, 2.2, 0.6, 0.3, 0.65);
+  speckle(ctx, 0, 3.4, 8.5, 2.2, 26, '#d49a3a', 0.36, 12, 0.85);
+  speckle(ctx, 0, 3.4, 8.5, 2.2, 14, '#fff7da', 0.32, 13, 1);
+  speckle(ctx, 1, -2.0, 5, 1.6, 10, '#fffbe8', 0.3, 14, 1);
+  speckle(ctx, 1, -1.8, 6, 1.6, 10, '#e2b250', 0.3, 15, 0.8);
+  glint(ctx, 3.0, -1.6, 2.2, 0.5, 0.2, 0.65);
 });
 
 ingr('pepe', (ctx) => {
@@ -990,13 +1232,13 @@ ingr('burro', (ctx) => {
   ctx.save();
   ctx.translate(-0.4, -2.0);
   const u: Pt = [1, 0.18], v: Pt = [0.55, -0.42];
-  const L = 12.4, D = 7.0, H = 5.6;
-  const P0: Pt = [-7.6, 6.2];
+  const L = 11.6, D = 6.4, H = 7.6;
+  const P0: Pt = [-7.2, 7.0];
   const add = (p: Pt, q: Pt, k: number): Pt => [p[0] + q[0] * k, p[1] + q[1] * k];
   const P1 = add(P0, u, L), P3 = add(P0, v, D), P2 = add(P1, v, D);
   const Q0: Pt = [P0[0], P0[1] - H], Q1: Pt = [P1[0], P1[1] - H], Q2: Pt = [P2[0], P2[1] - H], Q3: Pt = [P3[0], P3[1] - H];
   // the parchment it came in, opened out flat (crinkled edges, one corner folded back)
-  const e = 1.9;
+  const e = 1.7;
   const c0 = add(add(P0, u, -e), v, -e * 0.8), c1 = add(add(P1, u, e), v, -e * 0.8), c2 = add(add(P2, u, e * 0.8), v, e * 0.5), c3 = add(add(P3, u, -e), v, e * 0.5);
   const R = rng(8);
   const crinkle = (a: Pt, b: Pt, k: number): Pt[] => Array.from({ length: k }, (_, i) => {
@@ -1033,31 +1275,31 @@ ingr('burro', (ctx) => {
 // ===========================================================================
 
 ingr('acqua', (ctx) => {
-  const cx = -1.4, cy = 0.8, rx = 7.0, ry = 2.5;
-  // the handle rises from the back of the rim and ends in a hook
-  tube(ctx, [[cx + 4.6, cy - 1.4], [cx + 6.6, cy - 5.6], [cx + 8.0, cy - 9.4], [cx + 8.2, cy - 11.0], [cx + 7.0, cy - 11.6]], 1.45, '#d7dee8', K, true, '#ffffff', 0.9);
-  // deep round bowl + rim, one silhouette
+  // a steel ladle: a round hemispherical bowl on a long, steep handle, full of cloudy, starchy pasta water
+  const cx = -3.0, cy = 2.6, rx = 6.4, ry = 1.9, d = 6.4;
+  // the handle rises steeply from the back of the rim and ends in a hook
+  tube(ctx, [[cx + 3.6, cy - 0.8], [cx + 5.6, cy - 5.6], [cx + 7.6, cy - 10.4], [cx + 8.6, cy - 13.2], [cx + 7.6, cy - 14.6], [cx + 6.4, cy - 13.8]], 1.35, '#d7dee8', K, true, '#ffffff', 0.9);
   const bowl = (c: Ctx) => {
     c.moveTo(cx - rx, cy);
-    c.bezierCurveTo(cx - rx, cy + 7.2, cx - 3.6, cy + 9.0, cx, cy + 9.0);
-    c.bezierCurveTo(cx + 3.6, cy + 9.0, cx + rx, cy + 7.2, cx + rx, cy);
+    c.bezierCurveTo(cx - rx, cy + d * 0.62, cx - rx * 0.56, cy + d, cx, cy + d);
+    c.bezierCurveTo(cx + rx * 0.56, cy + d, cx + rx, cy + d * 0.62, cx + rx, cy);
     c.closePath();
   };
   const rim = (c: Ctx) => ellipsePath(c, cx, cy, rx, ry);
   G(ctx, [
-    { build: bowl, style: { fill: linear(ctx, cx - rx, 0, cx + rx, 0, [[0, '#ffffff'], [0.28, '#e2e8f0'], [0.75, '#97a3b6'], [1, '#c4ccd8']]), shadow: 'none' } },
+    { build: bowl, style: { fill: linear(ctx, cx - rx, 0, cx + rx, 0, [[0, '#ffffff'], [0.3, '#e2e8f0'], [0.75, '#97a3b6'], [1, '#c4ccd8']]), shadow: 'none' } },
     { build: rim, style: { fill: '#aeb8c8', shadow: 'none' } },
   ], K);
   inside(ctx, bowl, () => {
-    line(ctx, [[cx - 5.2, cy + 3.0], [cx - 4.2, cy + 6.4], [cx - 1.6, cy + 7.8]], 0.95, '#ffffff', true, 0.9);
-    line(ctx, [[cx + 4.8, cy + 3.4], [cx + 3.8, cy + 6.2]], 0.5, '#e8edf4', true, 0.7);
+    line(ctx, [[cx - 5.0, cy + 2.0], [cx - 3.8, cy + 4.6], [cx - 1.4, cy + 5.8]], 0.9, '#ffffff', true, 0.9);
+    line(ctx, [[cx + 4.8, cy + 2.2], [cx + 3.6, cy + 4.4]], 0.45, '#e8edf4', true, 0.7);
   });
-  // cloudy, starchy water (opalescent, not clear)
-  const water = (c: Ctx) => ellipsePath(c, cx, cy + 0.25, rx - 0.85, ry - 0.6);
-  S(ctx, water, { fill: radial(ctx, cx - 1.8, cy - 0.2, rx, [[0, '#ffffff'], [0.5, '#e8f2f2'], [1, '#bcd4dc']]), ink: 0.6, inkColor: '#6f8296', shadow: 'none' });
+  // cloudy, opalescent water filled to the brim
+  const water = (c: Ctx) => ellipsePath(c, cx, cy + 0.15, rx - 0.75, ry - 0.5);
+  S(ctx, water, { fill: radial(ctx, cx - 2.0, cy - 0.3, rx, [[0, '#ffffff'], [0.5, '#eef4f0'], [1, '#c4d6d8']]), ink: 0.55, inkColor: '#6f8296', shadow: 'none' });
   inside(ctx, water, () => {
-    line(ctx, [[cx - 4.2, cy - 0.2], [cx - 2.0, cy - 0.7], [cx + 0.6, cy - 0.3]], 0.45, '#ffffff', true, 0.95);
-    for (const [x, y, r] of [[cx + 2.6, cy + 0.6, 0.45], [cx + 3.7, cy - 0.2, 0.3], [cx + 1.6, cy + 1.2, 0.3]] as [number, number, number][]) {
+    line(ctx, [[cx - 4.6, cy - 0.3], [cx - 2.2, cy - 0.8], [cx + 0.4, cy - 0.4]], 0.45, '#ffffff', true, 0.95);
+    for (const [x, y, r] of [[cx + 2.8, cy + 0.5, 0.45], [cx + 4.0, cy - 0.2, 0.3], [cx + 1.8, cy + 1.0, 0.3]] as [number, number, number][]) {
       ctx.beginPath();
       circlePath(ctx, x, y, r);
       ctx.lineWidth = 0.25;
@@ -1066,70 +1308,81 @@ ingr('acqua', (ctx) => {
     }
   });
   // one spaghetto draped over the rim: it IS pasta water
-  inkLine2(ctx, [[cx - 0.6, cy + 0.4], [cx - 3.6, cy + 1.6], [cx - 6.0, cy + 2.2], [cx - 7.6, cy + 3.6], [cx - 7.6, cy + 6.0]], 0.85, '#f4d27a', 0.55);
+  inkLine2(ctx, [[cx + 1.2, cy + 0.4], [cx - 1.4, cy + 0.9], [cx - 3.0, cy + 1.6], [cx - 3.6, cy + 3.0], [cx - 3.0, cy + 4.0], [cx - 3.8, cy + 5.2]], 0.75, '#f4d27a', 0.5);
   // steam
-  for (const [x, a] of [[cx - 2.4, 1], [cx + 1.6, -1]] as [number, number][]) {
-    const pts: Pt[] = [[x, cy - 2.6], [x - 1.0 * a, cy - 4.6], [x + 0.6 * a, cy - 6.8], [x - 0.5 * a, cy - 9.0]];
+  for (const [x, a] of [[cx - 2.4, 1], [cx + 1.8, -1]] as [number, number][]) {
+    const pts: Pt[] = [[x, cy - 2.2], [x - 1.0 * a, cy - 4.4], [x + 0.6 * a, cy - 6.8], [x - 0.5 * a, cy - 9.2]];
     line(ctx, pts, 1.7, '#8fa6b8', true, 0.5);
     line(ctx, pts, 1.05, '#ffffff', true, 0.95);
   }
 });
 
 ingr('vino', (ctx) => {
-  // white grapes at the foot (behind the bottle's right side)
-  const grapes: [number, number][] = [[6.0, 3.0], [8.4, 3.4], [5.0, 5.4], [7.4, 5.8], [9.0, 6.6], [6.2, 8.0], [8.0, 8.8]];
-  // vine leaf
-  rot(ctx, 7.0, 1.4, -0.6, () => {
-    S(ctx, (c) => {
-      c.moveTo(0, 0);
-      c.bezierCurveTo(-1.0, -1.6, 0.4, -3.6, 1.6, -2.4);
-      c.bezierCurveTo(2.0, -4.0, 4.4, -3.6, 3.8, -1.6);
-      c.bezierCurveTo(5.4, -1.2, 5.0, 1.0, 3.2, 0.8);
-      c.bezierCurveTo(2.4, 1.6, 0.8, 1.4, 0, 0);
-      c.closePath();
-    }, { fill: '#5ea040', ink: 0.9, shadow: '#3c7a2c', shadowOffset: [-0.6, -0.6] });
-    line(ctx, [[0.3, 0], [2.6, -1.4]], 0.3, '#b6e08a', false, 0.9);
-  });
-  for (const [x, y] of grapes) {
-    S(ctx, (c) => circlePath(c, x, y, 1.65), { fill: '#cddc66', ink: 0.85, shadow: '#9cae38', shadowOffset: [-0.6, -0.6], gloss: [{ x: x - 0.55, y: y - 0.6, rx: 0.45, ry: 0.3, rot: -0.6, alpha: 0.95 }] });
-  }
-  rot(ctx, -2.4, 0.4, -0.2, () => {
+  // a slender bottle of dry white (green glass) behind a stemmed glass of straw-coloured wine
+  rot(ctx, -3.6, 0, -0.06, () => {
+    const hw = 3.1, nw = 1.15;
     const bottle = (c: Ctx) => {
-      c.moveTo(-1.4, -8.2);
-      c.lineTo(-1.4, -4.8);
-      c.bezierCurveTo(-1.4, -3.0, -3.7, -2.8, -3.7, -0.6);
-      c.lineTo(-3.7, 9.0);
-      c.quadraticCurveTo(-3.7, 10.0, -2.7, 10.0);
-      c.lineTo(2.7, 10.0);
-      c.quadraticCurveTo(3.7, 10.0, 3.7, 9.0);
-      c.lineTo(3.7, -0.6);
-      c.bezierCurveTo(3.7, -2.8, 1.4, -3.0, 1.4, -4.8);
-      c.lineTo(1.4, -8.2);
+      c.moveTo(-nw, -11.0);
+      c.lineTo(-nw, -5.6);
+      c.bezierCurveTo(-nw, -3.6, -hw, -3.6, -hw, -1.0);
+      c.lineTo(-hw, 9.8);
+      c.quadraticCurveTo(-hw, 10.8, -hw + 1.0, 10.8);
+      c.lineTo(hw - 1.0, 10.8);
+      c.quadraticCurveTo(hw, 10.8, hw, 9.8);
+      c.lineTo(hw, -1.0);
+      c.bezierCurveTo(hw, -3.6, nw, -3.6, nw, -5.6);
+      c.lineTo(nw, -11.0);
       c.closePath();
     };
-    S(ctx, bottle, { fill: '#e4efcf', ink: K, shadow: 'none' });
-    // straw-coloured dry white, up to the shoulder
+    S(ctx, bottle, { fill: linear(ctx, -hw, 0, hw, 0, [[0, '#5f9a50'], [0.45, '#3a7038'], [1, '#1f4422']]), ink: K, shadow: 'none' });
     inside(ctx, bottle, () => {
-      ctx.fillStyle = linear(ctx, -3.7, 0, 3.7, 0, [[0, '#fbf1b8'], [0.5, '#efd978'], [1, '#c9a93a']]);
-      ctx.fillRect(-5, -2.2, 10, 13);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.beginPath();
-      ellipsePath(ctx, 0, -2.2, 3.6, 0.5);
-      ctx.fillStyle = '#fff8cc';
+      roundRectPath(ctx, -2.3, -1.6, 0.9, 11.0, 0.45);
       ctx.fill();
-    });
-    crescent(ctx, bottle, '#7a7a2a', 0.3, [-1.6, -1.4]);
-    inside(ctx, bottle, () => {
-      line(ctx, [[-2.6, -0.6], [-2.7, 8.6]], 0.8, '#ffffff', false, 0.75);
-      line(ctx, [[-0.6, -7.6], [-0.6, -4.8]], 0.5, '#ffffff', false, 0.8);
-      // plain label (no text): a band with a little grape mark
-      S(ctx, (c) => roundRectPath(c, -3.8, 2.6, 7.6, 4.4, 0.4), { fill: '#fbf3dc', ink: 0.6, shadow: '#dccfb0', shadowOffset: [-1.0, -0.6] });
-      for (const [x, y] of [[-0.6, 4.2], [0.6, 4.2], [0, 5.2]] as Pt[]) S(ctx, (c) => circlePath(c, x, y, 0.55), { fill: '#9cae38', ink: 0, shadow: 'none' });
-      line(ctx, [[-2.6, 3.3], [2.6, 3.3]], 0.4, '#b5343e', false, 0.8);
+      line(ctx, [[-0.4, -9.8], [-0.4, -5.6]], 0.45, '#cfeac0', false, 0.8);
+      // plain label (no text)
+      S(ctx, (c) => roundRectPath(c, -hw - 0.2, 2.8, hw * 2 + 0.4, 4.6, 0.3), { fill: '#fbf3dc', ink: 0.6, shadow: '#dccfb0', shadowOffset: [-1.0, -0.4] });
+      line(ctx, [[-2.0, 3.8], [2.0, 3.8]], 0.45, '#b5343e', false, 0.85);
+      for (const [x, y] of [[-0.55, 5.2], [0.55, 5.2], [0, 6.1]] as Pt[]) S(ctx, (c) => circlePath(c, x, y, 0.5), { fill: '#b8c24a', ink: 0, shadow: 'none' });
     });
     // capsule
-    S(ctx, (c) => roundRectPath(c, -1.85, -10.4, 3.7, 3.6, 0.6), { fill: linear(ctx, -1.8, 0, 1.8, 0, [[0, '#d65a64'], [0.4, '#a8283a'], [1, '#6e1224']]), ink: K, shadow: 'none' });
-    line(ctx, [[-1.7, -7.6], [1.7, -7.6]], 0.4, '#e8a0a6', false, 0.8);
+    S(ctx, (c) => roundRectPath(c, -1.6, -12.4, 3.2, 3.6, 0.5), { fill: linear(ctx, -1.6, 0, 1.6, 0, [[0, '#fff1a6'], [0.4, '#e0b03c'], [1, '#9c6a14']]), ink: K, shadow: 'none' });
   });
+  // the glass: tulip bowl, stem, foot
+  const gx = 4.6, rimY = -1.6;
+  const bowl = (c: Ctx) => {
+    c.moveTo(gx - 3.6, rimY);
+    c.bezierCurveTo(gx - 4.2, rimY + 3.4, gx - 2.6, rimY + 6.6, gx, rimY + 6.8);
+    c.bezierCurveTo(gx + 2.6, rimY + 6.6, gx + 4.2, rimY + 3.4, gx + 3.6, rimY);
+    c.closePath();
+  };
+  // stem + foot (one inked silhouette under the bowl)
+  G(ctx, [
+    { build: (c) => roundRectPath(c, gx - 0.45, rimY + 6.2, 0.9, 5.2, 0.4), style: { fill: '#eef6f6', shadow: 'none' } },
+    { build: (c) => ellipsePath(c, gx, rimY + 11.6, 3.4, 0.95), style: { fill: '#eef6f6', shadow: '#c6d4d8', shadowOffset: [-0.6, -0.4] } },
+  ], 1.1);
+  S(ctx, bowl, { fill: 'rgba(240,248,248,0.92)', ink: 1.2, shadow: 'none' });
+  inside(ctx, bowl, () => {
+    // the wine, two thirds up
+    ctx.beginPath();
+    ctx.rect(gx - 5, rimY + 2.4, 10, 6);
+    ctx.fillStyle = linear(ctx, gx - 4, 0, gx + 4, 0, [[0, '#fff3b0'], [0.5, '#f2d96a'], [1, '#c9a634']]);
+    ctx.fill();
+    ctx.beginPath();
+    ellipsePath(ctx, gx, rimY + 2.4, 3.9, 0.55);
+    ctx.fillStyle = '#fff7c8';
+    ctx.fill();
+    line(ctx, [[gx - 2.6, rimY + 0.8], [gx - 2.8, rimY + 3.4], [gx - 1.8, rimY + 5.4]], 0.7, '#ffffff', true, 0.9);
+  });
+  // the rim, seen as a thin ellipse
+  ctx.save();
+  ctx.beginPath();
+  ellipsePath(ctx, gx, rimY, 3.6, 0.6);
+  ctx.lineWidth = 0.45;
+  ctx.strokeStyle = '#8fa2a8';
+  ctx.stroke();
+  ctx.restore();
 });
 
 ingr('peperoncino', (ctx) => {
@@ -1187,81 +1440,92 @@ function dice(ctx: Ctx, x: number, y: number, s: number, col: string, ink = 0.8)
 }
 
 ingr('soffritto', (ctx) => {
-  const ON = '#f4eccb', CA = '#f28a22', CE = '#8fcb4e';
-  const s = 3.7;
-  const cubes: [number, number, string][] = [
-    [-1.6, -5.0, CA], [1.9, -4.6, CE],
-    [-4.6, -1.8, CE], [-1.0, -1.2, ON], [2.6, -0.9, CA], [6.0, -1.6, ON],
-    [-7.2, 1.8, ON], [-3.4, 2.4, CA], [0.4, 2.8, CE], [4.2, 2.6, ON], [7.6, 2.0, CA],
-    [-5.4, 6.0, CA], [-1.8, 6.6, ON], [1.9, 6.6, CA], [5.6, 6.0, CE],
-  ];
-  // back to front so the ink of each cube overlaps the one behind
-  for (const [x, y, c] of cubes) dice(ctx, x, y, s, c);
-  // a celery leaf top + a carrot ribbon sticking out of the heap
-  rot(ctx, 3.4, -6.6, -0.9, () => {
-    S(ctx, (c) => {
-      leafPath(c, 4.4, 2.6, 0.45);
-      c.save(); c.rotate(-0.7); leafPath(c, 3.4, 2.2, 0.45); c.restore();
-      c.save(); c.rotate(0.7); leafPath(c, 3.4, 2.2, 0.45); c.restore();
-    }, { fill: '#6cc04a', ink: 0.9, shadow: '#3f8a2e', shadowOffset: [-0.6, -0.6] });
-    line(ctx, [[0, 0], [3.8, 0]], 0.3, '#c6f09a', false, 0.9);
+  // the three vegetables whole, crossed behind a small heap of their dice
+  // a carrot, with its feathery top
+  rot(ctx, -1.0, -2.6, -0.85, () => {
+    rot(ctx, 9.6, 0, 0, () => {
+      S(ctx, (c) => {
+        for (const a of [-0.55, -0.1, 0.4]) { c.save(); c.rotate(a); leafPath(c, 4.6, 1.6, 0.4); c.restore(); }
+      }, { fill: '#5cb848', ink: 0.85, shadow: '#3a8a30', shadowOffset: [-0.4, -0.4] });
+    });
+    const carrot = (c: Ctx) => taperPath(c, [[9.8, 0], [3.0, 0.1], [-5.0, -0.2], [-10.4, 0.3]], (t) => 4.2 * Math.pow(1 - t, 0.55) + 0.4, 24);
+    S(ctx, carrot, { fill: '#f58a24', ink: K, shadow: '#cf5e14', shadowOffset: [0, -1.1], gloss: [{ x: 3, y: -1.0, rx: 4.4, ry: 0.4, alpha: 0.6, color: '#ffd9a0' }] });
+    for (const x of [5.4, 1.4, -2.4, -5.6]) line(ctx, [[x, -1.4 + Math.abs(x) * 0.05], [x - 0.4, 0.2]], 0.35, '#c4581a', false, 0.75);
   });
-  glint(ctx, -1.8, -6.2, 0.8, 0.4, -0.5, 0.8);
+  // a celery stalk with its leaves
+  rot(ctx, 1.0, -2.8, 0.82, () => {
+    rot(ctx, -9.8, 0, Math.PI, () => {
+      S(ctx, (c) => {
+        for (const a of [-0.6, 0, 0.6]) { c.save(); c.rotate(a); leafPath(c, 3.8, 2.4, 0.45); c.restore(); }
+      }, { fill: '#7ccc50', ink: 0.85, shadow: '#4a9a34', shadowOffset: [-0.4, -0.4] });
+    });
+    const stalk = (c: Ctx) => roundRectPath(c, -9.8, -1.6, 19.6, 3.2, [0.6, 1.4, 1.4, 0.6]);
+    S(ctx, stalk, { fill: '#b6e07a', ink: K, shadow: '#7fb84e', shadowOffset: [0, -1.0] });
+    for (const y of [-0.6, 0.5]) line(ctx, [[-9.0, y], [9.0, y]], 0.35, '#86b852', false, 0.8);
+  });
+  // a small heap of dice in front: carrot, celery and onion
+  const ON = '#f6f0d8', CA = '#f28a22', CE = '#9ad25a';
+  const cubes: [number, number, string][] = [
+    [-1.4, 3.2, ON], [2.2, 3.4, CA],
+    [-4.8, 5.8, CA], [-1.2, 6.4, CE], [2.4, 6.6, ON], [5.8, 6.2, CE],
+    [-6.6, 9.0, ON], [-3.0, 9.4, CE], [0.6, 9.6, CA], [4.2, 9.4, ON], [7.4, 9.0, CA],
+  ];
+  for (const [x, y, c] of cubes) dice(ctx, x, y, 3.6, c);
 });
 
 ingr('pinoli', (ctx) => {
-  // a pine cone behind
-  rot(ctx, 3.6, -3.0, 0.55, () => {
+  // a heap of long ivory Mediterranean pine nuts, a small cone behind it
+  rot(ctx, 6.6, -6.4, 0.5, () => {
     const cone = (c: Ctx) => {
-      c.moveTo(0, -7.4);
-      c.bezierCurveTo(4.4, -7.0, 5.6, -1.6, 5.0, 2.2);
-      c.bezierCurveTo(4.4, 5.6, 1.8, 7.0, 0, 7.0);
-      c.bezierCurveTo(-1.8, 7.0, -4.4, 5.6, -5.0, 2.2);
-      c.bezierCurveTo(-5.6, -1.6, -4.4, -7.0, 0, -7.4);
+      c.moveTo(0, -4.6);
+      c.bezierCurveTo(2.8, -4.4, 3.5, -1.0, 3.1, 1.4);
+      c.bezierCurveTo(2.7, 3.5, 1.1, 4.4, 0, 4.4);
+      c.bezierCurveTo(-1.1, 4.4, -2.7, 3.5, -3.1, 1.4);
+      c.bezierCurveTo(-3.5, -1.0, -2.8, -4.4, 0, -4.6);
       c.closePath();
     };
-    S(ctx, cone, { fill: '#9a5a2e', ink: K, shadow: '#6a3518', shadowOffset: [-1.4, -1.4] });
+    S(ctx, cone, { fill: '#9a5a2e', ink: 1.2, shadow: '#6a3518', shadowOffset: [-0.9, -0.9] });
     inside(ctx, cone, () => {
-      for (let r = -3; r <= 3; r++) {
-        for (let q = -3; q <= 3; q++) {
-          const x = q * 2.4 + (r % 2 ? 1.2 : 0), y = r * 2.2;
-          if (Math.abs(x) > 5.4 || Math.abs(y) > 7.2) continue;
+      for (let r = -2; r <= 2; r++) {
+        for (let q = -2; q <= 2; q++) {
+          const x = q * 1.6 + (r % 2 ? 0.8 : 0), y = r * 1.5;
           ctx.beginPath();
-          ctx.moveTo(x - 1.1, y + 0.3);
-          ctx.quadraticCurveTo(x, y - 1.1, x + 1.1, y + 0.3);
-          ctx.quadraticCurveTo(x, y + 1.0, x - 1.1, y + 0.3);
+          ctx.moveTo(x - 0.75, y + 0.2);
+          ctx.quadraticCurveTo(x, y - 0.75, x + 0.75, y + 0.2);
+          ctx.quadraticCurveTo(x, y + 0.7, x - 0.75, y + 0.2);
           ctx.closePath();
           ctx.fillStyle = '#c98a4e';
           ctx.fill();
-          ctx.lineWidth = 0.35;
+          ctx.lineWidth = 0.3;
           ctx.strokeStyle = '#4a2410';
           ctx.stroke();
         }
       }
     });
-    crescent(ctx, cone, '#3e1c0a', 0.35, [-1.6, -1.6]);
   });
-  // a heap of ivory kernels in front
+  // the heap, back rows first
   const R = rng(31);
   const kern: [number, number, number][] = [
-    [-2.8, 0.4, -0.5], [0.6, 1.6, 0.6], [-5.2, 3.0, 0.2], [-1.6, 3.6, 1.2], [2.2, 4.4, -0.9],
-    [-7.4, 6.4, -1.0], [-4.2, 6.8, 0.5], [-0.8, 7.2, -0.3], [2.8, 7.8, 0.9], [5.6, 6.8, -0.4],
+    [-1.6, -5.4, -0.3], [1.6, -5.0, 0.5],
+    [-4.6, -2.0, 0.6], [-1.2, -1.4, -0.2], [2.4, -1.6, 0.8], [5.6, -0.6, -0.5],
+    [-7.4, 2.0, -0.7], [-4.0, 2.4, 0.3], [-0.4, 2.6, -0.9], [3.2, 2.6, 0.2], [6.8, 3.0, 1.0],
+    [-8.6, 6.4, 0.4], [-5.2, 6.8, -0.4], [-1.6, 7.0, 0.7], [2.0, 7.0, -0.2], [5.6, 7.0, 0.5], [8.8, 6.6, -0.9],
   ];
   for (const [x, y, a] of kern) {
     rot(ctx, x, y, a + (R() - 0.5) * 0.3, () => {
       const k = (c: Ctx) => {
-        c.moveTo(0, -2.5);
-        c.bezierCurveTo(1.45, -2.0, 1.55, 1.2, 0, 2.2);
-        c.bezierCurveTo(-1.55, 1.2, -1.45, -2.0, 0, -2.5);
+        c.moveTo(0, -3.0);
+        c.bezierCurveTo(1.6, -2.4, 1.75, 1.4, 0, 2.7);
+        c.bezierCurveTo(-1.75, 1.4, -1.6, -2.4, 0, -3.0);
         c.closePath();
       };
-      S(ctx, k, { fill: '#f4e3b8', ink: 0.95, shadow: '#d4b47c', shadowOffset: [-0.6, -0.7], gloss: [{ x: -0.45, y: 0.2, rx: 0.32, ry: 1.0, alpha: 0.85 }] });
-      inside(ctx, k, () => { ctx.beginPath(); ellipsePath(ctx, 0, -2.4, 0.9, 0.8); ctx.fillStyle = '#c99a5a'; ctx.fill(); });
+      S(ctx, k, { fill: '#f6e8c2', ink: 0.95, shadow: '#d8b57a', shadowOffset: [-0.7, -0.8], gloss: [{ x: -0.5, y: 0.2, rx: 0.36, ry: 1.2, alpha: 0.9 }] });
+      inside(ctx, k, () => { ctx.beginPath(); ellipsePath(ctx, 0, -2.9, 1.0, 0.85); ctx.fillStyle = '#c9965a'; ctx.fill(); });
     });
   }
 });
 
-/** Shell outline of a vongola verace seen from above (umbo near the top-left). */
+/** Outline of a vongola verace's valve (umbo near the top-left). */
 function clamPath(c: Ctx, s: number) {
   c.moveTo(-0.8 * s, -5.6 * s);
   c.bezierCurveTo(0.8 * s, -5.4 * s, 5.0 * s, -3.4 * s, 6.2 * s, 0.4 * s);
@@ -1271,59 +1535,91 @@ function clamPath(c: Ctx, s: number) {
   c.closePath();
 }
 
+/** The verace's decussate shell: bold growth rings crossed by radial ribs, with brown zig-zags. */
 function clamTexture(ctx: Ctx, s: number, seed: number) {
   const R = rng(seed);
   const um: Pt = [-0.8 * s, -5.6 * s];
-  // growth rings (the clearest "clam" cue at small size)
-  for (let k = 0.32; k < 1; k += 0.15) {
+  for (let k = 0.3; k < 1; k += 0.14) {
     ctx.save();
     ctx.translate(um[0], um[1]);
     ctx.scale(k, k);
     ctx.translate(-um[0], -um[1]);
     ctx.beginPath();
     clamPath(ctx, s);
-    ctx.lineWidth = 0.5 / k;
-    ctx.strokeStyle = '#7a5e42';
-    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 0.55 / k;
+    ctx.strokeStyle = '#6a5866';
+    ctx.globalAlpha = 0.85;
     ctx.stroke();
     ctx.restore();
   }
-  // fine radial ribs crossing them: the verace's lattice
-  for (let i = 0; i < 13; i++) {
-    const a = 0.2 + (i / 12) * (Math.PI - 0.4);
-    line(ctx, [um, [um[0] + Math.cos(a) * 11 * s, um[1] + Math.sin(a) * 11 * s]], 0.3, '#8c7458', false, 0.35);
+  for (let i = 0; i < 14; i++) {
+    const a = 0.15 + (i / 13) * (Math.PI - 0.3);
+    line(ctx, [um, [um[0] + Math.cos(a) * 12 * s, um[1] + Math.sin(a) * 12 * s]], 0.4, '#6a5866', false, 0.6);
   }
-  // brown zig-zag markings
   for (let i = 0; i < 3; i++) {
     const a = 0.7 + i * 0.75 + R() * 0.2;
     const pts: Pt[] = [];
     for (let j = 1; j <= 4; j++) {
       const d = j * 2.3 * s;
-      pts.push([um[0] + Math.cos(a + (j % 2 ? 0.12 : -0.12)) * d, um[1] + Math.sin(a + (j % 2 ? 0.12 : -0.12)) * d]);
+      pts.push([um[0] + Math.cos(a + (j % 2 ? 0.14 : -0.14)) * d, um[1] + Math.sin(a + (j % 2 ? 0.14 : -0.14)) * d]);
     }
-    line(ctx, pts, 0.9 * s, '#6e4a30', false, 0.55);
+    line(ctx, pts, 0.9 * s, '#7a5236', false, 0.5);
   }
 }
 
 ingr('vongole', (ctx) => {
-  const clam = (x: number, y: number, a: number, s: number, seed: number) => rot(ctx, x, y, a, () => {
+  const closed = () => rot(ctx, -4.6, 5.4, -0.2, () => {
+    const s = 0.74;
     const b = (c: Ctx) => clamPath(c, s);
-    S(ctx, b, { fill: '#ddc9a6', ink: K, shadow: '#a88a66', shadowOffset: [-1.6, -1.8] });
-    inside(ctx, b, () => clamTexture(ctx, s, seed));
-    // the beak (umbo) and a wet shine
-    S(ctx, (c) => ellipsePath(c, -0.8 * s, -4.6 * s, 1.1 * s, 0.8 * s), { fill: '#b89a74', ink: 0, shadow: 'none' });
-    glint(ctx, -3.2 * s, -1.0 * s, 1.5 * s, 0.6 * s, -0.7, 0.8);
+    S(ctx, b, { fill: '#e8dfd8', ink: K, shadow: '#b8a8b4', shadowOffset: [-1.4, -1.5] });
+    inside(ctx, b, () => clamTexture(ctx, s, 5));
+    glint(ctx, -3.0 * s, -1.2 * s, 1.4 * s, 0.6 * s, -0.7, 0.85);
   });
-  clam(3.8, -3.4, 0.4, 0.86, 2);
-  // the verace's two separate siphons, peeking out from under the front clam
-  for (const [pts, tip] of [
-    [[[2.6, 3.6], [5.6, 3.8], [8.2, 2.8]], [8.4, 2.7]],
-    [[[2.6, 5.0], [5.4, 6.0], [7.8, 6.6]], [8.0, 6.7]],
-  ] as [Pt[], Pt][]) {
-    inkLine2(ctx, pts, 1.3, '#f6ead8', 0.8, INK, true);
-    S(ctx, (c) => circlePath(c, tip[0], tip[1], 0.75), { fill: '#9a6a52', ink: 0.6, shadow: 'none' });
-  }
-  clam(-2.0, 2.6, -0.25, 1.0, 5);
+  // ...and one open in front: both valves spread on the hinge like a butterfly, the pale interior,
+  // the plump clam and its two short siphons
+  const H: Pt = [0.8, -4.6];
+  const s = 0.8;
+  const valve = (a: number, flip: number, meat: boolean) => rot(ctx, H[0], H[1], a, () => {
+    ctx.save();
+    ctx.scale(flip, 1);
+    ctx.translate(0.8 * s, 5.6 * s);
+    const b = (c: Ctx) => clamPath(c, s);
+    S(ctx, b, { fill: '#c6b4c2', ink: K, shadow: 'none' });
+    const inner = (c: Ctx) => {
+      c.save();
+      c.translate(0.2 * s, 0.5 * s);
+      c.scale(0.84, 0.82);
+      clamPath(c, s);
+      c.restore();
+    };
+    S(ctx, inner, {
+      fill: radial(ctx, 0.6 * s, 1.0 * s, 7 * s, [[0, '#ffffff'], [0.62, '#f6f0f6'], [1, '#c9a2c6']]),
+      ink: 0.5,
+      inkColor: '#7a6074',
+      shadow: 'none',
+      gloss: [{ x: -2.6 * s, y: 1.6 * s, rx: 1.6 * s, ry: 0.55 * s, rot: 0.6, alpha: 0.85 }],
+    });
+    // the violet stain near the hinge
+    inside(ctx, inner, () => { ctx.beginPath(); ellipsePath(ctx, -0.6 * s, -3.8 * s, 2.2 * s, 1.4 * s, -0.2); ctx.fillStyle = 'rgba(140,80,150,0.45)'; ctx.fill(); });
+    if (meat) {
+      S(ctx, (c) => blobPath(c, 0.4 * s, 0.6 * s, 3.4 * s, 2.7 * s, 0.14, 9, 7), {
+        fill: radial(ctx, -0.4 * s, -0.4 * s, 4 * s, [[0, '#ffe6c8'], [0.7, '#f5bb8e'], [1, '#d98a62']]),
+        ink: 0.8,
+        shadow: '#d48a62',
+        shadowOffset: [-0.6, -0.6],
+        gloss: [{ x: -0.6 * s, y: -0.2 * s, rx: 1.0 * s, ry: 0.5 * s, rot: -0.4, alpha: 0.8 }],
+      });
+      // two short pale siphons
+      for (const dy of [-0.55, 0.55]) tube(ctx, [[2.9 * s, 1.0 * s + dy], [4.1 * s, 1.0 * s + dy * 1.25]], 0.8, '#fbe8d6', 0.5, false, '#ffffff', 0.7);
+    }
+    ctx.restore();
+  });
+  valve(1.25, -1, false);
+  valve(-1.05, 1, true);
+  // the hinge
+  S(ctx, (c) => ellipsePath(c, H[0], H[1] - 0.2, 1.3, 0.8, 0), { fill: '#8a6a5a', ink: 0.8, shadow: 'none' });
+  // one closed clam in front
+  closed();
 });
 
 ingr('impasto', (ctx) => {
@@ -1331,92 +1627,87 @@ ingr('impasto', (ctx) => {
   ctx.save();
   ctx.globalAlpha = 0.9;
   ctx.beginPath();
-  blobPath(ctx, 0, 6.6, 10.2, 2.8, 0.16, 12, 5);
+  blobPath(ctx, 0.4, 6.6, 10.6, 2.6, 0.18, 12, 5);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.restore();
-  speckle(ctx, 0, 6.6, 10.4, 3.0, 16, '#ffffff', 0.35, 44, 1);
-  // two panetti side by side, soft and slightly slumped from proofing
-  const ballPath = (c: Ctx, x: number, y: number, s: number) => {
-    c.moveTo(x - 6.4 * s, y + 2.6 * s);
-    c.bezierCurveTo(x - 7.6 * s, y - 2.8 * s, x - 3.8 * s, y - 6.4 * s, x, y - 6.4 * s);
-    c.bezierCurveTo(x + 3.8 * s, y - 6.4 * s, x + 7.6 * s, y - 2.8 * s, x + 6.4 * s, y + 2.6 * s);
-    c.bezierCurveTo(x + 5.2 * s, y + 5.0 * s, x - 5.2 * s, y + 5.0 * s, x - 6.4 * s, y + 2.6 * s);
+  speckle(ctx, 0.4, 6.8, 11.0, 3.0, 18, '#ffffff', 0.35, 44, 1);
+  // one big proofed panetto: a low, wide, soft dome, slumped from rising
+  const x = 0, y = 2.2;
+  const ball = (c: Ctx) => {
+    c.moveTo(x - 9.4, y + 3.0);
+    c.bezierCurveTo(x - 10.0, y - 4.6, x - 5.2, y - 9.2, x, y - 9.2);
+    c.bezierCurveTo(x + 5.2, y - 9.2, x + 10.0, y - 4.6, x + 9.4, y + 3.0);
+    c.bezierCurveTo(x + 7.8, y + 5.6, x - 7.8, y + 5.6, x - 9.4, y + 3.0);
     c.closePath();
   };
-  const dough = (x: number, y: number, s: number, seed: number) => {
-    const b = (c: Ctx) => ballPath(c, x, y, s);
-    S(ctx, b, {
-      fill: radial(ctx, x - 2.2 * s, y - 3.2 * s, 9 * s, [[0, '#fffbf0'], [0.5, '#f7e8c8'], [1, '#e6cc9a']]),
-      ink: K,
-      shadow: '#dcbc8a',
-      shadowOffset: [-2.0 * s, -2.0 * s],
-      gloss: [{ x: x - 2.8 * s, y: y - 3.4 * s, rx: 2.0 * s, ry: 1.0 * s, rot: -0.6, alpha: 0.5 }],
-    });
-    inside(ctx, b, () => {
-      speckle(ctx, x - 0.4 * s, y - 3.8 * s, 4.4 * s, 1.8 * s, 14, '#ffffff', 0.34, seed, 0.95);
-      for (const [dx, dy, r] of [[2.8, -1.4, 0.45], [4.0, 0.4, 0.32], [-3.8, 0.6, 0.36]] as [number, number, number][]) {
-        ctx.beginPath();
-        circlePath(ctx, x + dx * s, y + dy * s, r);
-        ctx.lineWidth = 0.3;
-        ctx.strokeStyle = '#c9a874';
-        ctx.stroke();
-      }
-    });
-  };
-  dough(4.0, -1.8, 0.82, 47);
-  dough(-2.2, 2.0, 1.02, 43);
+  S(ctx, ball, {
+    fill: radial(ctx, x - 3.0, y - 5.0, 12, [[0, '#fffbf0'], [0.5, '#f6e4c0'], [1, '#e0c08c']]),
+    ink: K,
+    shadow: '#d6b47e',
+    shadowOffset: [-2.6, -2.6],
+    gloss: [{ x: x - 3.6, y: y - 5.4, rx: 2.8, ry: 1.3, rot: -0.5, alpha: 0.55 }],
+  });
+  inside(ctx, ball, () => {
+    // flour on top, a few gas bubbles under the skin
+    speckle(ctx, x - 0.6, y - 5.4, 6.0, 2.6, 22, '#ffffff', 0.36, 47, 0.95);
+    for (const [dx, dy, r] of [[4.0, -2.4, 0.5], [5.6, -0.2, 0.36], [-5.6, 0.2, 0.42], [-3.2, 2.4, 0.3], [2.0, 2.0, 0.34]] as [number, number, number][]) {
+      ctx.beginPath();
+      circlePath(ctx, x + dx, y + dy, r);
+      ctx.lineWidth = 0.32;
+      ctx.strokeStyle = '#c9a874';
+      ctx.stroke();
+    }
+  });
+  // a fingertip dimple: the baker's test that it has proofed
+  S(ctx, (c) => ellipsePath(c, x + 2.6, y - 4.0, 1.5, 1.0, -0.2), { fill: '#e2c690', ink: 0, shadow: '#f6e6c6', shadowOffset: [0.5, 0.5] });
+  line(ctx, [[x + 1.2, y - 4.5], [x + 2.4, y - 5.0], [x + 3.9, y - 4.6]], 0.45, '#b8925a', true, 0.85);
 });
 
 ingr('mozzarella', (ctx) => {
-  // a little pool of whey (soft, no rim: it is not a plate)
+  // a shallow pool of whey (soft, no rim: it is not a plate)
   ctx.save();
   ctx.beginPath();
-  ellipsePath(ctx, 0.4, 6.8, 9.8, 2.6);
+  ellipsePath(ctx, 0.8, 6.6, 10.4, 2.8);
   ctx.fillStyle = 'rgba(214,230,242,0.95)';
   ctx.fill();
   ctx.restore();
-  line(ctx, [[-6.4, 7.4], [-2.0, 8.4], [3.4, 8.2]], 0.5, '#ffffff', true, 0.9);
-  // the ball (fior di latte), cut open on the right to show its milky layers
-  const bx = -1.0, by = -1.0, r = 8.0;
-  const ball = (c: Ctx) => circlePath(c, bx, by, r);
-  const cut = (c: Ctx) => ellipsePath(c, bx + 4.4, by + 0.6, 3.9, 6.9, -0.2);
-  // the little pinched knot where it was torn off the curd (mozzatura)
-  const knot = (c: Ctx) => ellipsePath(c, bx - 0.6, by - r - 0.1, 1.7, 1.1, -0.2);
-  S(ctx, knot, { fill: '#f4f6f9', ink: K, shadow: '#cdd7e6', shadowOffset: [-0.6, -0.6] });
-  S(ctx, ball, {
-    fill: radial(ctx, bx - 2.6, by - 3.0, r * 1.5, [[0, '#ffffff'], [0.6, '#fbfaf5'], [1, '#e2e6ec']]),
-    ink: K,
-    shadow: '#cdd7e6',
-    shadowOffset: [-2.6, -2.6],
-    gloss: [{ x: bx - 3.4, y: by - 3.4, rx: 2.6, ry: 1.5, rot: -0.7, alpha: 1 }],
-  });
-  inside(ctx, ball, () => {
-    // the cut face: wet, glossy, brighter than the skin, with a few milky beads
-    S(ctx, cut, { fill: radial(ctx, bx + 3.6, by - 1.6, 7, [[0, '#ffffff'], [1, '#f1f5fa']]), ink: 0.9, shadow: '#e2e9f2', shadowOffset: [1.6, 1.4] });
-    inside(ctx, cut, () => {
-      glint(ctx, bx + 3.4, by - 2.6, 0.8, 2.0, 0.1, 0.95);
-      for (const [x, y] of [[bx + 5.2, by + 2.2], [bx + 4.0, by + 4.2], [bx + 6.0, by - 1.0]] as Pt[]) {
-        ctx.beginPath();
-        circlePath(ctx, x, y, 0.45);
-        ctx.lineWidth = 0.3;
-        ctx.strokeStyle = '#c9d4e2';
-        ctx.stroke();
-      }
-    });
-  });
-  // a crease under the knot, and a sheen
-  line(ctx, [[bx - 2.0, by - r + 0.9], [bx - 0.6, by - r + 1.5], [bx + 0.8, by - r + 0.9]], 0.45, '#c4ccd8', true, 0.95);
-  line(ctx, [[bx - 6.0, by + 1.6], [bx - 4.4, by + 4.6], [bx - 1.4, by + 6.0]], 0.8, '#ffffff', true, 0.9);
-  // a drop of milk running down from the cut
-  S(ctx, (c) => {
-    c.moveTo(bx + 5.6, by + 6.0);
-    c.bezierCurveTo(bx + 6.2, by + 7.2, bx + 7.0, by + 8.0, bx + 6.4, by + 8.8);
-    c.bezierCurveTo(bx + 5.6, by + 9.4, bx + 4.6, by + 8.6, bx + 5.0, by + 7.6);
-    c.quadraticCurveTo(bx + 5.3, by + 6.8, bx + 5.6, by + 6.0);
+  line(ctx, [[-4.0, 8.0], [1.0, 8.8], [6.4, 8.2]], 0.5, '#ffffff', true, 0.9);
+  // one glossy porcelain-white fior di latte, the soft pulled tip where it was torn off the curd
+  const bx = 1.8, by = -1.2;
+  const ball = (c: Ctx) => {
+    c.moveTo(bx - 0.6, by - 7.8);
+    c.bezierCurveTo(bx + 0.6, by - 9.6, bx + 1.6, by - 7.8, bx + 2.4, by - 7.3);
+    c.bezierCurveTo(bx + 6.2, by - 6.4, bx + 7.8, by - 3.0, bx + 7.8, by + 0.6);
+    c.bezierCurveTo(bx + 7.8, by + 5.4, bx + 4.2, by + 7.6, bx, by + 7.6);
+    c.bezierCurveTo(bx - 4.2, by + 7.6, bx - 7.8, by + 5.4, bx - 7.8, by + 0.6);
+    c.bezierCurveTo(bx - 7.8, by - 3.6, bx - 4.6, by - 7.4, bx - 0.6, by - 7.8);
     c.closePath();
-  }, { fill: '#ffffff', ink: 0.8, inkColor: '#5f7f98', shadow: '#dce6f0', shadowOffset: [-0.4, -0.4], gloss: [{ x: bx + 5.4, y: by + 8.0, rx: 0.3, ry: 0.4, alpha: 0.9 }] });
+  };
+  S(ctx, ball, {
+    fill: radial(ctx, bx - 2.6, by - 3.0, 11, [[0, '#ffffff'], [0.6, '#fbfaf6'], [1, '#e0e6ee']]),
+    ink: K,
+    shadow: '#cfd8e6',
+    shadowOffset: [-2.6, -2.6],
+    gloss: [
+      { x: bx - 3.4, y: by - 3.2, rx: 2.6, ry: 1.4, rot: -0.7, alpha: 1 },
+      { x: bx + 4.6, y: by + 3.6, rx: 0.5, ry: 0.9, rot: -0.6, alpha: 0.7 },
+    ],
+  });
+  // the soft crease under the pulled tip
+  line(ctx, [[bx - 1.2, by - 6.8], [bx + 0.4, by - 6.2], [bx + 1.8, by - 6.7]], 0.45, '#c4ccd8', true, 0.95);
+  // a round slice in front, with the faint layered fibres of pasta filata
+  const sx = -5.2, sy = 6.0;
+  const edge = (c: Ctx) => ellipsePath(c, sx + 0.3, sy + 0.9, 4.6, 2.5);
+  const face = (c: Ctx) => ellipsePath(c, sx, sy, 4.6, 2.5);
+  G(ctx, [
+    { build: edge, style: { fill: '#e6ecf2', shadow: 'none' } },
+    { build: face, style: { fill: '#fdfdfb', shadow: '#eef1f5', shadowOffset: [-1.0, -0.8] } },
+  ], 1.2);
+  inside(ctx, face, () => {
+    for (const k of [-1, 0, 1]) line(ctx, [[sx - 3.6, sy + k * 0.8 - 0.2], [sx - 1.0, sy + k * 0.8 + 0.25], [sx + 1.6, sy + k * 0.8 - 0.1], [sx + 3.6, sy + k * 0.8 + 0.2]], 0.3, '#d6dde8', true, 0.9);
+    glint(ctx, sx - 1.6, sy - 1.0, 1.2, 0.35, -0.1, 0.9);
+  });
   // a basil leaf at its side
-  basilLeaf(ctx, -5.0, 6.0, Math.PI + 0.4, 6.4, 3.8, 1.1);
+  basilLeaf(ctx, 7.4, 5.0, -0.5, 5.6, 3.4, 1.0);
 });
-
