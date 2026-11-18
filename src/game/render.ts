@@ -16,6 +16,25 @@ const TELL_RED = '#ff2a1a';
 /** Bosses whose own wind-up cue is green: the red tell is not laid over those green pixels. */
 const SPARE_GREEN = new Set(['b_aglio']);
 
+/**
+ * What the DOM HUD covers, in CSS px from the top left of the screen. `top`: where its fixed top band ends (XP
+ * bar, timer, recipe strip, slots, counters, boss bar). `toastTop`…`toastBottom`, `toastLeft`…`toastRight`: the
+ * toasts showing now; they sit under the band, or at the bottom edge on a short screen. `bannerTop`…
+ * `bannerBottom`: the big banner across the middle. All 0 when there is none.
+ */
+export interface HudCover {
+  top: number;
+  toastTop: number;
+  toastBottom: number;
+  toastLeft: number;
+  toastRight: number;
+  bannerTop: number;
+  bannerBottom: number;
+}
+const NO_HUD: HudCover = { top: 0, toastTop: 0, toastBottom: 0, toastLeft: 0, toastRight: 0, bannerTop: 0, bannerBottom: 0 };
+/** x0, y0, x1, y1 */
+type Box = [number, number, number, number];
+
 interface DrawItem {
   y: number;
   k: 0 | 1 | 2 | 3; // prop, enemy, player, projectile
@@ -72,6 +91,8 @@ export class Renderer {
   private vignette: HTMLCanvasElement | null = null;
   private motes: Mote[] = [];
   private t = 0;
+  /** Which side of the chef an edge arrow takes when it is pushed down onto him (1 right, -1 left). */
+  private arrowSide = 1;
   quality: 'high' | 'low' = 'high';
   profile = false;
   prof: Record<string, number> = {};
@@ -142,7 +163,8 @@ export class Renderer {
     run.camY = this.camY;
   }
 
-  render(run: Run, dt: number, input: Input | null) {
+  /** @param hud what the DOM HUD covers: boss taunts and edge arrows keep out of it */
+  render(run: Run, dt: number, input: Input | null, hud: HudCover = NO_HUD) {
     this.t += dt;
     const ctx = this.ctx;
     const env = run.world.env;
@@ -250,6 +272,8 @@ export class Renderer {
     this.drawShots(run);
     run.fx.drawParticles(ctx, 1, x0, y0, x1, y1);
     for (const p of vis) if (p.layer === 'overhead') this.drawProp(p, true);
+    // real ingredients float above every prop: a shelf, a tree or an awning never hides the one thing to find
+    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && p.x > x0 - 30 && p.x < x1 + 30 && p.y > y0 - 30 && p.y < y1 + 40) this.drawIngredient(p);
     this.emitPropFx(run, vis, dt);
 
     this.mark('air');
@@ -274,8 +298,16 @@ export class Renderer {
     ctx.setTransform(z, 0, 0, z, ox, oy);
     setFastBase(z, ox, oy);
     run.fx.drawTexts(ctx, FONT);
-    run.fx.drawBubbles(ctx, FONT);
-    this.drawIndicators(run);
+    // the HUD's cover in world units. An arrow stops at the fixed top band, above toasts at the bottom edge (short
+    // screens) and under toasts at the top that leave it no room below the band. A boss's taunt keeps out of the
+    // band and finds a place clear of the toasts and the banner.
+    const band = hud.top / this.zoom;
+    const below = hud.toastTop > this.H / 2 ? (this.H - hud.toastTop) / this.zoom : 0;
+    const busy: Box[] = [];
+    if (hud.toastBottom > hud.toastTop) busy.push([v.x0 + hud.toastLeft / this.zoom, v.y0 + hud.toastTop / this.zoom, v.x0 + hud.toastRight / this.zoom, v.y0 + hud.toastBottom / this.zoom]);
+    this.drawIndicators(run, band, below, below ? undefined : busy[0]);
+    if (hud.bannerBottom > hud.bannerTop) busy.push([v.x0, v.y0 + hud.bannerTop / this.zoom, v.x1, v.y0 + hud.bannerBottom / this.zoom]);
+    run.fx.drawBubbles(ctx, FONT, { x0: v.x0, y0: v.y0 + band, x1: v.x1, y1: v.y1 }, busy, pl);
 
     this.mark('texts');
     // ------------------------------------------------ screen space post
@@ -503,7 +535,7 @@ export class Renderer {
       ctx.globalCompositeOperation = 'source-over';
     }
     if (p.kind === 'ingredient') {
-      this.drawIngredient(p);
+      this.drawIngredientRing(p); // the badge itself floats in the air layer
       return;
     }
     const big = p.kind === 'xp' && p.value >= 25;
@@ -532,18 +564,22 @@ export class Renderer {
     }
   }
 
-  /** A real ingredient: golden glow, pulsing ground ring, gold-rimmed badge, bobbing sprite. */
-  private drawIngredient(p: Pickup) {
+  /** A real ingredient's mark on the floor (drawn with the other pickups, under props and characters): a pulsing ring. */
+  private drawIngredientRing(p: Pickup) {
     const ctx = this.ctx;
-    const bob = Math.sin(p.t * 3.2) * 3 - 6;
-    const y = p.y - p.z + bob - 8;
-    // pulsing ring on the ground
     const k = (p.t * 0.8) % 1;
     ctx.strokeStyle = `rgba(255,214,90,${0.7 * (1 - k)})`;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.ellipse(p.x, p.y + 6, 14 + k * 26, (14 + k * 26) * 0.42, 0, 0, TAU);
     ctx.stroke();
+  }
+
+  /** A real ingredient (air layer, above every prop): golden glow, gold-rimmed badge, bobbing sprite. */
+  private drawIngredient(p: Pickup) {
+    const ctx = this.ctx;
+    const bob = Math.sin(p.t * 3.2) * 3 - 6;
+    const y = p.y - p.z + bob - 8;
     // golden glow
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.55 + Math.sin(p.t * 5) * 0.15;
@@ -600,11 +636,35 @@ export class Renderer {
       return;
     }
     if (a.kind === 'cheese' || a.kind === 'stink') {
+      const stink = a.kind === 'stink';
+      if (stink) {
+        // the green glow alone is a faint wash with no edge on a dark floor: a murky pool lies under it,
+        // exactly where the cloud slows and hurts
+        ctx.fillStyle = rgba('#5c9c12', 0.32 * fade);
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r, a.r * 0.775, 0, 0, TAU);
+        ctx.fill();
+      }
       // clouds: soft glow (cheese dust, garlic stink)
-      ctx.globalAlpha = (a.kind === 'stink' ? 0.6 + Math.sin(this.t * 4 + a.rot) * 0.08 : 0.55) * fade;
-      const gs = glowSprite(a.kind === 'stink' ? '#a8d84a' : '#f6ecc4');
+      ctx.globalAlpha = (stink ? 0.8 + Math.sin(this.t * 4 + a.rot) * 0.08 : 0.55) * fade;
+      const gs = glowSprite(stink ? '#a8d84a' : '#f6ecc4');
       ctx.drawImage(gs, a.x - a.r * 1.3, a.y - a.r, a.r * 2.6, a.r * 2);
       ctx.globalAlpha = 1;
+      if (stink) {
+        // …and a rim of bright dashes crawls round its edge (dark under-stroke: it reads on pale floors too)
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r, a.r * 0.775, 0, 0, TAU);
+        ctx.lineWidth = 4.5;
+        ctx.strokeStyle = rgba('#24400a', 0.5 * fade);
+        ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = rgba('#c4ff45', (0.88 + Math.sin(this.t * 4 + a.rot) * 0.1) * fade);
+        ctx.setLineDash([10, 6]);
+        ctx.lineDashOffset = -(this.t * 12 + a.rot * 16);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineDashOffset = 0;
+      }
       if (a.kind === 'cheese') {
         // the pale glow alone vanishes on light floors, so every cheese cloud gets an amber rim where it
         // slows, and a cream ring swells out to it every 0.42 s
@@ -969,21 +1029,50 @@ export class Renderer {
     }
   }
 
-  private drawIndicators(run: Run) {
+  /**
+   * Arrows at the screen edge towards what is off screen.
+   * @param top, bottom what the HUD covers there (world units)
+   * @param toasts the toasts under the top band, if any (world box)
+   */
+  private drawIndicators(run: Run, top: number, bottom: number, toasts?: Box) {
     const ctx = this.ctx;
     const v = run.view;
     const cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2;
-    const targets: { x: number; y: number; c: string; big: boolean; size?: number }[] = [];
+    const targets: { x: number; y: number; c: string; big: boolean; size?: number; gap?: number }[] = [];
     for (const b of run.bosses) if (b.alive && !run.onScreen(b.x, b.y, -10)) targets.push({ x: b.x, y: b.y, c: '#ff3b2f', big: true });
     for (const p of run.pickups) if (p.alive && p.kind === 'chest' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#ffd34d', big: false });
-    // real ingredients: the biggest arrow on screen
-    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#7cff8a', big: true, size: 16 });
+    // real ingredients: the biggest arrow on screen; it stays while the badge is in view but under the HUD's
+    // top band, and then points at the badge from just below it
+    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && (!run.onScreen(p.x, p.y, -10) || p.y - 31 < v.y0 + top)) targets.push({ x: p.x, y: p.y - 14, c: '#7cff8a', big: true, size: 16, gap: 17 });
     for (const t of targets) {
       const a = Math.atan2(t.y - cy, t.x - cx);
-      const hw = (v.x1 - v.x0) / 2 - 26, hh = (v.y1 - v.y0) / 2 - 26;
-      const k = Math.min(hw / Math.abs(Math.cos(a) || 1e-6), hh / Math.abs(Math.sin(a) || 1e-6));
-      const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
-      const s = (t.size ?? (t.big ? 13 : 10)) * (1 + Math.sin(this.t * 6) * 0.1);
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const size = t.size ?? (t.big ? 13 : 10);
+      const hw = (v.x1 - v.x0) / 2 - 26;
+      let hh = (v.y1 - v.y0) / 2 - 26;
+      // the arrow stops clear of the HUD (the XP bar, timer, recipe strip, slots and boss bar on top; toasts at the
+      // bottom of a short screen), not under it
+      const len = size * 1.1 + 3;
+      if (sa < 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - top - len, 0));
+      else if (bottom > 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - bottom - len, 45 + len));
+      let k = Math.min(hw / Math.abs(ca || 1e-6), hh / Math.abs(sa || 1e-6));
+      if (t.gap) k = Math.min(k, Math.hypot(t.x - cx, t.y - cy) - t.gap - len);
+      let x = cx + ca * k, y = cy + sa * k;
+      // toasts lying right under the band (the boss bar is up) leave the arrow no room there: it stops under them
+      // (+ 6: their shadow)
+      if (toasts && sa < 0 && x + len > toasts[0] && x - len < toasts[2] && y + len > toasts[1] && y - len < toasts[3] + 6) {
+        k = Math.max((cy - toasts[3] - 6 - len) / -sa, 0);
+        x = cx + ca * k;
+        y = cy + sa * k;
+      }
+      // pushed down onto the chef (a tall band on a short screen, a stack of toasts): it steps to his side - the
+      // side it is on, and right above him the side it had
+      const p = run.player, side = 18 + len;
+      if (Math.abs(x - p.x) < side && y + len > p.y - 64 && y - len < p.y + 24) {
+        if (Math.abs(x - p.x) > 5) this.arrowSide = x > p.x ? 1 : -1;
+        x = p.x + side * this.arrowSide;
+      }
+      const s = size * (1 + Math.sin(this.t * 6) * 0.1);
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(a);

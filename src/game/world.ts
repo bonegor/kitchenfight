@@ -4,6 +4,7 @@
  */
 import type { StageEnv, PropPlacement } from '../gfx/stageenv';
 import { hash2, seededRandom } from '../core/math';
+import { spriteSpec } from '../gfx/sprites';
 
 export interface PropInst extends PropPlacement {
   key: string; // unique & stable: chunk + index
@@ -191,6 +192,25 @@ export class World {
   free(x: number, y: number, r: number): boolean {
     const o = { x, y };
     return !this.resolve(o, r);
+  }
+
+  /**
+   * Would something standing at `footY` be hidden inside the rectangle? True when the rectangle meets the sprite
+   * box of an overhead prop, or of a y-sorted prop that stands in front of `footY` (it is drawn over that spot).
+   * Looks at the loaded chunks only.
+   */
+  covered(x0: number, y0: number, x1: number, y1: number, footY: number): boolean {
+    for (const list of this.chunks.values())
+      for (const p of list) {
+        if (p.layer === 'floor') continue;
+        if (p.layer !== 'overhead' && p.y + (p.sortOffset ?? 0) <= footY) continue;
+        const s = spriteSpec(p.sprite);
+        if (!s) continue;
+        const ax = s.ax ?? s.w / 2;
+        const left = p.x - (p.flip ? s.w - ax : ax), top = p.y - (s.ay ?? s.h / 2);
+        if (left < x1 && left + s.w > x0 && top < y1 && top + s.h > y0) return true;
+      }
+    return false;
   }
 
   /** Breakable props whose footprint overlaps the circle. */

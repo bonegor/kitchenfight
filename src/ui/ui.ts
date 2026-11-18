@@ -16,6 +16,7 @@ import { shortIntruderName } from '../game/sightings';
 import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
+import type { HudCover } from '../game/render';
 import type { SaveData } from '../core/save';
 import { formatTime, clamp } from '../core/math';
 import { renderStagePreview } from './preview';
@@ -83,6 +84,8 @@ export class UI {
   loadingStart: (() => void) | null = null;
   private levelShownAt = 0;
   private bossTracked: Enemy | null = null;
+  /** What the HUD covers at the top and bottom of the screen right now (see HudCover): the renderer keeps edge arrows and boss taunts out of it. */
+  hudCover: HudCover = { top: 0, toastTop: 0, toastBottom: 0, toastLeft: 0, toastRight: 0, bannerTop: 0, bannerBottom: 0 };
   current = '';
 
   constructor(public app: AppAPI) {
@@ -828,11 +831,45 @@ export class UI {
     this.toastWait = [];
     this.toastHoldUntil = 0;
     this.nextToastAt = 0;
+    this.measureHud();
   }
 
   removeHud() {
     this.hud?.remove();
     this.hud = null;
+    this.measureHud();
+  }
+
+  /**
+   * Where the HUD's top band ends (XP bar, timer, recipe strip, slots, counters, the boss bar while it shows)
+   * and where the toasts and the big banner lie across the screen.
+   */
+  private measureHud() {
+    const c = this.hudCover;
+    c.top = c.toastTop = c.toastBottom = c.toastLeft = c.toastRight = c.bannerTop = c.bannerBottom = 0;
+    const hud = this.hud;
+    if (!hud) return;
+    for (const el of hud.querySelectorAll('.xpbar, .hud-timer, .recipe-strip, .hud-left, .hud-right, .boss-bar')) c.top = Math.max(c.top, el.getBoundingClientRect().bottom);
+    // layout sizes times the HUD's zoom: a toast pops in small and the banner zooms in at a tilt, which would
+    // shrink or blow up their bounding boxes
+    const box = hud.getBoundingClientRect();
+    const z = box.height / (hud.offsetHeight || 1) || 1;
+    if (this.toastsEl?.childElementCount) {
+      const b = this.toastsEl.getBoundingClientRect();
+      c.toastTop = b.top;
+      c.toastBottom = b.bottom;
+      // the column is as wide as its widest toast, centred
+      let w = 0;
+      for (const t of this.toastsEl.children) w = Math.max(w, (t as HTMLElement).offsetWidth * z);
+      c.toastLeft = (b.left + b.right - w) / 2;
+      c.toastRight = c.toastLeft + w;
+    }
+    const ban = this.bannerCur?.el;
+    if (ban) {
+      c.bannerTop = box.top + ban.offsetTop * z;
+      // + 12: it sits at a tilt, the left end of its second line hangs that much lower
+      c.bannerBottom = c.bannerTop + (ban.offsetHeight + 12) * z;
+    }
   }
 
   updateHud(run: Run, fps: number) {
@@ -912,7 +949,10 @@ export class UI {
       this.bossTracked = b;
       r.boss.classList.toggle('hidden', !b);
       if (b) r.bossName.textContent = b.def.boss?.title ?? b.def.name;
+      L.coverT = 0; // the top band just grew or shrank: measure it now
     }
+    // the band also moves with the window size and the fonts: look again every half second
+    if ((L.coverT = (L.coverT ?? 0) + 1) % 30 === 1) this.measureHud();
     if (b) {
       const pct = Math.round(clamp(b.hp / b.maxHp, 0, 1) * 1000) / 10;
       if (L.b !== pct) { r.bossFill.style.width = pct + '%'; L.b = pct; }
@@ -943,6 +983,7 @@ export class UI {
     const max = window.innerHeight / (parseFloat(this.root.style.getPropertyValue('--z')) || 1) <= 520 ? 2 : 3;
     while (this.toastsEl.children.length > max) this.toastsEl.firstChild?.remove();
     this.toastList.push({ el: t, endT: this.hudClock + 3.7 });
+    this.lastHud.coverT = 0;
   }
 
   /** Expire toasts and banners, show the next waiting ones (game time, see updateHud). */
@@ -951,6 +992,7 @@ export class UI {
     if (this.toastList.length && this.toastList[0].endT <= c) {
       for (const t of this.toastList) if (t.endT <= c) t.el.remove();
       this.toastList = this.toastList.filter((t) => t.endT > c);
+      this.lastHud.coverT = 0;
     }
     if (this.toastWait.length && c >= this.toastHoldUntil && c >= this.nextToastAt) {
       const t = this.toastWait.shift()!;
@@ -960,6 +1002,7 @@ export class UI {
     if (this.bannerCur && c >= this.bannerCur.endT) {
       this.bannerCur.el.remove();
       this.bannerCur = null;
+      this.lastHud.coverT = 0;
     }
     if (this.bannerQ.length && c >= this.bannerHeldUntil) {
       const next = this.bannerQ.shift()!;
@@ -1038,6 +1081,7 @@ export class UI {
     b.style.animationDuration = (ms - 100) / 1000 + 's';
     hud.appendChild(b);
     this.bannerCur = { el: b, endT: this.hudClock + ms / 1000 };
+    this.lastHud.coverT = 0;
   }
   // banner and toast timing, in seconds of game time (hudClock only runs while playing)
   private hudClock = 0;

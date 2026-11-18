@@ -398,6 +398,7 @@ export class Run {
   /**
    * Place real ingredient #index on the map: 320–520 units from the chef on free ground,
    * preferably behind him (opposite to where he is walking), so he has to turn back for it.
+   * Never behind a shelf, a tree or under an awning if any open spot turns up: its ring must show on the floor.
    */
   spawnIngredient(index: number) {
     const ing = this.recipe?.ingredients[index];
@@ -406,15 +407,19 @@ export class Run {
     const moving = Math.hypot(p.vx, p.vy) > 20;
     const base = moving ? Math.atan2(-p.vy, -p.vx) : this.rng.next() * TAU;
     let x = p.x + Math.cos(base) * 420, y = p.y + Math.sin(base) * 420;
+    let hidden = false; // a free spot that a prop stands in front of: only if nothing better turns up
     for (let tries = 0; tries < 24; tries++) {
       const a = base + (this.rng.next() - 0.5) * (tries < 12 ? 1.6 : TAU);
       const d = 320 + this.rng.next() * 200;
       const tx = p.x + Math.cos(a) * d, ty = p.y + Math.sin(a) * d;
-      if (this.world.free(tx, ty, 26)) {
-        x = tx;
-        y = ty;
-        break;
-      }
+      if (!this.world.free(tx, ty, 26)) continue;
+      // the badge floats at ty - 36 … ty + 8, the ring lies around ty + 6
+      const covered = this.world.covered(tx - 22, ty - 36, tx + 22, ty + 14, ty);
+      if (covered && hidden) continue;
+      x = tx;
+      y = ty;
+      if (!covered) break;
+      hidden = true;
     }
     this.dropPickup('ingredient', x, y, index, false);
     this.hooks.onToast(`${ing.it} is on the map! Follow the green arrow.`, 'good');

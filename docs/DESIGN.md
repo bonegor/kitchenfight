@@ -53,7 +53,8 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
 - **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, a night ramp)
   and the particles (dust, flour, embers, fireflies), and add a little decor made of existing props (tomato
   crates and sauce stains, a flour-dusted pantry, lemon crates, wine crates, basil pots, sea-side puddles).
-  The paths and the spawn area stay those of the base environment.
+  The paths and the spawn area stay those of the base environment, and decor that would stand in or
+  through a base prop (the oven, a counter, a stall, the fountain) is left out.
 - **Old saves** (four stages, save version 1) migrate to version 2: La Cucina's records and wins carry
   over to the Pomodoro and the Carbonara, La Trattoria's to the Margherita, I Vicoli's to the Marinara;
   the Food Court keeps its id. The unlocked list restarts from the Pomodoro (plus the finale if it was
@@ -182,9 +183,13 @@ each corner of Italy.
 - **When.** Director events place them one by one, in recipe order, at evenly spaced times between
   1:10 and 13:50, kept at least 20 s clear of the 5:00 and 10:00 bosses (`ingredientTimes()`).
 - **Where.** 320–520 units from the chef on free ground, preferably *behind* him (opposite to where he is
-  walking), so he has to turn back for it. A toast says "<ingredient> is on the map! Follow the green arrow."
-- **Look.** A golden glow, a pulsing ground ring, a gold-rimmed badge and a bobbing sprite; off screen it
-  gets the biggest arrow on screen, in green.
+  walking), so he has to turn back for it; not behind a shelf or a tree and not under an awning, as long as
+  an open spot turns up. A toast says "<ingredient> is on the map! Follow the green arrow."
+- **Look.** A golden glow, a pulsing ground ring, a gold-rimmed badge and a bobbing sprite. The badge is
+  drawn above every prop. Off screen, or in view but under the HUD's top band, it gets the biggest arrow on
+  screen, in green. Edge arrows stop below the HUD (XP bar, timer, recipe strip, slots, boss bar), above
+  the toasts where they sit at the bottom (short screens), and under toasts that lie right below the boss
+  bar. An arrow that this pushes down onto the chef steps to his side.
 - **Pickup.** The magnet ignores it until the chef is within 60 units. Left alone for 90 s, it starts
   drifting slowly toward him.
 - **Collect.** A banner "<Ingredient> ✓ n/m" with its buff, a chime and a chef line. The buff lasts for the
@@ -355,8 +360,9 @@ extra its recipe lists spawns.
 | **Il Sacco del Grattugiato** (new) | The Bag of Pre-Grated Cheese | Pre-grated cheese on clams | Vongole | Marinara |
 
 The five new bosses (patterns in `src/game/bosses/b_*.ts`):
-- **Il Re dell'Aglio** — a crowned garlic bulb: fans of garlic cloves, stink clouds that slow, a royal belly
-  slam, garlic courtiers; enraged, he sheds his papery skin and speeds up. *"Solo uno spicchio… in camicia!"*
+- **Il Re dell'Aglio** — a crowned garlic bulb: fans of garlic cloves, stink clouds that slow (a green pool
+  with a rim of crawling dashes exactly where they act), a royal belly slam, garlic courtiers; enraged, he
+  sheds his papery skin and speeds up. *"Solo uno spicchio… in camicia!"*
 - **Il Panetto Supremo** — a giant butter block: butter pats that land as slippery puddles, telegraphed
   slides that leave a buttery trail, rings of pats; enraged, it melts (smaller and faster).
   *"Un pochino di burro, per la cremosità!"*
@@ -372,6 +378,10 @@ A boss that visits another dish as a mid-boss says a line about that dish, not a
 and *"Clams need CREAM!"* in the Vongole, the Bag of Pre-Grated Cheese *"Formaggio sulla Marinara?
 Abbondante!"* on the Marinara, and the One-Pan Influencer sells a one-pan amatriciana with onion, cacio e
 pepe with cream and pesto with cream. The bubble and the spoken line use the same text.
+
+A boss shouts its line in a speech bubble as it arrives at the edge of the screen. The bubble is kept in
+view, below the HUD's top band, and takes the nearest place clear of the toasts and the boss banner: over,
+under or beside them, and not on the chef. Its tail shows only while the boss stands under it.
 
 ## Medals (Medaglie)
 Checked at the end of every run (`src/game/medals.ts`).

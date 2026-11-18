@@ -6,6 +6,7 @@
  * colliders, so the spawn area and paths stay exactly as in the base environment).
  */
 import { STAGE_ENVS, registerStageEnv, type StageEnv, type PropPlacement } from './stageenv';
+import { spriteSpec } from './sprites';
 import type { StageDef, StageVariant } from '../game/stages';
 
 /** Decor sets: [sprite, weight, layer, breakable hp?, debris?] — all existing props. */
@@ -30,6 +31,25 @@ function pick(list: Decor[], r: number): Decor {
   return list[list.length - 1];
 }
 
+/**
+ * Would decor standing at (x, y) stick in or through this base prop? True within 24 units of its collider
+ * (a crate in the oven wall, a basil pot on the fountain rim) and, for decor that stands up, anywhere inside
+ * the picture of a y-sorted prop from its top down to its foot (a crate through a market stall or a café table).
+ */
+function embedded(p: PropPlacement, x: number, y: number, upright: boolean): boolean {
+  const c = p.collider;
+  if (c) {
+    const dx = x - p.x - (c.ox ?? 0), dy = y - p.y - (c.oy ?? 0);
+    if (c.kind === 'circle' ? dx * dx + dy * dy < (c.r + 24) ** 2 : Math.abs(dx) < c.w / 2 + 24 && Math.abs(dy) < c.h / 2 + 24) return true;
+  }
+  if (!upright || (p.layer && p.layer !== 'sorted')) return false;
+  const s = spriteSpec(p.sprite);
+  if (!s) return false;
+  const ax = s.ax ?? s.w / 2;
+  const left = p.x - (p.flip ? s.w - ax : ax);
+  return x > left && x < left + s.w && y > p.y - (s.ay ?? s.h / 2) && y < p.y + 8;
+}
+
 function makeVariant(base: StageEnv, st: StageDef): StageEnv {
   const v = st.variant!;
   const decor = v.decor ? DECOR[v.decor].filter((d) => STAGE_ENVS[base.id] && d[0]) : [];
@@ -42,6 +62,10 @@ function makeVariant(base: StageEnv, st: StageDef): StageEnv {
       const out: PropPlacement[] = base.populate(cx, cy, rnd);
       if (!decor.length) return out;
       const cs = base.chunkSize;
+      const nb = out.length; // the base props come first
+      // decor left out because it stuck in a base prop: it still keeps the later decor at a distance and takes
+      // its random numbers, so everything else in the chunk stays exactly where it was
+      const dropped: [number, number][] = [];
       const n = 2 + Math.floor(rnd() * 3);
       for (let i = 0; i < n; i++) {
         const x = (cx + 0.08 + rnd() * 0.84) * cs;
@@ -49,8 +73,17 @@ function makeVariant(base: StageEnv, st: StageDef): StageEnv {
         const d = pick(decor, rnd());
         // keep clear of the base props (and of the spawn spot for anything solid-looking)
         if (out.some((p) => (p.x - x) ** 2 + (p.y - y) ** 2 < 56 * 56)) continue;
+        if (dropped.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < 56 * 56)) continue;
         if (d[2] === 'sorted' && Math.abs(x) < 120 && Math.abs(y) < 120) continue;
-        const p: PropPlacement = { sprite: d[0], x, y, flip: rnd() < 0.5 };
+        const flip = rnd() < 0.5;
+        // that distance is between anchor points: a counter, the oven, a stall or the fountain reaches further
+        let stuck = false;
+        for (let j = 0; j < nb && !stuck; j++) stuck = embedded(out[j], x, y, d[2] === 'sorted');
+        if (stuck) {
+          dropped.push([x, y]);
+          continue;
+        }
+        const p: PropPlacement = { sprite: d[0], x, y, flip };
         if (d[2] === 'floor') p.layer = 'floor';
         if (d[3]) p.breakable = { hp: d[3], debris: d[4] ?? 'wood' };
         out.push(p);

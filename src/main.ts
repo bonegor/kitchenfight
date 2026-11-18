@@ -402,7 +402,7 @@ class App {
       }
       this.renderer.updateCamera(run, step);
       run.update(step);
-      this.renderer.render(run, step, inp);
+      this.renderer.render(run, step, inp, this.ui.hudCover);
       this.ui.updateHud(run, this.fps);
     } else {
       inp.joystickEnabled = false;
