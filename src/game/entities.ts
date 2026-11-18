@@ -56,6 +56,8 @@ export class Enemy {
   attackPose = 0; // >0 shows attack sprite
   telegraph = 0; // red warning tint
   buff = 0; // speed buff timer (garlic aura)
+  /** how much faster it acts while buffed: GARLIC_BUFF, less where the dish's speed factor has used up the room (Run.spawnEnemy) */
+  buffMul = 1;
   slamR = 0; // boss leap impact radius
   bossStep = 0; // index into the boss attack rotation
   /** boss: seconds a slow would have cost the running attack, owed to the pause after it (Run.updateEnemies) */

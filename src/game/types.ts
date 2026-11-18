@@ -19,6 +19,9 @@ export interface Stats {
   curse: number; // enemy hp/spawn multiplier
 }
 
+/** The chef's walk speed in px/s at moveSpeed 1 (Run.updatePlayer; the waves' speed cap is measured against it). */
+export const CHEF_SPEED = 132;
+
 export function baseStats(): Stats {
   return {
     maxHp: 120,

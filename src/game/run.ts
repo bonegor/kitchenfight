@@ -6,13 +6,13 @@ import { Enemy, Projectile, EnemyShot, Pickup, Area, PickupKind, AreaKind, newId
 import { SpatialHash } from '../core/spatial';
 import { FX } from './fx';
 import { World, PropInst } from './world';
-import { Stats, baseStats, StatMod, CharacterDef, WeaponStats } from './types';
+import { Stats, baseStats, StatMod, CharacterDef, WeaponStats, CHEF_SPEED } from './types';
 import { WEAPONS, WeaponInstance, BASE_WEAPON_IDS } from './weapons';
 import { PASSIVES, POWERUPS } from './passives';
 import { ENEMIES, EnemyDef, ELITE_DMG } from './enemies';
 import { updateEnemy, onEnemyDeath } from './ai';
 import { Director } from './director';
-import type { StageDef } from './stages';
+import { buffFactor, waveSpeed, type StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
@@ -304,7 +304,9 @@ export class Run {
     const hpScale = this.director.hpScale() * (o.hpMul ?? 1) * this.stats.curse;
     e.maxHp = e.hp = def.hp * hpScale * (e.elite ? 14 : 1);
     e.add = !!o.add;
-    e.speed = def.speed * (e.elite ? 0.9 : 1) * (0.92 + this.rng.next() * 0.16);
+    // a dish's speed factor moves everything but its bosses and its heavy bodies (phased in and capped: see waveSpeed)
+    const pace = this.director.speedScale();
+    e.speed = (e.boss ? def.speed : waveSpeed(def, pace)) * (e.elite ? 0.9 : 1) * (0.92 + this.rng.next() * 0.16);
     e.damage = def.damage * (e.elite ? ELITE_DMG : 1) * this.director.dmgScale(e.add ? this.stage.bossDmg : undefined);
     e.xp = def.xp;
     e.kx = e.ky = e.vx = e.vy = 0;
@@ -325,6 +327,7 @@ export class Run {
     e.attackPose = 0;
     e.telegraph = 0;
     e.buff = 0;
+    e.buffMul = e.boss ? 1 : buffFactor(def, pace);
     e.slamR = 0;
     e.bossStep = 0;
     e.slowDebt = 0;
@@ -1147,7 +1150,7 @@ export class Run {
     }
     const moving = Math.abs(mx) + Math.abs(my) > 0.05;
     p.moving = moving;
-    let speed = 132 * this.stats.moveSpeed;
+    let speed = CHEF_SPEED * this.stats.moveSpeed;
     if (p.slowT > 0) {
       p.slowT -= dt;
       speed *= 1 - p.slowAmt;
@@ -1261,7 +1264,7 @@ export class Run {
             e.slowDebt = 0;
           }
         }
-        updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
+        updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? e.buffMul : 1));
       }
       if (!e.alive) continue;
       // obstacle collision (flyers ignore)

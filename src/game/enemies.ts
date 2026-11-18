@@ -73,6 +73,11 @@ export interface EnemyDef {
   info: EnemyInfo;
   /** split on death */
   split?: { into: string; count: number };
+  /**
+   * A big, slow body (the frozen lasagne and its like): its touch may cost more of the chef's bar than an
+   * ordinary walker's, because it can be seen coming and walked away from. See the hit-size rule in stages.ts.
+   */
+  heavy?: boolean;
 }
 
 /**
@@ -83,6 +88,8 @@ export const SHOT_DMG: Partial<Record<BehaviorKind, number>> = { ranged: 0.5, bu
 export const LOB_CLOUD_DMG = 0.2;
 /** An elite hits this much harder than the plain crime (Run.spawnEnemy). */
 export const ELITE_DMG = 1.5;
+/** The garlic's aura: everything near it acts this much faster (walks, shoots, leaps). */
+export const GARLIC_BUFF = 1.35;
 
 export const ENEMIES: Record<string, EnemyDef> = {};
 function E(d: EnemyDef) {
@@ -155,7 +162,7 @@ E({
 });
 E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
-  radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6,
+  radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6, heavy: true,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', split: { into: 'ananas_pezzo', count: 4 },
   info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: '"Pineapple, a fruit, on a pizza?" — Gino D\'Acampo on British TV (as reported)' },
 });
@@ -197,7 +204,7 @@ E({
 });
 E({
   id: 'alfredo', name: 'Alfredo il Colloso', en: 'Alfredo the Gluey', sprite: 'enemy.alfredo',
-  radius: 17, hp: 40, speed: 42, damage: 10, xp: 4, behavior: 'puddler', params: { puddle: 'cream', interval: 3, r: 30, life: 5, slow: 0.4 }, knockResist: 0.4,
+  radius: 17, hp: 40, speed: 42, damage: 10, xp: 4, behavior: 'puddler', params: { puddle: 'cream', interval: 3, r: 30, life: 5, slow: 0.4 }, knockResist: 0.4, heavy: true,
   color: 'cream', juice: '#fff1cf', chunk: 'bread',
   info: { crime: 'Creamy chicken "Alfredo"', why: 'The original, created by Roman restaurateur Alfredo di Lelio in the early 1900s, is fettuccine, butter and Parmigiano — in Italy simply "fettuccine al burro". Jarred cream-and-chicken Alfredo is American.', severity: 3 },
 });
@@ -239,13 +246,13 @@ E({
 });
 E({
   id: 'surgelata', name: 'Lasagna Surgelata', en: 'Frozen Lasagna', sprite: 'enemy.surgelata',
-  radius: 23, hp: 110, speed: 32, damage: 10, xp: 6, behavior: 'chase', knockResist: 0.75,
+  radius: 23, hp: 110, speed: 32, damage: 10, xp: 6, behavior: 'chase', knockResist: 0.75, heavy: true,
   color: 'red', juice: '#d9532e', chunk: 'glass',
   info: { crime: 'Frozen microwave lasagna', why: 'Lasagna is a Sunday ritual: fresh egg-pasta sheets, slow-cooked ragù, béchamel and hours in the oven — not a frozen brick nuked for six minutes.', severity: 2 },
 });
 E({
   id: 'pentolaunica', name: 'La Pentola Unica', en: 'The Single Pot', sprite: 'enemy.pentolaunica',
-  radius: 17, hp: 44, speed: 50, damage: 10, xp: 5, behavior: 'devourer', params: { range: 320 }, knockResist: 0.5,
+  radius: 17, hp: 44, speed: 50, damage: 10, xp: 5, behavior: 'devourer', params: { range: 320 }, knockResist: 0.5, heavy: true,
   color: 'cream', juice: '#f3e2b5', chunk: 'bread',
   info: { crime: 'One-pot "carbonara"', why: 'A 2016 French viral video boiled pasta in one pot with onion, bacon and cream. Italians cook pasta in plenty of salted water and build the sauce separately. It eats other crimes to grow — stop it early!', severity: 4, quote: 'Even the pasta maker seen in the clip distanced itself: "this goes too far… désolé".' },
 });

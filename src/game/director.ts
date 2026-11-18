@@ -3,7 +3,7 @@
  * events (rings, walls, stampedes, elites, toasts) and the boss schedule.
  */
 import type { Run } from './run';
-import { DMG_RAMP, type StageDef, type WaveMinute } from './stages';
+import { DMG_RAMP, speedFactor, type StageDef, type WaveMinute } from './stages';
 import { ENEMIES } from './enemies';
 import { TAU } from '../core/math';
 import { audio } from '../audio/audio';
@@ -40,6 +40,11 @@ export class Director {
     const t = this.run.time / 60;
     const k = base > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) : this.ramp();
     return (1 + (base - 1) * k) * (1 + t * 0.045);
+  }
+
+  /** The dish's walk-speed factor now (phased in: see speedFactor in stages.ts). */
+  speedScale() {
+    return speedFactor(this.stage.speed, this.run.time);
   }
 
   wave(): WaveMinute {

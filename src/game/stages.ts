@@ -16,7 +16,8 @@
 import type { MusicId } from '../audio/audio';
 import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
 import type { StageAmbient } from '../gfx/stageenv';
-import { ENEMIES } from './enemies';
+import { ENEMIES, GARLIC_BUFF, type EnemyDef } from './enemies';
+import { CHEF_SPEED } from './types';
 
 export interface WaveMinute {
   /** [enemyId, weight] */
@@ -76,6 +77,8 @@ export interface Tier {
   rate: number;
   /** multiplies BASE_MAX (soft cap of alive enemies) */
   max: number;
+  /** walk-speed factor of everything but the bosses and the heavy bodies (phased in over SPEED_RAMP and capped: see waveSpeed) */
+  speed: number;
   /** boss base HP for the 5:00 / 10:00 / 15:00 slots (×hpBase × player level × time at spawn) */
   bossHp: [number, number, number];
 }
@@ -128,12 +131,12 @@ export interface Tier {
 //   · with no pantry, no run of 264 ended before 2:30 and 11 ended before 3:20.
 // =====================================================================================
 export const TIERS: Record<TierId, Tier> = {
-  T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, bossDmg: 0.85, rate: 0.74, max: 0.8, bossHp: [1300, 2100, 3300] },
-  T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, bossDmg: 1, rate: 0.93, max: 0.94, bossHp: [1400, 2300, 3600] },
-  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 2.2, bossDmg: 1.45, rate: 1.4, max: 1.05, bossHp: [800, 1750, 2400] },
-  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.42, dmgBase: 3.5, bossDmg: 1.5, rate: 1.8, max: 1.2, bossHp: [850, 1800, 2400] },
-  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.5, dmgBase: 3.8, bossDmg: 1.55, rate: 1.9, max: 1.2, bossHp: [1200, 1350, 2200] },
-  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.9, bossDmg: 1.75, rate: 1.7, max: 1.2, bossHp: [700, 850, 1800] },
+  T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, bossDmg: 0.85, rate: 0.74, max: 0.8, speed: 1, bossHp: [1300, 2100, 3300] },
+  T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, bossDmg: 1, rate: 0.93, max: 0.94, speed: 1, bossHp: [1400, 2300, 3600] },
+  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 2.2, bossDmg: 1.45, rate: 1.4, max: 1.05, speed: 1, bossHp: [800, 1750, 2400] },
+  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.42, dmgBase: 3.5, bossDmg: 1.5, rate: 1.8, max: 1.2, speed: 1, bossHp: [850, 1800, 2400] },
+  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.5, dmgBase: 3.8, bossDmg: 1.55, rate: 1.9, max: 1.2, speed: 1, bossHp: [1200, 1350, 2200] },
+  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.9, bossDmg: 1.75, rate: 1.7, max: 1.2, speed: 1, bossHp: [700, 850, 1800] },
 };
 
 /** Spawns per second, minute by minute (×tier.rate). Minutes 5 and 10 breathe (boss); minute 15 is the final boss. */
@@ -144,6 +147,42 @@ export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 1
 export const RATE_RAMP: [number, number] = [2, 8];
 /** A dmgBase or bossDmg above 1 is ×1 up to the first second here and phases in linearly to full at the second (Director.dmgScale). */
 export const DMG_RAMP: [number, number] = [240, 600];
+/** A dish's speed factor above 1 is ×1 up to the first second here and phases in linearly to full at the second. */
+export const SPEED_RAMP: [number, number] = [180, 480];
+/** The speed factor of a dish never takes a walker past this share of the chef's base pace. */
+export const WALKER_SPEED_CAP = 0.85;
+
+/** A dish's speed factor at `time` seconds: a factor above 1 phases in over SPEED_RAMP (the openings stay as they are). */
+export function speedFactor(mul: number, time: number): number {
+  const k = Math.min(1, Math.max(0, (time - SPEED_RAMP[0]) / (SPEED_RAMP[1] - SPEED_RAMP[0])));
+  return mul > 1 ? 1 + (mul - 1) * k : mul;
+}
+
+/**
+ * Walk speed of a non-boss enemy in a dish whose speed factor is `factor`: its own speed × the factor,
+ * but never past WALKER_SPEED_CAP of the chef's base pace. What is that fast by design (the rolling
+ * meatball, the orbiting pepper) keeps its own speed, and so does a heavy body: its harder hit is
+ * fair because it is slow. Dashes, leaps and stampedes have their own speeds and are not touched; a
+ * hopper's hop scales with its walk.
+ */
+export function waveSpeed(def: EnemyDef, factor: number): number {
+  if (factor <= 1) return def.speed * factor;
+  if (def.heavy) return def.speed;
+  return Math.min(def.speed * factor, Math.max(def.speed, CHEF_SPEED * WALKER_SPEED_CAP));
+}
+
+/**
+ * How much faster a crime acts under the garlic's aura in a dish whose speed factor is `factor`: the
+ * aura's GARLIC_BUFF, as long as that leaves a walker under WALKER_SPEED_CAP of the chef's pace. Past
+ * it, the dish's factor and the aura together give no more than the larger of the cap and what the
+ * aura alone gives that crime (a buffed pasta-snapper was at 80 % of the chef's pace before any factor).
+ */
+export function buffFactor(def: EnemyDef, factor: number): number {
+  const inDish = waveSpeed(def, factor);
+  const allowed = Math.max(def.speed * GARLIC_BUFF, Math.min(inDish * GARLIC_BUFF, CHEF_SPEED * WALKER_SPEED_CAP));
+  return Math.max(1, Math.min(GARLIC_BUFF, allowed / inDish));
+}
+
 /** Max share of a minute's spawn weight that may come from non-intruder extras. */
 export const MAX_EXTRA_SHARE = 0.2;
 /** Intruders left out of the weight-order check (support enemies: see the header). */
@@ -190,6 +229,8 @@ export interface StageDef {
   hpGrowth: number;
   dmgBase: number;
   bossDmg: number;
+  /** walk-speed factor of everything but the bosses and the heavy bodies (tier × dish; applied through waveSpeed) */
+  speed: number;
   /** `hp` = boss base HP for this slot (overrides the boss's own); `dmg` = factor on the boss's damage in this slot */
   bosses: { at: number; id: string; hp?: number; dmg?: number }[];
   finalBoss: string;
@@ -272,6 +313,8 @@ interface StageSpec {
   rateMul?: number;
   /** optional factor on the tier's dmgBase: slow, soft intruders hit harder (the bosses keep the tier's bossDmg) */
   dmgMul?: number;
+  /** optional factor on the tier's walk-speed factor: a crowd of slow intruders that has to press harder */
+  speedMul?: number;
   /** optional per-slot factor on the tier's bossDmg: a boss that lands more or fewer of its attacks in this slot */
   bossDmgMul?: [number, number, number];
   unlock: UnlockRule;
@@ -301,6 +344,7 @@ function stage(num: number, s: StageSpec): StageDef {
     hpGrowth: T.hpGrowth,
     dmgBase: Math.round(T.dmgBase * (s.dmgMul ?? 1) * 100) / 100,
     bossDmg: T.bossDmg,
+    speed: Math.round(T.speed * (s.speedMul ?? 1) * 100) / 100,
     bosses: bosses(s.tier, s.bosses, s.bossHpMul, s.bossDmgMul),
     finalBoss: s.bosses[2],
     waves: waves(s.tier, s.minutes, s.rateMul),
