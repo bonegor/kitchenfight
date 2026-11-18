@@ -17,7 +17,7 @@
 import type { MusicId } from '../audio/audio';
 import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
 import type { StageAmbient } from '../gfx/stageenv';
-import { ELITE_DMG, ENEMIES, GARLIC_BUFF, REGULAR_ENEMY_IDS, SHOT_DMG, SPEED_JITTER, touchGrowth, type EnemyDef } from './enemies';
+import { ELITE_DMG, ENEMIES, GARLIC_BUFF, meanClump, REGULAR_ENEMY_IDS, SHOT_DMG, SPEED_JITTER, touchGrowth, type EnemyDef } from './enemies';
 import { baseStats, CHEF_SPEED } from './types';
 
 export interface WaveMinute {
@@ -258,7 +258,7 @@ export function buffFactor(def: EnemyDef, factor: number): number {
   return Math.max(1, Math.min(GARLIC_BUFF, allowed / inDish));
 }
 
-/** Max share of a minute's spawn weight that may come from non-intruder extras. */
+/** Max share of a minute's spawns that may come from non-intruder extras: by weight, and by heads (a swarm pick brings a clump). */
 export const MAX_EXTRA_SHARE = 0.2;
 /** Intruders left out of the weight-order check (support enemies: see the header). */
 export const ORDER_EXEMPT = new Set(['aglio']);
@@ -321,10 +321,14 @@ export interface StageDef {
 // wave helpers
 // -------------------------------------------------------------------------------------
 type Pool = [string, number][];
-interface MinuteSpec { pool: Pool; extras: string[]; share: number }
+interface MinuteSpec { pool: Pool; extras: string[]; share: number; rate: number }
 
-/** One minute: intruder pool + optional dish-relevant extras taking `share` of the weight. */
-const M = (pool: Pool, extras: string[] = [], share = 0.15): MinuteSpec => ({ pool, extras, share: extras.length ? share : 0 });
+/**
+ * One minute: intruder pool + optional dish-relevant extras taking `share` of the weight. A swarm
+ * extra spawns in clumps, so waves() divides its weight by its mean clump: `share` holds by heads too.
+ * `rate` is a factor on the minute's spawn rate.
+ */
+const M = (pool: Pool, extras: string[] = [], share = 0.15, rate = 1): MinuteSpec => ({ pool, extras, share: extras.length ? share : 0, rate });
 
 /** Spawn-rate factor of minute i: a factor above 1 phases in over RATE_RAMP (the openings stay gentle). */
 export function rateFactor(mul: number, i: number): number {
@@ -337,8 +341,8 @@ function waves(tier: TierId, minutes: MinuteSpec[], rateMul = 1): WaveMinute[] {
   return minutes.map((m, i) => {
     const sum = m.pool.reduce((a, [, w]) => a + w, 0);
     const extraW = m.extras.length ? ((m.share / (1 - m.share)) * sum) / m.extras.length : 0;
-    const pool: Pool = [...m.pool, ...m.extras.map((id) => [id, Math.floor(extraW * 100) / 100] as [string, number])];
-    return { pool, rate: Math.round(BASE_RATE[i] * rateFactor(T.rate * rateMul, i) * 100) / 100, max: Math.round(BASE_MAX[i] * T.max) };
+    const pool: Pool = [...m.pool, ...m.extras.map((id) => [id, Math.floor((extraW / meanClump(ENEMIES[id])) * 100) / 100] as [string, number])];
+    return { pool, rate: Math.round(BASE_RATE[i] * rateFactor(T.rate * rateMul, i) * m.rate * 100) / 100, max: Math.round(BASE_MAX[i] * T.max) };
   });
 }
 
@@ -442,10 +446,12 @@ const SPECS: StageSpec[] = [
     id: 'pomodoro', env: 'kitchen', tier: 'T1', bosses: ['b_scatolone', 'b_microonde', 'b_ketchup'], unlock: null, accent: '#e8442f',
     variant: { label: 'morning', tint: '#fff6e8', darkness: 0, vignette: 0.22, particles: 'dust', decor: 'tomatoes' },
     minutes: [
-      // gentle opening: a few squeeze bottles and as many rolling meatballs; the leaping chicken waits for minute 3
-      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2),
-      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2),
-      M([['ketchup', 2.5], ['polpetta', 1.5], ['pollo', 0.5]], ['spezzato'], 0.2),
+      // gentle opening: a few squeeze bottles and as many rolling meatballs; the leaping chicken waits for minute 3.
+      // The snapped spaghetti are a fifth of the heads (they come in clumps), no longer of the picks, so the
+      // first three minutes spawn less often (×0.85): as many intruders as when the snappers were twice as many
+      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2, 0.85),
+      M([['ketchup', 1.5], ['polpetta', 1.5]], ['spezzato'], 0.2, 0.85),
+      M([['ketchup', 2.5], ['polpetta', 1.5], ['pollo', 0.5]], ['spezzato'], 0.2, 0.85),
       M([['ketchup', 3], ['polpetta', 2], ['pollo', 1]], ['spezzato', 'forbici'], 0.2),
       M([['polpetta', 2.5], ['pollo', 2], ['ketchup', 2]], ['scotta'], 0.2),
       M([['ketchup', 3], ['polpetta', 1.5]], ['spezzato'], 0.2),
@@ -462,7 +468,7 @@ const SPECS: StageSpec[] = [
     ],
     events: [
       T(20, 'Spaghetti al pomodoro: tomato, oil, garlic, basil. Keep the ketchup OUT!'),
-      E(90, 'ring', 'spezzato', 18),
+      E(90, 'ring', 'ketchup', 6),
       E(150, 'elite', 'ketchup'),
       E(210, 'wall', 'spezzato', 16),
       E(270, 'elite', 'polpetta'),
@@ -955,7 +961,8 @@ export function unlockText(st: StageDef): string {
 
 /**
  * The wave rules (empty = OK).
- * - Dishes 1–10: every minute's pool draws ≥ 80 % of its weight from the dish's intruders and
+ * - Dishes 1–10: every minute's pool draws ≥ 80 % of its weight, and ≥ 80 % of its heads (a swarm
+ *   pick brings a clump: meanClump), from the dish's intruders and
  *   the rest from its extras; event enemies are intruders or extras; the intruders' shares follow
  *   the recipe's order (ORDER_EXEMPT aside); every intruder spawns.
  * - The finale is mixed by hand from the whole menu (exempt from the 80 % and order rules), but
@@ -978,13 +985,16 @@ export function stageRuleProblems(): string[] {
       continue;
     }
     st.waves.forEach((w, m) => {
-      let tot = 0, intr = 0;
+      let tot = 0, intr = 0, heads = 0, intrHeads = 0;
       for (const [id, wt] of w.pool) {
+        const h = wt * meanClump(ENEMIES[id]);
         tot += wt;
-        if (intruderIn(r, id)) intr += wt;
+        heads += h;
+        if (intruderIn(r, id)) { intr += wt; intrHeads += h; }
         else if (!r.extras.includes(id)) out.push(`${st.id} m${m}: ${id} is neither an intruder nor an extra`);
       }
       if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(Math.floor((1000 * intr) / tot) / 10).toFixed(1)}% < ${Math.round(100 * (1 - MAX_EXTRA_SHARE))}%`);
+      if (heads > 0 && intrHeads / heads < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(Math.floor((1000 * intrHeads) / heads) / 10).toFixed(1)}% of the heads < ${Math.round(100 * (1 - MAX_EXTRA_SHARE))}%`);
     });
     for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast' && !intruderIn(r, ev.enemy) && !r.extras.includes(ev.enemy)) out.push(`${st.id} @${ev.at}: event enemy ${ev.enemy} not an intruder`);
     // weight order (see the header)

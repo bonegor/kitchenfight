@@ -98,6 +98,16 @@ export const GARLIC_BUFF = 1.35;
  * stages.ts checks touchGrowth); a fed pot is wider and tougher, not harder-hitting.
  */
 export const DEVOUR = { scale: 1.1, maxScale: 1.9, hp: 1.25, dmg: 1 };
+/** A swarm pick spawns this many of its kind at once (min, max; Director.update). */
+export const SWARM_CLUMP: [number, number] = [2, 3];
+/**
+ * How many heads one spawn pick of this enemy brings on average: the mean clump of a swarm type, else 1.
+ * (The pieces an enemy splits into when it dies are not spawns: the mushy pasta counts as one.)
+ */
+export function meanClump(def: EnemyDef | undefined): number {
+  return def?.behavior === 'swarm' ? (SWARM_CLUMP[0] + SWARM_CLUMP[1]) / 2 : 1;
+}
+
 /** Every enemy's walk speed is spread by ± this share when it spawns (Run.spawnEnemy); the speed caps in stages.ts leave room for it. */
 export const SPEED_JITTER = 0.08;
 

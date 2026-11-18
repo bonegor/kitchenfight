@@ -4,7 +4,7 @@
  */
 import type { Run } from './run';
 import { dmgFactor, HP_RAMP, speedFactor, type StageDef, type WaveMinute } from './stages';
-import { ENEMIES } from './enemies';
+import { ENEMIES, SWARM_CLUMP } from './enemies';
 import { BOSS_LINES } from './recipes';
 import { TAU } from '../core/math';
 import { audio } from '../audio/audio';
@@ -113,7 +113,7 @@ export class Director {
       const def = ENEMIES[pick.id];
       if (!def) continue;
       // swarm types come in small clumps
-      const clump = def.behavior === 'swarm' ? run.rng.int(2, 3) : 1;
+      const clump = def.behavior === 'swarm' ? run.rng.int(SWARM_CLUMP[0], SWARM_CLUMP[1]) : 1;
       this.acc -= (clump - 1) * 0.5;
       const pos = this.spawnPos(def.radius);
       for (let i = 0; i < clump; i++) run.spawnEnemy(def, pos.x + run.rng.range(-18, 18), pos.y + run.rng.range(-18, 18));

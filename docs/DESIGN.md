@@ -385,7 +385,8 @@ each corner of Italy.
   At most 6 toasts wait in the queue; one is shown every 5 s.
 - **Waves.** In every minute at least 80 % of the spawn weight comes from the dish's intruders; the rest
   (≤ 20 %) are the dish's *extras*, method crimes that fit it (snapped spaghetti in the Pomodoro, the
-  one-pot carbonara in the Carbonara…). Over the run, the intruders' shares follow their order in the
+  one-pot carbonara in the Carbonara…). The 20 % also holds by head count: a swarm type comes in clumps
+  of 2–3 (`SWARM_CLUMP`), so a swarm extra's weight is divided by its mean clump (2.5). Over the run, the intruders' shares follow their order in the
   recipe (the loudest crime comes most often), and every intruder spawns. Garlic, a support enemy, is
   exempt from the order, but it has to spawn too. **The finale's** waves are mixed by hand from the whole
   menu and exempt from the 80 % and order rules, but every intruder and extra its recipe lists must spawn
