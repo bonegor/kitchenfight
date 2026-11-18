@@ -68,6 +68,8 @@ export class Player {
   moving = false;
   slowT = 0;
   slowAmt = 0;
+  /** time until an enemy hazard underfoot may tick again (one clock for every hazard: overlapping ones never stack) */
+  hazardT = 0;
   healT = 0;
   qs = 0;
 }
@@ -646,26 +648,34 @@ export class Run {
   /** whether the last hitEnemy() call was a critical hit */
   lastCrit = false;
 
-  hurtPlayer(dmg: number, sx: number, sy: number, src = '?') {
+  /**
+   * @param tick a damage-over-time tick from an enemy hazard underfoot (updateAreas). Like a hit it is
+   *   stopped by the chef's invulnerability frames, but it grants none and pushes nothing: a cloud
+   *   underfoot must never shield the chef from the next slam, shot or bite.
+   */
+  hurtPlayer(dmg: number, sx: number, sy: number, src = '?', tick = false) {
     const p = this.player;
     if (p.iframes > 0 || this.state !== 'playing' || p.hp <= 0 || this.finalBossDefeated) return;
     const d = Math.max(1, dmg - this.stats.armor);
     p.hp -= d;
     this.damageTaken += d;
     this.dmgBy[src] = (this.dmgBy[src] ?? 0) + d;
-    p.iframes = 0.5;
+    if (!tick) p.iframes = 0.5;
     p.hurtT = 0.3;
-    this.fx.hurt = Math.min(1, this.fx.hurt + 0.35 + d / 40);
-    this.fx.shake(0.18 + Math.min(0.3, d / 60));
+    // a tick tints the screen a little and never shakes it: it comes every 0.6 s while he stands in the hazard
+    this.fx.hurt = Math.min(1, this.fx.hurt + (tick ? 0.12 : 0.35 + d / 40));
+    if (!tick) this.fx.shake(0.18 + Math.min(0.3, d / 60));
     this.fx.number(p.x, p.y - 40, d, false, '#ff5a4f');
-    this.sfx('player_hurt', { volume: 0.8 });
+    this.sfx('player_hurt', { volume: tick ? 0.45 : 0.8 });
     if (p.hp < this.stats.maxHp * 0.3 && this.rng.next() < 0.3) this.say(['Aiuto!', 'Mannaggia!', 'Ahia!', 'Porca miseria!'], false, '#ffd0c8');
     else if (this.rng.next() < 0.06) this.say(['Che schifo!', 'Vergogna!', 'Ma che fai?!', 'Non si fa!'], false, '#ffd0c8');
-    // push nearby enemies back a little so you can escape
-    const dx = p.x - sx, dy = p.y - sy;
-    const l = Math.hypot(dx, dy) || 1;
-    p.vx += (dx / l) * 80;
-    p.vy += (dy / l) * 80;
+    if (!tick) {
+      // knock the chef away from the hit a little so he can escape
+      const dx = p.x - sx, dy = p.y - sy;
+      const l = Math.hypot(dx, dy) || 1;
+      p.vx += (dx / l) * 80;
+      p.vy += (dy / l) * 80;
+    }
     if (p.hp <= 0) this.playerDown();
   }
 
@@ -1156,6 +1166,7 @@ export class Run {
     }
     this.world.resolve(p, p.r * 0.8);
     if (p.iframes > 0) p.iframes -= dt;
+    if (p.hazardT > 0) p.hazardT -= dt;
     if (p.hurtT > 0) p.hurtT -= dt;
     // regen
     if (this.stats.recovery > 0 && p.hp < this.stats.maxHp) {
@@ -1579,6 +1590,8 @@ export class Run {
 
   updateAreas(dt: number) {
     const pl = this.player;
+    // the strongest damaging enemy hazard under the chef this frame
+    let hz: Area | null = null;
     for (const a of this.areas) {
       if (!a.alive) continue;
       a.life -= dt;
@@ -1595,13 +1608,7 @@ export class Run {
             pl.slowT = 0.15;
             pl.slowAmt = a.slow;
           }
-          if (a.damage) {
-            a.tickT -= dt;
-            if (a.tickT <= 0) {
-              a.tickT = a.tick;
-              this.hurtPlayer(a.damage, a.x, a.y, 'area:' + a.kind);
-            }
-          }
+          if (a.damage && (!hz || a.damage > hz.damage)) hz = a;
         }
         continue;
       }
@@ -1626,6 +1633,12 @@ export class Run {
         const ang = Math.random() * TAU, d = Math.random() * a.r;
         this.fx.burst(a.x + Math.cos(ang) * d, a.y + Math.sin(ang) * d * 0.7, 1, { colors: ['#ffd34d', '#ff8a2a', '#ff4b1f'], speed: 30, size: 3, life: 0.5, additive: true, angle: -Math.PI / 2, spread: 0.6 });
       }
+    }
+    // Hazard damage: one tick clock on the chef for all enemy hazards, so overlapping clouds tick as
+    // one (the strongest). A tick waits out his invulnerability frames and grants none (hurtPlayer).
+    if (hz && pl.hazardT <= 0 && pl.iframes <= 0) {
+      pl.hazardT = hz.tick;
+      this.hurtPlayer(hz.damage, hz.x, hz.y, 'area:' + hz.kind, true);
     }
   }
 
