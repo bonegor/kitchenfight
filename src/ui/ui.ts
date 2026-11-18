@@ -11,7 +11,7 @@ import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
 import { STAGES, COURSES, stageById, isDishUnlocked, unlockText, dishesWon, type StageDef } from '../game/stages';
-import { RECIPES, recipeById, dishesForIntruder, type RecipeDef, type RecipeIntruder } from '../game/recipes';
+import { RECIPES, recipeById, dishesForIntruder, type RecipeDef, type RecipeIntruder, type RecipeSource } from '../game/recipes';
 import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
@@ -1647,8 +1647,8 @@ export class UI {
       h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', title: src.name, ...(nav ? { 'data-nav': '' } : {}) }, text);
     const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
     // the Italian chefs and creators behind the sources (recipe + intruder sources), one row each
-    const chefs = new Map<string, { url: string; name: string }[]>();
-    const credit = (who: string, src: { url: string; name: string }) => {
+    const chefs = new Map<string, RecipeSource[]>();
+    const credit = (who: string, src: RecipeSource) => {
       for (const c of who.split(';').map((x) => x.trim()).filter(Boolean)) {
         const l = chefs.get(c) ?? [];
         if (!l.some((x) => x.url === src.url)) l.push(src);
@@ -1657,10 +1657,11 @@ export class UI {
     };
     for (const s of r.sources) if (s.chef) credit(s.chef, s);
     for (const i of r.intruders) if (i.chef) credit(i.chef, i.source);
-    // a chef's link reads as its publisher: "(Scatti di Gusto)" at the end of the name, else the site
-    const publisher = (src: { url: string; name: string }) => {
+    // a chef's link reads as its publisher: the source's own label, else "(Scatti di Gusto)" at the
+    // end of the name, else the site
+    const publisher = (src: RecipeSource) => {
       const m = /\(([^()]{2,30})\)\s*$/.exec(src.name);
-      return m ? m[1] : hostOf(src.url) || src.name;
+      return src.publisher ?? (m ? m[1] : hostOf(src.url) || src.name);
     };
     const meta = (s: { lang?: string; year?: string; url: string }) => h('span', { class: 'meta' }, [s.lang?.toUpperCase(), s.year, hostOf(s.url)].filter(Boolean).join(' · '));
     const q = r.quote;

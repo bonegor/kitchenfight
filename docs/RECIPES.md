@@ -130,10 +130,10 @@ chili: a free choice") · Basilico.
   garlic in oil as the base (shallot as an alternative), finished in the pan with a little pasta water.
   The search excerpt did not confirm which of two blog posts it was.
 - Chef sources (the Ricettario's *Gli chef*): Vincenzo's Plate's reaction video to the YouGov food
-  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food));
-  Antonino Cannavacciuolo ([Il Fatto Quotidiano, 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/))
-  and Irina Steccanella ([Trend Online](https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/))
-  against sugar in tomato sauce (see *Also researched, not in the game* below).
+  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)).
+  The two chef sources against sugar in tomato sauce (Antonino Cannavacciuolo, Irina Steccanella) are
+  not on the dish's page, because the page has no sugar intruder: they are under *Also researched, not
+  in the game* below.
 
 **Intruders in the game**
 
@@ -213,6 +213,7 @@ only from egg, cheese, fat and starch.
   the August 1954 *La Cucina Italiana* recipe used spaghetti, pancetta, Gruyère, garlic, eggs, salt and pepper.
 - [Carbonara, la ricetta perfetta di Luciano Monosilio (Scatti di Gusto)](https://www.scattidigusto.it/carbonara-ricetta-perfetta-luciano-monosilio) —
   the Roman chef known as the "king of carbonara": spaghetti, yolks, guanciale, cheese and pepper.
+  (The same article as the 2018 chef link below; the game lists it once, under *Gli chef*.)
 - [Carbonara Day, la ricetta perfetta (AGI, 2023)](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) —
   Monosilio's carbonara uses egg, Pecorino Romano, Grana Padano and guanciale, and only long pasta.
 - [Italy marks Carbonara Day (ANSA English, 2017)](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html) —
@@ -229,7 +230,8 @@ only from egg, cheese, fat and starch.
   [Il Fatto Quotidiano (2016)](https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/),
   [Italia Squisita](https://italiasquisita.net/it/video-ricette/pasta-alla-carbonara-di-luciano-monosilio),
   [SCMP](https://www.scmp.com/magazines/post-magazine/article/1862632/king-carbonara-luciano-monosilio-reveals-secrets-behind-his)
-  and the pasta makers' [Carbonara Day guide](https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc);
+  and the pasta makers' [Carbonara Day guide](https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc)
+  (a Word file that downloads, so the game does not link it);
   [Vincenzo's Plate recipe](https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/);
   [Max Mariola's video recipe (Gambero Rosso)](https://www.gamberorosso.it/notizie/videoricette-la-carbonara-di-max-mariola/).
 
@@ -431,8 +433,9 @@ return it at the end so it stays crisp. Toss with the pasta and finish with plen
   paraphrase: the Amatrice recipe calls for spaghetti, not bucatini;
   [the Amatrice De.C.O., delibera 27/2015 (Gazzetta del Gusto)](https://gazzettadelgusto.it/ricette/salse-sughi/storia-e-ricetta-originale-dellamatriciana/?print=pdf) —
   Amatrice formalised Amatriciana Rossa and Bianca.
-- Chef sources (the Ricettario's *Gli chef*): Carlo Cracco, the chef of the 2015 garlic row, as a source
-  of controversy, not of rules: [Amatrice's statement of the proper ingredients (Blitz Quotidiano, 2015)](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)
+- No chef credit (the page has no *Gli chef* row). The only chef-tagged sources are about Carlo Cracco,
+  the chef of the 2015 garlic row: a source of controversy, not of rules, so the game lists them as
+  plain *Fonti*: [Amatrice's statement of the proper ingredients (Blitz Quotidiano, 2015)](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)
   and [Dissapore (2015)](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/).
 
 **Intruders in the game**
@@ -557,8 +560,8 @@ culinary lens only; the cited page speaks of a "gel stabiliser" in general).
 
 ## 6. Pizza Margherita
 
-*Margherita pizza* · **Le Pizze** · Origin: Naples, Campania. Tradition dates it to 1889 and a royal visit;
-treat that as legend, as tomato-mozzarella-basil pizzas existed earlier · Base: Neapolitan dough of wheat
+*Margherita pizza* · **Le Pizze** · Origin: Naples, Campania. Tradition dates it to 1889 and a royal visit,
+but that date is legend: tomato-mozzarella-basil pizzas existed earlier · Base: Neapolitan dough of wheat
 flour, water, salt and brewer's yeast (the AVPN also allows a natural starter), stretched by hand, never
 with a rolling pin or press, into a disc no wider than 35 cm with a raised rim, baked 60–90 s in a
 wood-fired oven at about 485 °C (EU STG figures)
@@ -736,13 +739,13 @@ milk. Toss with tagliatelle.
 
 **Authority sources**
 
-- [Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)](https://accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf) —
+- [Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)](https://accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf) —
   ✓ "VARIANTI AMMESSE 1) Carni miste: manzo (circa il 60%) e maiale (circa il 40%) (lombo o capocollo);
   2) Carni tritate al coltello; 3) Pancetta stesa o arrotolata di maiale al posto della pancetta fresca;
-  4) Un profumo di noce moscata;". [English version (PDF)](https://www.accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf).
+  4) Un profumo di noce moscata;". [English version (PDF)](https://www.accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf).
 - [Accademia announcement](https://accademiaitalianadellacucina.it/en/node/62013) — ✓ "from 20 April 2023 the
   reference text will differ from that deposited in the Bologna Chamber of Commerce on 17 October 1982."
-- [Camera di Commercio di Bologna press release (2023, PDF)](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Ragù%20alla%20bolognese%2020%20aprile%202023.pdf).
+- [Camera di Commercio di Bologna press release (2023, PDF)](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Rag%C3%B9%20alla%20bolognese%2020%20aprile%202023.pdf).
 - [LaPresse (2023)](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) —
   ✓ "Non sono ammesse, invece, la polpa di vitello e la pancetta affumicata, così come solo la carne di
   maiale, aglio, rosmarino, prezzemolo o altri aromi. Vietati brandy e farina." (Not allowed: veal, smoked
@@ -1207,6 +1210,9 @@ the sources lens showed to be unsupported; intruders kept when the culinary lens
   page: a Food52 mirror (`vercel.food52.com`), The Local's CMS address (`cms.thelocal.com/?p=…`), WordPress
   shortlinks (`?p=…`) for Il Vero Alfredo, Life in Italy and Travel Emilia-Romagna, and a Nordot syndication
   copy. They are marked where they appear; replace them with the canonical page once it can be opened.
+  The three Ragù PDF addresses are the ones found, with the "ù" percent-encoded (`%C3%B9`) like their
+  spaces. Research notes about a link (a mirror, a syndicated copy, an unidentified original) stay in
+  this file: in the game a source's name is its title and publisher only.
 - **The working files** (the research dataset `recipes_dataset.json` and the full dossier, with every
   evidence entry and the "+N more" sources) were produced during the research and are not in the repository.
   This file is the edited record; `src/game/recipes.ts` holds the in-game subset.
@@ -1223,6 +1229,10 @@ When you change `src/game/recipes.ts`:
    add it here first.
 2. **Real people are sources, never characters.** Name them only in `chef` credits and `quote.by`; in-game
    texts use archetypes. Companies are generic ("a major US newspaper", "a British food website").
+   A `chef` credit is for a chef whose recipe or opinion backs the page. When the chef is the subject
+   of the row the page describes (the 2015 garlic row), list the articles as plain sources. The crime
+   cards in `enemies.ts` follow the same rule: no names, and a wording the research could not verify is
+   a paraphrase without quotation marks.
 3. **`quote` only when verified verbatim**, and say against what (a search snippet is not the live page).
 4. **Contested means a note.** `contested: true` always comes with a `note` giving the other side, and no
    toast may be more absolute than the note: neither the friend-or-foe toasts (see `foeLines`) nor the
