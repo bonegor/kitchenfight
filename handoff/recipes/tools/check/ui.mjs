@@ -15,7 +15,7 @@ async function legacy(name, v1) {
   await page.addInitScript((v1) => { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); if (v1) localStorage.setItem('kitchenfight.save.v1', JSON.stringify(v1)); sessionStorage.setItem('seeded', '1'); } }, v1);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.press-start', { timeout: 120000 });
-  const s = await page.evaluate(() => { const s = window.__kf.save; return { version: s.version, unlocked: s.unlockedStages, records: s.records, lastStage: s.lastStage, coins: s.coins, powerups: s.powerups, ach: s.achievements, chars: s.unlockedChars, stored: JSON.parse(localStorage.getItem('kitchenfight.save.v1') || 'null')?.version }; });
+  const s = await page.evaluate(() => { const s = window.__kf.save; return { version: s.version, unlocked: s.unlockedStages, records: s.records, lastStage: s.lastStage, coins: s.coins, powerups: s.powerups, ach: s.achievements, chars: s.unlockedChars, stored: JSON.parse(localStorage.getItem('kitchenfight.save.v2') || 'null')?.version ?? 'not written yet' }; });
   console.log('MIGRATION', name, JSON.stringify(s));
   await page.mouse.click(5, 5);
   await page.evaluate(() => window.__kf.ui.showStageSelect());
