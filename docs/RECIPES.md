@@ -130,10 +130,11 @@ chili: a free choice") · Basilico.
   garlic in oil as the base (shallot as an alternative), finished in the pan with a little pasta water.
   The search excerpt did not confirm which of two blog posts it was.
 - Chef sources (the Ricettario's *Gli chef*): Vincenzo's Plate's reaction video to the YouGov food
-  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food));
-  Antonino Cannavacciuolo ([Il Fatto Quotidiano, 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/))
-  and Irina Steccanella ([Trend Online](https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/))
-  against sugar in tomato sauce (see *Also researched, not in the game* below).
+  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)),
+  and Antonino Cannavacciuolo against sugar in tomato sauce ([Il Fatto Quotidiano, 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/);
+  see *Also researched, not in the game* below).
+- [Trend Online: sugar in tomato sauce, the chefs' answers](https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/) —
+  a plain source, not a chef credit: the research dataset ties no chef to this article.
 
 **Intruders in the game**
 
@@ -578,10 +579,14 @@ wood-fired oven at about 485 °C (EU STG figures)
 - [Dissapore on Reg. (EU) 2022/2313](https://www.dissapore.com/notizie/pizza-napoletana-lue-elimina-dai-menu-quella-che-non-rispetta-il-disciplinare-di-produzione/)
   and [on hand stretching only](https://www.dissapore.com/alimentazione/pizza-napoletana-stg-cambia-il-disciplinare-e-si-conferma-unassurdita/);
   [Scatti di Gusto: mozzarella vs fiordilatte (2012)](https://www.scattidigusto.it/2012/07/05/bufala-vieni-a-vedere-se-sulla-pizza-ci-va-mozzarella-o-fiordilatte/).
-- Chef sources (the Ricettario's *Gli chef*), all on pineapple: Gino Sorbillo ([Open, 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/)),
-  Antonino Cannavacciuolo ([Gambero Rosso, 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/)),
-  Franco Pepe ([Gambero Rosso, 2019](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/)) and
+- Chef sources (the Ricettario's *Gli chef*), both on pineapple: Antonino Cannavacciuolo
+  ([Gambero Rosso, 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/)) and
   Vincenzo's Plate ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)).
+- Plain sources, not chef credits: [Open, 2023](https://www.open.online/2023/12/31/sorbillo-pizza-ananas-reazione-utenti-video/)
+  (the reactions to Gino Sorbillo's pineapple Margherita) and
+  [Gambero Rosso, 2019](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/) (Franco Pepe's pineapple pizza).
+  Both pizzaioli put pineapple on pizza, so they are counter-voices and the Ricettario does not credit them
+  against it (the same rule that keeps Max Mariola out of the Ragù's credits).
 
 **Intruders in the game**
 

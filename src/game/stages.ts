@@ -15,6 +15,7 @@
 import type { MusicId } from '../audio/audio';
 import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
 import type { StageAmbient } from '../gfx/stageenv';
+import { ENEMIES } from './enemies';
 
 export interface WaveMinute {
   /** [enemyId, weight] */
@@ -815,6 +816,8 @@ export function stageRuleProblems(): string[] {
       const spawned = new Set<string>();
       for (const w of st.waves) for (const [id, wt] of w.pool) if (wt > 0) spawned.add(id);
       for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast') spawned.add(ev.enemy);
+      // an enemy that splits when it dies brings its pieces too (the mushy pasta's pasta-rinsers)
+      for (const id of [...spawned]) { const into = ENEMIES[id]?.split?.into; if (into) spawned.add(into); }
       for (const i of r.intruders) if (![i.enemy, ...(i.alias ?? [])].some((id) => spawned.has(id))) out.push(`${st.id}: listed intruder ${i.enemy} never spawns`);
       for (const id of r.extras) if (!spawned.has(id)) out.push(`${st.id}: listed extra ${id} never spawns`);
       continue;
@@ -826,7 +829,7 @@ export function stageRuleProblems(): string[] {
         if (intruderIn(r, id)) intr += wt;
         else if (!r.extras.includes(id)) out.push(`${st.id} m${m}: ${id} is neither an intruder nor an extra`);
       }
-      if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(100 * intr / tot).toFixed(0)}% < 80%`);
+      if (tot > 0 && intr / tot < 1 - MAX_EXTRA_SHARE - 1e-6) out.push(`${st.id} m${m}: intruders ${(Math.floor((1000 * intr) / tot) / 10).toFixed(1)}% < ${Math.round(100 * (1 - MAX_EXTRA_SHARE))}%`);
     });
     for (const ev of st.events) if (ev.enemy && ev.kind !== 'toast' && !intruderIn(r, ev.enemy) && !r.extras.includes(ev.enemy)) out.push(`${st.id} @${ev.at}: event enemy ${ev.enemy} not an intruder`);
     // weight order (see the header)

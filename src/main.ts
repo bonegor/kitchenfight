@@ -22,6 +22,7 @@ import { charById, CHARACTERS } from './game/passives';
 import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
 import type { Enemy } from './game/entities';
 import { awardMedals } from './game/medals';
+import { recipeById } from './game/recipes';
 
 /** Unlock every dish the save's wins allow (also completes a v1 → v2 migration) and keep lastStage valid. */
 function prepareSave(s: SaveData): SaveData {
@@ -269,7 +270,7 @@ class App {
     // the results screen shows the recipe either way; the first ★ of a dish is also an unlock
     if (run.recipeComplete && !wasPerfect) unlocks.push({ icon: run.recipe?.sprite ?? 'icon.star', text: `First ★ on the menu: ${run.stage.name}, ricetta completa!` });
     const fresh = refreshUnlocks(this.save);
-    for (const s of fresh) unlocks.push({ icon: 'icon.star', text: `New dish on the menu: ${s.name}!` });
+    for (const s of fresh) unlocks.push({ icon: recipeById(s.recipe)?.sprite ?? 'icon.star', text: `New dish on the menu: ${s.name}!` });
     if (fresh.length) {
       // the menu opens on the new dish (and warms its music) next time
       this.save.lastStage = fresh[0].id;

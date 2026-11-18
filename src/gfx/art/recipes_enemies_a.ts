@@ -772,7 +772,8 @@ enemySprite('prosciutto', 48, 50, 34, drawProsciutto);
 // ===========================================================================
 // 4. BROCCOLO AMERICANO — r15. A dark-green floret head in a red baseball cap,
 //    dunked in "Alfredo" cream that drips off the top; pale stalk body, white
-//    sneakers. Swings a floret underhand to lob it. (Lobber: florets → cream puddles.)
+//    sneakers. Swings a floret underhand to lob it. (Lobber: a floret lands as a patch of
+//    mashed broccoli, fx.floret_patch.)
 // ===========================================================================
 
 const BROC = '#3e8c39';
