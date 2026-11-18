@@ -745,12 +745,30 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; -webkit-text-stroke: 
   .story-dishes img { width: 92px; height: 62px; }
   .story p { font-size: 17px; }
 }
+/* short portrait phones (320x568 up to a 390x844 phone inside a browser's toolbars): the full
+   run-start card is taller than the half screen under the chef and would cover him, so the plate
+   sits beside the name and everything is a size smaller */
+@media (max-width: 600px) and (min-height: 521px) and (max-height: 730px) {
+  .dish-banner { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 14px 8px 8px; }
+  .dish-banner .db-txt { display: contents; }
+  .dish-banner .db-art { width: 72px; margin: 0; }
+  .dish-banner .db-name { font-size: 25px; text-align: left; }
+  .dish-banner .db-lbl, .dish-banner .db-ings { grid-column: 1 / -1; }
+  .dish-banner .db-lbl { margin: 2px 0 3px; font-size: 12px; }
+  .dish-banner .db-ings { gap: 3px 6px; }
+  .dish-banner .db-ing { font-size: 11px; }
+  .dish-banner .badge { width: 32px; height: 32px; }
+  .dish-banner .badge img { width: 25px; height: 25px; }
+}
 /* phones and short screens: dish cards with the picture beside the text (a 390-wide phone
    shows two to three dishes per screen instead of one) */
 @media (max-width: 600px), (max-height: 520px) {
-  .course-cards { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-bottom: 8px; }
+  /* one course per row (a one-dish course beside a neighbour would be narrower than its card),
+     and a card never wider than its row (320-wide phones) */
+  .course { flex-basis: 100%; }
+  .course-cards { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 10px; margin-bottom: 8px; }
   .dish-card { scroll-margin: 40px 0 10px; }
-  @container dish (min-width: 290px) and (max-width: 639.9px) {
+  @container dish (min-width: 250px) and (max-width: 639.9px) {
     .dc { flex-direction: row; }
     .dish-pic { width: 40%; aspect-ratio: auto; min-height: 124px; border-bottom: 0; border-right: 3px solid var(--ink); }
     .dish-art { width: 84%; }
@@ -760,6 +778,16 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; -webkit-text-stroke: 
     .icon-row { min-height: 26px; padding: 1px 5px 1px 2px; }
     .icon-row img { width: 22px; height: 22px; }
     .icon-row .lbl { width: 18px; height: 18px; font-size: 11px; }
+  }
+  /* 320-wide phones: a slimmer picture, so five ingredients stay on one line */
+  @container dish (min-width: 250px) and (max-width: 289.9px) {
+    .dish-pic { width: 36%; }
+    .dish-art { width: 92%; }
+    .dish-info { padding: 6px 7px 8px 8px; }
+    .dish-info h4 { font-size: 21px; }
+    .icon-row { padding: 1px 4px 1px 2px; }
+    .icon-row img { width: 21px; height: 21px; }
+    .icon-row .lbl { margin-right: 1px; }
   }
 }
 @media (max-height: 520px) {
