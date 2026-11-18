@@ -1127,7 +1127,7 @@ export class UI {
       ico = d.icon;
       maxLv = d.maxLevel;
       desc = c.isNew ? `${d.desc} (${d.short})` : d.short + ' more.';
-      lvText = c.isNew ? 'Ingredient' : `Level ${c.level}`;
+      lvText = c.isNew ? 'Passive' : `Level ${c.level}`;
       const evolves = Object.values(WEAPONS).filter((w) => w.evolve?.passive === c.id);
       if (evolves.length) {
         const w = evolves[0];
@@ -1444,7 +1444,7 @@ export class UI {
     mk('recipes', '🍝 Ricette');
     mk('crimes', '🍍 Crimini');
     mk('weapons', '🔪 Armi');
-    mk('passives', '🧄 Ingredienti');
+    mk('passives', '🧂 Rinforzi');
     mk('records', '🏆 Record');
     const sev = (n: number) => h('span', { class: 'sev' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= n ? '' : 'off' })));
     // single-column (phone) layout: bring the entry into view when it's tapped
@@ -1584,7 +1584,7 @@ export class UI {
         const known = seen.has('w:' + id);
         detail.innerHTML = '';
         if (!known) {
-          detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, d.evolution ? `An evolution. Hint: max out ${WEAPONS[d.from!].name} and find the right ingredient.` : 'Not yet discovered.'));
+          detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, d.evolution ? `An evolution. Hint: max out ${WEAPONS[d.from!].name} and find the right passive.` : 'Not yet discovered.'));
           return;
         }
         const evo = d.evolve ? WEAPONS[d.evolve.into] : null;

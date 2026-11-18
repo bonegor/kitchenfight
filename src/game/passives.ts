@@ -19,7 +19,7 @@ P({ id: 'macinapepe', name: 'Macinapepe', short: '+1 Amount', desc: 'Another twi
 P({ id: 'vespa', name: 'Motorino', short: '+10% Speed', desc: 'Keys to a vintage Italian scooter. Move faster.', icon: 'icon.p.vespa', maxLevel: 5, mods: [{ stat: 'moveSpeed', add: 0.1 }] });
 P({ id: 'cornicello', name: 'Cornicello', short: '+10% Luck', desc: 'A red Neapolitan lucky horn. Never buy your own — but this one was a gift.', icon: 'icon.p.cornicello', maxLevel: 5, mods: [{ stat: 'luck', add: 0.1 }] });
 P({ id: 'ricettario', name: 'Ricettario della Nonna', short: '+8% Growth', desc: "Nonna's handwritten recipe book. Learn faster.", icon: 'icon.p.ricettario', maxLevel: 5, mods: [{ stat: 'growth', add: 0.08 }] });
-P({ id: 'profumo', name: 'Profumo di Ragù', short: '+25% Magnet', desc: 'Sunday ragù simmering for six hours. Ingredients come to you.', icon: 'icon.p.profumo', maxLevel: 5, mods: [{ stat: 'magnet', add: 0.25 }] });
+P({ id: 'profumo', name: 'Profumo di Ragù', short: '+25% Magnet', desc: 'Sunday ragù simmering for six hours. XP and coins come to you.', icon: 'icon.p.profumo', maxLevel: 5, mods: [{ stat: 'magnet', add: 0.25 }] });
 P({ id: 'sale', name: 'Sale Grosso', short: '+10% Proj. Speed', desc: 'Coarse sea salt for the pasta water. Projectiles fly faster.', icon: 'icon.p.sale', maxLevel: 5, mods: [{ stat: 'speed', add: 0.1 }] });
 P({ id: 'salvadanaio', name: 'Salvadanaio', short: '+15% Greed', desc: 'A ceramic piggy bank. More coins from everything.', icon: 'icon.p.salvadanaio', maxLevel: 5, mods: [{ stat: 'greed', add: 0.15 }] });
 
