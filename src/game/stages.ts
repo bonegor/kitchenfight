@@ -5,8 +5,8 @@
  *
  * BALANCE: the difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves, the two
  * ramps RATE_RAMP / DMG_RAMP and BOSS_HP_FACTOR). A level's waves only choose WHO comes (pools);
- * HOW MANY and HOW TOUGH come from its tier, with three optional per-dish factors
- * (StageSpec.rateMul / dmgMul / bossHpMul).
+ * HOW MANY and HOW TOUGH come from its tier, with four optional per-dish factors
+ * (StageSpec.rateMul / dmgMul / bossHpMul / bossDmgMul).
  *
  * POOLS: over the whole run, each intruder's share of the spawn weight follows the order of
  * recipe.intruders (the spec's "weight order": the loudest crime comes most often), checked
@@ -98,7 +98,13 @@ export interface Tier {
 //   minutes 7–15.
 // - A boss hits by its tier's bossDmg, not by dmgBase (1.45–1.75 at full ramp is what the old
 //   stages' bosses hit with, the base damage in enemies.ts having been cut by a fifth). The
-//   5:00 boss comes at the start of the ramp, so it is the mildest of the three.
+//   5:00 boss comes at the start of the ramp, so it is the mildest of the three. A dish scales
+//   single slots with StageSpec.bossDmgMul: the finals of the Amatriciana and of Cacio e Pepe
+//   hit ×0.8. Both were tuned while their boss (Il Re dell'Aglio, Il Panetto Supremo) fell
+//   silent whenever the chef kept it above him; now that nothing switches it off it attacks
+//   more often against the test bot (17.7 against 13.7 times a minute, 14.4 against 12.4), and
+//   ×0.8 puts the damage the bot takes in the two fights back where it was (medians: 264
+//   against 263, and 263 against 269).
 // - bossHp is the slot's base HP; the real HP is ×hpBase × player level × time
 //   (Director.spawnBoss). It is set for fights of about a minute and a half with the test bot in
 //   every tier: the bot's damage does not grow with the tier, so bossHp × hpBase is about level
@@ -184,8 +190,8 @@ export interface StageDef {
   hpGrowth: number;
   dmgBase: number;
   bossDmg: number;
-  /** `hp` = boss base HP for this slot (overrides the boss's own) */
-  bosses: { at: number; id: string; hp?: number }[];
+  /** `hp` = boss base HP for this slot (overrides the boss's own); `dmg` = factor on the boss's damage in this slot */
+  bosses: { at: number; id: string; hp?: number; dmg?: number }[];
   finalBoss: string;
   waves: WaveMinute[];
   events: StageEvent[];
@@ -233,9 +239,9 @@ export const BOSS_HP_FACTOR: Record<string, number> = {
   b_influencer: 0.6, b_campanile: 0.5, b_burro: 0.7, b_microonde: 0.65, b_scatolone: 0.7, b_grattugiato: 0.6, b_frullatore: 0.65, b_aglio: 0.8, b_bolognese: 0.8,
 };
 
-const bosses = (tier: TierId, ids: [string, string, string], mul: [number, number, number] = [1, 1, 1]) => {
+const bosses = (tier: TierId, ids: [string, string, string], mul: [number, number, number] = [1, 1, 1], dmg: [number, number, number] = [1, 1, 1]) => {
   const hp = TIERS[tier].bossHp;
-  return ids.map((id, i) => ({ at: 300 * (i + 1), id, hp: Math.round(hp[i] * (BOSS_HP_FACTOR[id] ?? 1) * mul[i]) }));
+  return ids.map((id, i) => ({ at: 300 * (i + 1), id, hp: Math.round(hp[i] * (BOSS_HP_FACTOR[id] ?? 1) * mul[i]), dmg: dmg[i] }));
 };
 
 const MUSIC: Record<string, MusicId> = { kitchen: 'kitchen', trattoria: 'trattoria', streets: 'streets', foodcourt: 'foodcourt' };
@@ -266,6 +272,8 @@ interface StageSpec {
   rateMul?: number;
   /** optional factor on the tier's dmgBase: slow, soft intruders hit harder (the bosses keep the tier's bossDmg) */
   dmgMul?: number;
+  /** optional per-slot factor on the tier's bossDmg: a boss that lands more or fewer of its attacks in this slot */
+  bossDmgMul?: [number, number, number];
   unlock: UnlockRule;
   accent: string;
   minutes: MinuteSpec[];
@@ -293,7 +301,7 @@ function stage(num: number, s: StageSpec): StageDef {
     hpGrowth: T.hpGrowth,
     dmgBase: Math.round(T.dmgBase * (s.dmgMul ?? 1) * 100) / 100,
     bossDmg: T.bossDmg,
-    bosses: bosses(s.tier, s.bosses, s.bossHpMul),
+    bosses: bosses(s.tier, s.bosses, s.bossHpMul, s.bossDmgMul),
     finalBoss: s.bosses[2],
     waves: waves(s.tier, s.minutes, s.rateMul),
     events,
@@ -433,7 +441,7 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], bossHpMul: [1.25, 0.9, 0.85], rateMul: 1.45, dmgMul: 1.45, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
+    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], bossHpMul: [1.25, 0.9, 0.95], bossDmgMul: [1, 1, 0.8], rateMul: 1.45, dmgMul: 1.45, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
     variant: { label: 'evening', tint: '#ffd6a8', darkness: 0.46, darkColor: '#2a120a', vignette: 0.45, particles: 'embers', decor: 'embers' },
     minutes: [
       // bacon opens; the layered onions (the dish's hardest hitters early on) build up from minute 2
@@ -472,7 +480,7 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_influencer', 'b_alfredo', 'b_burro'], bossHpMul: [1.25, 1, 0.85], rateMul: 1.2, unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
+    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_influencer', 'b_alfredo', 'b_burro'], bossHpMul: [1.25, 1, 0.85], bossDmgMul: [1, 1, 0.8], rateMul: 1.2, unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
     variant: { label: 'late night', tint: '#ffe0c0', darkness: 0.6, darkColor: '#1a0c18', vignette: 0.5, particles: 'dust', decor: 'osteria' },
     minutes: [
       // butter and cream open; the grated cheese only seasons the dish, and less of it before 5:00

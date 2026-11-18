@@ -156,8 +156,10 @@ export class Director {
     const lvlMul = 1 + (run.level - 1) * 0.035;
     const slot = slotHp ? slotHp / def.hp : 1;
     const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) * slot });
-    // a boss hits by its tier's bossDmg, not by the waves' dmgBase: its own attacks set its threat
-    e.damage = def.damage * this.dmgScale(this.stage.bossDmg);
+    // a boss hits by its tier's bossDmg, not by the waves' dmgBase: its own attacks set its threat.
+    // The slot's own factor (StageSpec.bossDmgMul) is looked up here, not passed in, so every caller gets it
+    const slotDmg = this.stage.bosses.find((b) => b.id === id && b.hp === slotHp)?.dmg ?? 1;
+    e.damage = def.damage * this.dmgScale(this.stage.bossDmg) * slotDmg;
     e.spawnT = 0.6;
     const final = lastSlot && id === this.stage.finalBoss;
     e.isFinal = final;

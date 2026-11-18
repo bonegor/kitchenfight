@@ -89,6 +89,18 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
   - *Damage.* A boss hits by its tier's `bossDmg`, not by `dmgBase`: 1.45–1.75 at full ramp is what the
     old stages' bosses hit with (their base damage in `enemies.ts`, 14–24, is a fifth lower than it was).
     The 5:00 boss arrives at the start of the damage ramp, so it is the mildest of the three.
+  - *Two finals hit ×0.8* (`bossDmgMul`): Il Re dell'Aglio in the Amatriciana and Il Panetto Supremo in
+    Cacio e Pepe. Both slots were tuned on a build in which these two fell silent whenever the chef
+    kept them above him. Nothing switches them off any more (see *Nobody parks a boss*), so against
+    the test bot the King attacks 17.7 times a minute where he made 13.7, and the Block 14.4 where he
+    made 12.4. At ×1 the bot took about a sixth more damage from the King himself and a fifth more
+    from the Block. At ×0.8 both fights measure as they did: the damage taken during the fight is 264
+    (median; 263 before) in the Amatriciana and 263 (269) in Cacio e Pepe, with 0.67 (0.65) and 1.10
+    (1.34) deaths in the fight (96 runs against 168 and 144 of the earlier build). The Block's 5:00
+    slots in the Pesto and the Vongole keep ×1: there the damage did not move. The King's slot also
+    has ×0.95 HP where it had ×0.85: from off screen he now lands next to the chef, the bot's weapons
+    reach him more, and at ×0.85 the fight had become a fifth shorter (70 s on average against 86 s).
+    ×0.95 gives 76 s with the damage where it was; ×1 gives 91 s, but more damage than before.
   - *HP.* A slot's HP replaces the boss's own and is then ×hpBase, ×player level and ×time
     (`Director.spawnBoss`). The slots are set for fights of about a minute and a half with the test bot
     in every tier, which is why the base HP falls from T3 to T6 while `hpBase` rises. `BOSS_HP_FACTOR`
@@ -127,19 +139,20 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
   invulnerability frames but gives none, so a cloud never shields him from the next hit; overlapping
   hazards tick as one, the strongest.
 - **Per-dish factors** (`StageSpec`): `rateMul` (more or fewer spawns, phased in like `rate`) for a dish
-  whose intruders are softer or tougher than its tier-mates', `dmgMul` (harder hits from the waves) and
-  `bossHpMul` (single boss slots: the same boss is quicker or slower to bring down in another crowd).
+  whose intruders are softer or tougher than its tier-mates', `dmgMul` (harder hits from the waves),
+  `bossHpMul` (single boss slots: the same boss is quicker or slower to bring down in another crowd) and
+  `bossDmgMul` (single boss slots: a factor on the tier's `bossDmg`).
 
-| Dish | rateMul | dmgMul | bossHpMul (5:00 / 10:00 / 15:00) |
-|---|---|---|---|
-| Alfredo | — | — | 1.25 / 1.1 / 1.35 |
-| Amatriciana | 1.45 | 1.45 | 1.25 / 0.9 / 0.85 |
-| Cacio e Pepe | 1.2 | — | 1.25 / 1 / 0.85 |
-| Margherita | 0.75 | — | 0.65 / 1 / 0.9 |
-| Marinara | 1.3 | — | — |
-| Ragù | — | — | 0.7 / 0.65 / 0.75 |
-| Pesto | 1.1 | — | 1.25 / 1.3 / 1 |
-| Vongole | 1.2 | 1.1 | — |
+| Dish | rateMul | dmgMul | bossHpMul (5:00 / 10:00 / 15:00) | bossDmgMul (5:00 / 10:00 / 15:00) |
+|---|---|---|---|---|
+| Alfredo | — | — | 1.25 / 1.1 / 1.35 | — |
+| Amatriciana | 1.45 | 1.45 | 1.25 / 0.9 / 0.95 | 1 / 1 / 0.8 |
+| Cacio e Pepe | 1.2 | — | 1.25 / 1 / 0.85 | 1 / 1 / 0.8 |
+| Margherita | 0.75 | — | 0.65 / 1 / 0.9 | — |
+| Marinara | 1.3 | — | — | — |
+| Ragù | — | — | 0.7 / 0.65 / 0.75 | — |
+| Pesto | 1.1 | — | 1.25 / 1.3 / 1 | — |
+| Vongole | 1.2 | 1.1 | — | — |
 
 - **Measured** with the test bot (`simulate()` in `main.ts`; the chef Enzo; a mid-progress pantry of
   Olio 2, San Marzano 2, Grembiule 1 and Minestrone 1; 24 runs per dish and setting). The bot kites crowds
