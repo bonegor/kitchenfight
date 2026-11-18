@@ -91,6 +91,20 @@ export const ELITE_DMG = 1.5;
 /** The garlic's aura: everything near it acts this much faster (walks, shoots, leaps). */
 export const GARLIC_BUFF = 1.35;
 
+/**
+ * The devourer (La Pentola Unica) grows with every crime it swallows: ×scale in size up to maxScale,
+ * ×hp in health, ×dmg in damage.
+ */
+export const DEVOUR = { scale: 1.1, maxScale: 1.9, hp: 1.25, dmg: 1.035 };
+
+/** The most a touch can grow after spawning: a fully fed devourer (×1.27); 1 for everything else. */
+export function touchGrowth(def: EnemyDef): number {
+  if (def.behavior !== 'devourer') return 1;
+  // it hunts while its scale is below maxScale, so the last meal may take it past the cap
+  const meals = Math.ceil(Math.log(DEVOUR.maxScale) / Math.log(DEVOUR.scale) - 1e-9);
+  return Math.pow(DEVOUR.dmg, meals);
+}
+
 export const ENEMIES: Record<string, EnemyDef> = {};
 function E(d: EnemyDef) {
   ENEMIES[d.id] = d;
@@ -198,7 +212,7 @@ E({
 });
 E({
   id: 'cappuccino', name: 'Cappuccino Ritardatario', en: 'Latecomer Cappuccino', sprite: 'enemy.cappuccino',
-  radius: 14, hp: 30, speed: 70, damage: 9, xp: 4, behavior: 'chase',
+  radius: 14, hp: 30, speed: 70, damage: 8, xp: 4, behavior: 'chase',
   color: 'brown', juice: '#a8714a', chunk: 'glass',
   info: { crime: 'Cappuccino after 11 a.m. (or with a meal)', why: 'Milky coffee is for breakfast; after lunch or dinner Italians drink an espresso. (Italians do argue about how strict the rule is.) These only show up after 11:00 on the clock.', severity: 3, quote: '"No al cappuccino con la pasta" ("No cappuccino with pasta") — Trevi Fountain sign, 2023' },
 });
@@ -319,7 +333,7 @@ E({
 });
 E({
   id: 'anacardo', name: 'Anacardo Abusivo', en: 'Bootleg Cashew', sprite: 'enemy.anacardo',
-  radius: 8, hp: 5, speed: 84, damage: 3, xp: 1, behavior: 'swarm', params: { wobble: 0.8 },
+  radius: 8, hp: 5, speed: 84, damage: 3, xp: 2, behavior: 'swarm', params: { wobble: 0.8 },
   color: 'yellow', juice: '#e9d3a2', chunk: 'bread',
   info: { crime: 'Cashews in pesto', why: 'Pesto genovese is made with pine nuts. Cheap industrial jars often replace them with cashews, and Italian food media treat that as the mark of an imitation "alla genovese" pesto.', severity: 3 },
 });

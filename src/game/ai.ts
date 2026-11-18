@@ -3,7 +3,7 @@
  */
 import type { Run } from './run';
 import type { Enemy } from './entities';
-import { ENEMIES, LOB_CLOUD_DMG, SHOT_DMG } from './enemies';
+import { DEVOUR, ENEMIES, LOB_CLOUD_DMG, SHOT_DMG } from './enemies';
 import { TAU } from '../core/math';
 import { BOSS_PATTERNS } from './bosses';
 
@@ -434,7 +434,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
     case 'devourer': {
       // hunt the nearest smaller crime and swallow it to grow
       let target: Enemy | null = null;
-      if (e.scale < 1.9) {
+      if (e.scale < DEVOUR.maxScale) {
         run.enemiesIn(e.x, e.y, P.range ?? 320, tmp);
         let bd = 1e9;
         for (const o of tmp) {
@@ -449,11 +449,11 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         steer(e, (dx / dd) * e.speed * 1.2, (dy / dd) * e.speed * 1.2, dt);
         if (dd < e.r + target.r * 0.6) {
           target.alive = false;
-          e.scale = Math.min(1.9, e.scale * 1.1);
+          e.scale = Math.min(DEVOUR.maxScale, e.scale * DEVOUR.scale);
           e.r = e.def.radius * e.scale;
-          e.maxHp *= 1.25;
-          e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.25);
-          e.damage *= 1.06;
+          e.maxHp *= DEVOUR.hp;
+          e.hp = Math.min(e.maxHp, e.hp + e.maxHp * (DEVOUR.hp - 1));
+          e.damage *= DEVOUR.dmg;
           e.xp += Math.max(1, target.xp);
           e.squash = 1;
           e.attackPose = 0.3;
