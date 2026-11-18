@@ -20,7 +20,10 @@
  * Enrage (< 50 % HP): "Via la camicia!" — he sheds his papery skin (harmless flakes drift to the
  * floor), then, after a 0.45 s wind-up, a clove ring bursts out. He walks and attacks faster and
  * stinks for the rest of the fight (green fumes rise behind his crown and around his feet).
- * He never starts an attack in the first 1.6 s after his entrance, or while he is off screen or under the HUD.
+ * He never starts an attack in the first 1.6 s after his entrance, or while he is off screen: there his
+ * attacks wait. They wait 2.5 s at most: a chef who keeps him off screen (backing away in any direction,
+ * or running in a straight line) gets the leap next, from wherever he is. Its landing circle is drawn
+ * under the chef, so it reads at any distance, and it puts him back in view.
  */
 import { brain, danger, hazard, leap, steer, shoot, type Pattern } from '../ai';
 import { ENEMIES } from '../enemies';
@@ -33,15 +36,18 @@ const SHED = 1; // e.aux flag
 const STINK_COLS = ['#c8e070', '#a8d84a', '#eef7c0'];
 const CLOUD_LIFE = 5;
 const ENRAGE_WIND = 0.45;
+const ATTACKS = ['cloves', 'stink', 'leap', 'cloves', 'summon', 'stink'];
+/** The longest his attacks wait while he is off screen, in seconds; after that the leap is forced. */
+const DENIED_MAX = 2.5;
 
 interface Cloud { x: number; y: number; r: number; until: number; next: number }
-interface King { id: number; born: number; clouds: Cloud[]; ringAt: number; aura: number }
+interface King { id: number; born: number; clouds: Cloud[]; ringAt: number; aura: number; denied: number }
 
 /** Per-boss bookkeeping (enemies are pooled: the record is reset when the id changes). */
 const kings = new WeakMap<Enemy, King>();
 function king(run: Run, e: Enemy): King {
   let k = kings.get(e);
-  if (!k || k.id !== e.id) kings.set(e, (k = { id: e.id, born: run.time, clouds: [], ringAt: 0, aura: 0 }));
+  if (!k || k.id !== e.id) kings.set(e, (k = { id: e.id, born: run.time, clouds: [], ringAt: 0, aura: 0, denied: 0 }));
   return k;
 }
 
@@ -84,10 +90,12 @@ function stinkCloud(run: Run, e: Enemy, k: King, x: number, y: number) {
   k.clouds.push({ x, y, r, until: run.time + CLOUD_LIFE, next: run.time + 0.3 });
 }
 
-/** Fully in view and clear of the HUD (timer and boss bar on top): only then may an attack start. */
+/**
+ * On screen: the middle of his body is inside the view by half his radius. The margin is the same on
+ * every side, so no direction of retreat switches him off.
+ */
 function inView(run: Run, e: Enemy) {
-  const v = run.view;
-  return e.x > v.x0 + e.r && e.x < v.x1 - e.r && e.y - e.r * 1.4 > v.y0 + 90 && e.y + e.r * 0.6 < v.y1;
+  return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
 }
 
 function facePlayer(run: Run, e: Enemy) {
@@ -201,13 +209,19 @@ export const aglio: Pattern = (run, e, dt) => {
     if (Math.random() < 0.55) puff(run, e.x + s * (58 + Math.random() * 22) * e.scale, e.y - (88 + Math.random() * 20) * e.scale - e.z, 0.42, 1.1, 1, 0.65);
     else puff(run, e.x + (Math.random() - 0.5) * 120 * e.scale, e.y + 40 * e.scale, 0.5, 1.2, 0, 0.7);
   }
-  // no attack under the FINAL BOSS banner, from off screen or from under the HUD
+  // no attack under the FINAL BOSS banner, and none from off screen: there an attack waits. The wait
+  // is bounded. `denied` adds up the time since his last attack that he was off screen or had an
+  // attack overdue (after the entrance); past DENIED_MAX the next attack is the leap, and it does not wait
   if (!e.bossAttack && e.state !== 50) {
     const age = run.time - k.born;
     if (age < 1.6) e.timer = Math.max(e.timer, 1.6 - age);
-    if (!inView(run, e)) e.timer = Math.max(e.timer, 0.3);
+    const seen = inView(run, e);
+    if (age >= 1.6 && (!seen || e.timer <= 0.3)) k.denied += dt;
+    if (k.denied > DENIED_MAX) while (ATTACKS[e.bossStep % ATTACKS.length] !== 'leap') e.bossStep++;
+    else if (!seen) e.timer = Math.max(e.timer, 0.3);
   }
-  brain(run, e, dt, ['cloves', 'stink', 'leap', 'cloves', 'summon', 'stink'], 0.95, (a, t, first) => {
+  brain(run, e, dt, ATTACKS, 0.95, (a, t, first) => {
+    if (first) k.denied = 0;
     if (a === 'leap') {
       if (first) {
         const p = run.player;

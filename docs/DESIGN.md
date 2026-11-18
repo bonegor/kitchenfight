@@ -98,6 +98,13 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     Il Frullatore ×0.65, Il Re dell'Aglio ×0.8, and Lo Spaghettone ×0.8 (untouchable while phased out).
   - *Nobody outruns the fight.* A boss more than 300 units behind the chef walks faster, up to 3.5× its
     pace (`BOSS_NEAR` in `ai.ts`), so it cannot be left off screen.
+  - *Nobody parks a boss.* Il Re dell'Aglio and Il Panetto Supremo start no attack while they are off
+    screen (the middle of the body outside the view; the margin is the same on every side): the attack
+    waits. It waits 2.5 s at most (`DENIED_MAX`, counted from the boss's last attack: time off screen,
+    or with an attack overdue). Then the next attack is the one that closes the distance, from wherever
+    the boss is, and both are marked at the chef: the King's leap by its landing circle, the Block's
+    slide by its lane, which runs all the way to the chef and whose circles stay until the dish has
+    passed them. The other bosses have no such rule: they attack from wherever they are.
   - *The quake.* Il Pizzone Abissale's quake lays four beats of five danger circles; a circle does 0.6×
     its damage (the slam does 1×).
 - **Hazards.** An enemy hazard that hurts (a cheese cloud, a broccoli patch, a boss's stink cloud, fire

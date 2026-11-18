@@ -11,13 +11,18 @@
  *           landing spot is marked by a warning ring the size of the slippery puddle it becomes
  *   slide   he turns to the chef and a lane of warning circles as wide as what actually hits (his
  *           body plus the chef) shows the path (0.75 s, butter spraying behind the dish like spinning
- *           wheels), then the dish slides down it at full speed, leaving a buttery trail, and stops
+ *           wheels), then the dish slides down it at full speed, clearing the circles as it passes
+ *           them and leaving a buttery trail, and stops
  *           about 120 px past where the chef stood, so it stays on screen; enraged, if he is still on
  *           screen, he turns and slides a second time with the same 0.75 s tell
  *   pats    three rotating rings of butter pats (12, 16 enraged)
  * Enrage (< 50 % HP): it MELTS: smaller hitbox, drawn at 0.9 scale, faster, puddles all around, and it
  * keeps dripping and leaves small butter puddles behind it for the rest of the fight.
- * He never starts an attack in the first 1.6 s after his entrance, or while he is off screen or under the HUD.
+ * He never starts an attack in the first 1.6 s after his entrance, or while he is off screen: there his
+ * attacks wait. They wait 2.5 s at most: a chef who keeps him off screen (backing away in any direction,
+ * or running in a straight line) gets a slide next, from wherever he is, and that slide comes all the
+ * way back to the chef. Each circle of the lane stays until the dish has passed it, so a slide that
+ * starts off screen is still marked when it arrives.
  */
 import { brain, lobShot, hazard, shoot, steer, toPlayer, type Pattern } from '../ai';
 import type { Run } from '../run';
@@ -28,22 +33,29 @@ const PAT = 'proj.e_butterpat';
 const MELTED = 1; // e.aux flag
 const BUTTER = ['#fff3b0', '#fbe58a', '#ffffff'];
 const SLIDE_WIND = 0.75;
+/** Longest slide in seconds: from on screen, and from off screen (the slide that brings him back). */
+const SLIDE_MAX = 0.85, SLIDE_BACK = 2.5;
 const MELT_AT = 0.4, MELT_RATE = 3.5, MELT_PATS = 5;
+const ATTACKS = ['melt', 'slide', 'pats', 'slide', 'melt', 'pats'];
+/** The longest his attacks wait while he is off screen, in seconds; after that the slide is forced. */
+const DENIED_MAX = 2.5;
 
-interface Block { id: number; born: number; drip: number; phase: 'wind' | 'slide'; until: number; n: number; dur: number; speed: number }
+interface Block { id: number; born: number; drip: number; phase: 'wind' | 'slide'; until: number; n: number; dur: number; speed: number; denied: number }
 
 /** Per-boss bookkeeping (enemies are pooled: the record is reset when the id changes). */
 const blocks = new WeakMap<Enemy, Block>();
 function block(run: Run, e: Enemy): Block {
   let b = blocks.get(e);
-  if (!b || b.id !== e.id) blocks.set(e, (b = { id: e.id, born: run.time, drip: 0, phase: 'wind', until: 0, n: 0, dur: 0, speed: 0 }));
+  if (!b || b.id !== e.id) blocks.set(e, (b = { id: e.id, born: run.time, drip: 0, phase: 'wind', until: 0, n: 0, dur: 0, speed: 0, denied: 0 }));
   return b;
 }
 
-/** Fully in view and clear of the HUD (timer and boss bar on top): only then may an attack start. */
+/**
+ * On screen: the middle of his body is inside the view by half his radius. The margin is the same on
+ * every side, so no direction of retreat switches him off.
+ */
 function inView(run: Run, e: Enemy) {
-  const v = run.view;
-  return e.x > v.x0 + e.r && e.x < v.x1 - e.r && e.y - e.r * 1.4 > v.y0 + 90 && e.y + e.r * 0.6 < v.y1;
+  return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
 }
 
 function facePlayer(run: Run, e: Enemy) {
@@ -57,7 +69,8 @@ function knifeTip(e: Enemy): [number, number] {
 
 /**
  * Aim a slide at the chef: face him and lay the lane of warning circles. The lane is as wide as the
- * contact reach (e.r·0.85 + the chef's radius) and the slide stops about 120 px past the chef.
+ * contact reach (e.r·0.85 + the chef's radius) and the slide stops about 120 px past the chef. From on
+ * screen it is at most SLIDE_MAX s long; from off screen he comes all the way back (up to SLIDE_BACK s).
  */
 function aimSlide(run: Run, e: Enemy, b: Block, t: number) {
   const tp = toPlayer(run, e);
@@ -65,7 +78,7 @@ function aimSlide(run: Run, e: Enemy, b: Block, t: number) {
   e.ay = tp.dy;
   e.face = tp.dx >= 0 ? 1 : -1;
   b.speed = e.bossPhase ? 600 : 520;
-  b.dur = Math.min(0.85, Math.max(0.35, (tp.d + 120) / b.speed));
+  b.dur = Math.min(inView(run, e) ? SLIDE_MAX : SLIDE_BACK, Math.max(0.35, (tp.d + 120) / b.speed));
   b.phase = 'wind';
   b.until = t + SLIDE_WIND;
   e.telegraph = SLIDE_WIND;
@@ -78,9 +91,10 @@ function aimSlide(run: Run, e: Enemy, b: Block, t: number) {
   const len = b.speed * b.dur;
   const step = along * 1.05;
   const n = Math.max(1, Math.ceil(len / step));
+  // each circle stays until the dish reaches it: the lane is still there when he comes in from off screen
   for (let i = 0; i <= n; i++) {
     const d = (len * i) / n;
-    run.addArea('warning', e.x + e.ax * d, e.y + e.ay * d, w, SLIDE_WIND, { enemy: true });
+    run.addArea('warning', e.x + e.ax * d, e.y + e.ay * d, w, SLIDE_WIND + d / b.speed, { enemy: true });
   }
   run.sfx('enemy_dash', { volume: 0.7, pitch: 0.7 }, e.x);
 }
@@ -119,13 +133,19 @@ export const burro: Pattern = (run, e, dt) => {
       hazard(run, 'butter', e.x + (Math.random() - 0.5) * e.r * 0.8, e.y + e.r * 0.45, 22 + Math.random() * 6, 2.6, 0.2);
     }
   }
-  // no attack under the FINAL BOSS banner, from off screen or from under the HUD
+  // no attack under the FINAL BOSS banner, and none from off screen: there an attack waits. The wait
+  // is bounded. `denied` adds up the time since his last attack that he was off screen or had an
+  // attack overdue (after the entrance); past DENIED_MAX the next attack is a slide, and it does not wait
   if (!e.bossAttack && e.state !== 50) {
     const age = run.time - b.born;
     if (age < 1.6) e.timer = Math.max(e.timer, 1.6 - age);
-    if (!inView(run, e)) e.timer = Math.max(e.timer, 0.3);
+    const seen = inView(run, e);
+    if (age >= 1.6 && (!seen || e.timer <= 0.3)) b.denied += dt;
+    if (b.denied > DENIED_MAX) while (ATTACKS[e.bossStep % ATTACKS.length] !== 'slide') e.bossStep++;
+    else if (!seen) e.timer = Math.max(e.timer, 0.3);
   }
-  brain(run, e, dt, ['melt', 'slide', 'pats', 'slide', 'melt', 'pats'], 1, (a, t, first) => {
+  brain(run, e, dt, ATTACKS, 1, (a, t, first) => {
+    if (first) b.denied = 0;
     if (a === 'slide') {
       if (first) {
         b.n = 0;
