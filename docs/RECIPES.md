@@ -1150,7 +1150,10 @@ two, its popularity is **inherited** from those entries, not separately research
   olive oil in the Cacio e Pepe but seed oil in the Pesto; `vongola` (the Cheesy Clam) is cheese on clams in
   the Vongole and clams on the Marinara; `pollo` is chicken on pasta or on pizza. The general crime of each
   enemy is in Il Ricettario's Crimini tab; the per-dish reason is in the Ricette tab, and a shortened form
-  of it is in the first-sighting toast.
+  of it is in the first-sighting toast. On a crime card, the "Non appartiene a:" chip of a dish where the
+  ingredient itself belongs names the form that is the intruder there ("Alfredo: Parmesan finto",
+  "Pesto: Formaggio generico", "Ragù: Pancetta affumicata"), so the Parmesan card, which calls
+  Parmigiano the hero of the Alfredo and the Pesto, does not seem to ban it from them.
 - **The Carbonara's `bacon` is smoked bacon, not pancetta**: pancetta there is a contested fallback, so it is
   not a foe (friend-or-foe toasts call pancetta a foe only in the Amatriciana).
 - **Method crimes** (snapping spaghetti, rinsing, cold-water starts, canned and one-pot carbonara…) are not

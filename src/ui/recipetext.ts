@@ -25,7 +25,7 @@ export function shortOrigin(r: RecipeDef): string {
 
 /** Chip-sized dish name: "Spaghetti alla Carbonara" → "Carbonara". */
 const SHORT_DISH: Record<string, string> = {
-  pomodoro: 'Al Pomodoro',
+  pomodoro: 'Pomodoro',
   carbonara: 'Carbonara',
   alfredo: 'Alfredo',
   amatriciana: 'Amatriciana',

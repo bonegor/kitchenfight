@@ -339,5 +339,5 @@ Banish.
   [RECIPES.md](RECIPES.md).
 - **Crimini** — the bestiary with *why Italians object* (from research) and, for each crime, the dishes it
   does not belong in ("Non appartiene a:").
-- **Armi** (weapons and their evolutions), **Ingredienti** (the passive ingredients) and **Record** (each
+- **Armi** (weapons and their evolutions), **Rinforzi** (the passives; "ingredients" now means a dish's real ingredients) and **Record** (each
   dish's records).

@@ -241,7 +241,7 @@ class App {
           [2.6, touch ? 'Drag anywhere to move. Your weapons fire on their own!' : 'Move with WASD or the arrow keys. Your weapons fire on their own!'],
           [8, 'Collect basil, cherry tomatoes and mozzarella to level up.'],
           [16, 'Smash crates and flour sacks — they hide food and coins.'],
-          [26, 'Max a weapon + own its ingredient, then open a picnic basket to EVOLVE it.'],
+          [26, 'Max a weapon + own its passive, then open a picnic basket to EVOLVE it.'],
         ];
         for (const [t, msg] of tips) setTimeout(() => { if (this.run === run && run.state !== 'dead') this.ui.toast(msg, 'info'); }, t * 1000);
       }
