@@ -104,7 +104,16 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     or with an attack overdue). Then the next attack is the one that closes the distance, from wherever
     the boss is, and both are marked at the chef: the King's leap by its landing circle, the Block's
     slide by its lane, which runs all the way to the chef and whose circles stay until the dish has
-    passed them. The other bosses have no such rule: they attack from wherever they are.
+    passed them. From off screen both aim at where the chef is heading (the leap one second ahead, the
+    slide at the spot the dish and the chef reach together), so running on in a straight line is no
+    way out; a chef who turns away is missed. The other bosses have no such rule: they attack from
+    wherever they are.
+  - *Nothing unreadable under the HUD.* While one of these two is on screen but the top of its body is
+    inside the band the HUD covers (the top 90 units of the view: timer and recipe strip) or above it,
+    its pose cannot be read. There it starts only the attacks that are marked on the ground at the
+    chef: the King's stink and leap, the Block's melt and slide. The clove fan, the summon and the pat
+    rings, which only the pose announces, are passed over. Nothing waits, so the boss attacks as often
+    as anywhere else.
   - *Slows.* The chef's slowing weapons (Pesto Genovese 45 %, Olive d'Oro 25 %, the Forno 12–18 %)
     stretch a boss's walk and the pause between two attacks, never an attack: a boss ignores slows
     while an attack runs (and while it is airborne or phased out). Its warning circles, lanes and cones

@@ -21,10 +21,15 @@
  * He never starts an attack in the first 1.6 s after his entrance, or while he is off screen: there his
  * attacks wait. They wait 2.5 s at most: a chef who keeps him off screen (backing away in any direction,
  * or running in a straight line) gets a slide next, from wherever he is, and that slide comes all the
- * way back to the chef. Each circle of the lane stays until the dish has passed it, so a slide that
- * starts off screen is still marked when it arrives.
+ * way back to the chef: from off screen it is aimed at where the chef is heading (the spot the dish
+ * and the chef reach together), so running on in a straight line is no way out. Each circle of the
+ * lane stays until the dish has passed it, so a slide that starts off screen is still marked when it
+ * arrives.
+ * While he is under the HUD (the top of his body in the band at the top of the screen, or above it)
+ * his pose cannot be read: there he starts no pat rings, only the attacks that are marked on the
+ * ground at the chef (melt, slide).
  */
-import { brain, lobShot, hazard, shoot, steer, toPlayer, type Pattern } from '../ai';
+import { brain, lobShot, hazard, shoot, steer, type Pattern } from '../ai';
 import type { Run } from '../run';
 import type { Enemy } from '../entities';
 import { TAU } from '../../core/math';
@@ -37,6 +42,10 @@ const SLIDE_WIND = 0.75;
 const SLIDE_MAX = 0.85, SLIDE_BACK = 2.5;
 const MELT_AT = 0.4, MELT_RATE = 3.5, MELT_PATS = 5;
 const ATTACKS = ['melt', 'slide', 'pats', 'slide', 'melt', 'pats'];
+/** Attacks announced by his pose alone (no mark on the ground): never started under the HUD. */
+const POSE_ONLY = new Set(['pats']);
+/** The band at the top of the view that the HUD covers (timer, recipe strip), in world units. */
+const HUD_BAND = 90;
 /** The longest his attacks wait while he is off screen, in seconds; after that the slide is forced. */
 const DENIED_MAX = 2.5;
 
@@ -58,6 +67,11 @@ function inView(run: Run, e: Enemy) {
   return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
 }
 
+/** Under the HUD: the top of his body is inside the band at the top of the view, or above it. */
+function underHud(run: Run, e: Enemy) {
+  return e.y - e.r * 1.4 < run.view.y0 + HUD_BAND;
+}
+
 function facePlayer(run: Run, e: Enemy) {
   e.face = run.player.x >= e.x ? 1 : -1;
 }
@@ -70,15 +84,31 @@ function knifeTip(e: Enemy): [number, number] {
 /**
  * Aim a slide at the chef: face him and lay the lane of warning circles. The lane is as wide as the
  * contact reach (e.r·0.85 + the chef's radius) and the slide stops about 120 px past the chef. From on
- * screen it is at most SLIDE_MAX s long; from off screen he comes all the way back (up to SLIDE_BACK s).
+ * screen it is at most SLIDE_MAX s long; from off screen he comes all the way back (up to SLIDE_BACK s)
+ * and aims at where the chef is heading: the spot the dish and the chef reach together.
  */
 function aimSlide(run: Run, e: Enemy, b: Block, t: number) {
-  const tp = toPlayer(run, e);
-  e.ax = tp.dx;
-  e.ay = tp.dy;
-  e.face = tp.dx >= 0 ? 1 : -1;
+  const p = run.player;
+  const off = !inView(run, e);
   b.speed = e.bossPhase ? 600 : 520;
-  b.dur = Math.min(inView(run, e) ? SLIDE_MAX : SLIDE_BACK, Math.max(0.35, (tp.d + 120) / b.speed));
+  let tx = p.x, ty = p.y;
+  if (off) {
+    // the chef's place when the dish sets off, seen from the dish; then the time ts the dish needs to
+    // meet him: |q + v·ts| = speed·ts
+    const qx = p.x + p.vx * SLIDE_WIND - e.x, qy = p.y + p.vy * SLIDE_WIND - e.y;
+    const qv = qx * p.vx + qy * p.vy, k = b.speed * b.speed - (p.vx * p.vx + p.vy * p.vy);
+    if (k > 0) {
+      const ts = (qv + Math.sqrt(qv * qv + k * (qx * qx + qy * qy))) / k;
+      const lead = SLIDE_WIND + Math.min(ts, SLIDE_BACK);
+      tx += p.vx * lead;
+      ty += p.vy * lead;
+    }
+  }
+  const d = Math.hypot(tx - e.x, ty - e.y) || 1;
+  e.ax = (tx - e.x) / d;
+  e.ay = (ty - e.y) / d;
+  e.face = e.ax >= 0 ? 1 : -1;
+  b.dur = Math.min(off ? SLIDE_BACK : SLIDE_MAX, Math.max(0.35, (d + 120) / b.speed));
   b.phase = 'wind';
   b.until = t + SLIDE_WIND;
   e.telegraph = SLIDE_WIND;
@@ -135,7 +165,9 @@ export const burro: Pattern = (run, e, dt) => {
   }
   // no attack under the FINAL BOSS banner, and none from off screen: there an attack waits. The wait
   // is bounded. `denied` adds up the time since his last attack that he was off screen or had an
-  // attack overdue (after the entrance); past DENIED_MAX the next attack is a slide, and it does not wait
+  // attack overdue (after the entrance); past DENIED_MAX the next attack is a slide, and it does not wait.
+  // On screen but under the HUD nothing waits: an attack about to start there (brain() starts one when
+  // the timer runs out) is the next one in the cycle that is marked at the chef
   if (!e.bossAttack && e.state !== 50) {
     const age = run.time - b.born;
     if (age < 1.6) e.timer = Math.max(e.timer, 1.6 - age);
@@ -143,6 +175,7 @@ export const burro: Pattern = (run, e, dt) => {
     if (age >= 1.6 && (!seen || e.timer <= 0.3)) b.denied += dt;
     if (b.denied > DENIED_MAX) while (ATTACKS[e.bossStep % ATTACKS.length] !== 'slide') e.bossStep++;
     else if (!seen) e.timer = Math.max(e.timer, 0.3);
+    else if (e.timer <= dt && underHud(run, e)) while (POSE_ONLY.has(ATTACKS[e.bossStep % ATTACKS.length])) e.bossStep++;
   }
   brain(run, e, dt, ATTACKS, 1, (a, t, first) => {
     if (first) b.denied = 0;
