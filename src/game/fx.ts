@@ -359,11 +359,11 @@ export class FX {
   /**
    * @param free the view below the HUD's top band (world units). A big bubble is kept inside it, so the taunt
    *   of a boss arriving at the screen edge can be read; small bubbles stay over their speaker
-   * @param busy [y0, y1] of what the HUD lays across the screen for a while (toasts, the big banner): a big
-   *   bubble slips over or under them
-   * @param chef his bubbles are left alone (he stands mid-screen)
+   * @param busy [x0, y0, x1, y1] of what the HUD lays over the screen for a while (toasts, the big banner): a
+   *   big bubble goes over, under or beside them
+   * @param chef his bubbles are left alone (he stands mid-screen); a bubble that has to move does not land on him
    */
-  drawBubbles(ctx: CanvasRenderingContext2D, font: string, free?: { x0: number; y0: number; x1: number; y1: number }, busy: [number, number][] = [], chef?: object) {
+  drawBubbles(ctx: CanvasRenderingContext2D, font: string, free?: { x0: number; y0: number; x1: number; y1: number }, busy: [number, number, number, number][] = [], chef?: { x: number; y: number }) {
     for (const b of this.bubbles) {
       const age = b.max - b.life;
       const appear = Math.min(1, age / 0.18);
@@ -380,14 +380,30 @@ export class FX {
       let tail = 0;
       if (free && b.big && b.target !== chef) {
         const mx = w / 2 + 6;
-        const cx = free.x1 - free.x0 > mx * 2 ? clamp(x, free.x0 + mx, free.x1 - mx) : (free.x0 + free.x1) / 2;
+        const left = free.x0 + mx, right = free.x1 - mx;
         const hi = free.y1 - r - 12, lo = Math.min(free.y0 + r + 4, hi);
-        let cy = clamp(y, lo, hi);
-        for (const [b0, b1] of busy) {
-          if (cy + r + 8 <= b0 || cy - r >= b1) continue;
-          // over it or under it, whichever is nearer and has room
-          const over = b0 - r - 12, under = b1 + r + 4;
-          cy = over >= lo && (cy - over <= under - cy || under > hi) ? over : under <= hi ? under : cy;
+        let cx = right > left ? clamp(x, left, right) : (free.x0 + free.x1) / 2, cy = clamp(y, lo, hi);
+        // the nearest place clear of all of them: over one (with room for the tail), under one or beside it.
+        // If there is none, the place that lies on the fewest. Where it has to move, it keeps off the chef too
+        // (his hat 64 over his feet, his health bar under them)
+        const all = chef ? busy.concat([[chef.x - 18, chef.y - 64, chef.x + 18, chef.y + 24]]) : busy;
+        const xs = [cx], ys = [cy];
+        for (const q of all) {
+          xs.push(q[0] - mx, q[2] + mx);
+          ys.push(q[1] - r - 12, q[3] + r + 4);
+        }
+        let best = Infinity;
+        for (const px of xs) {
+          for (const py of ys) {
+            if (py < lo || py > hi || ((px < left || px > right) && px !== xs[0])) continue;
+            let d = Math.abs(px - xs[0]) + Math.abs(py - ys[0]);
+            for (const q of d ? all : busy) if (px + mx - 1 > q[0] && px - mx + 1 < q[2] && py + r + 11 > q[1] && py - r - 3 < q[3]) d += 1e6;
+            if (d < best) {
+              best = d;
+              cx = px;
+              cy = py;
+            }
+          }
         }
         tail = cy > y + 1 || Math.abs(x - cx) > w / 2 ? NaN : clamp(x - cx, -w / 2 + r + 4, w / 2 - r - 6);
         x = cx;

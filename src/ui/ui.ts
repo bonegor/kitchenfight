@@ -84,7 +84,7 @@ export class UI {
   private levelShownAt = 0;
   private bossTracked: Enemy | null = null;
   /** What the HUD covers at the top and bottom of the screen right now (see HudCover): the renderer keeps edge arrows and boss taunts out of it. */
-  hudCover: HudCover = { top: 0, toastTop: 0, toastBottom: 0, bannerTop: 0, bannerBottom: 0 };
+  hudCover: HudCover = { top: 0, toastTop: 0, toastBottom: 0, toastLeft: 0, toastRight: 0, bannerTop: 0, bannerBottom: 0 };
   current = '';
 
   constructor(public app: AppAPI) {
@@ -814,22 +814,29 @@ export class UI {
    */
   private measureHud() {
     const c = this.hudCover;
-    c.top = c.toastTop = c.toastBottom = c.bannerTop = c.bannerBottom = 0;
+    c.top = c.toastTop = c.toastBottom = c.toastLeft = c.toastRight = c.bannerTop = c.bannerBottom = 0;
     const hud = this.hud;
     if (!hud) return;
     for (const el of hud.querySelectorAll('.xpbar, .hud-timer, .recipe-strip, .hud-left, .hud-right, .boss-bar')) c.top = Math.max(c.top, el.getBoundingClientRect().bottom);
+    // layout sizes times the HUD's zoom: a toast pops in small and the banner zooms in at a tilt, which would
+    // shrink or blow up their bounding boxes
+    const box = hud.getBoundingClientRect();
+    const z = box.height / (hud.offsetHeight || 1) || 1;
     if (this.toastsEl?.childElementCount) {
       const b = this.toastsEl.getBoundingClientRect();
       c.toastTop = b.top;
       c.toastBottom = b.bottom;
+      // the column is as wide as its widest toast, centred
+      let w = 0;
+      for (const t of this.toastsEl.children) w = Math.max(w, (t as HTMLElement).offsetWidth * z);
+      c.toastLeft = (b.left + b.right - w) / 2;
+      c.toastRight = c.toastLeft + w;
     }
     const ban = this.bannerCur?.el;
     if (ban) {
-      // its layout box: the banner zooms in and sits at a tilt, which would blow up its bounding box
-      const box = hud.getBoundingClientRect();
-      const z = box.height / (hud.offsetHeight || 1) || 1;
       c.bannerTop = box.top + ban.offsetTop * z;
-      c.bannerBottom = c.bannerTop + ban.offsetHeight * z;
+      // + 12: it sits at a tilt, the left end of its second line hangs that much lower
+      c.bannerBottom = c.bannerTop + (ban.offsetHeight + 12) * z;
     }
   }
 

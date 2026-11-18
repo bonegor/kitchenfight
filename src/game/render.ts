@@ -17,19 +17,23 @@ const TELL_RED = '#ff2a1a';
 const SPARE_GREEN = new Set(['b_aglio']);
 
 /**
- * What the DOM HUD covers, in CSS px from the top of the screen. `top`: where its fixed top band ends (XP bar,
- * timer, recipe strip, slots, counters, boss bar). `toastTop`…`toastBottom`: the toasts showing now; they sit
- * under the band, or at the bottom edge on a short screen. `bannerTop`…`bannerBottom`: the big banner across
- * the middle. Both are 0, 0 when there is none.
+ * What the DOM HUD covers, in CSS px from the top left of the screen. `top`: where its fixed top band ends (XP
+ * bar, timer, recipe strip, slots, counters, boss bar). `toastTop`…`toastBottom`, `toastLeft`…`toastRight`: the
+ * toasts showing now; they sit under the band, or at the bottom edge on a short screen. `bannerTop`…
+ * `bannerBottom`: the big banner across the middle. All 0 when there is none.
  */
 export interface HudCover {
   top: number;
   toastTop: number;
   toastBottom: number;
+  toastLeft: number;
+  toastRight: number;
   bannerTop: number;
   bannerBottom: number;
 }
-const NO_HUD: HudCover = { top: 0, toastTop: 0, toastBottom: 0, bannerTop: 0, bannerBottom: 0 };
+const NO_HUD: HudCover = { top: 0, toastTop: 0, toastBottom: 0, toastLeft: 0, toastRight: 0, bannerTop: 0, bannerBottom: 0 };
+/** x0, y0, x1, y1 */
+type Box = [number, number, number, number];
 
 interface DrawItem {
   y: number;
@@ -87,6 +91,8 @@ export class Renderer {
   private vignette: HTMLCanvasElement | null = null;
   private motes: Mote[] = [];
   private t = 0;
+  /** Which side of the chef an edge arrow takes when it is pushed down onto him (1 right, -1 left). */
+  private arrowSide = 1;
   quality: 'high' | 'low' = 'high';
   profile = false;
   prof: Record<string, number> = {};
@@ -292,16 +298,15 @@ export class Renderer {
     ctx.setTransform(z, 0, 0, z, ox, oy);
     setFastBase(z, ox, oy);
     run.fx.drawTexts(ctx, FONT);
-    // the HUD's cover in world units. An arrow stops at the fixed top band (the toasts under it come and go: it
-    // would hop) and above toasts at the bottom edge (short screens). A boss's taunt keeps out of the band and
-    // slips past the toasts and the banner.
+    // the HUD's cover in world units. An arrow stops at the fixed top band, above toasts at the bottom edge (short
+    // screens) and under toasts at the top that leave it no room below the band. A boss's taunt keeps out of the
+    // band and finds a place clear of the toasts and the banner.
     const band = hud.top / this.zoom;
-    const toasts = hud.toastBottom > hud.toastTop;
-    const below = toasts && hud.toastTop > this.H / 2 ? (this.H - hud.toastTop) / this.zoom : 0;
-    this.drawIndicators(run, band, below);
-    const busy: [number, number][] = [];
-    if (toasts) busy.push([v.y0 + hud.toastTop / this.zoom, v.y0 + hud.toastBottom / this.zoom]);
-    if (hud.bannerBottom > hud.bannerTop) busy.push([v.y0 + hud.bannerTop / this.zoom, v.y0 + hud.bannerBottom / this.zoom]);
+    const below = hud.toastTop > this.H / 2 ? (this.H - hud.toastTop) / this.zoom : 0;
+    const busy: Box[] = [];
+    if (hud.toastBottom > hud.toastTop) busy.push([v.x0 + hud.toastLeft / this.zoom, v.y0 + hud.toastTop / this.zoom, v.x0 + hud.toastRight / this.zoom, v.y0 + hud.toastBottom / this.zoom]);
+    this.drawIndicators(run, band, below, below ? undefined : busy[0]);
+    if (hud.bannerBottom > hud.bannerTop) busy.push([v.x0, v.y0 + hud.bannerTop / this.zoom, v.x1, v.y0 + hud.bannerBottom / this.zoom]);
     run.fx.drawBubbles(ctx, FONT, { x0: v.x0, y0: v.y0 + band, x1: v.x1, y1: v.y1 }, busy, pl);
 
     this.mark('texts');
@@ -1024,8 +1029,12 @@ export class Renderer {
     }
   }
 
-  /** Arrows at the screen edge towards what is off screen. @param top, bottom what the HUD covers there (world units) */
-  private drawIndicators(run: Run, top: number, bottom: number) {
+  /**
+   * Arrows at the screen edge towards what is off screen.
+   * @param top, bottom what the HUD covers there (world units)
+   * @param toasts the toasts under the top band, if any (world box)
+   */
+  private drawIndicators(run: Run, top: number, bottom: number, toasts?: Box) {
     const ctx = this.ctx;
     const v = run.view;
     const cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2;
@@ -1037,17 +1046,32 @@ export class Renderer {
     for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && (!run.onScreen(p.x, p.y, -10) || p.y - 31 < v.y0 + top)) targets.push({ x: p.x, y: p.y - 14, c: '#7cff8a', big: true, size: 16, gap: 17 });
     for (const t of targets) {
       const a = Math.atan2(t.y - cy, t.x - cx);
+      const ca = Math.cos(a), sa = Math.sin(a);
       const size = t.size ?? (t.big ? 13 : 10);
       const hw = (v.x1 - v.x0) / 2 - 26;
       let hh = (v.y1 - v.y0) / 2 - 26;
       // the arrow stops clear of the HUD (the XP bar, timer, recipe strip, slots and boss bar on top; toasts at the
-      // bottom of a short screen), not under it; it still keeps off the chef (hat 52 units over the view centre, feet 45 under)
+      // bottom of a short screen), not under it
       const len = size * 1.1 + 3;
-      if (Math.sin(a) < 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - top - len, 52 + len));
+      if (sa < 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - top - len, 0));
       else if (bottom > 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - bottom - len, 45 + len));
-      let k = Math.min(hw / Math.abs(Math.cos(a) || 1e-6), hh / Math.abs(Math.sin(a) || 1e-6));
+      let k = Math.min(hw / Math.abs(ca || 1e-6), hh / Math.abs(sa || 1e-6));
       if (t.gap) k = Math.min(k, Math.hypot(t.x - cx, t.y - cy) - t.gap - len);
-      const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
+      let x = cx + ca * k, y = cy + sa * k;
+      // toasts lying right under the band (the boss bar is up) leave the arrow no room there: it stops under them
+      // (+ 6: their shadow)
+      if (toasts && sa < 0 && x + len > toasts[0] && x - len < toasts[2] && y + len > toasts[1] && y - len < toasts[3] + 6) {
+        k = Math.max((cy - toasts[3] - 6 - len) / -sa, 0);
+        x = cx + ca * k;
+        y = cy + sa * k;
+      }
+      // pushed down onto the chef (a tall band on a short screen, a stack of toasts): it steps to his side - the
+      // side it is on, and right above him the side it had
+      const p = run.player, side = 18 + len;
+      if (Math.abs(x - p.x) < side && y + len > p.y - 64 && y - len < p.y + 24) {
+        if (Math.abs(x - p.x) > 5) this.arrowSide = x > p.x ? 1 : -1;
+        x = p.x + side * this.arrowSide;
+      }
       const s = size * (1 + Math.sin(this.t * 6) * 0.1);
       ctx.save();
       ctx.translate(x, y);
