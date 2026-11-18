@@ -989,10 +989,15 @@ export class UI {
     const t = h('div', { class: 'toast ' + kind + (pic ? ' pic' : '') }, pic ? [pic, h('span', {}, body)] : body);
     this.toastsEl.appendChild(t);
     // a short (landscape phone) screen keeps two: a third would reach down to the chef
-    const max = window.innerHeight / (parseFloat(this.root.style.getPropertyValue('--z')) || 1) <= 520 ? 2 : 3;
+    const max = this.shortScreen() ? 2 : 3;
     while (this.toastsEl.children.length > max) this.toastsEl.firstChild?.remove();
     this.toastList.push({ el: t, endT: this.hudClock + 3.7 });
     this.lastHud.coverT = 0;
+  }
+
+  /** A landscape phone (main.css `max-height: 520px`): the toasts are at the bottom edge there. */
+  private shortScreen(): boolean {
+    return window.innerHeight / (parseFloat(this.root.style.getPropertyValue('--z')) || 1) <= 520;
   }
 
   /** Expire toasts and banners, show the next waiting ones (game time, see updateHud). */
@@ -1089,6 +1094,9 @@ export class UI {
     const b = make();
     b.style.animationDuration = (ms - 100) / 1000 + 's';
     hud.appendChild(b);
+    // an ingredient or recipe banner lies just under the chef, and on a short screen the toasts are at the
+    // bottom edge right below it: they wait for it (as for the run-start card), so the two never stack
+    if (this.shortScreen() && (b.classList.contains('ingr') || b.classList.contains('complete'))) this.toastHoldUntil = Math.max(this.toastHoldUntil, this.hudClock + ms / 1000);
     this.bannerCur = { el: b, endT: this.hudClock + ms / 1000 };
     this.lastHud.coverT = 0;
   }

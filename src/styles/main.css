@@ -352,8 +352,11 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .big-banner .bn-t { display: block; }
 .big-banner .bn-ico { display: block; margin: 0 auto -0.06em; }
 /* an ingredient collected / the recipe complete: 5-7 times a run, so smaller, the icon beside
-   the text, and below the player (the top band keeps the timer, recipe strip and warnings) */
+   the text, and below the player (the top band keeps the timer, recipe strip and warnings).
+   The fight goes on under them: after the pop they turn translucent, so the shots and enemies
+   coming up from below show through the letters. */
 .big-banner.ingr, .big-banner.complete { top: 62%; display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; column-gap: 0.22em; text-align: left; line-height: 1.05; }
+.big-banner.ingr, .big-banner.complete { animation-name: bannerThru; }
 .big-banner.ingr .bn-ico, .big-banner.complete .bn-ico { grid-row: 1 / span 2; margin: 0; }
 .big-banner.ingr small, .big-banner.complete small { font-size: clamp(14px, 0.36em, 22px); margin-top: 2px; }
 .big-banner.ingr { font-size: clamp(30px, calc(5vw / var(--z, 1)), 56px); }
@@ -379,6 +382,8 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 /* phones: the run-start card rises from the bottom edge */
 @keyframes dishInLow { 0% { transform: translateX(-50%) translateY(30px) scale(0.8); opacity: 0; } 9% { transform: translateX(-50%) scale(1.02); opacity: 1; } 13% { transform: translateX(-50%) scale(1); } 88% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.96); } }
 @keyframes bannerFade { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes bannerThru { 0% { transform: scale(2.2) rotate(-6deg); opacity: 0; } 12% { transform: scale(1) rotate(-3deg); opacity: 1; } 24% { opacity: 1; } 38% { opacity: 0.55; } 82% { opacity: 0.55; } 100% { opacity: 0; transform: scale(0.95) rotate(-3deg); } }
+@keyframes bannerFadeThru { 0% { opacity: 0; } 8% { opacity: 1; } 24% { opacity: 1; } 38% { opacity: 0.55; } 82% { opacity: 0.55; } 100% { opacity: 0; } }
 @keyframes bannerIn { 0% { transform: scale(2.2) rotate(-6deg); opacity: 0; } 12% { transform: scale(1) rotate(-3deg); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.95) rotate(-3deg); } }
 
 /* ------------------------------------------------------------------ level up */
@@ -938,6 +943,7 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; -webkit-text-stroke: 
   /* the banner must stay readable: a plain fade instead of the zoom (its last keyframe is invisible);
      the banner sets its own duration inline */
   .big-banner { animation-name: bannerFade !important; animation-timing-function: linear !important; transform: rotate(-3deg); }
+  .big-banner.ingr, .big-banner.complete { animation-name: bannerFadeThru !important; }
   .dish-banner { transform: translateX(-50%) !important; }
   .recipe-strip .ri.pop, .recipe-strip .ri.onmap, .recipe-strip.complete .rs-star { animation: none !important; }
   .btn, .char-card, .dish-card, .dish-art, .pu, .choice { transition: none !important; }

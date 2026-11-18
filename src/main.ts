@@ -224,7 +224,7 @@ class App {
           const r = run.recipe;
           if (!r) return;
           const ing = r.ingredients[index];
-          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false, { icon: r.sprite, cls: 'complete', ms: 3400, hold: true });
+          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false, { icon: r.sprite, cls: 'complete', ms: 2600, hold: true });
           else this.ui.banner(`${ing.it} ✓ ${run.ingredientsGot()}/${r.ingredients.length}`, ing.buff, false, { icon: ing.sprite, cls: 'ingr' });
         },
       };

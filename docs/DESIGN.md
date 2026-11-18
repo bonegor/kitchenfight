@@ -215,7 +215,9 @@ each corner of Italy.
 
 - **RICETTA COMPLETA!** All of a dish's ingredients in one run: full heal, +10% Might, +50 coins,
   confetti and the dinner bell. The dish's record gets **★ Ricetta completa** on its menu card (saved even
-  if the run is then lost; the *Ricetta Perfetta* medal also needs the win).
+  if the run is then lost; the *Ricetta Perfetta* medal also needs the win). The ingredient and recipe
+  banners lie just under the chef: after their pop they turn translucent (the fight shows through), and on
+  a landscape phone, where the toasts sit at the bottom edge below them, the toasts wait until they are gone.
 - **Intruders.** The first time each intruder of the dish is on screen, a toast shows its icon and names
   the crime with a one-line reason ("Panna nella Carbonara? NO! …"); the full reason is in Il Ricettario.
   Every toast says in English what the intruder is, in the reason or as a gloss ("Piselli (peas) nella
