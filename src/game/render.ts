@@ -606,11 +606,35 @@ export class Renderer {
       return;
     }
     if (a.kind === 'cheese' || a.kind === 'stink') {
+      const stink = a.kind === 'stink';
+      if (stink) {
+        // the green glow alone is a faint wash with no edge on a dark floor: a murky pool lies under it,
+        // exactly where the cloud slows and hurts
+        ctx.fillStyle = rgba('#5c9c12', 0.32 * fade);
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r, a.r * 0.775, 0, 0, TAU);
+        ctx.fill();
+      }
       // clouds: soft glow (cheese dust, garlic stink)
-      ctx.globalAlpha = (a.kind === 'stink' ? 0.6 + Math.sin(this.t * 4 + a.rot) * 0.08 : 0.55) * fade;
-      const gs = glowSprite(a.kind === 'stink' ? '#a8d84a' : '#f6ecc4');
+      ctx.globalAlpha = (stink ? 0.8 + Math.sin(this.t * 4 + a.rot) * 0.08 : 0.55) * fade;
+      const gs = glowSprite(stink ? '#a8d84a' : '#f6ecc4');
       ctx.drawImage(gs, a.x - a.r * 1.3, a.y - a.r, a.r * 2.6, a.r * 2);
       ctx.globalAlpha = 1;
+      if (stink) {
+        // …and a rim of bright dashes crawls round its edge (dark under-stroke: it reads on pale floors too)
+        ctx.beginPath();
+        ctx.ellipse(a.x, a.y, a.r, a.r * 0.775, 0, 0, TAU);
+        ctx.lineWidth = 4.5;
+        ctx.strokeStyle = rgba('#24400a', 0.5 * fade);
+        ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = rgba('#c4ff45', (0.88 + Math.sin(this.t * 4 + a.rot) * 0.1) * fade);
+        ctx.setLineDash([10, 6]);
+        ctx.lineDashOffset = -(this.t * 12 + a.rot * 16);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineDashOffset = 0;
+      }
       if (a.kind === 'cheese') {
         // the pale glow alone vanishes on light floors, so every cheese cloud gets an amber rim where it
         // slows, and a cream ring swells out to it every 0.42 s
