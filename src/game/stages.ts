@@ -67,7 +67,7 @@ export interface Tier {
   hpBase: number;
   /** extra enemy HP per minute */
   hpGrowth: number;
-  /** enemy damage multiplier reached after 7 minutes */
+  /** enemy damage multiplier, phased in over DMG_RAMP */
   dmgBase: number;
   /** multiplies BASE_RATE (spawns per second); a rate above 1 phases in over RATE_RAMP */
   rate: number;
@@ -88,9 +88,9 @@ export interface Tier {
 // - The Il Menù intruders of T3–T5 are softer than the old stages' crowd (puddlers, a swarm,
 //   strafers, lobbers), so these tiers carry more hpGrowth / dmgBase than the old stage each one
 //   matches. dmgBase also scales boss hits; the bosses' base damage was cut by a fifth for it.
-// - The openings stay gentle: hpBase and dmgBase phase in over the first 7 minutes (Director)
-//   and a rate above 1 over minutes 1–5 (RATE_RAMP, waves()), so the tiers pull apart from
-//   minute 3–4 on and differ most in minutes 5–15.
+// - The openings stay gentle: hpBase phases in over the first 7 minutes (Director), a rate above 1
+//   over minutes 2–8 (RATE_RAMP, waves()) and a dmgBase above 1 from 4:00 to 10:00 (DMG_RAMP).
+//   Up to 4:00 every dish hits like the first ones.
 // - bossHp is the slot's base HP; the real HP is ×hpBase × player level × time
 //   (Director.spawnBoss). BOSS_HP_FACTOR evens out the bosses that are slow to bring down
 //   anywhere, and a dish can scale one slot with StageSpec.bossHpMul.
@@ -114,7 +114,9 @@ export const BASE_RATE = [0.9, 1.45, 2.0, 2.45, 2.85, 2.5, 3.25, 3.55, 3.95, 4.3
 /** Soft cap of alive enemies, minute by minute (×tier.max). */
 export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 182, 202, 222, 128];
 /** A spawn-rate factor above 1 (tier × dish) is ×1 up to the first minute here and phases in linearly to full at the second. */
-export const RATE_RAMP: [number, number] = [1, 5];
+export const RATE_RAMP: [number, number] = [2, 8];
+/** A dmgBase above 1 is ×1 up to the first second here and phases in linearly to full at the second (Director.dmgScale). */
+export const DMG_RAMP: [number, number] = [240, 600];
 /** Max share of a minute's spawn weight that may come from non-intruder extras. */
 export const MAX_EXTRA_SHARE = 0.2;
 /** Intruders left out of the weight-order check (support enemies: see the header). */
@@ -369,10 +371,11 @@ const SPECS: StageSpec[] = [
     id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
     variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
     minutes: [
-      // cream opens with a few shrimp; the broccoli lobs from minute 2, the leaping chicken from minute 3
-      M([['panna', 3], ['gamberi', 0.3]], ['scotta'], 0.1),
-      M([['panna', 3], ['alfredo', 0.5], ['gamberi', 0.5]]),
-      M([['panna', 3], ['alfredo', 1], ['broccoli', 1], ['gamberi', 0.3]]),
+      // cream opens with a few shrimp and mushy pasta; the broccoli lobs and the gluey Alfredo puddles
+      // from minute 2, the leaping chicken from minute 3
+      M([['panna', 3], ['gamberi', 0.2]], ['scotta'], 0.2),
+      M([['panna', 3], ['gamberi', 0.3]], ['scotta'], 0.2),
+      M([['panna', 2.5], ['broccoli', 1], ['alfredo', 0.5], ['gamberi', 0.3]], ['scotta'], 0.15),
       M([['pollo', 0.5], ['panna', 2.5], ['broccoli', 1.5], ['alfredo', 1]], ['scotta'], 0.12),
       M([['alfredo', 2], ['gamberi', 1.2], ['panna', 3], ['pollo', 1.5], ['broccoli', 1.5]]),
       M([['panna', 2.5], ['pollo', 1.5], ['gamberi', 1.5]], ['scotta'], 0.12),
@@ -389,10 +392,10 @@ const SPECS: StageSpec[] = [
     ],
     events: [
       T(20, "Fettuccine, butter, Parmigiano, pasta water. Alfredo's dining room is open."),
-      E(100, 'ring', 'panna', 16),
-      E(160, 'elite', 'panna'),
+      E(100, 'ring', 'panna', 10),
+      E(160, 'elite', 'broccoli'),
       E(220, 'stampede', 'panna', 16),
-      E(270, 'elite', 'broccoli'),
+      E(270, 'elite', 'panna'),
       E(400, 'ring', 'gamberi', 26),
       E(460, 'elite', 'alfredo'),
       E(520, 'stampede', 'pollo', 18),
@@ -409,11 +412,12 @@ const SPECS: StageSpec[] = [
     id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], rateMul: 1.45, dmgMul: 1.35, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
     variant: { label: 'evening', tint: '#ffd6a8', darkness: 0.46, darkColor: '#2a120a', vignette: 0.45, particles: 'embers', decor: 'embers' },
     minutes: [
+      // bacon opens; the layered onions (the dish's hardest hitters early on) build up from minute 2
       M([['bacon', 3.5]], ['spezzato'], 0.2),
-      M([['bacon', 3.5], ['cipolla', 0.5]], ['spezzato'], 0.2),
-      M([['bacon', 2.5], ['cipolla', 1.2], ['aglio', 0.5]], ['spezzato'], 0.2),
-      M([['cipolla', 2.5], ['bacon', 2.5], ['parmesan', 1]], ['scotta'], 0.15),
-      M([['aglio', 2], ['bacon', 3.5], ['cipolla', 2.5], ['parmesan', 1]], ['spezzato'], 0.15),
+      M([['bacon', 3.5]], ['spezzato'], 0.2),
+      M([['bacon', 3], ['cipolla', 0.6], ['aglio', 0.5]], ['spezzato'], 0.2),
+      M([['cipolla', 1.5], ['bacon', 3], ['parmesan', 1]], ['scotta'], 0.15),
+      M([['aglio', 2], ['bacon', 3.5], ['cipolla', 2], ['parmesan', 1]], ['spezzato'], 0.15),
       M([['bacon', 3.5], ['cipolla', 2.5], ['aglio', 1]], ['spezzato'], 0.2),
       M([['cipolla', 4.5], ['aglio', 3.5], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
       M([['bacon', 3.5], ['aglio', 3], ['cipolla', 3.5], ['parmesan', 2]], ['spezzato'], 0.15),
@@ -421,7 +425,7 @@ const SPECS: StageSpec[] = [
       M([['aglio', 4], ['cipolla', 3.5], ['bacon', 3.5], ['parmesan', 2]], ['spezzato', 'scotta'], 0.15),
       M([['bacon', 3.5], ['cipolla', 2.5]], ['spezzato'], 0.2),
       M([['cipolla', 5], ['aglio', 4], ['parmesan', 2], ['bacon', 2.5]], ['scotta'], 0.15),
-      M([['bacon', 4.5], ['aglio', 4], ['cipolla', 4], ['parmesan', 3]], ['spezzato'], 0.15),
+      M([['bacon', 4], ['aglio', 4], ['cipolla', 4.5], ['parmesan', 3]], ['spezzato'], 0.15),
       M([['cipolla', 5], ['parmesan', 3], ['aglio', 4], ['bacon', 2.5]], ['scotta', 'spezzato'], 0.15),
       M([['aglio', 4], ['cipolla', 5.5], ['bacon', 3.5], ['parmesan', 3]], ['spezzato', 'scotta'], 0.15),
       M([['bacon', 3.5], ['cipolla', 3.5]], ['spezzato'], 0.2),
@@ -468,11 +472,11 @@ const SPECS: StageSpec[] = [
     events: [
       T(20, 'Pecorino, pepper, pasta water. Three ingredients and nowhere to hide.'),
       E(100, 'wall', 'burro', 12),
-      E(160, 'elite', 'panna'),
+      E(160, 'elite', 'parmesan'),
       E(220, 'stampede', 'panna', 14),
       E(270, 'elite', 'olio'),
       E(400, 'ring', 'panna', 22),
-      E(460, 'elite', 'parmesan'),
+      E(460, 'elite', 'panna'),
       E(520, 'ring', 'scotta', 16),
       E(570, 'elite', 'pentola'),
       T(660, 'Someone is reaching for the butter!', 'warn'),
@@ -567,9 +571,9 @@ const SPECS: StageSpec[] = [
     minutes: [
       // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff, the meatballs
       // and a few frozen lasagne (the microwave at 10:00 brings more)
-      M([['bacon', 2.5], ['fantasma', 0.5]]),
-      M([['bacon', 2.5], ['fantasma', 1], ['panna', 0.5]]),
-      M([['fantasma', 2], ['bacon', 2], ['panna', 1.5], ['aglio', 0.5]]),
+      M([['bacon', 2.5], ['fantasma', 0.3]]),
+      M([['bacon', 2.5], ['fantasma', 0.6], ['panna', 0.5]]),
+      M([['fantasma', 1.5], ['bacon', 2], ['panna', 1.5], ['aglio', 0.5]]),
       M([['panna', 3.5], ['fantasma', 3], ['bacon', 2], ['aglio', 1]], ['polpetta'], 0.06),
       M([['fantasma', 3], ['aglio', 2], ['bacon', 2], ['panna', 3.5]], ['polpetta', 'surgelata'], 0.1),
       M([['bacon', 2.5], ['fantasma', 2]], ['polpetta'], 0.12),

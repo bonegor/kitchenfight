@@ -3,7 +3,7 @@
  * events (rings, walls, stampedes, elites, toasts) and the boss schedule.
  */
 import type { Run } from './run';
-import type { StageDef, WaveMinute } from './stages';
+import { DMG_RAMP, type StageDef, type WaveMinute } from './stages';
 import { ENEMIES } from './enemies';
 import { TAU } from '../core/math';
 import { audio } from '../audio/audio';
@@ -31,10 +31,15 @@ export class Director {
     return base * (1 + t * this.stage.hpGrowth + Math.max(0, t - 10) * this.stage.hpGrowth * 0.6);
   }
 
+  /**
+   * Enemy damage. A dmgBase above 1 phases in over DMG_RAMP, later than the HP, so the openings
+   * stay gentle; a dmgBase below 1 (the first dish) applies over the HP ramp.
+   */
   dmgScale() {
     const t = this.run.time / 60;
-    const base = 1 + (this.stage.dmgBase - 1) * this.ramp();
-    return base * (1 + t * 0.045);
+    const db = this.stage.dmgBase;
+    const k = db > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) : this.ramp();
+    return (1 + (db - 1) * k) * (1 + t * 0.045);
   }
 
   wave(): WaveMinute {
