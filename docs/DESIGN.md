@@ -58,6 +58,17 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
   over to the Pomodoro and the Carbonara, La Trattoria's to the Margherita, I Vicoli's to the Marinara;
   the Food Court keeps its id. The unlocked list restarts from the Pomodoro (plus the finale if it was
   already open), then every dish whose rule the carried-over wins satisfy is unlocked.
+  - Each format has its own storage key. Version 2 saves live under `kitchenfight.save.v2`. The old key,
+    `kitchenfight.save.v1`, is only read, to carry a save over while there is no version 2 save yet; it is
+    never written and never removed, so the build before Il Menù (which cannot play a version 2 save) keeps
+    playing on its own save in the same browser.
+  - A save reset writes a fresh version 2 save at once, so the old save is not carried over a second time.
+    It leaves the old key alone: that save belongs to the old build.
+  - When a save loads, the chefs and the medals that its totals and wins have already earned are granted
+    without a message (after a migration: Micio through La Trattoria's win, *Pizzaiolo DOC* through both
+    pizzas), so the chef picker and the Record tab agree with the menu from the first screen on.
+  - The migration hands back *Giro d'Italia*: it meant "all four stages" and now means every dish, of which
+    an old save has won five at most. It is earned again, with its results line, on the full menu.
 
 ### Difficulty
 Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each tuned against one of the old stages.
@@ -327,6 +338,10 @@ Checked at the end of every run (`src/game/medals.ts`).
 | **Pizzaiolo DOC** (new) | Win the Margherita and the Marinara. |
 | **Il Quaderno della Nonna** (new) | Complete 5 different recipes (★ on 5 dishes, won or not). |
 
+The medals that the save alone earns (`saved` in `medals.ts`: the two "in total" ones, Tutti a Tavola, Giro
+d'Italia, Primi Romani, Pizzaiolo DOC, Il Quaderno della Nonna) are also checked when a save loads, without
+a message. The others need a run and are only checked at its end.
+
 ## Meta progression — La Dispensa (permanent power-ups, bought with coins)
 Might, Armor, Max HP, Recovery, Cooldown, Area, Projectile speed, Duration,
 Amount, Move speed, Magnet, Luck, Growth, Greed, Revival (“Bis!”), Reroll, Skip,
@@ -339,5 +354,11 @@ Banish.
   [RECIPES.md](RECIPES.md).
 - **Crimini** — the bestiary with *why Italians object* (from research) and, for each crime, the dishes it
   does not belong in ("Non appartiene a:").
-- **Armi** (weapons and their evolutions), **Ingredienti** (the passive ingredients) and **Record** (each
+- **Armi** (weapons and their evolutions), **Rinforzi** (the passives; "ingredients" now means a dish's real ingredients) and **Record** (each
   dish's records).
+- In the four lists an entry opens on a click, a tap, or keyboard / gamepad focus. The pointer passing over
+  an entry only highlights it (it may be on its way to the open entry's links and chips); the open entry
+  keeps its gold ring. The Record tab scrolls with Up / Down before the focus moves on to the Back button.
+- Hover focus follows real pointer movement only (`Nav` in `src/ui/dom.ts`): a card that a key press, the
+  wheel or a new screen slides under a resting pointer does not take the focus from the keyboard / gamepad,
+  and does not show the hover look either (`body.keys-nav` in `main.css`), so one element looks focused.
