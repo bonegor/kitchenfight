@@ -187,7 +187,8 @@ export class UI {
    * overlaps), so the wide finale card and the next course are not skipped for the Back
    * button. Left / right go to the card beside it on the same row, else to the previous /
    * next card in reading order (never to a faraway card or the Back button).
-   * False = not on a card, or no card below / above: the normal spatial move takes over.
+   * Up on the top row stays put: nothing is above it, and the fallback would step sideways.
+   * False = not on a card, or no card below: the normal spatial move takes over (the Back button).
    */
   private menuMove(dx: number, dy: number): boolean {
     const cur = this.nav.cur;
@@ -220,7 +221,7 @@ export class UI {
     }
     if (!best && dx) best = cards[cards.indexOf(cur) + dx] ?? null;
     if (best) this.nav.focus(best);
-    return !!best || !!dx;
+    return !!best || !!dx || dy < 0;
   }
 
   /** The scroll box an element scrolls in (the nearest ancestor that actually scrolls). */
@@ -279,10 +280,21 @@ export class UI {
 
   private scrollAim: { el: HTMLElement; top: number; at: number } | null = null;
 
+  /** Where a box's scroll is heading: the target of a key scroll still running, else where it is. */
+  private scrollBase(sc: HTMLElement): number {
+    return this.scrollAim && this.scrollAim.el === sc && performance.now() - this.scrollAim.at < 450 ? this.scrollAim.top : sc.scrollTop;
+  }
+
+  /** Is there more of a box to scroll up / down? */
+  private canScroll(sc: HTMLElement, dy: number): boolean {
+    const base = this.scrollBase(sc);
+    return dy > 0 ? base < sc.scrollHeight - sc.clientHeight - 1 : base > 1;
+  }
+
   /** Scroll a box by about 60 % of its height (a held key keeps going from where the last press was heading). */
   private scrollBox(sc: HTMLElement, dy: number) {
     const now = performance.now();
-    const base = this.scrollAim && this.scrollAim.el === sc && now - this.scrollAim.at < 450 ? this.scrollAim.top : sc.scrollTop;
+    const base = this.scrollBase(sc);
     const top = Math.max(0, Math.min(sc.scrollHeight - sc.clientHeight, base + dy * Math.max(80, sc.clientHeight * 0.6)));
     this.scrollAim = { el: sc, top, at: now };
     sc.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -297,6 +309,8 @@ export class UI {
    *   Left / Right move along a row of chips, or into / along the links inside a block.
    * - Never onto a list entry or block that is scrolled out of view (except the list's own
    *   neighbours, which scroll in).
+   * - A tab without a list (Record): Up / Down scroll the page to its end first, then move
+   *   between the tabs and Back.
    */
   private collMove(dx: number, dy: number): boolean {
     const cur = this.nav.cur;
@@ -385,6 +399,13 @@ export class UI {
       const out = this.pick(cur, all.filter((el) => !list.contains(el) && !detail?.contains(el) && visible(el)), dx, dy);
       if (out) this.nav.focus(out);
       return true;
+    }
+    if (!list && dy) {
+      const page = this.screen.querySelector<HTMLElement>('.panel-body');
+      if (page && this.canScroll(page, dy)) {
+        this.scrollBox(page, dy);
+        return true;
+      }
     }
     // tabs and the Back button: anything on screen, never a hidden list entry or block
     const best = this.pick(cur, all.filter((el) => (!list?.contains(el) && !detail?.contains(el)) || visible(el)), dx, dy);
@@ -637,8 +658,10 @@ export class UI {
         const unlocked = this.isStageUnlocked(st.id);
         const card = this.dishCard(st, char.sprite, won, n++);
         card.addEventListener('navfocus', () => {
+          // only a dish that can be played is remembered: a locked one would reopen the menu on dish 1
+          if (!unlocked) return;
           this.selectedStage = st.id;
-          if (unlocked) warm(st.id);
+          warm(st.id);
         });
         card.addEventListener('click', () => {
           if (!unlocked) {
@@ -1657,6 +1680,13 @@ export class UI {
       ),
     );
     this.show(el, 'collection', onBack);
+    // Open with the selected entry in view, in the middle of its list (a sideways strip on phones),
+    // wherever the screen was opened from. Only the list scrolls, not the page around it.
+    const sel = list.querySelector<HTMLElement>('.coll-item.sel');
+    if (sel) {
+      const a = sel.getBoundingClientRect(), b = list.getBoundingClientRect();
+      list.scrollBy({ left: (a.left + a.right - b.left - b.right) / 2, top: (a.top + a.bottom - b.top - b.bottom) / 2, behavior: 'instant' as ScrollBehavior });
+    }
     if (focus) this.revealFocus();
     audio.playMusic('menu');
   }
