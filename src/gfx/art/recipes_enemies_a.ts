@@ -1280,7 +1280,9 @@ danger('proj.e_spore', 12, (ctx) => {
     ctx.fill();
   }
   ctx.restore();
-});
+  // a dull olive puff among brown debris and green XP leaves: its hot rim is twice as wide and lighter than
+  // the other shots', so a field of fifty spores still reads as fifty shots (the renderer adds a short trail)
+}, { color: '#ffb52e', w: 1.9 });
 
 danger('proj.e_floret', 12, (ctx) => {
   // a round floret: stalk stub at the back, bumpy crown leading, cream dripping off the top

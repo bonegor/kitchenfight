@@ -151,12 +151,15 @@ projectile('proj.basilico', 22, 14, (ctx) => basilLeaf(ctx, 16, { ink: 1.0, stem
 // ===========================================================================
 // ENEMY PROJECTILES — round, hot rim, red glow = DANGER
 // ===========================================================================
-/** An enemy shot in the DANGER style (hot rim, red glow). Exported for the Il Menù art files. */
-export function danger(id: string, size: number, paint: (ctx: Ctx) => void) {
+/**
+ * An enemy shot in the DANGER style (hot rim, red glow). Exported for the Il Menù art files.
+ * `rim` widens or recolours the hot rim for a shot whose own colours are dull (the mushroom spore).
+ */
+export function danger(id: string, size: number, paint: (ctx: Ctx) => void, rim: { color?: string; w?: number } = {}) {
   const box = Math.ceil(size + 12);
   projectile(id, box, box, paint, {
-    edge: '#ffb03a',
-    edgeW: 0.9,
+    edge: rim.color ?? '#ffb03a',
+    edgeW: rim.w ?? 0.9,
     edgeA: 1,
     under: (ctx) => {
       softGlow(ctx, 0, 0, size * 0.95, '#ff3a1a', 0.55);

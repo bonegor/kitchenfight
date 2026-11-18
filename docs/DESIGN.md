@@ -184,7 +184,8 @@ each corner of Italy.
   1:10 and 13:50, kept at least 20 s clear of the 5:00 and 10:00 bosses (`ingredientTimes()`).
 - **Where.** 320–520 units from the chef on free ground, preferably *behind* him (opposite to where he is
   walking), so he has to turn back for it; not behind a shelf or a tree and not under an awning, as long as
-  an open spot turns up. A toast says "<ingredient> is on the map! Follow the green arrow."
+  an open spot turns up. A toast with the ingredient's badge says "<ingredient> is on the map! Follow the
+  green arrow.", or "…Grab the golden badge." when the badge appears in view (no arrow is drawn then).
 - **Look.** A golden glow, a pulsing ground ring, a gold-rimmed badge and a bobbing sprite. The badge is
   drawn above every prop. Off screen, or in view but under the HUD's top band, it gets the biggest arrow on
   screen, in green. Edge arrows stop below the HUD (XP bar, timer, recipe strip, slots, boss bar), above
@@ -214,9 +215,17 @@ each corner of Italy.
 
 - **RICETTA COMPLETA!** All of a dish's ingredients in one run: full heal, +10% Might, +50 coins,
   confetti and the dinner bell. The dish's record gets **★ Ricetta completa** on its menu card (saved even
-  if the run is then lost; the *Ricetta Perfetta* medal also needs the win).
-- **Intruders.** The first time each intruder of the dish is on screen, a toast names the crime with a
-  one-line reason ("Panna nella Carbonara? NO! …"); the full reason is in Il Ricettario. **Friend or
+  if the run is then lost; the *Ricetta Perfetta* medal also needs the win). The ingredient and recipe
+  banners lie just under the chef: after their pop they turn translucent (the fight shows through), and on
+  a landscape phone, where the toasts sit at the bottom edge below them, the toasts wait until they are gone.
+- **Intruders.** The first time each intruder of the dish is on screen, a toast shows its icon and names
+  the crime with a one-line reason ("Panna nella Carbonara? NO! …"); the full reason is in Il Ricettario.
+  Every toast says in English what the intruder is, in the reason or as a gloss ("Piselli (peas) nella
+  Carbonara? NO!"). **Extras** (below) get one toast of their own, worded as a crime of method with no dish
+  in it ("Spezzare gli spaghetti? NO! Never snap long pasta: it softens into the pot."); it is shown only
+  when no intruder's toast is waiting, and not before the first intruder has been named (or 0:30). The
+  recipe page in Il Ricettario lists them under "Crimini di metodo" (or "Altri crimini" where the lot is
+  mixed), each with a link to its crime card once met. **Friend or
   foe:** butter, garlic, pancetta, Parmigiano, mozzarella and onion belong in some dishes and are crimes in others; a one-off toast says so when you
   collect one where it belongs or meet it where it does not ("Garlic! In pesto it belongs. Not here!").
   At most 6 toasts wait in the queue; one is shown every 5 s.

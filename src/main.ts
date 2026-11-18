@@ -218,13 +218,13 @@ class App {
         onGameOver: () => this.finishRun(false),
         onVictory: () => this.finishRun(true),
         onRevive: () => this.ui.toast('Bis! A second helping of life.', 'good'),
-        onToast: (t, k) => this.ui.toast(t, k),
+        onToast: (t, k, ico) => this.ui.toast(t, k, ico),
         onIngredient: (index: number, complete: boolean) => {
           // the HUD recipe strip pops its ✓ by itself (it watches run.recipeGot)
           const r = run.recipe;
           if (!r) return;
           const ing = r.ingredients[index];
-          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false, { icon: r.sprite, cls: 'complete', ms: 3400, hold: true });
+          if (complete) this.ui.banner('RICETTA COMPLETA!', 'Full heal · +10% Might · +50 coins', false, { icon: r.sprite, cls: 'complete', ms: 2600, hold: true });
           else this.ui.banner(`${ing.it} ✓ ${run.ingredientsGot()}/${r.ingredients.length}`, ing.buff, false, { icon: ing.sprite, cls: 'ingr' });
         },
       };
@@ -293,8 +293,9 @@ class App {
     audio.playMusic(victory ? 'victory' : 'gameover', { fade: 0.3, restart: true });
     // the run's tracks pushed the title out of the music cache: render it again while the results
     // are on screen, so 'back to the title' does not wait (and the title is not silent after a game over)
-    audio.preload(['title']).catch(() => undefined);
-    this.ui.showResults(run, victory, unlocks, newRecord && run.time > 30);
+    // (with a new dish unlocked the results lead to Il Menù first: its music too)
+    audio.preload(fresh.length ? ['menu', 'title'] : ['title']).catch(() => undefined);
+    this.ui.showResults(run, victory, unlocks, newRecord && run.time > 30, fresh[0]);
     this.mode = 'menu';
     this.run = null;
     this.startAttract();

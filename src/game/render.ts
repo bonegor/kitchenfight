@@ -62,6 +62,12 @@ function glowSprite(color: string): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Enemy shots drawn with a short trail: slow, dull ones that fill the screen by the dozen (the mushrooms'
+ * spores in the Carbonara drift among brown debris and green XP leaves).
+ */
+const SHOT_TRAIL = new Set(['proj.e_spore']);
+
 let lightBrush: HTMLCanvasElement | null = null;
 function getLightBrush() {
   if (lightBrush) return lightBrush;
@@ -903,6 +909,14 @@ export class Renderer {
         ctx.fill();
       }
       this.glow(s.x, s.y - s.z, 15, '#ff4a2a', 0.45);
+      if (SHOT_TRAIL.has(s.sprite)) {
+        // two fading puffs behind it: the shot reads as moving, and shows where it is heading
+        ctx.globalAlpha = 0.3;
+        drawSprite(ctx, s.sprite, 0, s.x - s.vx * 0.13, s.y - s.z - s.vy * 0.13, s.scale * 0.62, s.scale * 0.62, s.rot);
+        ctx.globalAlpha = 0.56;
+        drawSprite(ctx, s.sprite, 0, s.x - s.vx * 0.065, s.y - s.z - s.vy * 0.065, s.scale * 0.82, s.scale * 0.82, s.rot);
+        ctx.globalAlpha = 1;
+      }
       if (hasSprite(s.sprite)) drawSprite(ctx, s.sprite, 0, s.x, s.y - s.z, s.scale, s.scale, s.rot);
       else {
         ctx.fillStyle = '#e8312a';
@@ -1007,6 +1021,23 @@ export class Renderer {
       glowList.push({ x: lx, y: ly, r: p.light.r * 0.6, c: p.light.color, a: 0.22 * I });
     }
     for (const a of run.areas) if (a.alive && a.kind === 'fire') put(a.x, a.y, a.r * 2.2, 0.8);
+    // Warnings and hazard clouds glow in the dark. They are drawn on the floor, so the darkness of a night arena
+    // dims them with it: a slide lane or a cheese cloud had half its daylight contrast there. The darkness is
+    // lifted along their rim and, more softly, over their floor. A lit kitchen has no darkness to lift: no change.
+    lc.strokeStyle = '#fff';
+    lc.lineWidth = 9 * this.zoom * scale;
+    for (const a of run.areas) {
+      if (!a.alive || (a.kind !== 'warning' && a.kind !== 'cheese' && a.kind !== 'stink')) continue;
+      const sx = toSX(a.x), sy = toSY(a.y), sr = a.r * this.zoom * scale;
+      if (sx < -sr * 2 || sy < -sr * 2 || sx > L.width + sr * 2 || sy > L.height + sr * 2) continue;
+      // a cloud fades in and out like its rim (drawArea); a warning is there at once
+      const f = a.kind === 'warning' ? 1 : Math.min(clamp((a.max - a.life) / 0.2, 0, 1), clamp(a.life / 0.5, 0, 1));
+      put(a.x, a.y, a.r * 1.5, (a.kind === 'warning' ? 0.45 : 0.3) * f);
+      lc.globalAlpha = 0.7 * f;
+      lc.beginPath();
+      lc.ellipse(sx, sy, sr, sr * 0.79, 0, 0, TAU);
+      lc.stroke();
+    }
     for (const pr of run.projectiles) if (pr.alive && pr.glow) put(pr.x, pr.y - pr.z, 70, 0.6);
     for (const e of run.enemies) if (e.alive && (e.elite || e.boss)) put(e.x, e.y, e.r * 2.5, 0.35);
     for (const p of run.pickups) if (p.alive && (p.kind === 'chest' || p.kind === 'ingredient')) put(p.x, p.y, p.kind === 'ingredient' ? 110 : 90, 0.75);

@@ -27,7 +27,7 @@ Song file: [`src/audio/songs/victory.ts`](../../src/audio/songs/victory.ts).
 
 `src/main.ts` `finishRun(true)` calls `audio.playMusic('victory', { fade: 0.3, restart: true })`
 and then opens the results screen ("Vittoria!"). The screen stays until the player clicks
-"Ancora" or "Menu"; players read stats, unlocks and medals there for 10–60 s or more. So the track
+"Il Menù" (after a new dish), "Ancora" or "Titolo"; players read stats, unlocks and medals there for 10–60 s or more. So the track
 is **loopable**: the fanfare plays once (20.26 s), then the one-bar vamp (1.56 s, also once), and
 the victory lap loops (`loopFrom` = 3, the `tail` section: 12 bars = 18.70 s). A minute on the
 results screen is the fanfare, the vamp and two passes of the lap. `startRun` preloads `victory` at
