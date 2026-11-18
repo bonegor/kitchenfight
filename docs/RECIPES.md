@@ -130,11 +130,10 @@ chili: a free choice") · Basilico.
   garlic in oil as the base (shallot as an alternative), finished in the pan with a little pasta water.
   The search excerpt did not confirm which of two blog posts it was.
 - Chef sources (the Ricettario's *Gli chef*): Vincenzo's Plate's reaction video to the YouGov food
-  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)),
-  and Antonino Cannavacciuolo against sugar in tomato sauce ([Il Fatto Quotidiano, 2022](https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/);
-  see *Also researched, not in the game* below).
-- [Trend Online: sugar in tomato sauce, the chefs' answers](https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/) —
-  a plain source, not a chef credit: the research dataset ties no chef to this article.
+  crimes, ketchup on pasta among them ([Euronews, 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food)).
+  The two chef sources against sugar in tomato sauce (Antonino Cannavacciuolo, Irina Steccanella) are
+  not on the dish's page, because the page has no sugar intruder: they are under *Also researched, not
+  in the game* below.
 
 **Intruders in the game**
 
@@ -214,6 +213,7 @@ only from egg, cheese, fat and starch.
   the August 1954 *La Cucina Italiana* recipe used spaghetti, pancetta, Gruyère, garlic, eggs, salt and pepper.
 - [Carbonara, la ricetta perfetta di Luciano Monosilio (Scatti di Gusto)](https://www.scattidigusto.it/carbonara-ricetta-perfetta-luciano-monosilio) —
   the Roman chef known as the "king of carbonara": spaghetti, yolks, guanciale, cheese and pepper.
+  (The same article as the 2018 chef link below; the game lists it once, under *Gli chef*.)
 - [Carbonara Day, la ricetta perfetta (AGI, 2023)](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) —
   Monosilio's carbonara uses egg, Pecorino Romano, Grana Padano and guanciale, and only long pasta.
 - [Italy marks Carbonara Day (ANSA English, 2017)](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html) —
@@ -230,7 +230,8 @@ only from egg, cheese, fat and starch.
   [Il Fatto Quotidiano (2016)](https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/),
   [Italia Squisita](https://italiasquisita.net/it/video-ricette/pasta-alla-carbonara-di-luciano-monosilio),
   [SCMP](https://www.scmp.com/magazines/post-magazine/article/1862632/king-carbonara-luciano-monosilio-reveals-secrets-behind-his)
-  and the pasta makers' [Carbonara Day guide](https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc);
+  and the pasta makers' [Carbonara Day guide](https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc)
+  (a Word file that downloads, so the game does not link it);
   [Vincenzo's Plate recipe](https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/);
   [Max Mariola's video recipe (Gambero Rosso)](https://www.gamberorosso.it/notizie/videoricette-la-carbonara-di-max-mariola/).
 
@@ -240,12 +241,12 @@ only from egg, cheese, fat and starch.
 |---|---|---|---|---|
 | `panna` Panna Invasora | Cream (and crème fraîche) | ●●●●● 5 | | The creaminess comes from yolks, Pecorino, guanciale fat and pasta water; Italian chefs say cream makes it greasier and flattens its flavour. The most common complaint about carbonara made outside Italy. |
 | `cipolla` Cipolla Clandestina | Onion | ●●●●○ 4 | | Not part of the Roman dish. A 2016 French one-pot video that boiled onion with the pasta caused an outcry in Italy. |
-| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Guanciale is cured pork cheek, never smoked. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. |
+| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. |
 | `aglio` Aglio in Camicia | Garlic | ●●●○○ 3 | C | Purists say its sharpness has no place in carbonara, where it competes with the guanciale and pepper, and Roman lists of rules ban it outright. |
 | `parmesan` Spargipolvere | Parmesan instead of Pecorino | ●●●○○ 3 | C | The cheese of Roman carbonara is sharp, salty Pecorino Romano; using only Parmigiano is a listed purist sin. |
 | `pollo` Pollo Infiltrato | Chicken | ●●●○○ 3 | | The only meat is guanciale. Italian coverage of American pasta lists chicken among the typical US additions, and a 2023 Trevi Fountain protest sign called chicken on pasta a crime in Italy. |
 | `piselli` Piselli Ribelli | Peas | ●●○○○ 2 | | Not part of carbonara. Coldiretti lists frozen peas among the distortions found abroad. |
-| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche. |
+| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche. |
 | `prosciutto` Prosciutto Impostore | Cooked ham *(sweep only)* | ●●○○○ 2 | | A British-style shortcut for guanciale; Italian food media list ham carbonara among recipe "horrors", and an Italian TV chef rejected it on live British TV. |
 | `burro` Burro Furbetto | Butter | ●●○○○ 2 | | The fat comes from rendered guanciale. Coldiretti names butter among the add-ons of fake carbonara abroad. |
 
@@ -258,7 +259,7 @@ only from egg, cheese, fat and starch.
 - **Parmesan instead of Pecorino:** [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) (Luciano Monosilio)
 - **Chicken:** [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [AGI 2023](https://www.agi.it/cronaca/news/2023-07-18/carbonara-di-pollo-sintetico-made-in-italy-ricette-22282277/); [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/)
 - **Peas:** [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce) ✓ headline "La Carbonara? Con panna, piselli, burro e basilico"; [MeteoWeb 2024](https://www.meteoweb.eu/2024/04/carbonara-day-ricette-tarocche-in-6-ristoranti-stranieri-su-10/1001399577/)
-- **Mushrooms:** [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html)
+- **Mushrooms:** [the chef's own "Carbonara in Under 10 Minutes" recipe](https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp) (the game's source). Not used for this intruder: [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html) (see the caveat below)
 - **Cooked ham:** [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) (Gino D'Acampo; a mirror address, as found in search); [ITV](https://itv.com/thismorning/food/classic-italian-carbonara-gino-dacampo-recipe) (Gino D'Acampo); [Scatti di Gusto 2016](https://www.scattidigusto.it/ricette-italiane-orrori-ingredienti)
 - **Butter:** [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce); [Reporter Gourmet](https://reportergourmet.com/en/news/8374-carbonara-according-to-bruno-barbieri-the-top-chef-s-recipe-with-only-egg-yolks-and-butter) (Bruno Barbieri)
 
@@ -279,6 +280,15 @@ only from egg, cheese, fat and starch.
   (Reporter Gourmet). Purists say the guanciale fat is enough.
 - *Cooked ham.* The TV chef was Gino D'Acampo on ITV's This Morning (2010). The Roman lenses tie the same
   clip to *milk* rather than ham, so accounts differ.
+- *Mushrooms.* The sweep filed two things under one event: the February 2020 "revolt in Rome" headlines
+  (Scatti di Gusto, Wanted in Rome) and the chef's ten-minute recipe with mushrooms, peas and crème
+  fraîche. A review found, from search snippets only, that the February articles are about a different
+  video of his (bacon and a runny sauce, no mushrooms). So the game no longer says that mushrooms
+  "sparked a revolt": it keeps the recipe's ingredient list and cites the recipe itself.
+- *Guanciale and smoke.* The research's line was "guanciale is never smoked". A review pointed out that
+  Amatrice-style guanciale, which the Amatriciana level names, is reported to be lightly smoked (search
+  snippets only), so the game now says "cured pork cheek, not smoked bacon" and makes no claim about
+  smoke in guanciale.
 - *Peas* are fine in other Italian pastas (pasta panna, prosciutto e piselli): the complaint is only about carbonara.
 
 **Also researched, not in the game:** tomato ●●●○○ 3 (the 2021 "smoky tomato carbonara" condemned by
@@ -423,8 +433,9 @@ return it at the end so it stays crisp. Toss with the pasta and finish with plen
   paraphrase: the Amatrice recipe calls for spaghetti, not bucatini;
   [the Amatrice De.C.O., delibera 27/2015 (Gazzetta del Gusto)](https://gazzettadelgusto.it/ricette/salse-sughi/storia-e-ricetta-originale-dellamatriciana/?print=pdf) —
   Amatrice formalised Amatriciana Rossa and Bianca.
-- Chef sources (the Ricettario's *Gli chef*): Carlo Cracco, the chef of the 2015 garlic row, as a source
-  of controversy, not of rules: [Amatrice's statement of the proper ingredients (Blitz Quotidiano, 2015)](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)
+- No chef credit (the page has no *Gli chef* row). The only chef-tagged sources are about Carlo Cracco,
+  the chef of the 2015 garlic row: a source of controversy, not of rules, so the game lists them as
+  plain *Fonti*: [Amatrice's statement of the proper ingredients (Blitz Quotidiano, 2015)](https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529)
   and [Dissapore (2015)](https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/).
 
 **Intruders in the game**
@@ -549,8 +560,8 @@ culinary lens only; the cited page speaks of a "gel stabiliser" in general).
 
 ## 6. Pizza Margherita
 
-*Margherita pizza* · **Le Pizze** · Origin: Naples, Campania. Tradition dates it to 1889 and a royal visit;
-treat that as legend, as tomato-mozzarella-basil pizzas existed earlier · Base: Neapolitan dough of wheat
+*Margherita pizza* · **Le Pizze** · Origin: Naples, Campania. Tradition dates it to 1889 and a royal visit,
+but that date is legend: tomato-mozzarella-basil pizzas existed earlier · Base: Neapolitan dough of wheat
 flour, water, salt and brewer's yeast (the AVPN also allows a natural starter), stretched by hand, never
 with a rolling pin or press, into a disc no wider than 35 cm with a raised rim, baked 60–90 s in a
 wood-fired oven at about 485 °C (EU STG figures)
@@ -732,13 +743,13 @@ milk. Toss with tagliatelle.
 
 **Authority sources**
 
-- [Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)](https://accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf) —
+- [Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)](https://accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf) —
   ✓ "VARIANTI AMMESSE 1) Carni miste: manzo (circa il 60%) e maiale (circa il 40%) (lombo o capocollo);
   2) Carni tritate al coltello; 3) Pancetta stesa o arrotolata di maiale al posto della pancetta fresca;
-  4) Un profumo di noce moscata;". [English version (PDF)](https://www.accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf).
+  4) Un profumo di noce moscata;". [English version (PDF)](https://www.accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf).
 - [Accademia announcement](https://accademiaitalianadellacucina.it/en/node/62013) — ✓ "from 20 April 2023 the
   reference text will differ from that deposited in the Bologna Chamber of Commerce on 17 October 1982."
-- [Camera di Commercio di Bologna press release (2023, PDF)](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Ragù%20alla%20bolognese%2020%20aprile%202023.pdf).
+- [Camera di Commercio di Bologna press release (2023, PDF)](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Rag%C3%B9%20alla%20bolognese%2020%20aprile%202023.pdf).
 - [LaPresse (2023)](https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/) —
   ✓ "Non sono ammesse, invece, la polpa di vitello e la pancetta affumicata, così come solo la carne di
   maiale, aglio, rosmarino, prezzemolo o altri aromi. Vietati brandy e farina." (Not allowed: veal, smoked
@@ -1051,7 +1062,7 @@ The popular-posts sweep's ranking, adjusted by the editor to the merged populari
 | 16 | Amatriciana | Onion **C** | Excluded by the STG; the 2020 TV row |
 | 17 | Pizza | Ketchup | The 2023 TikTok ketchup Margherita and a pizzaiolo's provocation |
 | 18 | Carbonara | Peas | Coldiretti 2024; the 2020 celebrity-chef video |
-| 19 | Carbonara | Mushrooms | The 2020 "revolt in Rome" (sweep only) |
+| 19 | Carbonara | Mushrooms | A celebrity chef's ten-minute recipe (sweep only; the sweep's "revolt in Rome" was about another video, see the Carbonara caveats) |
 | 20 | Pesto | Butter **C** | Genoa's "stuff for the Milanese" (2015) |
 
 Runners-up: pesto + cream; cacio e pepe + Parmesan or cream; carbonara + white wine, cooked ham, parsley.
@@ -1112,13 +1123,18 @@ pre-cooked sugared pizza sauce, onion or canned clams in vongole, dried "Italian
 
 ## Editorial calls in the game data
 
-`src/game/recipes.ts` is not a one-to-one copy of the research dataset. Its header lists the first two calls
-below; this section lists them all. Where an intruder was split from one research entry, or combined from
+`src/game/recipes.ts` is not a one-to-one copy of the research dataset. Its header lists the main calls;
+this section lists them all. Where an intruder was split from one research entry, or combined from
 two, its popularity is **inherited** from those entries, not separately researched.
 
 - **No sugar enemy in the Pomodoro.** The research supports sugar (4, contested), but no enemy fits it.
   Other researched intruders with no fitting enemy are left out too (tomato and pancetta in the Carbonara,
   vinegar in the Amatriciana…); each dish's "Also researched" list names them.
+- **No sugar sources on the Pomodoro's page.** The page says nothing about sugar in the sauce, so the
+  two articles against it (Il Fatto Quotidiano on Antonino Cannavacciuolo, Trend Online with Irina
+  Steccanella) are not in the dish's `sources`, neither under *Gli chef* nor as plain *Fonti*: there
+  they would back a claim the page does not make. Both are cited in the Pomodoro's
+  ["Also researched" entry](#1-spaghetti-al-pomodoro).
 - **Alfredo's imitation "Parmesan" and the Marinara's cheddar** are required by the level design, but the
   research has no dish-specific evidence for them. Their texts are adapted from the pizza research
   (Coldiretti on imitation "Parmesan" and "Anglo-Saxon cheddar") and cite that pizza source. Their
@@ -1143,13 +1159,26 @@ two, its popularity is **inherited** from those entries, not separately research
   olive oil in the Cacio e Pepe but seed oil in the Pesto; `vongola` (the Cheesy Clam) is cheese on clams in
   the Vongole and clams on the Marinara; `pollo` is chicken on pasta or on pizza. The general crime of each
   enemy is in Il Ricettario's Crimini tab; the per-dish reason is in the Ricette tab, and a shortened form
-  of it is in the first-sighting toast.
+  of it is in the first-sighting toast. On a crime card, the "Non appartiene a:" chip of a dish where the
+  ingredient itself belongs names the form that is the intruder there ("Alfredo: Parmesan finto",
+  "Pesto: Formaggio generico", "Ragù: Pancetta affumicata"), so the Parmesan card, which calls
+  Parmigiano the hero of the Alfredo and the Pesto, does not seem to ban it from them.
+- **Bosses away from home.** A boss reused as a mid-boss in another dish does not shout its home line
+  there (`BOSS_LINES` in `recipes.ts`; without an entry it uses its own taunt from `enemies.ts`). Each
+  line claims an intruder of the dish it is said in: the Cream Colossus says "Alfredo needs CREAM!" in
+  the Alfredo and "Clams need CREAM!" in the Vongole (cream: 5 and 3); the Bag of Pre-Grated Cheese says
+  "Formaggio sulla Marinara? Abbondante!" on the Marinara (grated cheese: 1); the One-Pan Influencer
+  offers a one-pan amatriciana "with onion" (5, contested), a cacio e pepe "with cream" (4) and a pesto
+  "with cream" (4). In the Carbonara and the finale it keeps "One-pan carbonara with cream!".
 - **The Carbonara's `bacon` is smoked bacon, not pancetta**: pancetta there is a contested fallback, so it is
   not a foe (friend-or-foe toasts call pancetta a foe only in the Amatriciana).
 - **Method crimes** (snapping spaghetti, rinsing, cold-water starts, canned and one-pot carbonara…) are not
   ingredients. They join the dishes where they fit as "extras", capped at 20 % of the wave weight.
 - **Sweep-only intruders in the game:** the Carbonara's mushrooms and cooked ham, and the Pomodoro's
   chicken. They sit near the end of their dish's wave order and are the first to revisit.
+- **Two research lines are softened** in the Carbonara and its copies in the finale: "guanciale is never
+  smoked" became "cured pork cheek, not smoked bacon", and mushrooms no longer "sparked a Roman revolt"
+  (reasons in the [Carbonara caveats](#2-spaghetti-alla-carbonara)).
 
 ## How this was researched, and its limits
 
@@ -1200,6 +1229,9 @@ the sources lens showed to be unsupported; intruders kept when the culinary lens
   page: a Food52 mirror (`vercel.food52.com`), The Local's CMS address (`cms.thelocal.com/?p=…`), WordPress
   shortlinks (`?p=…`) for Il Vero Alfredo, Life in Italy and Travel Emilia-Romagna, and a Nordot syndication
   copy. They are marked where they appear; replace them with the canonical page once it can be opened.
+  The three Ragù PDF addresses are the ones found, with the "ù" percent-encoded (`%C3%B9`) like their
+  spaces. Research notes about a link (a mirror, a syndicated copy, an unidentified original) stay in
+  this file: in the game a source's name is its title and publisher only.
 - **The working files** (the research dataset `recipes_dataset.json` and the full dossier, with every
   evidence entry and the "+N more" sources) were produced during the research and are not in the repository.
   This file is the edited record; `src/game/recipes.ts` holds the in-game subset.
@@ -1216,9 +1248,15 @@ When you change `src/game/recipes.ts`:
    add it here first.
 2. **Real people are sources, never characters.** Name them only in `chef` credits and `quote.by`; in-game
    texts use archetypes. Companies are generic ("a major US newspaper", "a British food website").
+   A `chef` credit is for a chef whose recipe or opinion backs the page. When the chef is the subject
+   of the row the page describes (the 2015 garlic row), list the articles as plain sources. The crime
+   cards in `enemies.ts` follow the same rule: no names, and a wording the research could not verify is
+   a paraphrase without quotation marks.
 3. **`quote` only when verified verbatim**, and say against what (a search snippet is not the live page).
-4. **Contested means a note.** `contested: true` always comes with a `note` giving the other side, and the
-   friend-or-foe toast must not be more absolute than the note (see `foeLines`).
+4. **Contested means a note.** `contested: true` always comes with a `note` giving the other side, and no
+   toast may be more absolute than the note: neither the friend-or-foe toasts (see `foeLines`) nor the
+   first-sighting reasons in `sightings.ts` ("The EU recipe rules (STG) want guanciale", not "guanciale
+   or nothing"; "by custom, no cheese" on clams, not "never").
 5. **Never mock what Italians accept** ([list above](#accepted-in-italy-never-an-enemy)).
 6. **Intruders must be enemies.** `enemy` is an `ENEMIES` id; the waves in `stages.ts` must keep ≥ 80 % of
    each minute's weight on the dish's intruders, follow the intruder order and spawn every intruder.

@@ -19,12 +19,12 @@ const SIGHTING: Record<string, Record<string, string>> = {
   carbonara: {
     panna: 'Yolk, Pecorino and pasta water make it creamy.',
     cipolla: "Guanciale, egg, Pecorino, pepper. That's all.",
-    bacon: 'Guanciale is never smoked.',
+    bacon: 'It wants guanciale: cured pork cheek.',
     aglio: "Purists ban it (though 1954's recipe had a clove).",
     parmesan: 'Pecorino leads; a little blend is fine.',
     pollo: 'Guanciale is the only meat.',
     piselli: 'A classic fake-carbonara add-on.',
-    funghi: 'They helped spark a 2020 Roman revolt.',
+    funghi: 'A foreign add-on with no place in the Roman dish.',
     prosciutto: 'Cooked ham is not guanciale.',
     burro: 'The fat is rendered guanciale.',
   },
@@ -40,7 +40,7 @@ const SIGHTING: Record<string, Record<string, string>> = {
   amatriciana: {
     aglio: 'The EU recipe rules (STG) exclude it.',
     cipolla: 'Excluded by the 2020 EU rules. The row simmers.',
-    bacon: 'Guanciale or nothing.',
+    bacon: 'The EU recipe rules (STG) want guanciale.',
     parmesan: "It's finished with pecorino.",
   },
   cacioepepe: {
@@ -76,7 +76,7 @@ const SIGHTING: Record<string, Record<string, string>> = {
     anacardo: 'Pine nuts! Cashews mark an imitation jar.',
     olio: 'Extra-virgin olive oil, ideally Ligurian.',
     burro: "Today's Genoese pesto uses olive oil only.",
-    parmesan: 'Parmigiano and pecorino sardo only.',
+    parmesan: 'It wants Parmigiano (or Grana) and pecorino.',
   },
   vongole: {
     vongola: 'A near-universal rule: it hides the clams.',

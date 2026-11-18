@@ -16,11 +16,15 @@
  *
  * Editorial calls where the spec left a choice:
  *  - the Pomodoro has no sugar intruder: the research supports "Zucchero" (contested), but no
- *    enemy fits it;
+ *    enemy fits it. Its page says nothing about sugar in the sauce, so its `sources` hold no
+ *    article on that either, as a chef credit or as a plain source (they are in docs/RECIPES.md);
  *  - Alfredo's 'parmesan' (imitation 'Parmesan') and the Marinara's 'cheddar' are required by
  *    the spec, but the research has no dish-specific evidence for them: their texts are adapted
  *    from its pizza entries (Coldiretti on imitation 'Parmesan' and 'Anglo-Saxon cheddar') and
- *    cite that pizza source.
+ *    cite that pizza source;
+ *  - two research lines are softened in the Carbonara (and its copies in the finale): guanciale
+ *    'never smoked' was too absolute, and mushrooms 'sparked a Roman revolt' cited an article about
+ *    another video (see the Carbonara caveats in docs/RECIPES.md).
  *
  * GENERATED from the research dataset by the foundation tooling, then kept by hand.
  */
@@ -36,6 +40,8 @@ export interface RecipeSource {
   year?: string;
   /** an Italian chef / creator behind this source (credit only) */
   chef?: string;
+  /** label of the link under 'Gli chef' when the name does not end with its publisher in brackets */
+  publisher?: string;
 }
 
 export type IngredientCategory = 'pasta' | 'tomato' | 'oil' | 'aroma' | 'herb' | 'meat' | 'egg' | 'cheese' | 'spice' | 'fat' | 'water' | 'wine' | 'veg' | 'nut' | 'sea' | 'dough';
@@ -246,8 +252,6 @@ export const RECIPES: RecipeDef[] = [
       { name: "La ricetta perfetta dello chef: spaghetti alla Don Alfonso (Scatti di Gusto)", url: "https://www.scattidigusto.it/la-ricetta-perfetta-dello-chef-spaghetti-alla-don-alfonso", lang: "it", year: "2014" },
       { name: "Spaghetti al pomodoro (Giallo Zafferano blog, Amici in cucina)", url: "https://blog.giallozafferano.it/amicincucina/spaghetti-al-pomodoro/", lang: "it" },
       { name: "Angry chef reacts to the 11 worst crimes committed against Italian food (Euronews)", url: "https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food", lang: "en", year: "2022", chef: "Vincenzo's Plate (Vincenzo Prosperi)" },
-      { name: "MasterChef 2021, lo zucchero nella salsa di pomodoro per Cannavacciuolo è improponibile (Il Fatto Quotidiano)", url: "https://www.ilfattoquotidiano.it/2022/01/14/masterchef-2021-lo-zucchero-nella-salsa-di-pomodoro-per-cannavacciuolo-e-improponibile-e-reagisce-cosi-video/6455970/", lang: "it", year: "2022", chef: "Antonino Cannavacciuolo" },
-      { name: "Salsa di pomodoro acida, zucchero sì o zucchero no? Ecco la risposta degli chef (Trend Online)", url: "https://www.trend-online.com/food/salsa-di-pomodoro-acida-zucchero/", lang: "it" },
     ],
     quote: { text: "fate appassire nell'olio quel che preferite fra cipolla, cipollotto, aglio, peperoncino", translation: "Soften in the oil whichever you prefer: onion, spring onion, garlic or chili.", by: "Dissapore", source: { name: "Sughi di pomodoro sciuè sciuè: 5 errori che facciamo spesso (Dissapore)", url: "https://www.dissapore.com/grande-notizia/sughi-al-pomodoro-veloci-5-errori/", lang: "it" } },
     funFact: "Garlic versus onion is a free choice in Italy, and grated Parmigiano on spaghetti al pomodoro is perfectly accepted (unlike on seafood pasta).",
@@ -274,7 +278,7 @@ export const RECIPES: RecipeDef[] = [
         popularity: 5,
         contested: false,
         note: "Cream did appear in Italian cookbook carbonaras in past decades, but Italy has abandoned the habit: it is not a living regional variant.",
-        source: { name: "Vincenzo's Plate, spaghetti alla carbonara recipe page (author reply in the comments)", url: "https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/", lang: "en", year: "2025" },
+        source: { name: "Vincenzo's Plate, spaghetti alla carbonara recipe page (author reply in the comments)", url: "https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/", lang: "en", year: "2025", publisher: "vincenzosplate.com (comments)" },
         chef: "Vincenzo's Plate (Vincenzo Prosperi)",
       },
       {
@@ -292,8 +296,8 @@ export const RECIPES: RecipeDef[] = [
         enemy: "bacon",
         it: "Bacon affumicato",
         en: "Smoked bacon",
-        why: "Carbonara uses guanciale, cured pork cheek, which is not smoked. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
-        line: "Guanciale is cured pork cheek, never smoked. Coldiretti names bacon a classic fake-carbonara swap.",
+        why: "Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
+        line: "Guanciale is cured pork cheek, not smoked bacon. Coldiretti names bacon a classic fake-carbonara swap.",
         popularity: 4,
         contested: false,
         source: { name: "Carbonara Day: Coldiretti, ricette taroccate in 6 ristoranti stranieri su 10 (AGI)", url: "https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/", lang: "it", year: "2024" },
@@ -345,11 +349,11 @@ export const RECIPES: RecipeDef[] = [
         enemy: "funghi",
         it: "Funghi",
         en: "Mushrooms",
-        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche.",
-        line: "Mushrooms helped spark a Roman revolt against a 2020 celebrity-chef carbonara video.",
+        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche.",
+        line: "Mushrooms are a frequent foreign add-on with no place in the Roman dish.",
         popularity: 2,
         contested: false,
-        source: { name: "La carbonara di Gordon Ramsay: è rivolta a Roma e dintorni", url: "https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/", lang: "it", year: "2020" },
+        source: { name: "Gordon's Carbonara in Under 10 Minutes (official recipe)", url: "https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp", lang: "en" },
       },
       {
         enemy: "prosciutto",
@@ -359,7 +363,7 @@ export const RECIPES: RecipeDef[] = [
         line: "Cooked ham is not guanciale. Italian food media list ham carbonara among recipe 'horrors'.",
         popularity: 2,
         contested: false,
-        source: { name: "Food52: We can't stop laughing at this old British TV clip (Gino D'Acampo, This Morning)", url: "https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip", lang: "en", year: "2010" },
+        source: { name: "Food52: We can't stop laughing at this old British TV clip (Gino D'Acampo, This Morning)", url: "https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip", lang: "en", year: "2010", publisher: "Food52" },
         chef: "Gino D'Acampo",
       },
       {
@@ -377,17 +381,15 @@ export const RECIPES: RecipeDef[] = [
     extras: ["scatoletta", "pentolaunica"],
     sources: [
       { name: "La carbonara del 1954: the first printed Italian recipe, from La Cucina Italiana (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/la-carbonara-del-1954-la-prima-ricetta-del-piatto-icona-di-roma-che-viene-da-milano-ed-e-fatta-con-laglio", lang: "it", year: "2024" },
-      { name: "Carbonara, la ricetta perfetta di Luciano Monosilio (Scatti di Gusto)", url: "https://www.scattidigusto.it/carbonara-ricetta-perfetta-luciano-monosilio", lang: "it" },
       { name: "Carbonara Day, la ricetta perfetta (AGI)", url: "https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/", lang: "it", year: "2023" },
       { name: "Italy marks Carbonara Day (ANSA English)", url: "https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html", lang: "en", year: "2017" },
       { name: "Pasta alla carbonara: 5 errori da non fare (Dissapore)", url: "https://www.dissapore.com/ricette/carbonara-5-errori-da-non-fare/", lang: "it" },
       { name: "Carbonara, la vera ricetta originale (Sky TG24)", url: "https://tg24.sky.it/salute-e-benessere/approfondimenti/carbonara-ricetta-originale", lang: "it" },
       { name: "History of Carbonara (Vincenzo's Plate)", url: "https://www.vincenzosplate.com/history-of-carbonara/", lang: "en" },
-      { name: "Luciano Monosilio interview with his carbonara recipe (Il Fatto Quotidiano, 2016)", url: "https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/", lang: "it", year: "2016", chef: "Luciano Monosilio" },
-      { name: "Pasta alla Carbonara di Luciano Monosilio (Italia Squisita video recipe)", url: "https://italiasquisita.net/it/video-ricette/pasta-alla-carbonara-di-luciano-monosilio", lang: "it", chef: "Luciano Monosilio; Italia Squisita" },
+      { name: "Luciano Monosilio interview with his carbonara recipe (Il Fatto Quotidiano, 2016)", url: "https://www.ilfattoquotidiano.it/2016/03/31/luciano-monosilio-la-cucina-e-lavoro-la-parte-spettacolare-ce-ma-non-e-tutto/2597245/", lang: "it", year: "2016", chef: "Luciano Monosilio", publisher: "Il Fatto Quotidiano" },
+      { name: "Pasta alla Carbonara di Luciano Monosilio (Italia Squisita video recipe)", url: "https://italiasquisita.net/it/video-ricette/pasta-alla-carbonara-di-luciano-monosilio", lang: "it", chef: "Luciano Monosilio; Italia Squisita", publisher: "Italia Squisita" },
       { name: "Carbonara, la ricetta perfetta di Luciano Monosilio (Scatti di Gusto)", url: "https://www.scattidigusto.it/2018/04/05/carbonara-ricetta-perfetta-luciano-monosilio/", lang: "it", year: "2018", chef: "Luciano Monosilio" },
       { name: "King of carbonara Luciano Monosilio reveals secrets behind his dish (SCMP)", url: "https://www.scmp.com/magazines/post-magazine/article/1862632/king-carbonara-luciano-monosilio-reveals-secrets-behind-his", lang: "en", chef: "Luciano Monosilio" },
-      { name: "Focus segreti MyCarbonara (Unione Italiana Food pasta makers' Carbonara Day material with chef Luciano Monosilio's '5 errori da non fare')", url: "https://welovepasta.it/wp-content/uploads/2021/03/Focus-segreti-MyCarbonara.doc", lang: "it", year: "2021", chef: "Luciano Monosilio" },
       { name: "Spaghetti alla Carbonara recipe (Vincenzo's Plate, Italian YouTube cook who campaigns for 'no cream in carbonara')", url: "https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/", lang: "en", chef: "Vincenzo's Plate (Vincenzo Prosperi)" },
       { name: "Videoricette: la carbonara di Max Mariola (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/videoricette-la-carbonara-di-max-mariola/", lang: "it", chef: "Max Mariola" },
     ],
@@ -426,7 +428,7 @@ export const RECIPES: RecipeDef[] = [
         line: "In Italy chicken is a main course, not a pasta topping. 'Chicken Alfredo' is unknown in Rome.",
         popularity: 5,
         contested: false,
-        source: { name: "The Pasta Queen on Alfredo misconceptions (syndicated article on Nordot; the original interview was not identified)", url: "https://nordot.app/1169279368201650965", lang: "en" },
+        source: { name: "The Pasta Queen on Alfredo misconceptions (Nordot)", url: "https://nordot.app/1169279368201650965", lang: "en" },
         chef: "The Pasta Queen (Nadia Caterina Munno)",
       },
       {
@@ -492,7 +494,7 @@ export const RECIPES: RecipeDef[] = [
       { name: "The Real Alfredo (Saveur)", url: "https://www.saveur.com/article/Kitchen/The-Real-Alfredo/", lang: "en" },
       { name: "Fettuccine Alfredo (Wikipedia)", url: "https://en.wikipedia.org/wiki/Fettuccine_Alfredo", lang: "en" },
     ],
-    quote: { text: "Chicken alfredo really rubs me the wrong way", by: "The Pasta Queen (Nadia Caterina Munno), Italian-born creator", source: { name: "The Pasta Queen on Alfredo misconceptions (syndicated article on Nordot; the original interview was not identified)", url: "https://nordot.app/1169279368201650965", lang: "en" } },
+    quote: { text: "Chicken alfredo really rubs me the wrong way", by: "The Pasta Queen (Nadia Caterina Munno), Italian-born creator", source: { name: "The Pasta Queen on Alfredo misconceptions (Nordot)", url: "https://nordot.app/1169279368201650965", lang: "en" } },
     funFact: "In Italy the dish is usually just 'fettuccine al burro', the plain comfort food for anyone feeling unwell. Hollywood stars tasted it on their 1920 honeymoon in Rome and made it famous in America.",
     sprite: "dish.alfredo",
   },
@@ -560,8 +562,8 @@ export const RECIPES: RecipeDef[] = [
       { name: "L'Amatriciana Tradizionale è STG: l'Europa tutela la salsa dei pastori di Amatrice (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/lamatriciana-tradizionale-e-stg-leuropa-tutela-la-salsa-dei-pastori-di-amatrice", lang: "it", year: "2020" },
       { name: "Giornata internazionale dell'Amatriciana: storia e ricetta originale (Sky TG24)", url: "https://tg24.sky.it/lifestyle/2026/03/06/giornata-amatriciana-storia-ricetta-originale", lang: "it", year: "2026" },
       { name: "Storia e ricetta originale dell'amatriciana: the Amatrice De.C.O., delibera n. 27/2015 (Gazzetta del Gusto)", url: "https://gazzettadelgusto.it/ricette/salse-sughi/storia-e-ricetta-originale-dellamatriciana/?print=pdf", lang: "it" },
-      { name: "Amatrice contro Carlo Cracco: niente aglio nell'amatriciana (Blitz Quotidiano)", url: "https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529", lang: "it", year: "2015", chef: "Carlo Cracco" },
-      { name: "Carlo Cracco: chi tocca l'Amatriciana, mettendoci l'aglio in camicia, muore (Dissapore)", url: "https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/", lang: "it", year: "2015", chef: "Carlo Cracco" },
+      { name: "Amatrice contro Carlo Cracco: niente aglio nell'amatriciana (Blitz Quotidiano)", url: "https://archivio.blitzquotidiano.it/foto-notizie/amatrice-contro-carlo-cracco-niente-aglio-nellamatriciana-foto-2096529", lang: "it", year: "2015" },
+      { name: "Carlo Cracco: chi tocca l'Amatriciana, mettendoci l'aglio in camicia, muore (Dissapore)", url: "https://www.dissapore.com/grande-notizia/carlo-cracco-aglio-in-camicia-nellamatriciana/", lang: "it", year: "2015" },
     ],
     quote: { text: "La \"Amatriciana Tradizionale\" a differenza di altre salse analoghe non prevede l'impiego di ingredienti quali aglio cipolla o pancetta.", translation: "Unlike other similar sauces, 'Amatriciana Tradizionale' does not use ingredients such as garlic, onion or pancetta.", by: "The EU Amatriciana Tradizionale STG specification (2020)", source: { name: "MIPAAF provvedimento 13 marzo 2020: Amatriciana Tradizionale STG, disciplinare (Italian publication of the specification)", url: "https://unionalimentari.com/wp-content/uploads/2024/09/MIPAAF-provv-13.3.2020-Amatriciana-Tradizionale-STGCOMPL.pdf", lang: "it", year: "2020" } },
     funFact: "Amatriciana has been an EU 'Traditional Speciality Guaranteed' since March 2020. After the 2016 earthquake, restaurants everywhere served 'amatriciana solidale' to help the town.",
@@ -639,7 +641,7 @@ export const RECIPES: RecipeDef[] = [
     it: "Pizza Margherita",
     en: "Margherita pizza",
     course: "Le Pizze",
-    origin: "Naples, Campania. Tradition dates it to 1889 and a royal visit; treat that as legend, as tomato-mozzarella-basil pizzas existed earlier",
+    origin: "Naples, Campania. Tradition dates it to 1889 and a royal visit, but that date is legend: tomato-mozzarella-basil pizzas existed earlier",
     shape: "Neapolitan dough of wheat flour, water, salt and brewer's yeast (the AVPN also allows a natural starter). It is stretched by hand, never with a rolling pin or press, into a soft disc no wider than 35 cm with a raised rim (cornicione), then baked 60-90 s in a wood-fired oven at about 485 °C (EU STG figures).",
     inDish: "sulla Margherita",
     blurb: "Naples' red, white and green icon, protected as an EU STG: raw tomato, mozzarella or fior di latte, basil and olive oil on hand-stretched dough.",
@@ -870,10 +872,10 @@ export const RECIPES: RecipeDef[] = [
     ],
     extras: ["surgelata", "polpetta"],
     sources: [
-      { name: "Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)", url: "https://accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf", lang: "it", year: "2023" },
-      { name: "Accademia Italiana della Cucina: Ragù alla bolognese, updated recipe 20 April 2023 (PDF, English)", url: "https://www.accademiaitalianadellacucina.it/sites/default/files/Ragù%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf", lang: "en", year: "2023" },
+      { name: "Accademia Italiana della Cucina: Ragù alla bolognese, ricetta aggiornata 20 aprile 2023 (PDF)", url: "https://accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20ricetta%20aggiornata%2020%20aprile%202023.pdf", lang: "it", year: "2023" },
+      { name: "Accademia Italiana della Cucina: Ragù alla bolognese, updated recipe 20 April 2023 (PDF, English)", url: "https://www.accademiaitalianadellacucina.it/sites/default/files/Rag%C3%B9%20alla%20bolognese%20-%20updated%20recipe_20%20April%202023.pdf", lang: "en", year: "2023" },
       { name: "Accademia Italiana della Cucina: announcement of the updated ragù recipe", url: "https://accademiaitalianadellacucina.it/en/node/62013", lang: "en", year: "2023" },
-      { name: "Camera di Commercio di Bologna: press release on depositing the renewed ragù recipe (20 April 2023, PDF)", url: "https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Ragù%20alla%20bolognese%2020%20aprile%202023.pdf", lang: "it", year: "2023" },
+      { name: "Camera di Commercio di Bologna: press release on depositing the renewed ragù recipe (20 April 2023, PDF)", url: "https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/2023/comunicato%20stampa%20deposito%20rinnovata%20ricetta%20vero%20Rag%C3%B9%20alla%20bolognese%2020%20aprile%202023.pdf", lang: "it", year: "2023" },
       { name: "LaPresse: Cambia la ricetta del ragù bolognese: eccola", url: "https://www.lapresse.it/cronaca/2023/04/20/cambia-la-ricetta-del-ragu-bolognese-eccola/", lang: "it", year: "2023" },
       { name: "Bologna city heritage sheet: Tagliatella al ragù (PDF)", url: "https://assets.culturabologna.it/ddbb8840-5178-4a44-b17b-de32ecf6f74e-2022-tagliatella-al-ragu.pdf", lang: "it", year: "2022" },
       { name: "Dissapore: Ragù alla bolognese, aggiornata la ricetta ufficiale: pancetta e manzo al posto della 'cartella'", url: "https://www.dissapore.com/notizie/ragu-alla-bolognese-aggiornata-la-ricetta-ufficiale-pancetta-e-manzo-al-posto-della-cartella/", lang: "it", year: "2023" },
@@ -1054,7 +1056,7 @@ export const RECIPES: RecipeDef[] = [
         line: "Carbonara gets its cream from egg yolk, Pecorino and pasta water — never from a carton.",
         popularity: 5,
         contested: false,
-        source: { name: "Vincenzo's Plate, spaghetti alla carbonara recipe page (author reply in the comments)", url: "https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/", lang: "en", year: "2025" },
+        source: { name: "Vincenzo's Plate, spaghetti alla carbonara recipe page (author reply in the comments)", url: "https://www.vincenzosplate.com/spaghetti-alla-carbonara-recipe/comment-page-5/", lang: "en", year: "2025", publisher: "vincenzosplate.com (comments)" },
         chef: "Vincenzo's Plate (Vincenzo Prosperi)",
         fromDish: "carbonara",
       },
@@ -1086,8 +1088,8 @@ export const RECIPES: RecipeDef[] = [
         enemy: "bacon",
         it: "Bacon affumicato",
         en: "Smoked bacon",
-        why: "Carbonara uses guanciale, cured pork cheek, which is not smoked. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
-        line: "Guanciale is cured pork cheek, never smoked. Coldiretti names bacon a classic fake-carbonara swap.",
+        why: "Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
+        line: "Guanciale is cured pork cheek, not smoked bacon. Coldiretti names bacon a classic fake-carbonara swap.",
         popularity: 4,
         contested: false,
         source: { name: "Carbonara Day: Coldiretti, ricette taroccate in 6 ristoranti stranieri su 10 (AGI)", url: "https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/", lang: "it", year: "2024" },
@@ -1158,7 +1160,7 @@ export const RECIPES: RecipeDef[] = [
         line: "In Italy chicken is a main course, not a pasta topping. 'Chicken Alfredo' is unknown in Rome.",
         popularity: 5,
         contested: false,
-        source: { name: "The Pasta Queen on Alfredo misconceptions (syndicated article on Nordot; the original interview was not identified)", url: "https://nordot.app/1169279368201650965", lang: "en" },
+        source: { name: "The Pasta Queen on Alfredo misconceptions (Nordot)", url: "https://nordot.app/1169279368201650965", lang: "en" },
         chef: "The Pasta Queen (Nadia Caterina Munno)",
         fromDish: "alfredo",
       },
@@ -1190,11 +1192,11 @@ export const RECIPES: RecipeDef[] = [
         enemy: "funghi",
         it: "Funghi",
         en: "Mushrooms",
-        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche.",
-        line: "Mushrooms helped spark a Roman revolt against a 2020 celebrity-chef carbonara video.",
+        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche.",
+        line: "Mushrooms are a frequent foreign add-on with no place in the Roman dish.",
         popularity: 2,
         contested: false,
-        source: { name: "La carbonara di Gordon Ramsay: è rivolta a Roma e dintorni", url: "https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/", lang: "it", year: "2020" },
+        source: { name: "Gordon's Carbonara in Under 10 Minutes (official recipe)", url: "https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp", lang: "en" },
         fromDish: "carbonara",
       },
     ],
@@ -1274,7 +1276,7 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
   },
   {
     ingredient: 'parmigiano', enemy: 'parmesan', friendIn: ['alfredo', 'pesto'], foeIn: ['carbonara', 'amatriciana', 'cacioepepe', 'vongole'],
-    friendLine: 'Parmigiano! In Alfredo and pesto it belongs. Never on clams.',
+    friendLine: 'Parmigiano! In Alfredo and pesto it belongs. On clams, by custom, no cheese.',
     foeLine: 'Parmigiano? In Alfredo and pesto, sì. Here the cheese is Pecorino!',
     foeLines: {
       carbonara: 'Parmigiano? In Alfredo and pesto, sì. Here Pecorino leads: a little blended in, at most.',
@@ -1296,3 +1298,23 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     },
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Bosses away from home
+// ---------------------------------------------------------------------------
+
+/**
+ * What a boss shouts (bubble and voice) when it visits a dish other than its own:
+ * dish id → boss id → line. Without an entry it uses its own taunt (enemies.ts), which names
+ * its home dish. Every line claims a crime that is an intruder of the dish it is said in:
+ * cream in the Alfredo, the Vongole, the Cacio e Pepe and the Pesto, grated cheese on the
+ * Marinara, onion in the Amatriciana.
+ */
+export const BOSS_LINES: Record<string, Record<string, string>> = {
+  alfredo: { b_panna: 'Alfredo needs CREAM!' },
+  vongole: { b_panna: 'Clams need CREAM!' },
+  marinara: { b_grattugiato: 'Formaggio sulla Marinara? Abbondante!' },
+  amatriciana: { b_influencer: 'Smash that like! One-pan amatriciana with onion!' },
+  cacioepepe: { b_influencer: 'Smash that like! One-pan cacio e pepe with cream!' },
+  pesto: { b_influencer: 'Smash that like! One-pan pesto with cream!' },
+};

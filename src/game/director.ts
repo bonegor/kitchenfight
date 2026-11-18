@@ -5,6 +5,7 @@
 import type { Run } from './run';
 import { DMG_RAMP, type StageDef, type WaveMinute } from './stages';
 import { ENEMIES } from './enemies';
+import { BOSS_LINES } from './recipes';
 import { TAU } from '../core/math';
 import { audio } from '../audio/audio';
 
@@ -164,7 +165,8 @@ export class Director {
     if (final) this.finalSpawned = true;
     run.fx.shake(0.5);
     run.sfx('boss_roar');
-    const taunt = def.boss?.taunt ?? '!!!';
+    // a boss away from its home dish has a line about the dish it is visiting
+    const taunt = BOSS_LINES[this.stage.recipe]?.[id] ?? def.boss?.taunt ?? '!!!';
     run.fx.bubble(e, taunt, -e.r * 2.3, '#ffe1d6', 2.6, true);
     // the taunt is spoken once the roar (1.0-1.4 s) has had its moment: boss speech cuts the roar
     run.schedule(1.2, () => {

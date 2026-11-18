@@ -11,7 +11,8 @@ import { WEAPONS } from '../game/weapons';
 import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/passives';
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
 import { STAGES, COURSES, stageById, isDishUnlocked, unlockText, dishesWon, type StageDef } from '../game/stages';
-import { RECIPES, recipeById, dishesForIntruder, type RecipeDef, type RecipeIntruder } from '../game/recipes';
+import { RECIPES, FRIEND_OR_FOE, recipeById, dishesForIntruder, intruderIn, type RecipeDef, type RecipeIntruder, type RecipeSource } from '../game/recipes';
+import { shortIntruderName } from '../game/sightings';
 import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
@@ -1096,7 +1097,7 @@ export class UI {
       ico = d.icon;
       maxLv = d.maxLevel;
       desc = c.isNew ? `${d.desc} (${d.short})` : d.short + ' more.';
-      lvText = c.isNew ? 'Ingredient' : `Level ${c.level}`;
+      lvText = c.isNew ? 'Passive' : `Level ${c.level}`;
       const evolves = Object.values(WEAPONS).filter((w) => w.evolve?.passive === c.id);
       if (evolves.length) {
         const w = evolves[0];
@@ -1288,7 +1289,7 @@ export class UI {
             })),
             run.recipeComplete
               ? h('div', { class: 'cnt done' }, '★ Ricetta completa')
-              : h('div', { class: 'cnt' }, `${got}/${m} ingredienti`, h('span', { class: 'sub' }, got ? ' · find them all for ★' : ' · follow the green arrow')),
+              : h('div', { class: 'cnt' }, `${got}/${m} ingredienti veri`, h('span', { class: 'sub' }, got ? ' · find them all for ★' : ' · follow the green arrow')),
           ),
         )
       : null;
@@ -1413,7 +1414,7 @@ export class UI {
     mk('recipes', '🍝 Ricette');
     mk('crimes', '🍍 Crimini');
     mk('weapons', '🔪 Armi');
-    mk('passives', '🧄 Ingredienti');
+    mk('passives', '🧂 Rinforzi');
     mk('records', '🏆 Record');
     const sev = (n: number) => h('span', { class: 'sev' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= n ? '' : 'off' })));
     // single-column (phone) layout: bring the entry into view when it's tapped
@@ -1497,8 +1498,10 @@ export class UI {
           this.nav.refresh();
           return;
         }
-        // the dishes this crime does not belong in: chips that open the recipe
+        // the dishes this crime does not belong in: chips that open the recipe. Where the ingredient
+        // itself belongs (Parmigiano in the Alfredo), the chip names the form that is the intruder.
         const dishes = dishesForIntruder(id);
+        const friendIn = FRIEND_OR_FOE.find((f) => f.enemy === id)?.friendIn ?? [];
         detail.append(
           img(foeIcon(d.sprite), 'big'),
           h('h3', {}, d.name),
@@ -1511,7 +1514,8 @@ export class UI {
             ? h('div', { class: 'not-in' },
                 h('span', { class: 'lbl' }, 'Non appartiene a:'),
                 dishes.map((r) => {
-                  const c = h('span', { class: 'dish-chip', 'data-nav': '' }, img(icon(r.sprite), '', r.it), shortDishName(r));
+                  const intr = friendIn.includes(r.id) ? intruderIn(r, id) : undefined;
+                  const c = h('span', { class: 'dish-chip', 'data-nav': '' }, img(icon(r.sprite), '', r.it), shortDishName(r) + (intr ? ': ' + shortIntruderName(intr, r) : ''));
                   c.title = `${r.it}: open the recipe`;
                   c.addEventListener('click', () => { audio.sfx('ui_click'); this.showCollection('recipes', r.id, { tab: 'crimes', focus: id }); });
                   return c;
@@ -1543,7 +1547,7 @@ export class UI {
         const known = seen.has('w:' + id);
         detail.innerHTML = '';
         if (!known) {
-          detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, d.evolution ? `An evolution. Hint: max out ${WEAPONS[d.from!].name} and find the right ingredient.` : 'Not yet discovered.'));
+          detail.append(h('h3', {}, '???'), h('p', { class: 'why' }, d.evolution ? `An evolution. Hint: max out ${WEAPONS[d.from!].name} and find the right passive.` : 'Not yet discovered.'));
           return;
         }
         const evo = d.evolve ? WEAPONS[d.evolve.into] : null;
@@ -1647,8 +1651,8 @@ export class UI {
       h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', title: src.name, ...(nav ? { 'data-nav': '' } : {}) }, text);
     const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
     // the Italian chefs and creators behind the sources (recipe + intruder sources), one row each
-    const chefs = new Map<string, { url: string; name: string }[]>();
-    const credit = (who: string, src: { url: string; name: string }) => {
+    const chefs = new Map<string, RecipeSource[]>();
+    const credit = (who: string, src: RecipeSource) => {
       for (const c of who.split(';').map((x) => x.trim()).filter(Boolean)) {
         const l = chefs.get(c) ?? [];
         if (!l.some((x) => x.url === src.url)) l.push(src);
@@ -1657,10 +1661,11 @@ export class UI {
     };
     for (const s of r.sources) if (s.chef) credit(s.chef, s);
     for (const i of r.intruders) if (i.chef) credit(i.chef, i.source);
-    // a chef's link reads as its publisher: "(Scatti di Gusto)" at the end of the name, else the site
-    const publisher = (src: { url: string; name: string }) => {
+    // a chef's link reads as its publisher: the source's own label, else "(Scatti di Gusto)" at the
+    // end of the name, else the site
+    const publisher = (src: RecipeSource) => {
       const m = /\(([^()]{2,30})\)\s*$/.exec(src.name);
-      return m ? m[1] : hostOf(src.url) || src.name;
+      return src.publisher ?? (m ? m[1] : hostOf(src.url) || src.name);
     };
     const meta = (s: { lang?: string; year?: string; url: string }) => h('span', { class: 'meta' }, [s.lang?.toUpperCase(), s.year, hostOf(s.url)].filter(Boolean).join(' · '));
     const q = r.quote;
@@ -1743,7 +1748,7 @@ export class UI {
         h('div', { class: 'meta' },
           h('span', { class: 'pop', title: `How loudly Italians complain: ${i.popularity}/5` }, 'Indignazione ', [1, 2, 3, 4, 5].map((n) => h('i', { class: n <= i.popularity ? 'on' : '' }))),
           i.contested ? h('span', { class: 'tag contested', title: 'Italians genuinely disagree, or it has real historical roots' }, 'Discusso') : null,
-          from ? h('span', { class: 'tag from' }, 'da ' + shortDishName(from)) : null,
+          from ? h('span', { class: 'tag from' }, from.inDish.replace(/^(ne|su)/, 'da')) : null,
           card,
         ),
         h('p', { class: 'why' }, i.why),

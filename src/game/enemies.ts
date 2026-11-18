@@ -88,13 +88,13 @@ E({
   id: 'spezzato', name: 'Lo Spezzaspaghetti', en: 'The Spaghetti-Snapper', sprite: 'enemy.spezzato',
   radius: 10, hp: 7, speed: 78, damage: 4, xp: 1, behavior: 'swarm', params: { wobble: 0.6 },
   color: 'yellow', juice: '#f3d27a', chunk: 'bread',
-  info: { crime: 'Breaking spaghetti to fit the pot', why: 'Long pasta is meant to be twirled. Snapping it leaves short, uneven pieces — just wait a few seconds and it softens into the pot by itself.', severity: 4, quote: 'TV chef Lidia Bastianich reportedly stopped a host mid-snap and called it a "criminal offense".' },
+  info: { crime: 'Breaking spaghetti to fit the pot', why: 'Long pasta is meant to be twirled. Snapping it leaves short, uneven pieces — just wait a few seconds and it softens into the pot by itself.', severity: 4, quote: 'A TV chef reportedly stopped a host mid-snap and called it a criminal offense.' },
 });
 E({
   id: 'ketchup', name: 'Spruzzatore Rosso', en: 'The Red Squirter', sprite: 'enemy.ketchup',
   radius: 14, hp: 13, speed: 52, damage: 6, xp: 2, behavior: 'ranged', params: { min: 150, max: 260, cd: 3.4, shot: 'proj.e_ketchup', shotSpeed: 140, count: 1, spread: 0, muzzle: [4.6, -35] },
   color: 'red', juice: '#d8231f', chunk: 'plastic',
-  info: { crime: 'Ketchup on pasta', why: "Sweet, vinegary and processed — the opposite of a slow-cooked tomato sauce. In a 2022 YouGov survey Italians rated it their #1 food crime (net score −82).", severity: 5, quote: '"The most distressing abuse of Italian food is having ketchup with pasta." — YouGov' },
+  info: { crime: 'Ketchup on pasta', why: "Sweet, vinegary and processed — the opposite of a slow-cooked tomato sauce. In a 2022 YouGov survey Italians rated it their #1 food crime (net score −82).", severity: 5, quote: 'YouGov reportedly called ketchup with pasta the most distressing abuse of Italian food.' },
 });
 E({
   id: 'panna', name: 'Panna Invasora', en: 'Invading Cream', sprite: 'enemy.panna',
@@ -136,7 +136,7 @@ E({
   id: 'bacon', name: 'Bacon Abusivo', en: 'Unlicensed Bacon', sprite: 'enemy.bacon',
   radius: 13, hp: 14, speed: 66, damage: 6, xp: 2, behavior: 'slither', params: { amp: 1.0, freq: 5 },
   color: 'pink', juice: '#e57a7a', chunk: 'tomato',
-  info: { crime: 'Bacon (or smoked pancetta) instead of guanciale', why: 'Guanciale, cured pork cheek, melts into sweet, clean fat and is never smoked. Bacon is the swap Italians spot most often in foreign carbonara, the Amatriciana STG names pancetta among its excluded ingredients, and even Bologna\'s registered ragù, which uses fresh pancetta, forbids the smoked kind.', severity: 3, quote: 'Told that ham would make a "British carbonara", Gino D\'Acampo famously shot back (as reported): "If my grandmother had wheels, she would have been a bike!"' },
+  info: { crime: 'Bacon (or smoked pancetta) instead of guanciale', why: 'Guanciale, cured pork cheek, melts into sweet, clean fat. Smoked bacon is the swap Italians spot most often in foreign carbonara, the Amatriciana STG names pancetta among its excluded ingredients, and even Bologna\'s registered ragù, which uses fresh pancetta, forbids the smoked kind.', severity: 3 },
 });
 E({
   id: 'piselli', name: 'Piselli Ribelli', en: 'Rebel Peas', sprite: 'enemy.piselli',
@@ -148,7 +148,7 @@ E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
   radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', split: { into: 'ananas_pezzo', count: 4 },
-  info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: '"Pineapple, a fruit, on a pizza?" — Gino D\'Acampo on British TV (as reported)' },
+  info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: 'An Italian TV chef reportedly scolded children on British TV for liking pineapple on pizza.' },
 });
 E({
   id: 'ananas_pezzo', name: "Pezzo d'Ananas", en: 'Pineapple Chunk', sprite: 'enemy.ananas_pezzo',
@@ -172,7 +172,7 @@ E({
   id: 'polpetta', name: 'Polpetta Rotolante', en: 'Rolling Meatball', sprite: 'enemy.polpetta',
   radius: 14, hp: 22, speed: 118, damage: 7, xp: 3, behavior: 'roller', params: { accel: 150, turn: 2.2 }, knockResist: 0.4,
   color: 'brown', juice: '#8a4a2a', chunk: 'bread',
-  info: { crime: 'Spaghetti and meatballs', why: 'An Italian-American invention from around 1900. In Italy polpette are a main course on their own — never piled on spaghetti.', severity: 2, quote: '"You\'ll never find spaghetti and meatballs in Italy, at least outside of the most obvious tourist traps." — Tasting Table' },
+  info: { crime: 'Spaghetti and meatballs', why: 'An Italian-American invention from around 1900. In Italy polpette are a main course on their own — never piled on spaghetti.', severity: 2, quote: 'Tasting Table, as reported: you will not find spaghetti and meatballs in Italy, at least outside the most obvious tourist traps.' },
 });
 E({
   id: 'hawaiana', name: 'Fetta Hawaiana', en: 'Hawaiian Slice', sprite: 'enemy.hawaiana',
@@ -281,13 +281,13 @@ E({
   radius: 13, hp: 20, speed: 48, damage: 6, xp: 3, behavior: 'burster', params: { cd: 3.8, count: 6, shot: 'proj.e_spore', shotSpeed: 135, min: 150, max: 250 },
   color: 'brown', juice: '#d9c3a0', chunk: 'bread',
   flying: true, // it hovers (rootlets dangle under the clump), like the Stained Margherita
-  info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef\'s 2020 carbonara video with mushrooms, peas and crème fraîche.', severity: 2 },
+  info: { crime: 'Mushrooms in carbonara', why: 'Mushrooms are a frequent foreign addition with no place in the Roman dish. A celebrity chef\'s ten-minute carbonara recipe adds mushrooms, peas and crème fraîche.', severity: 2 },
 });
 E({
   id: 'prosciutto', name: 'Prosciutto Impostore', en: 'Impostor Ham', sprite: 'enemy.prosciutto',
   radius: 14, hp: 20, speed: 58, damage: 7, xp: 2, behavior: 'chase', knockResist: 0.3,
   color: 'pink', juice: '#f2a8a8', chunk: 'tomato',
-  info: { crime: 'Cooked ham instead of guanciale', why: 'Cooked ham in place of guanciale is a British-style shortcut. Italian food media list ham carbonara among the common recipe "horrors", and an Italian TV chef rejected it on live British TV.', severity: 2 },
+  info: { crime: 'Cooked ham instead of guanciale', why: 'Cooked ham in place of guanciale is a British-style shortcut. Italian food media list ham carbonara among the common recipe "horrors", and an Italian TV chef rejected it on live British TV.', severity: 2, quote: 'Rejecting a ham carbonara on live British TV, an Italian TV chef reportedly said that if his grandmother had wheels she would have been a bike.' },
 });
 E({
   id: 'broccoli', name: 'Broccolo Americano', en: 'American Broccoli', sprite: 'enemy.broccoli',
