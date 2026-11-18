@@ -1297,3 +1297,23 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     },
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Bosses away from home
+// ---------------------------------------------------------------------------
+
+/**
+ * What a boss shouts (bubble and voice) when it visits a dish other than its own:
+ * dish id → boss id → line. Without an entry it uses its own taunt (enemies.ts), which names
+ * its home dish. Every line claims a crime that is an intruder of the dish it is said in:
+ * cream in the Alfredo, the Vongole, the Cacio e Pepe and the Pesto, grated cheese on the
+ * Marinara, onion in the Amatriciana.
+ */
+export const BOSS_LINES: Record<string, Record<string, string>> = {
+  alfredo: { b_panna: 'Alfredo needs CREAM!' },
+  vongole: { b_panna: 'Clams need CREAM!' },
+  marinara: { b_grattugiato: 'Formaggio sulla Marinara? Abbondante!' },
+  amatriciana: { b_influencer: 'Smash that like! One-pan amatriciana with onion!' },
+  cacioepepe: { b_influencer: 'Smash that like! One-pan cacio e pepe with cream!' },
+  pesto: { b_influencer: 'Smash that like! One-pan pesto with cream!' },
+};

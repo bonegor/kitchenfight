@@ -303,6 +303,12 @@ The five new bosses (patterns in `src/game/bosses/b_*.ts`):
 - **Il Sacco del Grattugiato** — a torn bag of pre-grated "parmesan": cheese snow cones, slowing cheese
   clouds, a belly-flop, cheesy clams. *"Formaggio sulle vongole? Abbondante!"*
 
+A boss that visits another dish as a mid-boss says a line about that dish, not about its home dish
+(`BOSS_LINES` in `src/game/recipes.ts`): the Cream Colossus shouts *"Alfredo needs CREAM!"* in the Alfredo
+and *"Clams need CREAM!"* in the Vongole, the Bag of Pre-Grated Cheese *"Formaggio sulla Marinara?
+Abbondante!"* on the Marinara, and the One-Pan Influencer sells a one-pan amatriciana with onion, cacio e
+pepe with cream and pesto with cream. The bubble and the spoken line use the same text.
+
 ## Medals (Medaglie)
 Checked at the end of every run (`src/game/medals.ts`).
 

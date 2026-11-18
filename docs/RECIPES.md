@@ -1154,6 +1154,13 @@ two, its popularity is **inherited** from those entries, not separately research
   ingredient itself belongs names the form that is the intruder there ("Alfredo: Parmesan finto",
   "Pesto: Formaggio generico", "Ragù: Pancetta affumicata"), so the Parmesan card, which calls
   Parmigiano the hero of the Alfredo and the Pesto, does not seem to ban it from them.
+- **Bosses away from home.** A boss reused as a mid-boss in another dish does not shout its home line
+  there (`BOSS_LINES` in `recipes.ts`; without an entry it uses its own taunt from `enemies.ts`). Each
+  line claims an intruder of the dish it is said in: the Cream Colossus says "Alfredo needs CREAM!" in
+  the Alfredo and "Clams need CREAM!" in the Vongole (cream: 5 and 3); the Bag of Pre-Grated Cheese says
+  "Formaggio sulla Marinara? Abbondante!" on the Marinara (grated cheese: 1); the One-Pan Influencer
+  offers a one-pan amatriciana "with onion" (5, contested), a cacio e pepe "with cream" (4) and a pesto
+  "with cream" (4). In the Carbonara and the finale it keeps "One-pan carbonara with cream!".
 - **The Carbonara's `bacon` is smoked bacon, not pancetta**: pancetta there is a contested fallback, so it is
   not a foe (friend-or-foe toasts call pancetta a foe only in the Amatriciana).
 - **Method crimes** (snapping spaghetti, rinsing, cold-water starts, canned and one-pot carbonara…) are not
