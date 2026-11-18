@@ -72,7 +72,7 @@ await page.screenshot({ path: `${OUT}/08-results-win.png` });
 log('results win text:', await page.evaluate(() => (document.querySelector('.res-dish')?.textContent || 'NONE').replace(/\s+/g, ' ').slice(0, 200)));
 log('results buttons:', (await vis()).join(' | '));
 log('res-dish icon size:', await page.evaluate(() => { const i = document.querySelector('.res-dish img, .res-dish canvas'); if (!i) return 'none'; const b = i.getBoundingClientRect(); return b.width + 'x' + b.height; }));
-log('save after win:', JSON.stringify(await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('kitchenfight.save.v1')); return { v: s.version, unlocked: s.unlockedStages, rec: s.records, wins: s.wins, ach: s.achievements }; })));
+log('save after win:', JSON.stringify(await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('kitchenfight.save.v2')); return { v: s.version, unlocked: s.unlockedStages, rec: s.records, wins: s.wins, ach: s.achievements }; })));
 // back to the menu
 const btns = await vis();
 const toMenu = btns.find((b) => /Men|Menu|Il Men/.test(b)) || btns.find((b) => /Continua|Avanti|OK/.test(b));
