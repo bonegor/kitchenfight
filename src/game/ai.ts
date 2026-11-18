@@ -570,6 +570,9 @@ export function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolea
   return false;
 }
 
+/** Up to this distance from the chef a boss walks at its own pace; beyond it, it hurries (brain). */
+const BOSS_NEAR = 300;
+
 /**
  * Boss brain: cycles through an attack list. Each attack = [name, duration].
  * state 0 = walk (timer until next attack). Attacks run in `bossAttack`.
@@ -595,7 +598,10 @@ export function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul
     return;
   }
   if (!e.bossAttack) {
-    chase(run, e, dt, walkMul * (enraged ? 1.25 : 1));
+    // nobody outruns the fight: a boss left more than ~300 px behind hurries back (up to ×3.5 of its walk)
+    const far = toPlayer(run, e).d;
+    const hurry = 1 + Math.min(2.5, Math.max(0, (far - BOSS_NEAR) / 150));
+    chase(run, e, dt, walkMul * (enraged ? 1.25 : 1) * hurry);
     e.timer -= dt;
     if (e.timer <= 0) {
       e.bossAttack = attacks[e.bossStep++ % attacks.length];
@@ -763,7 +769,8 @@ const PATTERNS: Record<string, Pattern> = {
         if (t > 0.9 && Math.floor((t - dt) * 2) !== Math.floor(t * 2)) {
           for (let i = 0; i < 5; i++) {
             const p = run.player;
-            danger(run, p.x + (Math.random() - 0.5) * 300, p.y + (Math.random() - 0.5) * 220, 50, 0.8, e.damage * 0.8);
+            // four beats of five circles: a circle is softer than the slam, a careless quake still costs two or three
+            danger(run, p.x + (Math.random() - 0.5) * 300, p.y + (Math.random() - 0.5) * 220, 50, 0.8, e.damage * 0.6);
           }
           run.fx.shake(0.2);
         }

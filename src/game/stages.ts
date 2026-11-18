@@ -3,9 +3,10 @@
  * made (≥ 80 % of their weight) of that dish's intruders, its real ingredients to
  * collect, and three bosses (5:00, 10:00, 15:00).
  *
- * BALANCE: the difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves and
- * BOSS_HP_FACTOR). A level's waves only choose WHO comes (pools); HOW MANY and HOW TOUGH come
- * from its tier, with three optional per-dish factors (StageSpec.rateMul / dmgMul / bossHpMul).
+ * BALANCE: the difficulty numbers live in TIERS (+ the BASE_RATE / BASE_MAX curves, the two
+ * ramps RATE_RAMP / DMG_RAMP and BOSS_HP_FACTOR). A level's waves only choose WHO comes (pools);
+ * HOW MANY and HOW TOUGH come from its tier, with three optional per-dish factors
+ * (StageSpec.rateMul / dmgMul / bossHpMul).
  *
  * POOLS: over the whole run, each intruder's share of the spawn weight follows the order of
  * recipe.intruders (the spec's "weight order": the loudest crime comes most often), checked
@@ -63,17 +64,19 @@ export type TierId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6';
 export interface Tier {
   /** what it is tuned against (the pre-menu stages) */
   label: string;
-  /** enemy HP multiplier reached after 7 minutes (director ramp) */
+  /** enemy HP multiplier, phased in over the first 7 minutes (Director.ramp) */
   hpBase: number;
   /** extra enemy HP per minute */
   hpGrowth: number;
-  /** enemy damage multiplier, phased in over DMG_RAMP */
+  /** damage multiplier of the waves (and of a boss's adds), phased in over DMG_RAMP */
   dmgBase: number;
+  /** damage multiplier of the bosses themselves, phased in over DMG_RAMP (they do not take dmgBase) */
+  bossDmg: number;
   /** multiplies BASE_RATE (spawns per second); a rate above 1 phases in over RATE_RAMP */
   rate: number;
   /** multiplies BASE_MAX (soft cap of alive enemies) */
   max: number;
-  /** boss base HP for the 5:00 / 10:00 / 15:00 slots (×hpBase × player-level scaling at spawn) */
+  /** boss base HP for the 5:00 / 10:00 / 15:00 slots (×hpBase × player level × time at spawn) */
   bossHp: [number, number, number];
 }
 
@@ -81,32 +84,50 @@ export interface Tier {
 // TIERS — the one table the balance pass tunes, read top to bottom as the menu's ramp.
 // Pre-menu stages for reference (hpBase / hpGrowth / dmgBase): kitchen 1 / 0.11 / 1,
 // trattoria 1.6 / 0.13 / 1.15, streets 2.2 / 0.15 / 1.25, foodcourt 2.9 / 0.17 / 1.4.
-// - hpBase, rate, max and bossHp rise (or hold) from T1 to T6. hpGrowth and dmgBase rise from
+// - hpBase, bossDmg and max rise (or hold) from T1 to T6. hpGrowth, dmgBase and rate rise from
 //   T1 to T5 and step back for T6 on purpose: the finale's own crowd (frozen lasagne, devouring
-//   pots, cursed cans, squeeze bottles) hits hardest by itself; with T5's growth and damage it
-//   would be far beyond the old food court it is tuned against.
-// - The Il Menù intruders of T3–T5 are softer than the old stages' crowd (puddlers, a swarm,
-//   strafers, lobbers), so these tiers carry more hpGrowth / dmgBase than the old stage each one
-//   matches. dmgBase also scales boss hits; the bosses' base damage was cut by a fifth for it.
-// - The openings stay gentle: hpBase phases in over the first 7 minutes (Director), a rate above 1
-//   over minutes 2–8 (RATE_RAMP, waves()) and a dmgBase above 1 from 4:00 to 10:00 (DMG_RAMP).
-//   Up to 4:00 every dish hits like the first ones.
+//   pots, cursed cans, squeeze bottles) hits hardest by itself.
+// - The waves of T3–T5 carry far more hpGrowth / dmgBase / rate than the old stage each tier is
+//   measured against, for two reasons. The Il Menù intruders are softer than the old crowd
+//   (puddlers, a swarm, strafers, lobbers). And the old stages owed most of their pressure to
+//   boss fights of four to nine minutes, often two at once; here a fight takes about a minute
+//   and a half, so the waves carry the pressure.
+// - The openings stay gentle: hpBase phases in over the first 7 minutes (Director), a rate above
+//   1 over minutes 2–8 (RATE_RAMP, waves()) and a dmgBase or bossDmg above 1 from 4:00 to 10:00
+//   (DMG_RAMP). Up to 4:00 the dishes of T2–T6 hit alike; the tiers differ most in
+//   minutes 7–15.
+// - A boss hits by its tier's bossDmg, not by dmgBase (1.45–1.75 at full ramp is what the old
+//   stages' bosses hit with, the base damage in enemies.ts having been cut by a fifth). The
+//   5:00 boss comes at the start of the ramp, so it is the mildest of the three.
 // - bossHp is the slot's base HP; the real HP is ×hpBase × player level × time
-//   (Director.spawnBoss). BOSS_HP_FACTOR evens out the bosses that are slow to bring down
-//   anywhere, and a dish can scale one slot with StageSpec.bossHpMul.
+//   (Director.spawnBoss). It is set for fights of about a minute and a half with the test bot in
+//   every tier: the bot's damage does not grow with the tier, so bossHp × hpBase is about level
+//   from T3 to T6 and bossHp itself falls. BOSS_HP_FACTOR evens out the bosses that are slow to
+//   bring down anywhere, and a dish scales single slots with StageSpec.bossHpMul.
 // - A dish whose intruders are softer than its tier-mates' asks for more of them
-//   (StageSpec.rateMul, phased in like `rate`) or for harder hits (StageSpec.dmgMul).
-// - Measured with the bot (auto-revive, a mid pantry, 12 runs per dish), deaths in minutes 5–15:
-//   T1 0 · T2 0.2 · T3 ~6 · T4 ~8 · T5 ~14 · T6 ~26 (old kitchen 0.2 · trattoria 10 · streets 18 ·
-//   food court 27). Every dish sits at or above the dishes that unlock it.
+//   (StageSpec.rateMul, phased in like `rate`) or for harder hits (StageSpec.dmgMul); the
+//   Margherita's armoured pineapples and ketchup bursts ask for fewer.
+// - Measured with the test bot (Enzo, a mid pantry of Olio 2, San Marzano 2, Grembiule 1 and
+//   Minestrone 1; 24 runs per dish and setting):
+//   · deaths in minutes 5–15 with auto-revive: T1 0 · T2 0.2 · T3 6.2 · T4 12.5 · T5 15.9 ·
+//     T6 22.8 (the old stages with the same bot: kitchen 1.7 · trattoria 8.1 · streets 17.8 ·
+//     food court 29.7). By dish: Alfredo 7.6, Amatriciana 4.7, Margherita 6.2, Cacio e Pepe 11.5,
+//     Marinara 13.4, Ragù 14.0, Pesto 19.7, Vongole 13.9. Every dish sits at or above the dishes
+//     that unlock it, except the Vongole, which measured below the Pesto.
+//   · the 5:00 boss dies before the chef (no revive) in 67 % of the T3 runs, 38 % of T4, 21 % of
+//     T5 and 13 % of T6. The first death comes at a median of 7:12 in T3, 5:55 in T4, 6:24 in T5
+//     and 5:19 in T6: T4 and T5 are level on this one, T4 a little earlier.
+//   · a boss fight lasts 81–136 s on average from T3 up (51–75 s in T1 and T2); about one fight
+//     in eight goes over 150 s, mostly in runs the bot is losing badly.
+//   · with no pantry, no run of 264 ended before 2:30 and 11 ended before 3:20.
 // =====================================================================================
 export const TIERS: Record<TierId, Tier> = {
-  T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, rate: 0.74, max: 0.8, bossHp: [1300, 2100, 3300] },
-  T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, rate: 0.93, max: 0.94, bossHp: [1400, 2300, 3600] },
-  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 1.7, rate: 1.12, max: 1.05, bossHp: [1500, 2700, 4800] },
-  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.33, dmgBase: 2.35, rate: 1.3, max: 1.12, bossHp: [1600, 3000, 4800] },
-  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.4, dmgBase: 2.55, rate: 1.4, max: 1.2, bossHp: [1600, 3000, 5000] },
-  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.6, rate: 1.4, max: 1.2, bossHp: [1800, 3200, 6000] },
+  T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, bossDmg: 0.85, rate: 0.74, max: 0.8, bossHp: [1300, 2100, 3300] },
+  T2: { label: 'carbonara ≈ La Cucina', hpBase: 1, hpGrowth: 0.11, dmgBase: 1, bossDmg: 1, rate: 0.93, max: 0.94, bossHp: [1400, 2300, 3600] },
+  T3: { label: 'alfredo / amatriciana / margherita ≈ La Trattoria', hpBase: 1.6, hpGrowth: 0.21, dmgBase: 2.2, bossDmg: 1.45, rate: 1.4, max: 1.05, bossHp: [800, 1750, 2400] },
+  T4: { label: 'cacio e pepe / marinara: between La Trattoria and I Vicoli', hpBase: 1.9, hpGrowth: 0.42, dmgBase: 3.5, bossDmg: 1.5, rate: 1.8, max: 1.2, bossHp: [850, 1800, 2400] },
+  T5: { label: 'ragù / pesto / vongole ≈ I Vicoli di Napoli', hpBase: 2.2, hpGrowth: 0.5, dmgBase: 3.8, bossDmg: 1.55, rate: 1.9, max: 1.2, bossHp: [1200, 1350, 2200] },
+  T6: { label: 'finale ≈ La Food Court', hpBase: 2.9, hpGrowth: 0.26, dmgBase: 1.9, bossDmg: 1.75, rate: 1.7, max: 1.2, bossHp: [700, 850, 1800] },
 };
 
 /** Spawns per second, minute by minute (×tier.rate). Minutes 5 and 10 breathe (boss); minute 15 is the final boss. */
@@ -115,7 +136,7 @@ export const BASE_RATE = [0.9, 1.45, 2.0, 2.45, 2.85, 2.5, 3.25, 3.55, 3.95, 4.3
 export const BASE_MAX = [24, 42, 58, 70, 82, 74, 102, 114, 130, 144, 124, 162, 182, 202, 222, 128];
 /** A spawn-rate factor above 1 (tier × dish) is ×1 up to the first minute here and phases in linearly to full at the second. */
 export const RATE_RAMP: [number, number] = [2, 8];
-/** A dmgBase above 1 is ×1 up to the first second here and phases in linearly to full at the second (Director.dmgScale). */
+/** A dmgBase or bossDmg above 1 is ×1 up to the first second here and phases in linearly to full at the second (Director.dmgScale). */
 export const DMG_RAMP: [number, number] = [240, 600];
 /** Max share of a minute's spawn weight that may come from non-intruder extras. */
 export const MAX_EXTRA_SHARE = 0.2;
@@ -162,6 +183,7 @@ export interface StageDef {
   hpBase: number;
   hpGrowth: number;
   dmgBase: number;
+  bossDmg: number;
   /** `hp` = boss base HP for this slot (overrides the boss's own) */
   bosses: { at: number; id: string; hp?: number }[];
   finalBoss: string;
@@ -201,10 +223,11 @@ function waves(tier: TierId, minutes: MinuteSpec[], rateMul = 1): WaveMinute[] {
 /**
  * Per-boss factor on the tier's slot HP, measured in full runs (bot with a mid-progress pantry,
  * auto-revive): at equal HP these bosses took clearly longer to bring down than the others in
- * their slot. The ranged ones (influencer, clock tower) keep out of the chef's melee reach; the
- * can, the microwave and the cheese bag hide behind the adds and hazards they bring; the butter
- * block's enrage shrinks it. The Bolognese is untouchable while it is phased out: with a fixed
- * build and no waves it took 1.3× as long as the other ragù-tier finals at equal HP.
+ * their slot. The ranged ones (influencer, clock tower) do not come to the chef the way the
+ * leaping bosses do; the can, the microwave and the cheese bag hide behind the adds and hazards
+ * they bring; the butter block's enrage shrinks it. The Bolognese is untouchable while it is
+ * phased out: with a fixed build and no waves it took 1.3× as long as the other ragù-tier
+ * finals at equal HP. (No boss can be left behind any more: see BOSS_NEAR in ai.ts.)
  */
 export const BOSS_HP_FACTOR: Record<string, number> = {
   b_influencer: 0.6, b_campanile: 0.5, b_burro: 0.7, b_microonde: 0.65, b_scatolone: 0.7, b_grattugiato: 0.6, b_frullatore: 0.65, b_aglio: 0.8, b_bolognese: 0.8,
@@ -237,11 +260,11 @@ interface StageSpec {
   variant?: StageVariant;
   tier: TierId;
   bosses: [string, string, string];
-  /** optional per-slot factor on the boss HP: a boss that is slow to bring down only in this dish */
+  /** optional per-slot factor on the boss HP: a boss that is slower or quicker to bring down in this dish's crowd */
   bossHpMul?: [number, number, number];
-  /** optional factor on the tier's spawn rate (phases in like the tier's): soft intruders come in larger numbers */
+  /** optional factor on the tier's spawn rate (phases in like the tier's): soft intruders come in larger numbers, tough ones in smaller */
   rateMul?: number;
-  /** optional factor on the tier's dmgBase: slow, soft intruders hit harder (and so do the dish's bosses) */
+  /** optional factor on the tier's dmgBase: slow, soft intruders hit harder (the bosses keep the tier's bossDmg) */
   dmgMul?: number;
   unlock: UnlockRule;
   accent: string;
@@ -269,6 +292,7 @@ function stage(num: number, s: StageSpec): StageDef {
     hpBase: T.hpBase,
     hpGrowth: T.hpGrowth,
     dmgBase: Math.round(T.dmgBase * (s.dmgMul ?? 1) * 100) / 100,
+    bossDmg: T.bossDmg,
     bosses: bosses(s.tier, s.bosses, s.bossHpMul),
     finalBoss: s.bosses[2],
     waves: waves(s.tier, s.minutes, s.rateMul),
@@ -368,7 +392,7 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
+    id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], bossHpMul: [1.25, 1.1, 1.35], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
     variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
     minutes: [
       // cream opens with a few shrimp and mushy pasta; the broccoli lobs and the gluey Alfredo puddles
@@ -409,7 +433,7 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], rateMul: 1.45, dmgMul: 1.35, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
+    id: 'amatriciana', env: 'kitchen', tier: 'T3', bosses: ['b_scatolone', 'b_influencer', 'b_aglio'], bossHpMul: [1.25, 0.9, 0.85], rateMul: 1.45, dmgMul: 1.45, unlock: { anyOf: ['carbonara'] }, accent: '#c8321e',
     variant: { label: 'evening', tint: '#ffd6a8', darkness: 0.46, darkColor: '#2a120a', vignette: 0.45, particles: 'embers', decor: 'embers' },
     minutes: [
       // bacon opens; the layered onions (the dish's hardest hitters early on) build up from minute 2
@@ -448,7 +472,7 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_alfredo', 'b_influencer', 'b_burro'], bossHpMul: [1, 1, 0.8], rateMul: 1.2, unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
+    id: 'cacioepepe', env: 'trattoria', tier: 'T4', bosses: ['b_influencer', 'b_alfredo', 'b_burro'], bossHpMul: [1.25, 1, 0.85], rateMul: 1.2, unlock: { anyOf: ['alfredo', 'amatriciana'] }, accent: '#cfc2a0',
     variant: { label: 'late night', tint: '#ffe0c0', darkness: 0.6, darkColor: '#1a0c18', vignette: 0.5, particles: 'dust', decor: 'osteria' },
     minutes: [
       // butter and cream open; the grated cheese only seasons the dish, and less of it before 5:00
@@ -488,7 +512,7 @@ const SPECS: StageSpec[] = [
   },
   // ------------------------------------------------------------------ Le Pizze
   {
-    id: 'margherita', env: 'streets', tier: 'T3', bosses: ['b_deepdish', 'b_ketchup', 'b_ananas'], bossHpMul: [1, 0.7, 1], unlock: { anyOf: ['carbonara'] }, accent: '#3fa34d',
+    id: 'margherita', env: 'streets', tier: 'T3', bosses: ['b_ketchup', 'b_deepdish', 'b_ananas'], bossHpMul: [0.65, 1, 0.9], rateMul: 0.75, unlock: { anyOf: ['carbonara'] }, accent: '#3fa34d',
     variant: { label: 'sunset to night', nightRamp: [0.15, 0.62], decor: 'basil' },
     minutes: [
       M([['pepperoni', 3], ['ananas_pezzo', 3], ['hawaiana', 1]]),
@@ -566,7 +590,7 @@ const SPECS: StageSpec[] = [
   },
   // ------------------------------------------------------------------ Dal Nord
   {
-    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.65, 0.6, 1], rateMul: 1.05, unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
+    id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.7, 0.65, 0.75], unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
     variant: { label: 'Bologna afternoon', tint: '#ffe2b8', darkness: 0.16, darkColor: '#2a160c', vignette: 0.36, particles: 'dust', decor: 'osteria' },
     minutes: [
       // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff, the meatballs
@@ -606,25 +630,25 @@ const SPECS: StageSpec[] = [
     ],
   },
   {
-    id: 'pesto', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_influencer', 'b_frullatore'], unlock: { anyOf: ['ragu'] }, accent: '#4fa82e',
+    id: 'pesto', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_influencer', 'b_frullatore'], bossHpMul: [1.25, 1.3, 1], rateMul: 1.1, unlock: { anyOf: ['ragu'] }, accent: '#4fa82e',
     variant: { label: 'Ligurian day', tint: '#e4f7d0', darkness: 0.04, darkColor: '#10241a', vignette: 0.3, particles: 'dust', decor: 'basil' },
     minutes: [
-      M([['anacardo', 3], ['olio', 1]], ['smartphone'], 0.08),
+      M([['anacardo', 3], ['olio', 1]], ['smartphone'], 0.05),
       M([['anacardo', 3], ['olio', 2], ['panna', 1.5]]),
-      M([['anacardo', 2], ['panna', 3.5], ['olio', 2]], ['smartphone'], 0.1),
+      M([['anacardo', 2], ['panna', 3.5], ['olio', 2]], ['smartphone'], 0.05),
       M([['burro', 2], ['anacardo', 2], ['panna', 3.5], ['olio', 2]]),
-      M([['parmesan', 2], ['anacardo', 2], ['burro', 2], ['olio', 2]], ['smartphone'], 0.1),
-      M([['anacardo', 3], ['panna', 3.5]], ['smartphone'], 0.12),
+      M([['parmesan', 2], ['anacardo', 2], ['burro', 2], ['olio', 2]], ['smartphone'], 0.05),
+      M([['anacardo', 3], ['panna', 3.5]], ['smartphone'], 0.06),
       M([['olio', 3], ['burro', 2], ['parmesan', 2], ['anacardo', 2]]),
-      M([['panna', 5], ['anacardo', 3], ['olio', 2], ['burro', 2]], ['smartphone'], 0.12),
-      M([['parmesan', 3], ['olio', 3], ['anacardo', 2], ['panna', 3.5]], ['smartphone'], 0.1),
-      M([['burro', 3], ['panna', 5], ['anacardo', 3], ['parmesan', 2]], ['smartphone'], 0.12),
-      M([['anacardo', 3], ['olio', 3]], ['smartphone'], 0.12),
-      M([['parmesan', 3], ['burro', 3], ['olio', 3], ['anacardo', 3]], ['smartphone'], 0.12),
-      M([['panna', 6.5], ['anacardo', 3], ['parmesan', 3], ['burro', 2]], ['smartphone'], 0.12),
-      M([['olio', 3], ['burro', 3], ['panna', 5], ['anacardo', 3.5], ['parmesan', 2]], ['smartphone'], 0.12),
-      M([['anacardo', 3.5], ['panna', 6.5], ['burro', 3], ['olio', 3], ['parmesan', 3]], ['smartphone'], 0.12),
-      M([['anacardo', 3], ['panna', 5]], ['smartphone'], 0.12),
+      M([['panna', 5], ['anacardo', 3], ['olio', 2], ['burro', 2]], ['smartphone'], 0.06),
+      M([['parmesan', 3], ['olio', 3], ['anacardo', 2], ['panna', 3.5]], ['smartphone'], 0.05),
+      M([['burro', 3], ['panna', 5], ['anacardo', 3], ['parmesan', 2]], ['smartphone'], 0.06),
+      M([['anacardo', 3], ['olio', 3]], ['smartphone'], 0.06),
+      M([['parmesan', 3], ['burro', 3], ['olio', 3], ['anacardo', 3]], ['smartphone'], 0.06),
+      M([['panna', 6.5], ['anacardo', 3], ['parmesan', 3], ['burro', 2]], ['smartphone'], 0.06),
+      M([['olio', 3], ['burro', 3], ['panna', 5], ['anacardo', 3.5], ['parmesan', 2]], ['smartphone'], 0.06),
+      M([['anacardo', 3.5], ['panna', 6.5], ['burro', 3], ['olio', 3], ['parmesan', 3]], ['smartphone'], 0.06),
+      M([['anacardo', 3], ['panna', 5]], ['smartphone'], 0.06),
     ],
     events: [
       T(20, 'Genoa: basil in the marble mortar. Cream? Cashews? Not today.'),
@@ -645,25 +669,25 @@ const SPECS: StageSpec[] = [
   },
   // ------------------------------------------------------------------ Dal Sud e dal Mare
   {
-    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
+    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], rateMul: 1.2, dmgMul: 1.1, unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
     variant: { label: 'seaside morning', tint: '#dcecff', darkness: 0.04, darkColor: '#0c1a30', vignette: 0.3, particles: 'dust', decor: 'sea' },
     minutes: [
-      // the clams lead, butter and cream join early; the grated cheese waits for minute 3 and builds late
+      // the clams lead, butter and cream join early; the grated cheese waits for minute 3 and takes over late
       M([['vongola', 3], ['panna', 1.5], ['burro', 1]]),
       M([['vongola', 3], ['burro', 1.5], ['panna', 1.5]]),
       M([['vongola', 3], ['burro', 2], ['panna', 1]]),
       M([['vongola', 3], ['panna', 2], ['burro', 1.5], ['parmesan', 0.5]]),
       M([['burro', 2], ['vongola', 3.5], ['parmesan', 1], ['panna', 1.5]]),
       M([['vongola', 4], ['panna', 2]]),
-      M([['parmesan', 2.5], ['burro', 2], ['vongola', 3], ['panna', 2]]),
-      M([['vongola', 4], ['burro', 2.5], ['panna', 2], ['parmesan', 1.5]]),
-      M([['panna', 2.5], ['parmesan', 3.5], ['vongola', 4]]),
-      M([['burro', 3], ['vongola', 4], ['parmesan', 3.5], ['panna', 2]]),
+      M([['parmesan', 3], ['burro', 2], ['vongola', 3], ['panna', 2]]),
+      M([['vongola', 4], ['burro', 2.5], ['panna', 2], ['parmesan', 2.5]]),
+      M([['panna', 2.5], ['parmesan', 4], ['vongola', 4]]),
+      M([['burro', 3], ['vongola', 4], ['parmesan', 4], ['panna', 2]]),
       M([['vongola', 4], ['burro', 2]]),
-      M([['parmesan', 4], ['vongola', 4], ['panna', 2.5], ['burro', 2]]),
-      M([['vongola', 5], ['burro', 3], ['parmesan', 4]]),
-      M([['panna', 3], ['vongola', 5], ['burro', 3], ['parmesan', 4]]),
-      M([['vongola', 5], ['parmesan', 4.5], ['burro', 3], ['panna', 3]]),
+      M([['parmesan', 5], ['vongola', 4.5], ['panna', 2.5], ['burro', 2]]),
+      M([['vongola', 5], ['burro', 3], ['parmesan', 5]]),
+      M([['panna', 3], ['vongola', 5], ['burro', 3], ['parmesan', 5]]),
+      M([['vongola', 5], ['parmesan', 5], ['burro', 3], ['panna', 3]]),
       M([['vongola', 4], ['panna', 2], ['burro', 1]]),
     ],
     events: [
@@ -685,22 +709,22 @@ const SPECS: StageSpec[] = [
   },
   // ------------------------------------------------------------------ Il Gran Finale
   {
-    id: 'foodcourt', env: 'foodcourt', tier: 'T6', bosses: ['b_campanile', 'b_influencer', 'b_fusione'], bossHpMul: [0.55, 0.8, 1], unlock: { wins: 6 }, accent: '#d93fd0',
+    id: 'foodcourt', env: 'foodcourt', tier: 'T6', bosses: ['b_campanile', 'b_influencer', 'b_fusione'], unlock: { wins: 6 }, accent: '#d93fd0',
     minutes: [
       // every crime of the menu turns up at least once (stageRuleProblems checks the listed ones)
       M([['spezzato', 3], ['pastachips', 3], ['piselli', 2], ['anacardo', 2], ['scotta_mini', 1.5]]),
       M([['pastachips', 3], ['fantasma', 2], ['spezzato', 2], ['panna', 2], ['bacon', 2]]),
       M([['pentola', 1], ['fantasma', 2], ['macchiata', 1], ['panna', 2], ['spezzato', 3], ['burro', 2], ['scotta', 1.5]]),
-      M([['surgelata', 1], ['glassa', 2], ['frappe', 1], ['scatoletta', 1], ['panna', 2], ['ketchup', 1]]),
+      M([['surgelata', 0.5], ['glassa', 2], ['frappe', 1], ['scatoletta', 0.5], ['panna', 2], ['ketchup', 1.5]]),
       M([['pentola', 1], ['fantasma', 2], ['smartphone', 2], ['ananas', 2], ['parmesan', 2], ['cheddar', 2]]),
       M([['scatoletta', 3], ['ketchup', 3], ['pastachips', 3], ['pollo', 2]]),
-      M([['surgelata', 2], ['pentolaunica', 2], ['alfredo', 2], ['forbici', 2], ['bbq', 2]]),
+      M([['surgelata', 2], ['pentolaunica', 0.5], ['alfredo', 2], ['forbici', 2], ['bbq', 2]]),
       M([['fantasma', 3], ['scatoletta', 2], ['cipolla', 2], ['polpetta', 2], ['pentola', 1], ['aglio', 1]]),
       M([['surgelata', 2], ['ananas', 3], ['macchiata', 2], ['frappe', 3], ['gamberi', 2], ['bacon', 1.5]]),
-      M([['vongola', 2], ['scatoletta', 3], ['smartphone', 3], ['glassa', 2], ['pentolaunica', 1], ['funghi', 2]]),
+      M([['vongola', 2], ['scatoletta', 3], ['smartphone', 3], ['glassa', 2], ['pentolaunica', 0.5], ['funghi', 2]]),
       M([['ananas', 3], ['hawaiana', 3], ['pepperoni', 3]]),
       M([['cappuccino', 3], ['surgelata', 2], ['fantasma', 2], ['pentola', 1], ['macchiata', 2], ['prosciutto', 2], ['pollo', 2]]),
-      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 2], ['forbici', 2], ['olio', 2], ['aglio', 1]]),
+      M([['cappuccino', 3], ['scatoletta', 3], ['alfredo', 2], ['pentolaunica', 0.5], ['forbici', 2], ['olio', 2], ['aglio', 1]]),
       M([['cappuccino', 3], ['surgelata', 3], ['ananas', 3], ['smartphone', 3], ['glassa', 2], ['broccoli', 2]]),
       M([['cappuccino', 3], ['surgelata', 3], ['fantasma', 3], ['pentola', 2], ['alfredo', 2], ['frappe', 2], ['filante', 2], ['bacon', 2]]),
       M([['panna', 2], ['ketchup', 3], ['ananas_pezzo', 3], ['pastachips', 3]]),
@@ -708,9 +732,9 @@ const SPECS: StageSpec[] = [
     events: [
       T(20, 'Welcome to the Food Court. Everything here is a crime.'),
       E(100, 'ring', 'pastachips', 24),
-      E(160, 'elite', 'surgelata'),
+      E(160, 'elite', 'glassa'),
       E(230, 'stampede', 'pastachips', 26),
-      E(275, 'elite', 'pentolaunica'),
+      E(275, 'elite', 'pastachips'),
       E(400, 'ring', 'pastachips', 40),
       E(460, 'elite', 'fantasma'),
       E(520, 'wall', 'scatoletta', 20),

@@ -20,7 +20,7 @@ export class Director {
 
   constructor(private run: Run, private stage: StageDef) {}
 
-  /** later stages phase in their extra toughness over the first 7 minutes */
+  /** the HP ramp: a dish's extra toughness (hpBase) phases in over the first 7 minutes */
   private ramp() {
     return Math.min(1, this.run.time / 420);
   }
@@ -32,14 +32,14 @@ export class Director {
   }
 
   /**
-   * Enemy damage. A dmgBase above 1 phases in over DMG_RAMP, later than the HP, so the openings
-   * stay gentle; a dmgBase below 1 (the first dish) applies over the HP ramp.
+   * Enemy damage. A factor above 1 phases in over DMG_RAMP, later than the HP, so the openings and
+   * the first boss stay gentle; a factor below 1 (the first dish) applies over the HP ramp.
+   * @param base the stage's damage factor: dmgBase for the waves (the default), bossDmg for a boss
    */
-  dmgScale() {
+  dmgScale(base = this.stage.dmgBase) {
     const t = this.run.time / 60;
-    const db = this.stage.dmgBase;
-    const k = db > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) : this.ramp();
-    return (1 + (db - 1) * k) * (1 + t * 0.045);
+    const k = base > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) : this.ramp();
+    return (1 + (base - 1) * k) * (1 + t * 0.045);
   }
 
   wave(): WaveMinute {
@@ -156,6 +156,8 @@ export class Director {
     const lvlMul = 1 + (run.level - 1) * 0.035;
     const slot = slotHp ? slotHp / def.hp : 1;
     const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) * slot });
+    // a boss hits by its tier's bossDmg, not by the waves' dmgBase: its own attacks set its threat
+    e.damage = def.damage * this.dmgScale(this.stage.bossDmg);
     e.spawnT = 0.6;
     const final = lastSlot && id === this.stage.finalBoss;
     e.isFinal = final;

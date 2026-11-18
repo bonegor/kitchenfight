@@ -194,7 +194,7 @@ E({
 });
 E({
   id: 'parmesan', name: 'Spargipolvere', en: 'The Dust-Sprinkler', sprite: 'enemy.parmesan',
-  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 6, area: 'cheese', r: 22, slow: 0.25 },
+  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 140, max: 250, cd: 6, shot: 'proj.e_cheese', area: 'cheese', r: 22, slow: 0.25 },
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic',
   info: { crime: 'Powdered "parmesan", or Parmigiano where it does not belong', why: 'Parmigiano Reggiano is a protected cheese aged at least 12 months, and it is the hero of Alfredo and pesto. But Rome\'s carbonara, amatriciana and cacio e pepe want Pecorino Romano, seafood pasta wants no cheese at all, and some shelf-stable "parmesan" isn\'t even the same cheese: US lab tests in 2016 found up to 8.8% cellulose (wood pulp) in "100% parmesan".', severity: 4 },
 });
