@@ -6,13 +6,13 @@ import { Enemy, Projectile, EnemyShot, Pickup, Area, PickupKind, AreaKind, newId
 import { SpatialHash } from '../core/spatial';
 import { FX } from './fx';
 import { World, PropInst } from './world';
-import { Stats, baseStats, StatMod, CharacterDef, WeaponStats } from './types';
+import { Stats, baseStats, StatMod, CharacterDef, WeaponStats, CHEF_SPEED } from './types';
 import { WEAPONS, WeaponInstance, BASE_WEAPON_IDS } from './weapons';
 import { PASSIVES, POWERUPS } from './passives';
-import { ENEMIES, EnemyDef } from './enemies';
+import { ENEMIES, EnemyDef, ELITE_DMG, SPEED_JITTER } from './enemies';
 import { updateEnemy, onEnemyDeath } from './ai';
 import { Director } from './director';
-import type { StageDef } from './stages';
+import { buffFactor, paceFactor, waveSpeed, type StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
@@ -295,7 +295,8 @@ export class Run {
     return a;
   }
 
-  spawnEnemy(def: EnemyDef, x: number, y: number, o: { elite?: boolean; boss?: boolean; hpMul?: number } = {}): Enemy {
+  /** @param o.add called by a boss (summon): it hits by the dish's bossDmg, not by the waves' dmgBase */
+  spawnEnemy(def: EnemyDef, x: number, y: number, o: { elite?: boolean; boss?: boolean; hpMul?: number; add?: boolean } = {}): Enemy {
     const e = this.enemyPool.pop() ?? new Enemy();
     e.id = newId();
     e.def = def;
@@ -308,8 +309,12 @@ export class Run {
     e.r = def.radius * (e.elite ? 1.45 : 1);
     const hpScale = this.director.hpScale() * (o.hpMul ?? 1) * this.stats.curse;
     e.maxHp = e.hp = def.hp * hpScale * (e.elite ? 14 : 1);
-    e.speed = def.speed * (e.elite ? 0.9 : 1) * (0.92 + this.rng.next() * 0.16);
-    e.damage = def.damage * (e.elite ? 1.5 : 1) * this.director.dmgScale();
+    e.add = !!o.add;
+    // a dish's speed factor moves everything but its bosses and its heavy bodies (phased in and capped: see waveSpeed)
+    const pace = this.director.speedScale();
+    e.speed = (e.boss ? def.speed : waveSpeed(def, pace)) * (e.elite ? 0.9 : 1) * (1 - SPEED_JITTER + this.rng.next() * 2 * SPEED_JITTER);
+    e.pace = e.boss ? 1 : paceFactor(def, pace);
+    e.damage = def.damage * (e.elite ? ELITE_DMG : 1) * this.director.dmgScale(e.add ? this.stage.bossDmg : undefined);
     e.xp = def.xp;
     e.kx = e.ky = e.vx = e.vy = 0;
     e.face = 1;
@@ -329,8 +334,10 @@ export class Run {
     e.attackPose = 0;
     e.telegraph = 0;
     e.buff = 0;
+    e.buffMul = e.boss ? 1 : buffFactor(def, pace);
     e.slamR = 0;
     e.bossStep = 0;
+    e.slowDebt = 0;
     e.leapT = 0;
     e.leapDur = 0;
     e.onLand = null;
@@ -1162,7 +1169,7 @@ export class Run {
     }
     const moving = Math.abs(mx) + Math.abs(my) > 0.05;
     p.moving = moving;
-    let speed = 132 * this.stats.moveSpeed;
+    let speed = CHEF_SPEED * this.stats.moveSpeed;
     if (p.slowT > 0) {
       p.slowT -= dt;
       speed *= 1 - p.slowAmt;
@@ -1260,10 +1267,23 @@ export class Run {
       if (e.freeze > 0) e.freeze -= dt;
       if (e.stun > 0) e.stun -= dt;
       if (!isFrozen && (e.stun <= 0 || e.boss)) {
-        // an airborne boss ignores slows, so its slam lands exactly when the warning circle ends;
-        // a phased-out boss ignores them too, so it never shows up faded but hittable
-        const slow = e.boss && (e.state === 50 || e.invuln > 0) ? 0 : e.slowAmt;
-        updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
+        // a boss ignores slows while an attack runs, while it is airborne and while it is phased out.
+        // Its warning circles, lanes and cones and its red wind-up flicker run on game time: a slowed
+        // attack would come after its mark has gone (and a slowed phase would leave the boss faded but
+        // hittable). So a slow only stretches a boss's walk and the pause between two attacks. The
+        // time it would have cost the attack is not lost: the boss owes it to the pause that follows
+        // (slowDebt), so a slowed boss attacks as rarely as if the attack itself had been slowed
+        let slow = e.slowAmt;
+        if (e.boss) {
+          if (e.bossAttack || e.state === 50 || e.invuln > 0) {
+            if (e.bossAttack && e.state !== 50 && e.invuln <= 0) e.slowDebt += dt * slow;
+            slow = 0;
+          } else if (e.slowDebt > 0) {
+            e.timer += e.slowDebt;
+            e.slowDebt = 0;
+          }
+        }
+        updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? e.buffMul : 1));
       }
       if (!e.alive) continue;
       // obstacle collision (flyers ignore)

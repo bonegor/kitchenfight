@@ -3,7 +3,7 @@
  * events (rings, walls, stampedes, elites, toasts) and the boss schedule.
  */
 import type { Run } from './run';
-import { DMG_RAMP, type StageDef, type WaveMinute } from './stages';
+import { dmgFactor, HP_RAMP, speedFactor, type StageDef, type WaveMinute } from './stages';
 import { ENEMIES } from './enemies';
 import { BOSS_LINES } from './recipes';
 import { TAU } from '../core/math';
@@ -23,7 +23,7 @@ export class Director {
 
   /** the HP ramp: a dish's extra toughness (hpBase) phases in over the first 7 minutes */
   private ramp() {
-    return Math.min(1, this.run.time / 420);
+    return Math.min(1, this.run.time / HP_RAMP);
   }
 
   hpScale() {
@@ -33,14 +33,16 @@ export class Director {
   }
 
   /**
-   * Enemy damage. A factor above 1 phases in over DMG_RAMP, later than the HP, so the openings and
-   * the first boss stay gentle; a factor below 1 (the first dish) applies over the HP ramp.
-   * @param base the stage's damage factor: dmgBase for the waves (the default), bossDmg for a boss
+   * Enemy damage now (see dmgFactor in stages.ts, which the hit-size rule checks).
+   * @param base the stage's damage factor: dmgBase for the waves (the default), bossDmg for a boss and its adds
    */
   dmgScale(base = this.stage.dmgBase) {
-    const t = this.run.time / 60;
-    const k = base > 1 ? Math.min(1, Math.max(0, (this.run.time - DMG_RAMP[0]) / (DMG_RAMP[1] - DMG_RAMP[0]))) : this.ramp();
-    return (1 + (base - 1) * k) * (1 + t * 0.045);
+    return dmgFactor(base, this.run.time);
+  }
+
+  /** The dish's walk-speed factor now (phased in: see speedFactor in stages.ts). */
+  speedScale() {
+    return speedFactor(this.stage.speed, this.run.time);
   }
 
   wave(): WaveMinute {
@@ -157,8 +159,10 @@ export class Director {
     const lvlMul = 1 + (run.level - 1) * 0.035;
     const slot = slotHp ? slotHp / def.hp : 1;
     const e = run.spawnEnemy(def, pos.x, pos.y, { boss: true, hpMul: lvlMul / this.hpScale() * this.stage.hpBase * (1 + (run.time / 60) * 0.03) * slot });
-    // a boss hits by its tier's bossDmg, not by the waves' dmgBase: its own attacks set its threat
-    e.damage = def.damage * this.dmgScale(this.stage.bossDmg);
+    // a boss hits by its tier's bossDmg, not by the waves' dmgBase: its own attacks set its threat.
+    // The slot's own factor (StageSpec.bossDmgMul) is looked up here, not passed in, so every caller gets it
+    const slotDmg = this.stage.bosses.find((b) => b.id === id && b.hp === slotHp)?.dmg ?? 1;
+    e.damage = def.damage * this.dmgScale(this.stage.bossDmg) * slotDmg;
     e.spawnT = 0.6;
     const final = lastSlot && id === this.stage.finalBoss;
     e.isFinal = final;

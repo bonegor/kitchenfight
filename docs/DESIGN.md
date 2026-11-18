@@ -48,7 +48,8 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
   dishes) or `{ wins: n }` (win n different dishes). Locked cards say why ("Win Pizza Marinara or Trofie
   al Pesto Genovese to unlock").
 - **Difficulty** comes from the dish's tier, one of six, tuned against the old stages (see
-  [Difficulty](#difficulty) below). A dish's waves choose *who* comes; its tier sets how many and how tough.
+  [Difficulty](#difficulty) below). A dish's waves choose *who* comes; its tier sets how many, how fast
+  and how tough. How hard they hit is capped for every dish.
 - **Music** is the environment's track (kitchen, trattoria, streets, food court).
 - **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, a night ramp)
   and the particles (dust, flour, embers, fireflies), and add a little decor made of existing props (tomato
@@ -74,33 +75,116 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
 ### Difficulty
 Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured against one of the old stages.
 
-| Tier | Dishes | Measured against | hpBase | hpGrowth | dmgBase | bossDmg | rate | max | Boss HP 5:00 / 10:00 / 15:00 |
-|---|---|---|---|---|---|---|---|---|---|
-| T1 | Pomodoro | the old kitchen ×0.9 | 0.9 | 0.10 | 0.85 | 0.85 | 0.74 | 0.8 | 1300 / 2100 / 3300 |
-| T2 | Carbonara | the old kitchen | 1.0 | 0.11 | 1.0 | 1.0 | 0.93 | 0.94 | 1400 / 2300 / 3600 |
-| T3 | Alfredo, Amatriciana, Margherita | the old trattoria | 1.6 | 0.21 | 2.2 | 1.45 | 1.4 | 1.05 | 800 / 1750 / 2400 |
-| T4 | Cacio e Pepe, Marinara | between the trattoria and the streets | 1.9 | 0.42 | 3.5 | 1.5 | 1.8 | 1.2 | 850 / 1800 / 2400 |
-| T5 | Ragù, Pesto, Vongole | the old streets | 2.2 | 0.50 | 3.8 | 1.55 | 1.9 | 1.2 | 1200 / 1350 / 2200 |
-| T6 | the finale | the old food court | 2.9 | 0.26 | 1.9 | 1.75 | 1.7 | 1.2 | 700 / 850 / 1800 |
+| Tier | Dishes | Measured against | hpBase | hpGrowth | dmgBase | bossDmg | rate | max | speed | Boss HP 5:00 / 10:00 / 15:00 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| T1 | Pomodoro | the old kitchen ×0.9 | 0.9 | 0.10 | 0.85 | 0.85 | 0.74 | 0.8 | 1 | 1300 / 2100 / 3300 |
+| T2 | Carbonara | the old kitchen | 1.0 | 0.11 | 1.0 | 1.0 | 0.93 | 0.94 | 1 | 1400 / 2300 / 3600 |
+| T3 | Alfredo, Amatriciana, Margherita | the old trattoria | 1.6 | 0.21 | 2.2 | 1.45 | 1.4 | 1.05 | 1.15 | 800 / 1750 / 2400 |
+| T4 | Cacio e Pepe, Marinara | between the trattoria and the streets | 1.9 | 0.50 | 2.4 | 1.5 | 1.8 | 1.2 | 1.3 | 800 / 1800 / 2400 |
+| T5 | Ragù, Pesto, Vongole | the old streets | 2.2 | 0.55 | 2.6 | 1.55 | 1.9 | 1.2 | 1.4 | 1200 / 1350 / 2200 |
+| T6 | the finale | the old food court | 2.9 | 0.26 | 2.6 | 1.75 | 1.6 | 1.2 | 1.4 | 700 / 680 / 1550 |
 
 - **The columns.** `hpBase` multiplies enemy HP and phases in over the first 7 minutes (`Director`);
   `hpGrowth` adds HP every minute, faster after 10:00. `dmgBase` multiplies the damage of the waves and
-  `bossDmg` that of the bosses. `rate` and `max` multiply the spawns per second and the cap of live enemies
-  (`BASE_RATE`, `BASE_MAX`).
+  `bossDmg` that of the bosses and of the adds they call. `rate` and `max` multiply the spawns per second
+  and the cap of live enemies (`BASE_RATE`, `BASE_MAX`). `speed` multiplies the walk of everything a dish
+  spawns except its bosses and its heavy bodies.
+- **Hit size is capped.** Difficulty comes from crowds, speed, toughness and the patterns of the crimes and
+  the bosses, not from how much one touch takes.
+  - *One cap for everything.* No enemy ever hits for more than 2.9 × its base damage (`DMG_FACTOR_MAX`,
+    applied in `dmgFactor()`), in any dish, at any time. A dish's `dmgBase` only decides how early its
+    waves get there: about 9:15 at 2.2, 8:40 at 2.4, 8:10 at 2.6. After that the hits stop growing; the
+    crowd, its toughness and its pace do not.
+  - *What that means for a chef with no pantry* (120 HP, no armor; `HIT_CAP` in `stages.ts`):
+
+    | What hits | Most it can cost | The rule |
+    |---|---|---|
+    | the touch of an ordinary walker (base damage up to 8: onion, ghost, Hawaiian slice, cappuccino) | 19 % of the bar; 17 % for the cream, butter, clams and cheese pulls that carry most dishes | at most 25 % |
+    | a heavy, slow body (`heavy` in `enemies.ts`: frozen lasagne, armoured pineapple, Alfredo the Gluey, the single pot at any size) | 24 % | at most 40 %, and four touches must not kill |
+    | an elite (×1.5) | 25–29 % for an elite walker, 36 % for an elite heavy body | at most 40 % |
+    | a cursed can's blast (0.8 s fuse) | 39 % in the finale, 22 % in the Carbonara | at most 40 % |
+    | a shot or a lob | 15 % (an elite Stained Margherita's burst), 10 % otherwise | at most 20 % |
+    | anything a boss calls to its side | 30–32 % in a fight (the Ragù's cans at 10:00), 39 % at the very most | at most 40 % |
+
+  - *Five touches never kill, and four of a heavy body never do.* Measured at 14:00 with three of a
+    kind pinned on a standing chef with no pantry:
+
+    | What touches him | Touches to bring him down | From the first to the last |
+    |---|---|---|
+    | an ordinary walker, in every dish from T3 up (`SURVIVES_TOUCHES`) | 6 (10 in the Carbonara, 11 or more in the Pomodoro) | 2.7 s |
+    | a heavy body: frozen lasagne, armoured pineapple, Alfredo the Gluey (`SURVIVES_HEAVY_TOUCHES`) | 5 (the single pot, fully fed, 8 in the Carbonara) | 2.1 s |
+    | an elite heavy body (one announced event at a time; bounded by the 40 % only) | 3 | — |
+
+    A heavy body walks at a quarter to two fifths of the chef's pace (lasagne 32 px/s, pineapple 38,
+    Gluey 42, pot 50, against his 132). The waves of T4 and T5 used to carry a `dmgBase` of 3.5 and 3.8:
+    a touch cost a third of the bar late in six dishes, and three or four killed.
+  - *No inversion.* `dmgBase` never falls from one tier to the next (the finale's walkers used to hit
+    half as hard as T5's), and no walker out-hits the touch of its own dish's 10:00 boss.
+  - *Checked, not promised.* `hitRuleProblems()` (part of `stageRuleProblems()`, which
+    `scripts/validate.mjs` prints) computes every one of these for every dish from the stage and enemy
+    tables: wave minutes at their end, events and elites at their time, split pieces and the adds of a
+    boss as late as 25:00. A retune that breaks one fails the validation with the dish, the minute and
+    the enemy.
+  - *Three crimes changed for it.* The cappuccino's base damage is 8 (it was 9, the only ordinary walker
+    above 8). The armoured pineapple's is 10 (it was 11: four touches killed, where every other heavy
+    body needed five). The single pot's touch no longer grows with its meals (`DEVOUR.dmg` 1; it was
+    ×1.06 a meal, ×1.5 fully fed, which put a fed pot in the Carbonara above that dish's 10:00 boss and
+    made it a four-touch kill in the finale): a fed pot is wider and tougher, not harder-hitting.
+- **Speed took over.** Everything a dish spawns walks × the dish's `speed` (`waveSpeed()`).
+  - *Guard rail:* no walker is taken past 85 % of the chef's base pace (`WALKER_SPEED_CAP`; 112 px/s
+    against his 132), and that counts the ±8 % spread every spawn gets (`SPEED_JITTER`): the factor
+    stops at a nominal 104 px/s (`WALKER_SPEED_MAX`), so a capped kind walks at 96–112 px/s, 79 % of
+    the chef's pace on average. What is faster by design keeps its own speed: the rolling meatball
+    (118, up to 127 with the spread) and the orbiting pepper (120, up to 130). Dashes, leaps and
+    stampedes have their own speeds and are not touched.
+  - *Hoppers.* A hop keeps its own speed (170 px/s for the pasta-rinser, as in every dish before); the
+    dish's factor shortens the rest between two hops instead (`Enemy.pace`). In the finale (×1.4) forty
+    pasta-rinsers closed in at 76 px/s on average over their first four seconds, against 66 in the
+    Carbonara (×1); no hop was faster than 183 px/s in either.
+  - *Heavy bodies and bosses keep their pace* (the lasagne walks at a quarter of the chef's): a harder
+    hit is fair because it is slow.
+  - *The garlic's aura* (everything near a garlic acts ×1.35 faster) counts: where the dish's factor has
+    used up the room, the aura gives less (`buffFactor()`), so a buffed walker stays under the same cap
+    (spread included) unless the aura alone already took it there (a buffed pasta-snapper was at 80 %
+    of the chef's pace before any factor; pasta crisps, peas and chicken go past it under the aura as
+    they always did).
+  - *In numbers,* at full factor: a cream carton walks at 40 % of the chef's pace in T3, 45 % in T4 and
+    49 % in T5 and the finale (59 % in the Pesto; 35 % without the factor); the fastest walkers the factor
+    moved are at the cap (chicken, pineapple chunks, cashews, peas, pasta crisps, the shrimp between its
+    leaps: the quickest of 60 spawns of each walked at 112 px/s, none faster).
 - **Gentle openings.** A rate factor above 1 is ×1 until minute 2 and reaches full strength at minute 8
-  (`RATE_RAMP`); a `dmgBase` or `bossDmg` above 1 is ×1 until 4:00 and full at 10:00 (`DMG_RAMP`). Up to
-  4:00 the dishes of T2–T6 hit alike, and the tiers differ most in minutes 7–15.
+  (`RATE_RAMP`); a speed factor above 1 is ×1 until 3:00 and full at 8:00 (`SPEED_RAMP`); a `dmgBase` or
+  `bossDmg` above 1 is ×1 until 4:00 and full at 10:00 (`DMG_RAMP`). Up to 3:00 the dishes of T2–T6
+  hit and walk alike. They already differ in who comes, in numbers (`max` is not phased) and in
+  toughness: `hpGrowth` counts from 0:00, so at 3:00 a T5 crime has 4× its base HP where a T2 crime has
+  1.3×. The tiers differ most in minutes 7–15.
 - **Hotter waves than the old stages.** The menu's intruders (puddlers, swarms, strafers, lobbers) are
   softer than the old stages' crowd, and the old stages owed most of their pressure to boss fights of four
   to nine minutes, often two at once. Here a boss fight takes about a minute and a half, so the waves of
-  T3–T5 carry far more `hpGrowth`, `dmgBase` and `rate` than the stage each tier is measured against (the
-  old trattoria had 0.13 / 1.15, the streets 0.15 / 1.25). T6 steps back on `hpGrowth`, `dmgBase` and a
-  little on `rate`: the finale's own crowd (frozen lasagna, the single pot, the cursed little can) hits
-  hardest by itself.
+  T3–T5 carry far more `hpGrowth` and `rate` than the stage each tier is measured against (the old
+  trattoria had 0.13, the streets 0.15), and walk faster. T6 steps back on `hpGrowth` and `rate`: the
+  finale's own crowd (frozen lasagna, the single pot, the cursed little can, chargers) presses hardest by
+  itself.
 - **Bosses.**
   - *Damage.* A boss hits by its tier's `bossDmg`, not by `dmgBase`: 1.45–1.75 at full ramp is what the
     old stages' bosses hit with (their base damage in `enemies.ts`, 14–24, is a fifth lower than it was).
     The 5:00 boss arrives at the start of the damage ramp, so it is the mildest of the three.
+  - *Adds.* What a boss calls to its side (`summon()`, the Garlic King's courtiers) hits by `bossDmg`
+    too, and so do the pieces an add splits into. They used to take the waves' `dmgBase`: a cursed can
+    thrown by Il Microonde in the Ragù cost 76 % of the bar; it now costs 31 %.
+  - *Two finals hit ×0.8* (`bossDmgMul`): Il Re dell'Aglio in the Amatriciana and Il Panetto Supremo in
+    Cacio e Pepe. Both slots were tuned on a build in which these two fell silent whenever the chef
+    kept them above him. Nothing switches them off any more (see *Nobody parks a boss*), so against
+    the test bot the King attacks 17.7 times a minute where he made 13.7, and the Block 14.4 where he
+    made 12.4. At ×1 the bot took about a sixth more damage from the King himself and a fifth more
+    from the Block. At ×0.8 both fights measure as they did: the damage taken during the fight is 264
+    (median; 263 before) in the Amatriciana and 263 (269) in Cacio e Pepe, with 0.67 (0.65) and 1.10
+    (1.34) deaths in the fight (96 runs against 168 and 144 of the earlier build). The Block's 5:00
+    slots in the Pesto and the Vongole keep ×1: there the damage did not move. The King's slot also
+    has ×0.95 HP where it had ×0.85: from off screen he now lands next to the chef, the bot's weapons
+    reach him more, and at ×0.85 the fight had become a fifth shorter (70 s on average against 86 s).
+    ×0.95 gives 76 s with the damage where it was; ×1 gives 91 s, but more damage than before.
+    (These figures are from the build before the hit-size cap; the two slots were not re-fitted.)
   - *HP.* A slot's HP replaces the boss's own and is then ×hpBase, ×player level and ×time
     (`Director.spawnBoss`). The slots are set for fights of about a minute and a half with the test bot
     in every tier, which is why the base HP falls from T3 to T6 while `hpBase` rises. `BOSS_HP_FACTOR`
@@ -110,62 +194,127 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     Il Frullatore ×0.65, Il Re dell'Aglio ×0.8, and Lo Spaghettone ×0.8 (untouchable while phased out).
   - *Nobody outruns the fight.* A boss more than 300 units behind the chef walks faster, up to 3.5× its
     pace (`BOSS_NEAR` in `ai.ts`), so it cannot be left off screen.
+  - *Nobody parks a boss.* Il Re dell'Aglio and Il Panetto Supremo start no attack while they are off
+    screen (the middle of the body outside the view; the margin is the same on every side): the attack
+    waits. It waits 2.5 s at most (`DENIED_MAX`, counted from the boss's last attack: time off screen,
+    or with an attack overdue). Then the next attack is the one that closes the distance, from wherever
+    the boss is, and both are marked at the chef: the King's leap by its landing circle, the Block's
+    slide by its lane, which runs all the way to the chef and whose circles stay until the dish has
+    passed them. From off screen both aim at where the chef is heading (the leap one second ahead, the
+    slide at the spot the dish and the chef reach together), so running on in a straight line is no
+    way out; a chef who turns away is missed. The other bosses have no such rule: they attack from
+    wherever they are.
+  - *Nothing unreadable under the HUD.* While one of these two is on screen but the top of its body is
+    inside the band the HUD covers (the top 90 units of the view: timer and recipe strip) or above it,
+    its pose cannot be read. There it starts only the attacks that are marked on the ground at the
+    chef: the King's stink and leap, the Block's melt and slide. The clove fan, the summon and the pat
+    rings, which only the pose announces, are passed over. Nothing waits, so the boss attacks as often
+    as anywhere else.
+  - *Slows.* The chef's slowing weapons (Pesto Genovese 45 %, Olive d'Oro 25 %, the Forno 12–18 %)
+    stretch a boss's walk and the pause between two attacks, never an attack: a boss ignores slows
+    while an attack runs (and while it is airborne or phased out). Its warning circles, lanes and cones
+    run on game time, so a slowed attack would come after its mark had gone. The time the slow would
+    have cost the attack is added to the pause after it (`Enemy.slowDebt`), so a slowed boss attacks
+    exactly as rarely as if its attacks were slowed too: a slowing build is worth what it always was.
   - *The quake.* Il Pizzone Abissale's quake lays four beats of five danger circles; a circle does 0.6×
     its damage (the slam does 1×).
+- **Shots and lobs.** An enemy's own shot does a share of its touch (`SHOT_DMG` in `enemies.ts`): 0.5
+  for a ranged shot and for the direct hit of a lob (the cheese sprinkler, the broccoli), 0.7 for a
+  burst. A lob's direct hit used to do the full touch; with the cloud it leaves, the cheese sprinkler
+  alone dealt half of all damage in the Vongole.
 - **Hazards.** An enemy hazard that hurts (a cheese cloud, a broccoli patch, a boss's stink cloud, fire
   or ketchup trail) ticks every 0.6 s while the chef stands in it. A tick is stopped by his
   invulnerability frames but gives none, so a cloud never shields him from the next hit; overlapping
   hazards tick as one, the strongest.
 - **Per-dish factors** (`StageSpec`): `rateMul` (more or fewer spawns, phased in like `rate`) for a dish
-  whose intruders are softer or tougher than its tier-mates', `dmgMul` (harder hits from the waves) and
-  `bossHpMul` (single boss slots: the same boss is quicker or slower to bring down in another crowd).
+  whose intruders are softer or tougher than its tier-mates', `speedMul` (a factor on the tier's
+  `speed`), `bossHpMul` (single boss slots: the same boss is quicker or slower to bring down in another
+  crowd) and `bossDmgMul` (single boss slots: a factor on the tier's `bossDmg`). `dmgMul` (a factor on
+  the tier's `dmgBase`) still exists and no dish uses it: the Amatriciana had 1.45 and the Vongole 1.1.
 
-| Dish | rateMul | dmgMul | bossHpMul (5:00 / 10:00 / 15:00) |
-|---|---|---|---|
-| Alfredo | — | — | 1.25 / 1.1 / 1.35 |
-| Amatriciana | 1.45 | 1.45 | 1.25 / 0.9 / 0.85 |
-| Cacio e Pepe | 1.2 | — | 1.25 / 1 / 0.85 |
-| Margherita | 0.75 | — | 0.65 / 1 / 0.9 |
-| Marinara | 1.3 | — | — |
-| Ragù | — | — | 0.7 / 0.65 / 0.75 |
-| Pesto | 1.1 | — | 1.25 / 1.3 / 1 |
-| Vongole | 1.2 | 1.1 | — |
+| Dish | rateMul | speedMul | bossHpMul (5:00 / 10:00 / 15:00) | bossDmgMul (5:00 / 10:00 / 15:00) |
+|---|---|---|---|---|
+| Alfredo | — | — | 1.25 / 1.1 / 1.2 | — |
+| Amatriciana | 1.7 | 1.1 | 1.25 / 0.9 / 0.95 | 1 / 1 / 0.8 |
+| Cacio e Pepe | 1.2 | — | 1 / 1 / 0.85 | 1 / 1 / 0.8 |
+| Margherita | 0.75 | — | 0.65 / 1 / 0.9 | — |
+| Marinara | 1.55 | — | — | — |
+| Ragù | 1.15 | — | 0.5 / 0.45 / 0.7 | — |
+| Pesto | 1.35 | 1.2 | 1 / 0.9 / 0.8 | — |
+| Vongole | 1.5 | — | 0.75 / 1 / 1 | — |
+
+  The Pesto's cashews are worth 2 XP (they were 1: half of that dish's crowd, they starved the chef of
+  levels and made it harder than the Vongole it unlocks).
 
 - **Measured** with the test bot (`simulate()` in `main.ts`; the chef Enzo; a mid-progress pantry of
   Olio 2, San Marzano 2, Grembiule 1 and Minestrone 1; 24 runs per dish and setting). The bot kites crowds
   well but does not dodge telegraphed circles or step out of clouds, so it overstates that kind of damage.
+  The simulation has no seeds and the deaths of a dish spread from 0 to 30 a run: **read a dish's figure
+  as ±3**, the standard errors below notwithstanding.
 
-| Dish | Tier | Deaths in minutes 5–15, auto-revive (± standard error) | First death, median | 5:00 boss killed, no revive | Boss fights, mean s (5:00 / 10:00 / 15:00) |
-|---|---|---|---|---|---|
-| Pomodoro | T1 | 0.0 | none by 15:00 | 24/24 | 55 / 75 / 65 |
-| Carbonara | T2 | 0.2 ±0.1 | none by 15:00 | 24/24 | 51 / 69 / 52 |
-| Alfredo | T3 | 7.6 ±1.3 | 6:42 | 12/24 | 106 / 115 / 106 |
-| Amatriciana | T3 | 4.7 ±0.8 | 8:14 | 19/24 | 90 / 90 / 86 |
-| Margherita | T3 | 6.2 ±1.1 | 7:10 | 17/24 | 85 / 83 / 90 |
-| Cacio e Pepe | T4 | 11.5 ±2.0 | 6:14 | 9/24 | 81 / 108 / 89 |
-| Marinara | T4 | 13.4 ±1.6 | 5:43 | 9/24 | 86 / 101 / 91 |
-| Ragù | T5 | 14.0 ±1.6 | 6:46 | 9/24 | 121 / 131 / 104 |
-| Pesto | T5 | 19.7 ±2.4 | 6:17 | 2/24 | 136 / 117 / 130 |
-| Vongole | T5 | 13.9 ±1.3 | 6:23 | 4/24 | 115 / 106 / 100 |
-| the finale | T6 | 22.8 ±2.6 | 5:19 | 3/24 | 81 / 136 / 129 |
-| *old kitchen* | | 1.7 ±0.5 | none by 15:00 | 10/12 | 156 / 93 / 87 |
-| *old trattoria* | | 8.1 ±1.1 | 7:16 | 0/12 | 253 / 184 / 223 |
-| *old streets* | | 17.8 ±1.2 | 5:48 | 0/12 | 566 / 280 / 341 (the last one killed in 12 of 24 runs) |
-| *old food court* | | 29.7 ±2.1 | 4:24 | 0/12 | 892 / 522 / 478 (the last one killed in 3 of 24 runs) |
+| Dish | Tier | Deaths in minutes 5–15, auto-revive (± standard error) | First death, median | 5:00 boss killed, no revive | Boss fights, mean s (5:00 / 10:00 / 15:00) | Level at 15:00 |
+|---|---|---|---|---|---|---|
+| Pomodoro | T1 | 0.1 ±0.1 | none by 15:00 | 24/24 | 54 / 67 / 81 | 36 |
+| Carbonara | T2 | 0.3 ±0.1 | none by 15:00 | 22/24 | 66 / 89 / 79 | 35 |
+| Alfredo | T3 | 9.8 ±1.5 | 6:38 | 16/24 | 132 / 110 / 104 | 39 |
+| Amatriciana | T3 | 4.0 ±0.6 | 7:40 | 17/24 | 81 / 133 / 85 | 41 |
+| Margherita | T3 | 5.4 ±0.9 | 7:30 | 20/24 | 77 / 80 / 83 | 38 |
+| Cacio e Pepe | T4 | 9.7 ±1.7 | 6:21 | 13/24 | 99 / 86 / 66 | 33 |
+| Marinara | T4 | 6.4 ±0.7 | 5:48 | 10/24 | 86 / 138 / 95 | 38 |
+| Ragù | T5 | 9.7 ±1.3 | 6:21 | 10/24 | 95 / 102 / 92 | 41 |
+| Pesto | T5 | 9.7 ±1.5 | 6:30 | 5/24 | 110 / 119 / 107 (not killed in 1 of 24 runs) | 36 |
+| Vongole | T5 | 11.4 ±1.8 | 6:11 | 5/24 | 89 / 93 / 81 | 35 |
+| the finale | T6 | 24.2 ±2.6 | 5:08 | 1/24 | 88 / 116 / 107 | 38 |
+| *old kitchen* | | 1.7 ±0.5 | none by 15:00 | 10/12 | 156 / 93 / 87 | |
+| *old trattoria* | | 8.1 ±1.1 | 7:16 | 0/12 | 253 / 184 / 223 | |
+| *old streets* | | 17.8 ±1.2 | 5:48 | 0/12 | 566 / 280 / 341 (the last one killed in 12 of 24 runs) | |
+| *old food court* | | 29.7 ±2.1 | 4:24 | 0/12 | 892 / 522 / 478 (the last one killed in 3 of 24 runs) | |
 
-  - *By tier,* deaths in minutes 5–15: T1 0.0, T2 0.2, T3 6.2, T4 12.5, T5 15.9, T6 22.8. T5 comes out
-    about a tenth under the old streets, T3 and T6 about a quarter under the old trattoria and food court;
-    T4 lies between the trattoria and the streets. Every dish is at least as hard as the dishes that
-    unlock it, except the Vongole, which measured below the Pesto.
-  - *The first boss.* With no revive the 5:00 boss dies before the chef in 67 % of the T3 runs, 38 % of
-    T4, 21 % of T5 and 13 % of T6. The first death (median of 48 runs per dish, with or without
-    auto-revive) falls from T3 to T6, with T4 and T5 level (T4 a little earlier).
-  - *Boss fights* last 81–136 s on average from T3 up. About one in eight goes over 150 s and one in
-    eighteen over 200 s, mostly in runs the bot is losing badly; none is shorter than 19 s.
-  - *Openings.* With no pantry, no run of 264 (both bots, every dish) ended before 2:30, and 11 ended
-    before 3:20, all with the clumsier bot.
-  - *The old stages* were re-measured with the same bot and the hazard rule above (24 runs each for the
-    deaths, 12 for the first boss).
+  - *By tier,* deaths in minutes 5–15: T1 0.1, T2 0.3, T3 6.4, T4 8.0, T5 10.3, T6 24.2. The climb is
+    there, but T4 and T5 are lower than before the cap (T3–T6 were 6.2, 12.5, 15.9, 22.8): T3 and T6
+    come out a fifth under the old trattoria and the old food court, T5 two fifths under the old
+    streets, and T4 level with the trattoria instead of between it and the streets.
+    That is what capping the hits cost: the bot takes Nonna's apron in nearly every run, and a 20-point
+    touch against five points of armor is worth far less than a 40-point one.
+  - *T4 and T5 are one band on this count.* From the Alfredo to the Vongole the harder dishes all sit
+    at 10 to 11 deaths, within the ±3 of each other (the Amatriciana, the Margherita and the Marinara
+    are softer, at 4 to 6). No wave knob moves a T5 dish out of that band while the hits are capped:
+    the deaths stayed within the ±3 for a speed factor of 1.2 or 1.4, `hpGrowth` ×1.25, a `rateMul` up
+    to 1.5, and a cap of live enemies ×1.2 or ×1.4 (Ragù 9.7 / 10.1 / 9.9, Pesto 11.9 / 12.2 / 14.0,
+    Vongole 11.6 / 11.4 / 12.4, 24 runs each). From 6:00 on the crowd of T4 and T5 already sits at
+    85–95 % of its cap, which is why a higher spawn rate adds nothing. T5 shows as the later tier in
+    the first boss (below) and in the HP of its crimes; telling the two tiers apart by deaths needs a
+    new pattern in the T5 crowds, not a number in the table.
+  - *The unlock order.* No dish is softer than a dish that unlocks it by more than the ±3: Cacio e Pepe
+    is level with the Alfredo and above the Amatriciana, the Marinara level with the Margherita, the
+    Ragù level with Cacio e Pepe and above the Marinara, the Pesto level with the Ragù, the Vongole
+    above the Marinara and the Pesto, the finale above all.
+  - *The first boss.* With no revive the 5:00 boss dies before the chef in 74 % of the T3 runs, 48 % of
+    T4, 28 % of T5 and 4 % of T6 (the aim was about 60 / 40 / 20 for T3–T5). These swing: single
+    dishes moved by up to 6 runs of 24 between two rounds on near-identical builds (the finale 5 and
+    1, the Pesto 11 and 5), and the tier figures by 5 to 17 points. The Vongole's Butter Block has ×0.75
+    HP now (5 of 24, a fight of 89 s; at ×0.9 it was 2 of 24 and 121 s). The first death (median of 48
+    runs per dish, with or without auto-revive) comes at 7:14 in T3, 6:06 in T4, 6:17 in T5 and 5:08
+    in T6.
+  - *Boss fights* last 66–138 s on average from T3 up. About one in eight goes over 150 s and one in
+    seventeen over 200 s, mostly in runs the bot is losing badly. The spread is wide: a strong build
+    ends a fight in 16–25 s now and then (the shortest of 648 was 20 s; an independent round saw 16 s
+    for the finale's Influencer), and a weak one leaves a boss standing (the Pesto's Frullatore in 1 of
+    24 runs here, the finale's Influencer in 2 of 24 in the round before).
+  - *Damage shares* (minutes 5–15, a lobber's direct hit and its cloud counted together): no enemy
+    deals half of a dish's damage except the Amatriciana's onion (57 %; it is a third of that dish's
+    spawns and its hardest walker, and its touch is now 19 % of the bar where it was 35 %). The cheese
+    sprinkler is at 23 % in the Vongole (it was 49 %), the shrimp at 37 % in the Marinara.
+  - *Openings.* With no pantry, 1 run of 264 (both bots, every dish) ended before 2:30 (Cacio e Pepe,
+    the weaker bot, at 1:46) and 14 before 3:20; over 480 more such runs of the Alfredo, Cacio e Pepe,
+    the Ragù and the finale on the build before this one, 4 ended before 2:30, about 1 %. The hit-size
+    rule left the first three minutes of T1–T3 as they were (their `hpGrowth` and `rate` are unchanged
+    and the speed factor starts at 3:00). In T4 and T5 the crimes are 5–11 % tougher in those minutes
+    than before it, because `hpGrowth` went from 0.42 to 0.5 and from 0.5 to 0.55 and counts from 0:00.
+    That does not show in the early deaths: an A/B of 96 no-pantry runs each of the Pomodoro and Cacio e
+    Pepe gave 3 deaths before 2:30 on the build before the rule and 2 after.
+  - *The old stages* were measured with the same bot and the hazard rule above on the build before the
+    menu (24 runs each for the deaths, 12 for the first boss).
 
 ### Environments
 | Environment | Look | Dishes |

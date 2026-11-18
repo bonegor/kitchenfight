@@ -3,7 +3,7 @@
  */
 import type { Run } from './run';
 import type { Enemy } from './entities';
-import { ENEMIES } from './enemies';
+import { DEVOUR, ENEMIES, LOB_CLOUD_DMG, SHOT_DMG } from './enemies';
 import { TAU } from '../core/math';
 import { BOSS_PATTERNS } from './bosses';
 
@@ -182,7 +182,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const spread = P.spread ?? 0;
         for (let i = 0; i < n; i++) {
           const off = n > 1 ? (i / (n - 1) - 0.5) * spread * 2 : 0;
-          const sh = shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.5);
+          const sh = shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * SHOT_DMG.ranged!);
           if (P.muzzle) {
             sh.x = e.x + P.muzzle[0] * e.face * e.scale;
             sh.y = e.y + P.muzzle[1] * e.scale;
@@ -209,8 +209,9 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const p = run.player;
         const tx = p.x + p.vx * 0.6, ty = p.y + p.vy * 0.6;
         const area = P.area ?? 'cheese';
-        lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage, (x, y) => {
-          hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * 0.2);
+        // a direct hit of the lob counts like any other enemy shot; the cloud it leaves ticks for a fifth of the touch
+        lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage * SHOT_DMG.lobber!, (x, y) => {
+          hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * LOB_CLOUD_DMG);
           run.fx.burst(x, y, 10, { colors: LAND_SPLASH[area as HazardKind] ?? ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
         });
         e.attackPose = 0.3;
@@ -234,7 +235,8 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const hop = P.hop ?? 0.45;
         const k = 1 - e.timer / hop;
         e.z = Math.sin(k * Math.PI) * (P.height ?? 16);
-        const sp = (P.hopSpeed ?? 150) * (e.speed / Math.max(1, d.speed));
+        // the hop itself keeps its own speed (± the spawn jitter): a dish's speed factor shortens the rest between hops instead
+        const sp = ((P.hopSpeed ?? 150) * e.speed) / Math.max(1, d.speed * e.pace);
         e.x += e.ax * sp * dt;
         e.y += e.ay * sp * dt;
         e.face = e.ax > 0 ? 1 : -1;
@@ -244,7 +246,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
           e.state = 0;
           e.z = 0;
           e.squash = 0.8;
-          e.timer = (P.rest ?? 0.6) * (0.8 + Math.random() * 0.4);
+          e.timer = ((P.rest ?? 0.6) * (0.8 + Math.random() * 0.4)) / e.pace;
         }
       }
       break;
@@ -388,7 +390,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const def = ENEMIES[P.spawn ?? 'spezzato'];
         for (let i = 0; i < (P.count ?? 2); i++) {
           const a = Math.random() * TAU;
-          const m = run.spawnEnemy(def, e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r);
+          const m = run.spawnEnemy(def, e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r, { add: e.add });
           m.kx = Math.cos(a) * 160;
           m.ky = Math.sin(a) * 160;
         }
@@ -410,7 +412,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         e.timer = P.cd ?? 3;
         const n = P.count ?? 8;
         e.bossT = (e.bossT + 0.4) % TAU;
-        for (let i = 0; i < n; i++) shoot(run, e, e.bossT + (i / n) * TAU, P.shotSpeed ?? 150, P.shot ?? 'proj.e_ketchup', e.damage * 0.7);
+        for (let i = 0; i < n; i++) shoot(run, e, e.bossT + (i / n) * TAU, P.shotSpeed ?? 150, P.shot ?? 'proj.e_ketchup', e.damage * SHOT_DMG.burster!);
         e.attackPose = 0.3;
         run.sfx('enemy_shoot', { volume: 0.35, pitch: 1.2 }, e.x);
       }
@@ -433,7 +435,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
     case 'devourer': {
       // hunt the nearest smaller crime and swallow it to grow
       let target: Enemy | null = null;
-      if (e.scale < 1.9) {
+      if (e.scale < DEVOUR.maxScale) {
         run.enemiesIn(e.x, e.y, P.range ?? 320, tmp);
         let bd = 1e9;
         for (const o of tmp) {
@@ -448,11 +450,11 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         steer(e, (dx / dd) * e.speed * 1.2, (dy / dd) * e.speed * 1.2, dt);
         if (dd < e.r + target.r * 0.6) {
           target.alive = false;
-          e.scale = Math.min(1.9, e.scale * 1.1);
+          e.scale = Math.min(DEVOUR.maxScale, e.scale * DEVOUR.scale);
           e.r = e.def.radius * e.scale;
-          e.maxHp *= 1.25;
-          e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.25);
-          e.damage *= 1.06;
+          e.maxHp *= DEVOUR.hp;
+          e.hp = Math.min(e.maxHp, e.hp + e.maxHp * (DEVOUR.hp - 1));
+          e.damage *= DEVOUR.dmg;
           e.xp += Math.max(1, target.xp);
           e.squash = 1;
           e.attackPose = 0.3;
@@ -486,7 +488,7 @@ export function onEnemyDeath(run: Run, e: Enemy) {
     if (def) {
       for (let i = 0; i < s.count; i++) {
         const a = (i / s.count) * TAU + Math.random();
-        const m = run.spawnEnemy(def, e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6);
+        const m = run.spawnEnemy(def, e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { add: e.add });
         m.kx = Math.cos(a) * 220;
         m.ky = Math.sin(a) * 220;
         m.spawnT = 0.1;
@@ -521,12 +523,13 @@ export function aimed(run: Run, e: Enemy, n: number, spread: number, speed: numb
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
 
+/** A boss calls `n` crimes to its side. They are its adds: they hit by the dish's bossDmg, like the boss itself. */
 export function summon(run: Run, e: Enemy, id: string, n: number) {
   const def = ENEMIES[id];
   if (!def) return;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU + Math.random() * 0.5;
-    const m = run.spawnEnemy(def, e.x + Math.cos(a) * (e.r + 10), e.y + Math.sin(a) * (e.r + 10));
+    const m = run.spawnEnemy(def, e.x + Math.cos(a) * (e.r + 10), e.y + Math.sin(a) * (e.r + 10), { add: true });
     m.kx = Math.cos(a) * 200;
     m.ky = Math.sin(a) * 200;
   }

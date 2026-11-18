@@ -73,6 +73,40 @@ export interface EnemyDef {
   info: EnemyInfo;
   /** split on death */
   split?: { into: string; count: number };
+  /**
+   * A big, slow body (the frozen lasagne and its like): its touch may cost more of the chef's bar than an
+   * ordinary walker's, because it can be seen coming and walked away from. See the hit-size rule in stages.ts.
+   */
+  heavy?: boolean;
+}
+
+/**
+ * What an enemy's own shot does, as a share of its touch (ai.ts). A lobber's direct hit counts like any
+ * other shot; the cloud its lob leaves ticks for LOB_CLOUD_DMG of the touch.
+ */
+export const SHOT_DMG: Partial<Record<BehaviorKind, number>> = { ranged: 0.5, burster: 0.7, lobber: 0.5 };
+export const LOB_CLOUD_DMG = 0.2;
+/** An elite hits this much harder than the plain crime (Run.spawnEnemy). */
+export const ELITE_DMG = 1.5;
+/** The garlic's aura: everything near it acts this much faster (walks, shoots, leaps). */
+export const GARLIC_BUFF = 1.35;
+
+/**
+ * The devourer (La Pentola Unica) grows with every crime it swallows: ×scale in size up to maxScale,
+ * ×hp in health, ×dmg in damage. Its touch does not grow (dmg 1): it is a heavy body, and a heavy
+ * body needs five touches to bring down a chef with no pantry at any size (the hit-size rule in
+ * stages.ts checks touchGrowth); a fed pot is wider and tougher, not harder-hitting.
+ */
+export const DEVOUR = { scale: 1.1, maxScale: 1.9, hp: 1.25, dmg: 1 };
+/** Every enemy's walk speed is spread by ± this share when it spawns (Run.spawnEnemy); the speed caps in stages.ts leave room for it. */
+export const SPEED_JITTER = 0.08;
+
+/** The most a touch can grow after spawning: a fully fed devourer (DEVOUR.dmg a meal); 1 for everything else. */
+export function touchGrowth(def: EnemyDef): number {
+  if (def.behavior !== 'devourer') return 1;
+  // it hunts while its scale is below maxScale, so the last meal may take it past the cap
+  const meals = Math.ceil(Math.log(DEVOUR.maxScale) / Math.log(DEVOUR.scale) - 1e-9);
+  return Math.pow(DEVOUR.dmg, meals);
 }
 
 export const ENEMIES: Record<string, EnemyDef> = {};
@@ -146,7 +180,7 @@ E({
 });
 E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
-  radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6,
+  radius: 22, hp: 60, speed: 38, damage: 10, xp: 5, behavior: 'chase', knockResist: 0.6, heavy: true,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', split: { into: 'ananas_pezzo', count: 4 },
   info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: 'An Italian TV chef reportedly scolded children on British TV for liking pineapple on pizza.' },
 });
@@ -182,13 +216,13 @@ E({
 });
 E({
   id: 'cappuccino', name: 'Cappuccino Ritardatario', en: 'Latecomer Cappuccino', sprite: 'enemy.cappuccino',
-  radius: 14, hp: 30, speed: 70, damage: 9, xp: 4, behavior: 'chase',
+  radius: 14, hp: 30, speed: 70, damage: 8, xp: 4, behavior: 'chase',
   color: 'brown', juice: '#a8714a', chunk: 'glass',
   info: { crime: 'Cappuccino after 11 a.m. (or with a meal)', why: 'Milky coffee is for breakfast; after lunch or dinner Italians drink an espresso. (Italians do argue about how strict the rule is.) These only show up after 11:00 on the clock.', severity: 3, quote: '"No al cappuccino con la pasta" ("No cappuccino with pasta") — Trevi Fountain sign, 2023' },
 });
 E({
   id: 'alfredo', name: 'Alfredo il Colloso', en: 'Alfredo the Gluey', sprite: 'enemy.alfredo',
-  radius: 17, hp: 40, speed: 42, damage: 10, xp: 4, behavior: 'puddler', params: { puddle: 'cream', interval: 3, r: 30, life: 5, slow: 0.4 }, knockResist: 0.4,
+  radius: 17, hp: 40, speed: 42, damage: 10, xp: 4, behavior: 'puddler', params: { puddle: 'cream', interval: 3, r: 30, life: 5, slow: 0.4 }, knockResist: 0.4, heavy: true,
   color: 'cream', juice: '#fff1cf', chunk: 'bread',
   info: { crime: 'Creamy chicken "Alfredo"', why: 'The original, created by Roman restaurateur Alfredo di Lelio in the early 1900s, is fettuccine, butter and Parmigiano — in Italy simply "fettuccine al burro". Jarred cream-and-chicken Alfredo is American.', severity: 3 },
 });
@@ -230,13 +264,13 @@ E({
 });
 E({
   id: 'surgelata', name: 'Lasagna Surgelata', en: 'Frozen Lasagna', sprite: 'enemy.surgelata',
-  radius: 23, hp: 110, speed: 32, damage: 10, xp: 6, behavior: 'chase', knockResist: 0.75,
+  radius: 23, hp: 110, speed: 32, damage: 10, xp: 6, behavior: 'chase', knockResist: 0.75, heavy: true,
   color: 'red', juice: '#d9532e', chunk: 'glass',
   info: { crime: 'Frozen microwave lasagna', why: 'Lasagna is a Sunday ritual: fresh egg-pasta sheets, slow-cooked ragù, béchamel and hours in the oven — not a frozen brick nuked for six minutes.', severity: 2 },
 });
 E({
   id: 'pentolaunica', name: 'La Pentola Unica', en: 'The Single Pot', sprite: 'enemy.pentolaunica',
-  radius: 17, hp: 44, speed: 50, damage: 10, xp: 5, behavior: 'devourer', params: { range: 320 }, knockResist: 0.5,
+  radius: 17, hp: 44, speed: 50, damage: 10, xp: 5, behavior: 'devourer', params: { range: 320 }, knockResist: 0.5, heavy: true,
   color: 'cream', juice: '#f3e2b5', chunk: 'bread',
   info: { crime: 'One-pot "carbonara"', why: 'A 2016 French viral video boiled pasta in one pot with onion, bacon and cream. Italians cook pasta in plenty of salted water and build the sauce separately. It eats other crimes to grow — stop it early!', severity: 4, quote: 'Even the pasta maker seen in the clip distanced itself: "this goes too far… désolé".' },
 });
@@ -303,7 +337,7 @@ E({
 });
 E({
   id: 'anacardo', name: 'Anacardo Abusivo', en: 'Bootleg Cashew', sprite: 'enemy.anacardo',
-  radius: 8, hp: 5, speed: 84, damage: 3, xp: 1, behavior: 'swarm', params: { wobble: 0.8 },
+  radius: 8, hp: 5, speed: 84, damage: 3, xp: 2, behavior: 'swarm', params: { wobble: 0.8 },
   color: 'yellow', juice: '#e9d3a2', chunk: 'bread',
   info: { crime: 'Cashews in pesto', why: 'Pesto genovese is made with pine nuts. Cheap industrial jars often replace them with cashews, and Italian food media treat that as the mark of an imitation "alla genovese" pesto.', severity: 3 },
 });
