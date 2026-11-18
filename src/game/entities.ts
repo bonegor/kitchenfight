@@ -58,6 +58,8 @@ export class Enemy {
   buff = 0; // speed buff timer (garlic aura)
   slamR = 0; // boss leap impact radius
   bossStep = 0; // index into the boss attack rotation
+  /** boss: seconds a slow would have cost the running attack, owed to the pause after it (Run.updateEnemies) */
+  slowDebt = 0;
   leapT = 0; // remaining leap time
   leapDur = 0; // total leap time
   /** fired once when the current boss leap lands (cleared by every new leap) */

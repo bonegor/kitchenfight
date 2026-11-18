@@ -108,7 +108,9 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
   - *Slows.* The chef's slowing weapons (Pesto Genovese 45 %, Olive d'Oro 25 %, the Forno 12–18 %)
     stretch a boss's walk and the pause between two attacks, never an attack: a boss ignores slows
     while an attack runs (and while it is airborne or phased out). Its warning circles, lanes and cones
-    run on game time, so a slowed attack would come after its mark had gone.
+    run on game time, so a slowed attack would come after its mark had gone. The time the slow would
+    have cost the attack is added to the pause after it (`Enemy.slowDebt`), so a slowed boss attacks
+    exactly as rarely as if its attacks were slowed too: a slowing build is worth what it always was.
   - *The quake.* Il Pizzone Abissale's quake lays four beats of five danger circles; a circle does 0.6×
     its damage (the slam does 1×).
 - **Hazards.** An enemy hazard that hurts (a cheese cloud, a broccoli patch, a boss's stink cloud, fire

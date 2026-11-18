@@ -325,6 +325,7 @@ export class Run {
     e.buff = 0;
     e.slamR = 0;
     e.bossStep = 0;
+    e.slowDebt = 0;
     e.leapT = 0;
     e.leapDur = 0;
     e.onLand = null;
@@ -1245,8 +1246,19 @@ export class Run {
         // a boss ignores slows while an attack runs, while it is airborne and while it is phased out.
         // Its warning circles, lanes and cones and its red wind-up flicker run on game time: a slowed
         // attack would come after its mark has gone (and a slowed phase would leave the boss faded but
-        // hittable). So a slow only stretches a boss's walk and the pause between two attacks
-        const slow = e.boss && (e.bossAttack || e.state === 50 || e.invuln > 0) ? 0 : e.slowAmt;
+        // hittable). So a slow only stretches a boss's walk and the pause between two attacks. The
+        // time it would have cost the attack is not lost: the boss owes it to the pause that follows
+        // (slowDebt), so a slowed boss attacks as rarely as if the attack itself had been slowed
+        let slow = e.slowAmt;
+        if (e.boss) {
+          if (e.bossAttack || e.state === 50 || e.invuln > 0) {
+            if (e.bossAttack && e.state !== 50 && e.invuln <= 0) e.slowDebt += dt * slow;
+            slow = 0;
+          } else if (e.slowDebt > 0) {
+            e.timer += e.slowDebt;
+            e.slowDebt = 0;
+          }
+        }
         updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
       }
       if (!e.alive) continue;
