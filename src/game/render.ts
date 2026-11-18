@@ -62,6 +62,12 @@ function glowSprite(color: string): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Enemy shots drawn with a short trail: slow, dull ones that fill the screen by the dozen (the mushrooms'
+ * spores in the Carbonara drift among brown debris and green XP leaves).
+ */
+const SHOT_TRAIL = new Set(['proj.e_spore']);
+
 let lightBrush: HTMLCanvasElement | null = null;
 function getLightBrush() {
   if (lightBrush) return lightBrush;
@@ -903,6 +909,14 @@ export class Renderer {
         ctx.fill();
       }
       this.glow(s.x, s.y - s.z, 15, '#ff4a2a', 0.45);
+      if (SHOT_TRAIL.has(s.sprite)) {
+        // two fading puffs behind it: the shot reads as moving, and shows where it is heading
+        ctx.globalAlpha = 0.3;
+        drawSprite(ctx, s.sprite, 0, s.x - s.vx * 0.13, s.y - s.z - s.vy * 0.13, s.scale * 0.62, s.scale * 0.62, s.rot);
+        ctx.globalAlpha = 0.56;
+        drawSprite(ctx, s.sprite, 0, s.x - s.vx * 0.065, s.y - s.z - s.vy * 0.065, s.scale * 0.82, s.scale * 0.82, s.rot);
+        ctx.globalAlpha = 1;
+      }
       if (hasSprite(s.sprite)) drawSprite(ctx, s.sprite, 0, s.x, s.y - s.z, s.scale, s.scale, s.rot);
       else {
         ctx.fillStyle = '#e8312a';
