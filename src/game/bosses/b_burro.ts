@@ -29,7 +29,7 @@
  * his pose cannot be read: there he starts no pat rings, only the attacks that are marked on the
  * ground at the chef (melt, slide).
  */
-import { brain, lobShot, hazard, shoot, steer, type Pattern } from '../ai';
+import { brain, bossInView, ENTRY_MIN, lobShot, hazard, shoot, steer, type Pattern } from '../ai';
 import type { Run } from '../run';
 import type { Enemy } from '../entities';
 import { TAU } from '../../core/math';
@@ -49,23 +49,18 @@ const HUD_BAND = 90;
 /** The longest his attacks wait while he is off screen, in seconds; after that the slide is forced. */
 const DENIED_MAX = 2.5;
 
-interface Block { id: number; born: number; drip: number; phase: 'wind' | 'slide'; until: number; n: number; dur: number; speed: number; denied: number }
+interface Block { id: number; drip: number; phase: 'wind' | 'slide'; until: number; n: number; dur: number; speed: number; denied: number }
 
 /** Per-boss bookkeeping (enemies are pooled: the record is reset when the id changes). */
 const blocks = new WeakMap<Enemy, Block>();
 function block(run: Run, e: Enemy): Block {
   let b = blocks.get(e);
-  if (!b || b.id !== e.id) blocks.set(e, (b = { id: e.id, born: run.time, drip: 0, phase: 'wind', until: 0, n: 0, dur: 0, speed: 0, denied: 0 }));
+  if (!b || b.id !== e.id) blocks.set(e, (b = { id: e.id, drip: 0, phase: 'wind', until: 0, n: 0, dur: 0, speed: 0, denied: 0 }));
   return b;
 }
 
-/**
- * On screen: the middle of his body is inside the view by half his radius. The margin is the same on
- * every side, so no direction of retreat switches him off.
- */
-function inView(run: Run, e: Enemy) {
-  return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
-}
+/** On screen: the shared boss test of brain()'s entrance gate (the middle of his body inside the view by half his radius). */
+const inView = bossInView;
 
 /** Under the HUD: the top of his body is inside the band at the top of the view, or above it. */
 function underHud(run: Run, e: Enemy) {
@@ -169,13 +164,12 @@ export const burro: Pattern = (run, e, dt) => {
   // On screen but under the HUD nothing waits: an attack about to start there (brain() starts one when
   // the timer runs out) is the next one in the cycle that is marked at the chef
   if (!e.bossAttack && e.state !== 50) {
-    const age = run.time - b.born;
-    if (age < 1.6) e.timer = Math.max(e.timer, 1.6 - age);
+    const age = run.time - e.born; // the first ENTRY_MIN s, and the entrance off screen, are brain()'s gate
     const seen = inView(run, e);
-    if (age >= 1.6 && (!seen || e.timer <= 0.3)) b.denied += dt;
+    if (age >= ENTRY_MIN && (!seen || e.timer <= 0.3)) b.denied += dt;
     if (b.denied > DENIED_MAX) while (ATTACKS[e.bossStep % ATTACKS.length] !== 'slide') e.bossStep++;
     else if (!seen) e.timer = Math.max(e.timer, 0.3);
-    else if (e.timer <= dt && underHud(run, e)) while (POSE_ONLY.has(ATTACKS[e.bossStep % ATTACKS.length])) e.bossStep++;
+    else if (age >= ENTRY_MIN && e.timer <= dt && underHud(run, e)) while (POSE_ONLY.has(ATTACKS[e.bossStep % ATTACKS.length])) e.bossStep++;
   }
   brain(run, e, dt, ATTACKS, 1, (a, t, first) => {
     if (first) b.denied = 0;

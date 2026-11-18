@@ -322,6 +322,7 @@ export class Run {
     e.flash = e.squash = e.slow = e.slowAmt = e.freeze = e.burn = e.burnDps = e.burnTick = e.stun = 0;
     e.state = 0;
     e.timer = this.rng.next() * 1.5;
+    e.born = this.time;
     e.aux = 0;
     e.ax = e.ay = 0;
     e.spawnT = 0.35;

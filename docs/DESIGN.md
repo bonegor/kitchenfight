@@ -194,6 +194,11 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     Il Frullatore ×0.65, Il Re dell'Aglio ×0.8, and Lo Spaghettone ×0.8 (untouchable while phased out).
   - *Nobody outruns the fight.* A boss more than 300 units behind the chef walks faster, up to 3.5× its
     pace (`BOSS_NEAR` in `ai.ts`), so it cannot be left off screen.
+  - *Entrance.* No boss starts an attack in the first 1.6 s after it spawns (`ENTRY_MIN` in `ai.ts`:
+    the boss banner covers the screen then), nor while it is off screen (the middle of the body outside
+    the view by half a radius, the same on every side) until 4 s after the spawn (`ENTRY_MAX`): from
+    then on it attacks from wherever it is, so running away does not switch it off. The gate is in
+    `brain()` and is the same for every boss.
   - *Nobody parks a boss.* Il Re dell'Aglio and Il Panetto Supremo start no attack while they are off
     screen (the middle of the body outside the view; the margin is the same on every side): the attack
     waits. It waits 2.5 s at most (`DENIED_MAX`, counted from the boss's last attack: time off screen,
@@ -202,8 +207,8 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     slide by its lane, which runs all the way to the chef and whose circles stay until the dish has
     passed them. From off screen both aim at where the chef is heading (the leap one second ahead, the
     slide at the spot the dish and the chef reach together), so running on in a straight line is no
-    way out; a chef who turns away is missed. The other bosses have no such rule: they attack from
-    wherever they are.
+    way out; a chef who turns away is missed. After their entrance the other bosses have no such
+    rule: they attack from wherever they are.
   - *Nothing unreadable under the HUD.* While one of these two is on screen but the top of its body is
     inside the band the HUD covers (the top 90 units of the view: timer and recipe strip) or above it,
     its pose cannot be read. There it starts only the attacks that are marked on the ground at the

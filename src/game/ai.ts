@@ -575,6 +575,18 @@ export function leapUpdate(run: Run, e: Enemy, dt: number, height = 120): boolea
 
 /** Up to this distance from the chef a boss walks at its own pace; beyond it, it hurries (brain). */
 const BOSS_NEAR = 300;
+/** Entrance: no boss attack starts in the first ENTRY_MIN s after the spawn (under the boss banner)… */
+export const ENTRY_MIN = 1.6;
+/** …nor while the boss is off screen, until ENTRY_MAX s after the spawn: then it attacks from wherever it is. */
+export const ENTRY_MAX = 4;
+
+/**
+ * A boss is on screen: the middle of its body is inside the view by half its radius. The margin is
+ * the same on every side, so no direction of retreat counts more than another.
+ */
+export function bossInView(run: Run, e: Enemy) {
+  return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
+}
 
 /**
  * Boss brain: cycles through an attack list. Each attack = [name, duration].
@@ -605,6 +617,11 @@ export function brain(run: Run, e: Enemy, dt: number, attacks: string[], walkMul
     const far = toPlayer(run, e).d;
     const hurry = 1 + Math.min(2.5, Math.max(0, (far - BOSS_NEAR) / 150));
     chase(run, e, dt, walkMul * (enraged ? 1.25 : 1) * hurry);
+    // the entrance gate, the same for every boss: nothing starts under the boss banner or from off
+    // screen. The off-screen wait is bounded (ENTRY_MAX), so a chef who flees cannot switch a boss off
+    const age = run.time - e.born;
+    if (age < ENTRY_MIN) e.timer = Math.max(e.timer, ENTRY_MIN - age);
+    if (age < ENTRY_MAX && !bossInView(run, e)) e.timer = Math.max(e.timer, 0.3);
     e.timer -= dt;
     if (e.timer <= 0) {
       e.bossAttack = attacks[e.bossStep++ % attacks.length];

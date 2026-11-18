@@ -29,7 +29,7 @@
  * his pose cannot be read: there he starts no clove fan and no summon, only the attacks that are
  * marked on the ground at the chef (stink, leap).
  */
-import { brain, danger, hazard, leap, steer, shoot, type Pattern } from '../ai';
+import { brain, bossInView, ENTRY_MIN, danger, hazard, leap, steer, shoot, type Pattern } from '../ai';
 import { ENEMIES } from '../enemies';
 import type { Run } from '../run';
 import type { Enemy } from '../entities';
@@ -53,13 +53,13 @@ const CLOVE_DMG = 0.45;
 const DENIED_MAX = 2.5;
 
 interface Cloud { x: number; y: number; r: number; until: number; next: number }
-interface King { id: number; born: number; clouds: Cloud[]; ringAt: number; aura: number; denied: number }
+interface King { id: number; clouds: Cloud[]; ringAt: number; aura: number; denied: number }
 
 /** Per-boss bookkeeping (enemies are pooled: the record is reset when the id changes). */
 const kings = new WeakMap<Enemy, King>();
 function king(run: Run, e: Enemy): King {
   let k = kings.get(e);
-  if (!k || k.id !== e.id) kings.set(e, (k = { id: e.id, born: run.time, clouds: [], ringAt: 0, aura: 0, denied: 0 }));
+  if (!k || k.id !== e.id) kings.set(e, (k = { id: e.id, clouds: [], ringAt: 0, aura: 0, denied: 0 }));
   return k;
 }
 
@@ -102,13 +102,8 @@ function stinkCloud(run: Run, e: Enemy, k: King, x: number, y: number) {
   k.clouds.push({ x, y, r, until: run.time + CLOUD_LIFE, next: run.time + 0.3 });
 }
 
-/**
- * On screen: the middle of his body is inside the view by half his radius. The margin is the same on
- * every side, so no direction of retreat switches him off.
- */
-function inView(run: Run, e: Enemy) {
-  return run.onScreen(e.x, e.y - e.r * 0.5, -e.r * 0.5);
-}
+/** On screen: the shared boss test of brain()'s entrance gate (the middle of his body inside the view by half his radius). */
+const inView = bossInView;
 
 /** Under the HUD: the top of his body is inside the band at the top of the view, or above it. */
 function underHud(run: Run, e: Enemy) {
@@ -232,13 +227,12 @@ export const aglio: Pattern = (run, e, dt) => {
   // On screen but under the HUD nothing waits: an attack about to start there (brain() starts one when
   // the timer runs out) is the next one in the cycle that is marked at the chef
   if (!e.bossAttack && e.state !== 50) {
-    const age = run.time - k.born;
-    if (age < 1.6) e.timer = Math.max(e.timer, 1.6 - age);
+    const age = run.time - e.born; // the first ENTRY_MIN s, and the entrance off screen, are brain()'s gate
     const seen = inView(run, e);
-    if (age >= 1.6 && (!seen || e.timer <= 0.3)) k.denied += dt;
+    if (age >= ENTRY_MIN && (!seen || e.timer <= 0.3)) k.denied += dt;
     if (k.denied > DENIED_MAX) while (ATTACKS[e.bossStep % ATTACKS.length] !== 'leap') e.bossStep++;
     else if (!seen) e.timer = Math.max(e.timer, 0.3);
-    else if (e.timer <= dt && underHud(run, e)) while (POSE_ONLY.has(ATTACKS[e.bossStep % ATTACKS.length])) e.bossStep++;
+    else if (age >= ENTRY_MIN && e.timer <= dt && underHud(run, e)) while (POSE_ONLY.has(ATTACKS[e.bossStep % ATTACKS.length])) e.bossStep++;
   }
   brain(run, e, dt, ATTACKS, 0.95, (a, t, first) => {
     if (first) k.denied = 0;

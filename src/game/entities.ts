@@ -62,6 +62,8 @@ export class Enemy {
   pace = 1;
   slamR = 0; // boss leap impact radius
   bossStep = 0; // index into the boss attack rotation
+  /** run time of the spawn (Run.spawnEnemy): a boss's entrance gate counts from it (brain) */
+  born = 0;
   /** boss: seconds a slow would have cost the running attack, owed to the pause after it (Run.updateEnemies) */
   slowDebt = 0;
   leapT = 0; // remaining leap time
