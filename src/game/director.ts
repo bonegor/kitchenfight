@@ -34,7 +34,7 @@ export class Director {
   /**
    * Enemy damage. A factor above 1 phases in over DMG_RAMP, later than the HP, so the openings and
    * the first boss stay gentle; a factor below 1 (the first dish) applies over the HP ramp.
-   * @param base the stage's damage factor: dmgBase for the waves (the default), bossDmg for a boss
+   * @param base the stage's damage factor: dmgBase for the waves (the default), bossDmg for a boss and its adds
    */
   dmgScale(base = this.stage.dmgBase) {
     const t = this.run.time / 60;

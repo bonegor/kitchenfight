@@ -68,9 +68,9 @@ export interface Tier {
   hpBase: number;
   /** extra enemy HP per minute */
   hpGrowth: number;
-  /** damage multiplier of the waves (and of a boss's adds), phased in over DMG_RAMP */
+  /** damage multiplier of the waves, phased in over DMG_RAMP */
   dmgBase: number;
-  /** damage multiplier of the bosses themselves, phased in over DMG_RAMP (they do not take dmgBase) */
+  /** damage multiplier of the bosses and of the adds they call, phased in over DMG_RAMP (they do not take dmgBase) */
   bossDmg: number;
   /** multiplies BASE_RATE (spawns per second); a rate above 1 phases in over RATE_RAMP */
   rate: number;

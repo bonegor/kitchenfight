@@ -81,6 +81,8 @@ export interface EnemyDef {
  */
 export const SHOT_DMG: Partial<Record<BehaviorKind, number>> = { ranged: 0.5, burster: 0.7, lobber: 0.5 };
 export const LOB_CLOUD_DMG = 0.2;
+/** An elite hits this much harder than the plain crime (Run.spawnEnemy). */
+export const ELITE_DMG = 1.5;
 
 export const ENEMIES: Record<string, EnemyDef> = {};
 function E(d: EnemyDef) {

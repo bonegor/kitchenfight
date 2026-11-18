@@ -9,7 +9,7 @@ import { World, PropInst } from './world';
 import { Stats, baseStats, StatMod, CharacterDef, WeaponStats } from './types';
 import { WEAPONS, WeaponInstance, BASE_WEAPON_IDS } from './weapons';
 import { PASSIVES, POWERUPS } from './passives';
-import { ENEMIES, EnemyDef } from './enemies';
+import { ENEMIES, EnemyDef, ELITE_DMG } from './enemies';
 import { updateEnemy, onEnemyDeath } from './ai';
 import { Director } from './director';
 import type { StageDef } from './stages';
@@ -289,7 +289,8 @@ export class Run {
     return a;
   }
 
-  spawnEnemy(def: EnemyDef, x: number, y: number, o: { elite?: boolean; boss?: boolean; hpMul?: number } = {}): Enemy {
+  /** @param o.add called by a boss (summon): it hits by the dish's bossDmg, not by the waves' dmgBase */
+  spawnEnemy(def: EnemyDef, x: number, y: number, o: { elite?: boolean; boss?: boolean; hpMul?: number; add?: boolean } = {}): Enemy {
     const e = this.enemyPool.pop() ?? new Enemy();
     e.id = newId();
     e.def = def;
@@ -302,8 +303,9 @@ export class Run {
     e.r = def.radius * (e.elite ? 1.45 : 1);
     const hpScale = this.director.hpScale() * (o.hpMul ?? 1) * this.stats.curse;
     e.maxHp = e.hp = def.hp * hpScale * (e.elite ? 14 : 1);
+    e.add = !!o.add;
     e.speed = def.speed * (e.elite ? 0.9 : 1) * (0.92 + this.rng.next() * 0.16);
-    e.damage = def.damage * (e.elite ? 1.5 : 1) * this.director.dmgScale();
+    e.damage = def.damage * (e.elite ? ELITE_DMG : 1) * this.director.dmgScale(e.add ? this.stage.bossDmg : undefined);
     e.xp = def.xp;
     e.kx = e.ky = e.vx = e.vy = 0;
     e.face = 1;

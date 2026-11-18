@@ -389,7 +389,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const def = ENEMIES[P.spawn ?? 'spezzato'];
         for (let i = 0; i < (P.count ?? 2); i++) {
           const a = Math.random() * TAU;
-          const m = run.spawnEnemy(def, e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r);
+          const m = run.spawnEnemy(def, e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r, { add: e.add });
           m.kx = Math.cos(a) * 160;
           m.ky = Math.sin(a) * 160;
         }
@@ -487,7 +487,7 @@ export function onEnemyDeath(run: Run, e: Enemy) {
     if (def) {
       for (let i = 0; i < s.count; i++) {
         const a = (i / s.count) * TAU + Math.random();
-        const m = run.spawnEnemy(def, e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6);
+        const m = run.spawnEnemy(def, e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { add: e.add });
         m.kx = Math.cos(a) * 220;
         m.ky = Math.sin(a) * 220;
         m.spawnT = 0.1;
@@ -522,12 +522,13 @@ export function aimed(run: Run, e: Enemy, n: number, spread: number, speed: numb
   run.sfx('boss_shoot', { volume: 0.5 }, e.x);
 }
 
+/** A boss calls `n` crimes to its side. They are its adds: they hit by the dish's bossDmg, like the boss itself. */
 export function summon(run: Run, e: Enemy, id: string, n: number) {
   const def = ENEMIES[id];
   if (!def) return;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU + Math.random() * 0.5;
-    const m = run.spawnEnemy(def, e.x + Math.cos(a) * (e.r + 10), e.y + Math.sin(a) * (e.r + 10));
+    const m = run.spawnEnemy(def, e.x + Math.cos(a) * (e.r + 10), e.y + Math.sin(a) * (e.r + 10), { add: true });
     m.kx = Math.cos(a) * 200;
     m.ky = Math.sin(a) * 200;
   }

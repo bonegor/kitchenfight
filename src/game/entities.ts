@@ -70,6 +70,8 @@ export class Enemy {
   fade = 0;
   /** spawned as this stage's final boss */
   isFinal = false;
+  /** called by a boss (summon): it hits by the dish's bossDmg, not by the waves' dmgBase */
+  add = false;
   /** last time hit per weapon slot (for persistent hitboxes) */
   lastHit: Record<number, number> = {};
 }

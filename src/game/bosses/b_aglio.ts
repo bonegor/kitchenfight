@@ -169,7 +169,7 @@ function courtiers(run: Run, e: Enemy, n: number) {
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU + Math.random() * 0.5;
     const x = e.x + Math.cos(a) * e.r * 1.85, y = e.y + Math.sin(a) * e.r * 1.5;
-    const m = run.spawnEnemy(def, x, y);
+    const m = run.spawnEnemy(def, x, y, { add: true });
     m.kx = Math.cos(a) * 140;
     m.ky = Math.sin(a) * 140;
     for (let j = 0; j < 3; j++) puff(run, x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 18, 0.6, 0.9, 1, 0.75);
