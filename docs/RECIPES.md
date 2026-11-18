@@ -239,12 +239,12 @@ only from egg, cheese, fat and starch.
 |---|---|---|---|---|
 | `panna` Panna Invasora | Cream (and crème fraîche) | ●●●●● 5 | | The creaminess comes from yolks, Pecorino, guanciale fat and pasta water; Italian chefs say cream makes it greasier and flattens its flavour. The most common complaint about carbonara made outside Italy. |
 | `cipolla` Cipolla Clandestina | Onion | ●●●●○ 4 | | Not part of the Roman dish. A 2016 French one-pot video that boiled onion with the pasta caused an outcry in Italy. |
-| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Guanciale is cured pork cheek, never smoked. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. |
+| `bacon` Bacon Abusivo | Smoked bacon | ●●●●○ 4 | | Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon is the swap Italians spot most often abroad; Coldiretti lists it among typical "fake carbonara" errors. |
 | `aglio` Aglio in Camicia | Garlic | ●●●○○ 3 | C | Purists say its sharpness has no place in carbonara, where it competes with the guanciale and pepper, and Roman lists of rules ban it outright. |
 | `parmesan` Spargipolvere | Parmesan instead of Pecorino | ●●●○○ 3 | C | The cheese of Roman carbonara is sharp, salty Pecorino Romano; using only Parmigiano is a listed purist sin. |
 | `pollo` Pollo Infiltrato | Chicken | ●●●○○ 3 | | The only meat is guanciale. Italian coverage of American pasta lists chicken among the typical US additions, and a 2023 Trevi Fountain protest sign called chicken on pasta a crime in Italy. |
 | `piselli` Piselli Ribelli | Peas | ●●○○○ 2 | | Not part of carbonara. Coldiretti lists frozen peas among the distortions found abroad. |
-| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche. |
+| `funghi` Funghi Abusivi | Mushrooms *(sweep only)* | ●●○○○ 2 | | A frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche. |
 | `prosciutto` Prosciutto Impostore | Cooked ham *(sweep only)* | ●●○○○ 2 | | A British-style shortcut for guanciale; Italian food media list ham carbonara among recipe "horrors", and an Italian TV chef rejected it on live British TV. |
 | `burro` Burro Furbetto | Butter | ●●○○○ 2 | | The fat comes from rendered guanciale. Coldiretti names butter among the add-ons of fake carbonara abroad. |
 
@@ -257,7 +257,7 @@ only from egg, cheese, fat and starch.
 - **Parmesan instead of Pecorino:** [ANSA 2017](https://www.ansa.it/amp/english/news/lifestyle/food_wine/2017/04/06/italy-marks-carbonara-day_86fa411f-4b1c-49e8-b788-ed80d2f1d089.html); [AGI 2023](https://www.agi.it/cronaca/news/2023-04-06/carbonara_day_ricetta_perfetta-20835887/) (Luciano Monosilio)
 - **Chicken:** [Il Post 2021](https://www.ilpost.it/2021/02/28/pasta-stati-uniti/); [AGI 2023](https://www.agi.it/cronaca/news/2023-07-18/carbonara-di-pollo-sintetico-made-in-italy-ricette-22282277/); [Italianismo 2023](https://italianismo.com.br/en/grupo-protesta-na-fontana-di-trevi-contra-crimes-alimentares/)
 - **Peas:** [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce) ✓ headline "La Carbonara? Con panna, piselli, burro e basilico"; [MeteoWeb 2024](https://www.meteoweb.eu/2024/04/carbonara-day-ricette-tarocche-in-6-ristoranti-stranieri-su-10/1001399577/)
-- **Mushrooms:** [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html)
+- **Mushrooms:** [the chef's own "Carbonara in Under 10 Minutes" recipe](https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp) (the game's source). Not used for this intruder: [Scatti di Gusto 2020](https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/); [Wanted in Rome 2020](https://wantedinrome.com/news/italians-revolted-by-gordon-ramsays-nightmare-carbonara.html) (see the caveat below)
 - **Cooked ham:** [Food52](https://vercel.food52.com/story/20529-we-can-t-stop-laughing-at-this-old-british-tv-clip) (Gino D'Acampo; a mirror address, as found in search); [ITV](https://itv.com/thismorning/food/classic-italian-carbonara-gino-dacampo-recipe) (Gino D'Acampo); [Scatti di Gusto 2016](https://www.scattidigusto.it/ricette-italiane-orrori-ingredienti)
 - **Butter:** [AGI 2024](https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/); [Il Nordest 2024](https://www.ilnordest.it/economia/la-carbonara-con-panna-piselli-burro-e-basilico-tz2dlxce); [Reporter Gourmet](https://reportergourmet.com/en/news/8374-carbonara-according-to-bruno-barbieri-the-top-chef-s-recipe-with-only-egg-yolks-and-butter) (Bruno Barbieri)
 
@@ -278,6 +278,15 @@ only from egg, cheese, fat and starch.
   (Reporter Gourmet). Purists say the guanciale fat is enough.
 - *Cooked ham.* The TV chef was Gino D'Acampo on ITV's This Morning (2010). The Roman lenses tie the same
   clip to *milk* rather than ham, so accounts differ.
+- *Mushrooms.* The sweep filed two things under one event: the February 2020 "revolt in Rome" headlines
+  (Scatti di Gusto, Wanted in Rome) and the chef's ten-minute recipe with mushrooms, peas and crème
+  fraîche. A review found, from search snippets only, that the February articles are about a different
+  video of his (bacon and a runny sauce, no mushrooms). So the game no longer says that mushrooms
+  "sparked a revolt": it keeps the recipe's ingredient list and cites the recipe itself.
+- *Guanciale and smoke.* The research's line was "guanciale is never smoked". A review pointed out that
+  Amatrice-style guanciale, which the Amatriciana level names, is reported to be lightly smoked (search
+  snippets only), so the game now says "cured pork cheek, not smoked bacon" and makes no claim about
+  smoke in guanciale.
 - *Peas* are fine in other Italian pastas (pasta panna, prosciutto e piselli): the complaint is only about carbonara.
 
 **Also researched, not in the game:** tomato ●●●○○ 3 (the 2021 "smoky tomato carbonara" condemned by
@@ -1046,7 +1055,7 @@ The popular-posts sweep's ranking, adjusted by the editor to the merged populari
 | 16 | Amatriciana | Onion **C** | Excluded by the STG; the 2020 TV row |
 | 17 | Pizza | Ketchup | The 2023 TikTok ketchup Margherita and a pizzaiolo's provocation |
 | 18 | Carbonara | Peas | Coldiretti 2024; the 2020 celebrity-chef video |
-| 19 | Carbonara | Mushrooms | The 2020 "revolt in Rome" (sweep only) |
+| 19 | Carbonara | Mushrooms | A celebrity chef's ten-minute recipe (sweep only; the sweep's "revolt in Rome" was about another video, see the Carbonara caveats) |
 | 20 | Pesto | Butter **C** | Genoa's "stuff for the Milanese" (2015) |
 
 Runners-up: pesto + cream; cacio e pepe + Parmesan or cream; carbonara + white wine, cooked ham, parsley.
@@ -1107,8 +1116,8 @@ pre-cooked sugared pizza sauce, onion or canned clams in vongole, dried "Italian
 
 ## Editorial calls in the game data
 
-`src/game/recipes.ts` is not a one-to-one copy of the research dataset. Its header lists the first two calls
-below; this section lists them all. Where an intruder was split from one research entry, or combined from
+`src/game/recipes.ts` is not a one-to-one copy of the research dataset. Its header lists the main calls;
+this section lists them all. Where an intruder was split from one research entry, or combined from
 two, its popularity is **inherited** from those entries, not separately researched.
 
 - **No sugar enemy in the Pomodoro.** The research supports sugar (4, contested), but no enemy fits it.
@@ -1145,6 +1154,9 @@ two, its popularity is **inherited** from those entries, not separately research
   ingredients. They join the dishes where they fit as "extras", capped at 20 % of the wave weight.
 - **Sweep-only intruders in the game:** the Carbonara's mushrooms and cooked ham, and the Pomodoro's
   chicken. They sit near the end of their dish's wave order and are the first to revisit.
+- **Two research lines are softened** in the Carbonara and its copies in the finale: "guanciale is never
+  smoked" became "cured pork cheek, not smoked bacon", and mushrooms no longer "sparked a Roman revolt"
+  (reasons in the [Carbonara caveats](#2-spaghetti-alla-carbonara)).
 
 ## How this was researched, and its limits
 
@@ -1212,8 +1224,10 @@ When you change `src/game/recipes.ts`:
 2. **Real people are sources, never characters.** Name them only in `chef` credits and `quote.by`; in-game
    texts use archetypes. Companies are generic ("a major US newspaper", "a British food website").
 3. **`quote` only when verified verbatim**, and say against what (a search snippet is not the live page).
-4. **Contested means a note.** `contested: true` always comes with a `note` giving the other side, and the
-   friend-or-foe toast must not be more absolute than the note (see `foeLines`).
+4. **Contested means a note.** `contested: true` always comes with a `note` giving the other side, and no
+   toast may be more absolute than the note: neither the friend-or-foe toasts (see `foeLines`) nor the
+   first-sighting reasons in `sightings.ts` ("The EU recipe rules (STG) want guanciale", not "guanciale
+   or nothing"; "by custom, no cheese" on clams, not "never").
 5. **Never mock what Italians accept** ([list above](#accepted-in-italy-never-an-enemy)).
 6. **Intruders must be enemies.** `enemy` is an `ENEMIES` id; the waves in `stages.ts` must keep ≥ 80 % of
    each minute's weight on the dish's intruders, follow the intruder order and spawn every intruder.

@@ -20,7 +20,10 @@
  *  - Alfredo's 'parmesan' (imitation 'Parmesan') and the Marinara's 'cheddar' are required by
  *    the spec, but the research has no dish-specific evidence for them: their texts are adapted
  *    from its pizza entries (Coldiretti on imitation 'Parmesan' and 'Anglo-Saxon cheddar') and
- *    cite that pizza source.
+ *    cite that pizza source;
+ *  - two research lines are softened in the Carbonara (and its copies in the finale): guanciale
+ *    'never smoked' was too absolute, and mushrooms 'sparked a Roman revolt' cited an article about
+ *    another video (see the Carbonara caveats in docs/RECIPES.md).
  *
  * GENERATED from the research dataset by the foundation tooling, then kept by hand.
  */
@@ -292,8 +295,8 @@ export const RECIPES: RecipeDef[] = [
         enemy: "bacon",
         it: "Bacon affumicato",
         en: "Smoked bacon",
-        why: "Carbonara uses guanciale, cured pork cheek, which is not smoked. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
-        line: "Guanciale is cured pork cheek, never smoked. Coldiretti names bacon a classic fake-carbonara swap.",
+        why: "Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
+        line: "Guanciale is cured pork cheek, not smoked bacon. Coldiretti names bacon a classic fake-carbonara swap.",
         popularity: 4,
         contested: false,
         source: { name: "Carbonara Day: Coldiretti, ricette taroccate in 6 ristoranti stranieri su 10 (AGI)", url: "https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/", lang: "it", year: "2024" },
@@ -345,11 +348,11 @@ export const RECIPES: RecipeDef[] = [
         enemy: "funghi",
         it: "Funghi",
         en: "Mushrooms",
-        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche.",
-        line: "Mushrooms helped spark a Roman revolt against a 2020 celebrity-chef carbonara video.",
+        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche.",
+        line: "Mushrooms are a frequent foreign add-on with no place in the Roman dish.",
         popularity: 2,
         contested: false,
-        source: { name: "La carbonara di Gordon Ramsay: è rivolta a Roma e dintorni", url: "https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/", lang: "it", year: "2020" },
+        source: { name: "Gordon's Carbonara in Under 10 Minutes (official recipe)", url: "https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp", lang: "en" },
       },
       {
         enemy: "prosciutto",
@@ -1086,8 +1089,8 @@ export const RECIPES: RecipeDef[] = [
         enemy: "bacon",
         it: "Bacon affumicato",
         en: "Smoked bacon",
-        why: "Carbonara uses guanciale, cured pork cheek, which is not smoked. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
-        line: "Guanciale is cured pork cheek, never smoked. Coldiretti names bacon a classic fake-carbonara swap.",
+        why: "Carbonara uses guanciale, cured pork cheek, not smoked bacon. Bacon in place of guanciale is the swap Italians spot most often in foreign carbonara, and Coldiretti, the Italian farmers' association, names it among the typical 'fake carbonara' errors abroad.",
+        line: "Guanciale is cured pork cheek, not smoked bacon. Coldiretti names bacon a classic fake-carbonara swap.",
         popularity: 4,
         contested: false,
         source: { name: "Carbonara Day: Coldiretti, ricette taroccate in 6 ristoranti stranieri su 10 (AGI)", url: "https://www.agi.it/economia/news/2024-04-06/carbonara-day-coldiretti-tarocc-ristoranti-stranieri-25934192/", lang: "it", year: "2024" },
@@ -1190,11 +1193,11 @@ export const RECIPES: RecipeDef[] = [
         enemy: "funghi",
         it: "Funghi",
         en: "Mushrooms",
-        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. Italian social media mocked a celebrity chef's 2020 carbonara video with mushrooms, peas and crème fraîche.",
-        line: "Mushrooms helped spark a Roman revolt against a 2020 celebrity-chef carbonara video.",
+        why: "Mushrooms are a frequent foreign addition with no place in the Roman dish. A celebrity chef's ten-minute carbonara recipe adds mushrooms, peas and crème fraîche.",
+        line: "Mushrooms are a frequent foreign add-on with no place in the Roman dish.",
         popularity: 2,
         contested: false,
-        source: { name: "La carbonara di Gordon Ramsay: è rivolta a Roma e dintorni", url: "https://www.scattidigusto.it/2020/02/21/la-carbonara-di-gordon-ramsay-e-rivolta-a-roma-e-dintorni/", lang: "it", year: "2020" },
+        source: { name: "Gordon's Carbonara in Under 10 Minutes (official recipe)", url: "https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp", lang: "en" },
         fromDish: "carbonara",
       },
     ],
@@ -1274,7 +1277,7 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
   },
   {
     ingredient: 'parmigiano', enemy: 'parmesan', friendIn: ['alfredo', 'pesto'], foeIn: ['carbonara', 'amatriciana', 'cacioepepe', 'vongole'],
-    friendLine: 'Parmigiano! In Alfredo and pesto it belongs. Never on clams.',
+    friendLine: 'Parmigiano! In Alfredo and pesto it belongs. On clams, by custom, no cheese.',
     foeLine: 'Parmigiano? In Alfredo and pesto, sì. Here the cheese is Pecorino!',
     foeLines: {
       carbonara: 'Parmigiano? In Alfredo and pesto, sì. Here Pecorino leads: a little blended in, at most.',
