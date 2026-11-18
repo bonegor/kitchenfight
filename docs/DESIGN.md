@@ -123,8 +123,9 @@ each corner of Italy.
   an open spot turns up. A toast says "<ingredient> is on the map! Follow the green arrow."
 - **Look.** A golden glow, a pulsing ground ring, a gold-rimmed badge and a bobbing sprite. The badge is
   drawn above every prop. Off screen, or in view but under the HUD's top band, it gets the biggest arrow on
-  screen, in green. Edge arrows stop below the HUD (XP bar, timer, recipe strip, slots, boss bar), and
-  above the toasts where they sit at the bottom (short screens).
+  screen, in green. Edge arrows stop below the HUD (XP bar, timer, recipe strip, slots, boss bar), above
+  the toasts where they sit at the bottom (short screens), and under toasts that lie right below the boss
+  bar. An arrow that this pushes down onto the chef steps to his side.
 - **Pickup.** The magnet ignores it until the chef is within 60 units. Left alone for 90 s, it starts
   drifting slowly toward him.
 - **Collect.** A banner "<Ingredient> ✓ n/m" with its buff, a chime and a chef line. The buff lasts for the
@@ -309,8 +310,8 @@ The five new bosses (patterns in `src/game/bosses/b_*.ts`):
   clouds, a belly-flop, cheesy clams. *"Formaggio sulle vongole? Abbondante!"*
 
 A boss shouts its line in a speech bubble as it arrives at the edge of the screen. The bubble is kept in
-view, below the HUD's top band and clear of the toasts and the boss banner; its tail shows only while the
-boss stands under it.
+view, below the HUD's top band, and takes the nearest place clear of the toasts and the boss banner: over,
+under or beside them, and not on the chef. Its tail shows only while the boss stands under it.
 
 ## Medals (Medaglie)
 Checked at the end of every run (`src/game/medals.ts`).
