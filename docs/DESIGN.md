@@ -105,6 +105,10 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
     the boss is, and both are marked at the chef: the King's leap by its landing circle, the Block's
     slide by its lane, which runs all the way to the chef and whose circles stay until the dish has
     passed them. The other bosses have no such rule: they attack from wherever they are.
+  - *Slows.* The chef's slowing weapons (Pesto Genovese 45 %, Olive d'Oro 25 %, the Forno 12–18 %)
+    stretch a boss's walk and the pause between two attacks, never an attack: a boss ignores slows
+    while an attack runs (and while it is airborne or phased out). Its warning circles, lanes and cones
+    run on game time, so a slowed attack would come after its mark had gone.
   - *The quake.* Il Pizzone Abissale's quake lays four beats of five danger circles; a circle does 0.6×
     its damage (the slam does 1×).
 - **Hazards.** An enemy hazard that hurts (a cheese cloud, a broccoli patch, a boss's stink cloud, fire

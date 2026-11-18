@@ -1242,9 +1242,11 @@ export class Run {
       if (e.freeze > 0) e.freeze -= dt;
       if (e.stun > 0) e.stun -= dt;
       if (!isFrozen && (e.stun <= 0 || e.boss)) {
-        // an airborne boss ignores slows, so its slam lands exactly when the warning circle ends;
-        // a phased-out boss ignores them too, so it never shows up faded but hittable
-        const slow = e.boss && (e.state === 50 || e.invuln > 0) ? 0 : e.slowAmt;
+        // a boss ignores slows while an attack runs, while it is airborne and while it is phased out.
+        // Its warning circles, lanes and cones and its red wind-up flicker run on game time: a slowed
+        // attack would come after its mark has gone (and a slowed phase would leave the boss faded but
+        // hittable). So a slow only stretches a boss's walk and the pause between two attacks
+        const slow = e.boss && (e.bossAttack || e.state === 50 || e.invuln > 0) ? 0 : e.slowAmt;
         updateEnemy(this, e, dt * (1 - slow) * (e.buff > 0 ? 1.35 : 1));
       }
       if (!e.alive) continue;
