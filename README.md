@@ -21,10 +21,12 @@ Italian food media and Italian influencer chefs): **[docs/RECIPES.md](docs/RECIP
 
 <p align="center">
   <img src="docs/screenshots/title.jpg" width="49%" alt="Title screen" />
-  <img src="docs/screenshots/kitchen.jpg" width="49%" alt="La Cucina, the kitchen" />
-  <img src="docs/screenshots/trattoria.jpg" width="49%" alt="La Trattoria at night" />
-  <img src="docs/screenshots/streets.jpg" width="49%" alt="I Vicoli di Napoli with the Cappuccino Clock Tower boss" />
-  <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="La Food Court with the Cursed Microwave" />
+  <img src="docs/screenshots/menu.jpg" width="49%" alt="Il Menù: pick a dish" />
+  <img src="docs/screenshots/carbonara.jpg" width="49%" alt="Spaghetti alla Carbonara: picking up the egg yolks" />
+  <img src="docs/screenshots/alfredo.jpg" width="49%" alt="Fettuccine Alfredo in the trattoria" />
+  <img src="docs/screenshots/margherita.jpg" width="49%" alt="Pizza Margherita with the Ketchup Baron" />
+  <img src="docs/screenshots/vongole.jpg" width="49%" alt="Spaghetti alle Vongole by the sea" />
+  <img src="docs/screenshots/foodcourt.jpg" width="49%" alt="Il Menù degli Orrori, the finale" />
   <img src="docs/screenshots/levelup.jpg" width="49%" alt="Level-up cards" />
   <img src="docs/screenshots/chefs.jpg" width="49%" alt="Seven playable chefs" />
   <img src="docs/screenshots/ricettario.jpg" width="49%" alt="Il Ricettario — the encyclopedia of food crimes" />
