@@ -89,7 +89,15 @@ export class UI {
     this.selectedChar = app.save.lastChar;
     this.selectedStage = app.save.lastStage;
     this.applyScale();
-    window.addEventListener('resize', () => this.applyScale());
+    window.addEventListener('resize', this.onResize);
+  }
+
+  private onResize = () => this.applyScale();
+
+  /** Detach from the window and the document (the app builds a new UI after a save reset). */
+  dispose() {
+    window.removeEventListener('resize', this.onResize);
+    this.nav.dispose();
   }
 
   /**
@@ -1448,6 +1456,16 @@ export class UI {
     const stepIn = (e: Event, to: HTMLElement | null | undefined) => {
       if (!e.isTrusted && to) this.nav.focus(to, false);
     };
+    // A list entry opens on a click and on keyboard / gamepad focus. A pointer passing over it only
+    // highlights it: it may be on its way to the open entry's page, links and chips.
+    const onPick = (it: HTMLElement, open: () => void) => it.addEventListener('navfocus', (e) => {
+      if (!(e as CustomEvent).detail?.hover) open();
+    });
+    // the open entry carries .sel (the pointer's highlight can be on another one)
+    const mark = (it: Element | null) => {
+      list.querySelector('.coll-item.sel')?.classList.remove('sel');
+      it?.classList.add('sel');
+    };
     if (tab === 'recipes') {
       // dish list → the proper recipe (the detail scrolls on its own; Enter walks into it)
       list.classList.add('dishes');
@@ -1469,7 +1487,7 @@ export class UI {
           it.classList.add('sel');
           this.renderRecipe(detail, r);
         };
-        it.addEventListener('navfocus', select);
+        onPick(it, select);
         it.addEventListener('click', (e) => {
           select();
           if (e.isTrusted) revealDetail();
@@ -1526,7 +1544,7 @@ export class UI {
         const d = ENEMIES[id];
         const known = seen.has('e:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(id === start ? { 'data-nav-default': '' } : {}) }, img(foeIcon(d.sprite)));
-        it.addEventListener('navfocus', () => showE(id));
+        onPick(it, () => showE(id));
         it.addEventListener('click', (e) => {
           showE(id);
           if (e.isTrusted) revealDetail();
@@ -1561,11 +1579,13 @@ export class UI {
         const d = WEAPONS[id];
         const known = seen.has('w:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.icon)));
-        it.addEventListener('navfocus', () => showW(id));
-        it.addEventListener('click', () => { showW(id); revealDetail(); });
+        const open = () => { mark(it); showW(id); };
+        onPick(it, open);
+        it.addEventListener('click', () => { open(); revealDetail(); });
         list.appendChild(it);
       });
       showW(ids[0]);
+      mark(list.firstElementChild);
       body = h('div', { class: 'coll' }, list, detail);
     } else if (tab === 'passives') {
       const ids = Object.keys(PASSIVES);
@@ -1590,11 +1610,13 @@ export class UI {
         const d = PASSIVES[id];
         const known = seen.has('p:' + id);
         const it = h('div', { class: 'coll-item' + (known ? '' : ' unseen'), 'data-nav': '', ...(i === 0 ? { 'data-nav-default': '' } : {}) }, img(icon(d.icon)));
-        it.addEventListener('navfocus', () => showP(id));
-        it.addEventListener('click', () => { showP(id); revealDetail(); });
+        const open = () => { mark(it); showP(id); };
+        onPick(it, open);
+        it.addEventListener('click', () => { open(); revealDetail(); });
         list.appendChild(it);
       });
       showP(ids[0]);
+      mark(list.firstElementChild);
       body = h('div', { class: 'coll' }, list, detail);
     } else {
       body = h('div', {},

@@ -124,6 +124,7 @@ class App {
     this.ui.closeOverlay();
     this.ui.clearScreen();
     this.ui.removeHud();
+    this.ui.dispose();
     document.getElementById('ui')!.replaceChildren();
     this.ui = new UI(this);
     this.attract = null; // the title background must not show now-locked chefs/stages
