@@ -1338,7 +1338,8 @@ export class UI {
 
   // ------------------------------------------------------------------ results
 
-  showResults(run: Run, victory: boolean, unlocks: { icon: string; text: string }[], newRecord = false) {
+  /** @param newDish a dish this service unlocked: the results then lead straight to it on Il Menù */
+  showResults(run: Run, victory: boolean, unlocks: { icon: string; text: string }[], newRecord = false, newDish?: StageDef) {
     this.removeHud();
     this.overlay?.remove();
     this.overlay = null;
@@ -1397,9 +1398,16 @@ export class UI {
             h('tbody', {}, rows),
           ),
         ),
-        h('div', { class: 'panel-foot' },
-          this.btn('↻ Ancora', 'green', () => this.app.startRun(run.char.id, run.stage.id), 'Play again', { 'data-nav-default': '' }),
-          this.btn('Menu', 'cream', () => this.app.toTitle(), 'Main menu'),
+        h('div', { class: 'panel-foot' + (newDish ? ' three' : '') },
+          // a new dish on the menu: the way to it is the default (Il Menù opens on it, same chef)
+          newDish ? this.btn('Il Menù ▶', 'green', () => {
+            this.selectedChar = run.char.id;
+            this.selectedStage = newDish.id;
+            audio.playMusic('menu');
+            this.showStageSelect();
+          }, 'Next dish', { 'data-nav-default': '' }) : null,
+          this.btn('↻ Ancora', newDish ? 'cream' : 'green', () => this.app.startRun(run.char.id, run.stage.id), 'Play again', newDish ? {} : { 'data-nav-default': '' }),
+          this.btn('Titolo', 'cream', () => this.app.toTitle(), 'Title screen'),
         ),
       ),
     );

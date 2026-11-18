@@ -431,6 +431,11 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 /* ------------------------------------------------------------------ results */
 .results .panel { width: min(900px, 100%); flex: 0 1 auto; min-height: 0; }
 .results .panel-foot { flex: none; }
+/* three buttons (a new dish leads to Il Menù) stay on one row on a narrow phone */
+@media (max-width: 480px) {
+  .results .panel-foot.three { gap: 8px; padding-left: 8px; padding-right: 8px; flex-wrap: nowrap; }
+  .results .panel-foot.three .btn { font-size: 17px; padding: 8px 11px 9px; min-width: 0; }
+}
 .res-title { font-family: var(--font-title); font-size: clamp(48px, calc(9vw / var(--z, 1)), 96px); text-align: center; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
 .res-title.win { color: var(--gold); }
 .res-title.lose { color: var(--red); }
