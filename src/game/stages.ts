@@ -58,7 +58,7 @@ export interface StageVariant {
   /** darkness ramp over the run (overrides darkness) */
   nightRamp?: [number, number];
   /** extra decor made of existing props (see src/gfx/envvariants.ts) */
-  decor?: 'tomatoes' | 'basil' | 'lemons' | 'sea' | 'osteria' | 'embers' | 'pantry';
+  decor?: 'morning' | 'tomatoes' | 'basil' | 'lemons' | 'sea' | 'osteria' | 'bologna' | 'embers' | 'pantry';
 }
 
 export type TierId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6';
@@ -444,7 +444,7 @@ const SPECS: StageSpec[] = [
   // ------------------------------------------------------------------ 1 · Le Basi
   {
     id: 'pomodoro', env: 'kitchen', tier: 'T1', bosses: ['b_scatolone', 'b_microonde', 'b_ketchup'], unlock: null, accent: '#e8442f',
-    variant: { label: 'morning', tint: '#fff6e8', darkness: 0, vignette: 0.22, particles: 'dust', decor: 'tomatoes' },
+    variant: { label: 'morning', tint: '#eef4ff', darkness: 0, vignette: 0.15, particles: 'dust', decor: 'morning' },
     minutes: [
       // gentle opening: a few squeeze bottles and as many rolling meatballs; the leaping chicken waits for minute 3.
       // The snapped spaghetti are a fifth of the heads (they come in clumps), no longer of the picks, so the
@@ -487,7 +487,7 @@ const SPECS: StageSpec[] = [
   // ------------------------------------------------------------------ 2 · Primi Romani
   {
     id: 'carbonara', env: 'kitchen', tier: 'T2', bosses: ['b_influencer', 'b_alfredo', 'b_panna'], unlock: { anyOf: ['pomodoro'] }, accent: '#f2b632',
-    variant: { label: 'warm', tint: '#ffe9cf', darkness: 0, vignette: 0.3, particles: 'flour', decor: 'pantry' },
+    variant: { label: 'warm', tint: '#ffe6b0', darkness: 0.14, darkColor: '#2a160c', vignette: 0.4, particles: 'flour', decor: 'pantry' },
     minutes: [
       M([['piselli', 2], ['bacon', 2]]),
       M([['piselli', 2], ['bacon', 2], ['panna', 2]]),
@@ -526,7 +526,7 @@ const SPECS: StageSpec[] = [
   },
   {
     id: 'alfredo', env: 'trattoria', tier: 'T3', bosses: ['b_microonde', 'b_panna', 'b_alfredo'], bossHpMul: [1.25, 1.1, 1.2], unlock: { anyOf: ['carbonara'] }, accent: '#e9c46a',
-    variant: { label: 'lunch', tint: '#fff4e2', darkness: 0.1, darkColor: '#2a1a12', vignette: 0.3, particles: 'dust', decor: 'lemons' },
+    variant: { label: 'lunch', tint: '#fffaf0', darkness: 0.04, darkColor: '#2a1a12', vignette: 0.25, particles: 'dust', decor: 'lemons' },
     minutes: [
       // cream opens with a few shrimp and mushy pasta; the broccoli lobs and the gluey Alfredo puddles
       // from minute 2, the leaping chicken from minute 3
@@ -724,7 +724,7 @@ const SPECS: StageSpec[] = [
   // ------------------------------------------------------------------ Dal Nord
   {
     id: 'ragu', env: 'trattoria', tier: 'T5', bosses: ['b_scatolone', 'b_microonde', 'b_bolognese'], bossHpMul: [0.5, 0.45, 0.7], rateMul: 1.15, unlock: { anyOf: ['cacioepepe', 'marinara'] }, accent: '#8a3a2a',
-    variant: { label: 'Bologna afternoon', tint: '#ffe2b8', darkness: 0.16, darkColor: '#2a160c', vignette: 0.36, particles: 'dust', decor: 'osteria' },
+    variant: { label: 'Bologna afternoon', tint: '#ffcf96', darkness: 0.26, darkColor: '#2a160c', vignette: 0.45, particles: 'dust', decor: 'bologna' },
     minutes: [
       // no ranged crimes in Bologna: the pressure comes from the ghosts, the garlic's buff, the meatballs
       // and a few frozen lasagne (the microwave at 10:00 brings more)

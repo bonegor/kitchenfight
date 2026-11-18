@@ -5,20 +5,29 @@
  * same tiles and props, overridden `ambient`, plus a few decor props per chunk (no
  * colliders, so the spawn area and paths stay exactly as in the base environment).
  */
-import { STAGE_ENVS, registerStageEnv, type StageEnv, type PropPlacement } from './stageenv';
+import { STAGE_ENVS, registerStageEnv, type StageEnv, type PropPlacement, type PropLight } from './stageenv';
 import { spriteSpec } from './sprites';
 import type { StageDef, StageVariant } from '../game/stages';
 
 /** Decor sets: [sprite, weight, layer, breakable hp?, debris?] — all existing props. */
 type Decor = [string, number, 'floor' | 'sorted', number?, string?];
 const DECOR: Record<NonNullable<StageVariant['decor']>, Decor[]> = {
+  // Pomodoro: morning sun through the windows, basil on the sills (the base kitchen has a sun patch in about one chunk in three)
+  morning: [['prop.kitchen.sunpatch', 2.2, 'floor'], ['prop.common.basil_pot', 1.4, 'sorted'], ['prop.common.puddle_small', 0.6, 'floor']],
+  // Ragù: a Bolognese dining room, candles lit for the afternoon, sauce on the floor
+  bologna: [['prop.trattoria.candelabra', 1.2, 'sorted', 2, 'glass'], ['prop.trattoria.amphora', 1.2, 'sorted', 2, 'wood'], ['prop.trattoria.bread_basket', 1, 'sorted', 2, 'straw'], ['prop.kitchen.sauce_b', 1.2, 'floor']],
   tomatoes: [['prop.common.crate_tomato', 2, 'sorted', 2, 'tomato'], ['prop.kitchen.sauce_a', 1.5, 'floor'], ['prop.kitchen.sauce_b', 1, 'floor'], ['prop.kitchen.basil_leaves', 1.2, 'floor']],
   basil: [['prop.common.basil_pot', 2, 'sorted'], ['prop.kitchen.basil_leaves', 2, 'floor'], ['prop.streets.leaves', 1, 'floor']],
-  lemons: [['prop.common.crate_lemon', 2, 'sorted', 2, 'wood'], ['prop.trattoria.petals', 1.5, 'floor'], ['prop.trattoria.crumbs', 1, 'floor']],
+  lemons: [['prop.common.crate_lemon', 2, 'sorted', 2, 'wood'], ['prop.trattoria.flower_vase', 1.2, 'sorted', 1, 'glass'], ['prop.trattoria.petals', 1.5, 'floor']],
   sea: [['prop.common.crate_lemon', 1.5, 'sorted', 2, 'wood'], ['prop.common.puddle', 1.5, 'floor'], ['prop.common.puddle_small', 1.5, 'floor'], ['prop.streets.petals', 0.6, 'floor']],
   osteria: [['prop.trattoria.wine_crate', 1.6, 'sorted', 2, 'glass'], ['prop.trattoria.wine_stain', 1.5, 'floor'], ['prop.trattoria.crumbs', 1, 'floor'], ['prop.trattoria.napkin_drop', 0.8, 'floor']],
   embers: [['prop.common.crate_tomato', 1.5, 'sorted', 2, 'tomato'], ['prop.kitchen.peels', 1.4, 'floor'], ['prop.kitchen.sauce_b', 1, 'floor'], ['prop.common.crumbs', 1, 'floor']],
-  pantry: [['prop.common.crate', 1.2, 'sorted', 2, 'wood'], ['prop.kitchen.flour_a', 1, 'floor'], ['prop.kitchen.peels', 1, 'floor'], ['prop.common.crumbs', 1.2, 'floor']],
+  // Carbonara: the larder, wheels of cheese and stacked crates (both rare in the base kitchen)
+  pantry: [['prop.kitchen.parmigiano', 1.5, 'sorted'], ['prop.common.crate_stack', 1, 'sorted', 3, 'wood'], ['prop.kitchen.flour_a', 1.2, 'floor']],
+};
+/** Decor that is a light where the base environment places it lights the dark the same way here. */
+const DECOR_LIGHT: Record<string, PropLight> = {
+  'prop.trattoria.candelabra': { r: 190, color: '#ffb35a', intensity: 0.9, flicker: 0.45, oy: -118 },
 };
 
 function pick(list: Decor[], r: number): Decor {
@@ -86,6 +95,7 @@ function makeVariant(base: StageEnv, st: StageDef): StageEnv {
         const p: PropPlacement = { sprite: d[0], x, y, flip };
         if (d[2] === 'floor') p.layer = 'floor';
         if (d[3]) p.breakable = { hp: d[3], debris: d[4] ?? 'wood' };
+        if (DECOR_LIGHT[d[0]]) p.light = { ...DECOR_LIGHT[d[0]] };
         out.push(p);
       }
       return out;
