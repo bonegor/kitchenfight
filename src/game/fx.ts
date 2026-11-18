@@ -3,7 +3,7 @@
  * bubbles, screen shake, flashes. All pooled, all cheap.
  */
 import { drawSprite, hasSprite } from '../gfx/sprites';
-import { TAU, RNG } from '../core/math';
+import { TAU, RNG, clamp } from '../core/math';
 
 export interface Particle {
   x: number; y: number; z: number;
@@ -356,7 +356,14 @@ export class FX {
     ctx.globalAlpha = 1;
   }
 
-  drawBubbles(ctx: CanvasRenderingContext2D, font: string) {
+  /**
+   * @param free the view below the HUD's top band (world units). A big bubble is kept inside it, so the taunt
+   *   of a boss arriving at the screen edge can be read; small bubbles stay over their speaker
+   * @param busy [y0, y1] of what the HUD lays across the screen for a while (toasts, the big banner): a big
+   *   bubble slips over or under them
+   * @param chef his bubbles are left alone (he stands mid-screen)
+   */
+  drawBubbles(ctx: CanvasRenderingContext2D, font: string, free?: { x0: number; y0: number; x1: number; y1: number }, busy: [number, number][] = [], chef?: object) {
     for (const b of this.bubbles) {
       const age = b.max - b.life;
       const appear = Math.min(1, age / 0.18);
@@ -367,20 +374,39 @@ export class FX {
       ctx.font = `${size}px ${font}`;
       const w = ctx.measureText(b.text).width + 16;
       const h = size + 12;
-      const x = b.target.x, y = b.target.y + b.oy;
+      const r = h / 2;
+      let x = b.target.x, y = b.target.y + b.oy;
+      // the tail hangs under the bubble at this x; none (NaN) once the speaker is no longer below it
+      let tail = 0;
+      if (free && b.big && b.target !== chef) {
+        const mx = w / 2 + 6;
+        const cx = free.x1 - free.x0 > mx * 2 ? clamp(x, free.x0 + mx, free.x1 - mx) : (free.x0 + free.x1) / 2;
+        const hi = free.y1 - r - 12, lo = Math.min(free.y0 + r + 4, hi);
+        let cy = clamp(y, lo, hi);
+        for (const [b0, b1] of busy) {
+          if (cy + r + 8 <= b0 || cy - r >= b1) continue;
+          // over it or under it, whichever is nearer and has room
+          const over = b0 - r - 12, under = b1 + r + 4;
+          cy = over >= lo && (cy - over <= under - cy || under > hi) ? over : under <= hi ? under : cy;
+        }
+        tail = cy > y + 1 || Math.abs(x - cx) > w / 2 ? NaN : clamp(x - cx, -w / 2 + r + 4, w / 2 - r - 6);
+        x = cx;
+        y = cy;
+      }
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(s, s);
       ctx.globalAlpha = Math.min(1, vanish * 1.5);
       // bubble
       ctx.beginPath();
-      const r = h / 2;
       ctx.moveTo(-w / 2 + r, -h / 2);
       ctx.lineTo(w / 2 - r, -h / 2);
       ctx.arc(w / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2);
-      ctx.lineTo(6, h / 2);
-      ctx.lineTo(-2, h / 2 + 8);
-      ctx.lineTo(-4, h / 2);
+      if (!Number.isNaN(tail)) {
+        ctx.lineTo(tail + 6, h / 2);
+        ctx.lineTo(tail - 2, h / 2 + 8);
+        ctx.lineTo(tail - 4, h / 2);
+      }
       ctx.lineTo(-w / 2 + r, h / 2);
       ctx.arc(-w / 2 + r, 0, r, Math.PI / 2, (Math.PI * 3) / 2);
       ctx.closePath();

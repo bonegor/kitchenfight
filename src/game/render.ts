@@ -16,6 +16,21 @@ const TELL_RED = '#ff2a1a';
 /** Bosses whose own wind-up cue is green: the red tell is not laid over those green pixels. */
 const SPARE_GREEN = new Set(['b_aglio']);
 
+/**
+ * What the DOM HUD covers, in CSS px from the top of the screen. `top`: where its fixed top band ends (XP bar,
+ * timer, recipe strip, slots, counters, boss bar). `toastTop`…`toastBottom`: the toasts showing now; they sit
+ * under the band, or at the bottom edge on a short screen. `bannerTop`…`bannerBottom`: the big banner across
+ * the middle. Both are 0, 0 when there is none.
+ */
+export interface HudCover {
+  top: number;
+  toastTop: number;
+  toastBottom: number;
+  bannerTop: number;
+  bannerBottom: number;
+}
+const NO_HUD: HudCover = { top: 0, toastTop: 0, toastBottom: 0, bannerTop: 0, bannerBottom: 0 };
+
 interface DrawItem {
   y: number;
   k: 0 | 1 | 2 | 3; // prop, enemy, player, projectile
@@ -142,7 +157,8 @@ export class Renderer {
     run.camY = this.camY;
   }
 
-  render(run: Run, dt: number, input: Input | null) {
+  /** @param hud what the DOM HUD covers: boss taunts and edge arrows keep out of it */
+  render(run: Run, dt: number, input: Input | null, hud: HudCover = NO_HUD) {
     this.t += dt;
     const ctx = this.ctx;
     const env = run.world.env;
@@ -276,8 +292,17 @@ export class Renderer {
     ctx.setTransform(z, 0, 0, z, ox, oy);
     setFastBase(z, ox, oy);
     run.fx.drawTexts(ctx, FONT);
-    run.fx.drawBubbles(ctx, FONT);
-    this.drawIndicators(run);
+    // the HUD's cover in world units. An arrow stops at the fixed top band (the toasts under it come and go: it
+    // would hop) and above toasts at the bottom edge (short screens). A boss's taunt keeps out of the band and
+    // slips past the toasts and the banner.
+    const band = hud.top / this.zoom;
+    const toasts = hud.toastBottom > hud.toastTop;
+    const below = toasts && hud.toastTop > this.H / 2 ? (this.H - hud.toastTop) / this.zoom : 0;
+    this.drawIndicators(run, band, below);
+    const busy: [number, number][] = [];
+    if (toasts) busy.push([v.y0 + hud.toastTop / this.zoom, v.y0 + hud.toastBottom / this.zoom]);
+    if (hud.bannerBottom > hud.bannerTop) busy.push([v.y0 + hud.bannerTop / this.zoom, v.y0 + hud.bannerBottom / this.zoom]);
+    run.fx.drawBubbles(ctx, FONT, { x0: v.x0, y0: v.y0 + band, x1: v.x1, y1: v.y1 }, busy, pl);
 
     this.mark('texts');
     // ------------------------------------------------ screen space post
@@ -999,21 +1024,31 @@ export class Renderer {
     }
   }
 
-  private drawIndicators(run: Run) {
+  /** Arrows at the screen edge towards what is off screen. @param top, bottom what the HUD covers there (world units) */
+  private drawIndicators(run: Run, top: number, bottom: number) {
     const ctx = this.ctx;
     const v = run.view;
     const cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2;
-    const targets: { x: number; y: number; c: string; big: boolean; size?: number }[] = [];
+    const targets: { x: number; y: number; c: string; big: boolean; size?: number; gap?: number }[] = [];
     for (const b of run.bosses) if (b.alive && !run.onScreen(b.x, b.y, -10)) targets.push({ x: b.x, y: b.y, c: '#ff3b2f', big: true });
     for (const p of run.pickups) if (p.alive && p.kind === 'chest' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#ffd34d', big: false });
-    // real ingredients: the biggest arrow on screen
-    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && !run.onScreen(p.x, p.y, -10)) targets.push({ x: p.x, y: p.y, c: '#7cff8a', big: true, size: 16 });
+    // real ingredients: the biggest arrow on screen; it stays while the badge is in view but under the HUD's
+    // top band, and then points at the badge from just below it
+    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && (!run.onScreen(p.x, p.y, -10) || p.y - 31 < v.y0 + top)) targets.push({ x: p.x, y: p.y - 14, c: '#7cff8a', big: true, size: 16, gap: 17 });
     for (const t of targets) {
       const a = Math.atan2(t.y - cy, t.x - cx);
-      const hw = (v.x1 - v.x0) / 2 - 26, hh = (v.y1 - v.y0) / 2 - 26;
-      const k = Math.min(hw / Math.abs(Math.cos(a) || 1e-6), hh / Math.abs(Math.sin(a) || 1e-6));
+      const size = t.size ?? (t.big ? 13 : 10);
+      const hw = (v.x1 - v.x0) / 2 - 26;
+      let hh = (v.y1 - v.y0) / 2 - 26;
+      // the arrow stops clear of the HUD (the XP bar, timer, recipe strip, slots and boss bar on top; toasts at the
+      // bottom of a short screen), not under it; it still keeps off the chef (hat 52 units over the view centre, feet 45 under)
+      const len = size * 1.1 + 3;
+      if (Math.sin(a) < 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - top - len, 52 + len));
+      else if (bottom > 0) hh = Math.min(hh, Math.max((v.y1 - v.y0) / 2 - bottom - len, 45 + len));
+      let k = Math.min(hw / Math.abs(Math.cos(a) || 1e-6), hh / Math.abs(Math.sin(a) || 1e-6));
+      if (t.gap) k = Math.min(k, Math.hypot(t.x - cx, t.y - cy) - t.gap - len);
       const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
-      const s = (t.size ?? (t.big ? 13 : 10)) * (1 + Math.sin(this.t * 6) * 0.1);
+      const s = size * (1 + Math.sin(this.t * 6) * 0.1);
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(a);
