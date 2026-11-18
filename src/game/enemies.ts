@@ -75,6 +75,13 @@ export interface EnemyDef {
   split?: { into: string; count: number };
 }
 
+/**
+ * What an enemy's own shot does, as a share of its touch (ai.ts). A lobber's direct hit counts like any
+ * other shot; the cloud its lob leaves ticks for LOB_CLOUD_DMG of the touch.
+ */
+export const SHOT_DMG: Partial<Record<BehaviorKind, number>> = { ranged: 0.5, burster: 0.7, lobber: 0.5 };
+export const LOB_CLOUD_DMG = 0.2;
+
 export const ENEMIES: Record<string, EnemyDef> = {};
 function E(d: EnemyDef) {
   ENEMIES[d.id] = d;

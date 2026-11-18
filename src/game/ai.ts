@@ -3,7 +3,7 @@
  */
 import type { Run } from './run';
 import type { Enemy } from './entities';
-import { ENEMIES } from './enemies';
+import { ENEMIES, LOB_CLOUD_DMG, SHOT_DMG } from './enemies';
 import { TAU } from '../core/math';
 import { BOSS_PATTERNS } from './bosses';
 
@@ -182,7 +182,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const spread = P.spread ?? 0;
         for (let i = 0; i < n; i++) {
           const off = n > 1 ? (i / (n - 1) - 0.5) * spread * 2 : 0;
-          const sh = shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * 0.5);
+          const sh = shoot(run, e, a + off, P.shotSpeed ?? 160, P.shot ?? 'proj.e_generic', e.damage * SHOT_DMG.ranged!);
           if (P.muzzle) {
             sh.x = e.x + P.muzzle[0] * e.face * e.scale;
             sh.y = e.y + P.muzzle[1] * e.scale;
@@ -209,8 +209,9 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const p = run.player;
         const tx = p.x + p.vx * 0.6, ty = p.y + p.vy * 0.6;
         const area = P.area ?? 'cheese';
-        lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage, (x, y) => {
-          hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * 0.2);
+        // a direct hit of the lob counts like any other enemy shot; the cloud it leaves ticks for a fifth of the touch
+        lobShot(run, e, tx, ty, 0.9, P.shot ?? 'proj.e_generic', e.damage * SHOT_DMG.lobber!, (x, y) => {
+          hazard(run, area, x, y, P.r ?? 34, 3.5, P.slow ?? 0.3, e.damage * LOB_CLOUD_DMG);
           run.fx.burst(x, y, 10, { colors: LAND_SPLASH[area as HazardKind] ?? ['#fff6d6', '#f4e3a6'], speed: 140, size: 4, life: 0.5 });
         });
         e.attackPose = 0.3;
@@ -410,7 +411,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         e.timer = P.cd ?? 3;
         const n = P.count ?? 8;
         e.bossT = (e.bossT + 0.4) % TAU;
-        for (let i = 0; i < n; i++) shoot(run, e, e.bossT + (i / n) * TAU, P.shotSpeed ?? 150, P.shot ?? 'proj.e_ketchup', e.damage * 0.7);
+        for (let i = 0; i < n; i++) shoot(run, e, e.bossT + (i / n) * TAU, P.shotSpeed ?? 150, P.shot ?? 'proj.e_ketchup', e.damage * SHOT_DMG.burster!);
         e.attackPose = 0.3;
         run.sfx('enemy_shoot', { volume: 0.35, pitch: 1.2 }, e.x);
       }
