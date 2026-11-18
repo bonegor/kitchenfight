@@ -235,7 +235,8 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
         const hop = P.hop ?? 0.45;
         const k = 1 - e.timer / hop;
         e.z = Math.sin(k * Math.PI) * (P.height ?? 16);
-        const sp = (P.hopSpeed ?? 150) * (e.speed / Math.max(1, d.speed));
+        // the hop itself keeps its own speed (± the spawn jitter): a dish's speed factor shortens the rest between hops instead
+        const sp = ((P.hopSpeed ?? 150) * e.speed) / Math.max(1, d.speed * e.pace);
         e.x += e.ax * sp * dt;
         e.y += e.ay * sp * dt;
         e.face = e.ax > 0 ? 1 : -1;
@@ -245,7 +246,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
           e.state = 0;
           e.z = 0;
           e.squash = 0.8;
-          e.timer = (P.rest ?? 0.6) * (0.8 + Math.random() * 0.4);
+          e.timer = ((P.rest ?? 0.6) * (0.8 + Math.random() * 0.4)) / e.pace;
         }
       }
       break;

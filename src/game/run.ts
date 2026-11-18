@@ -9,10 +9,10 @@ import { World, PropInst } from './world';
 import { Stats, baseStats, StatMod, CharacterDef, WeaponStats, CHEF_SPEED } from './types';
 import { WEAPONS, WeaponInstance, BASE_WEAPON_IDS } from './weapons';
 import { PASSIVES, POWERUPS } from './passives';
-import { ENEMIES, EnemyDef, ELITE_DMG } from './enemies';
+import { ENEMIES, EnemyDef, ELITE_DMG, SPEED_JITTER } from './enemies';
 import { updateEnemy, onEnemyDeath } from './ai';
 import { Director } from './director';
-import { buffFactor, waveSpeed, type StageDef } from './stages';
+import { buffFactor, paceFactor, waveSpeed, type StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
@@ -306,7 +306,8 @@ export class Run {
     e.add = !!o.add;
     // a dish's speed factor moves everything but its bosses and its heavy bodies (phased in and capped: see waveSpeed)
     const pace = this.director.speedScale();
-    e.speed = (e.boss ? def.speed : waveSpeed(def, pace)) * (e.elite ? 0.9 : 1) * (0.92 + this.rng.next() * 0.16);
+    e.speed = (e.boss ? def.speed : waveSpeed(def, pace)) * (e.elite ? 0.9 : 1) * (1 - SPEED_JITTER + this.rng.next() * 2 * SPEED_JITTER);
+    e.pace = e.boss ? 1 : paceFactor(def, pace);
     e.damage = def.damage * (e.elite ? ELITE_DMG : 1) * this.director.dmgScale(e.add ? this.stage.bossDmg : undefined);
     e.xp = def.xp;
     e.kx = e.ky = e.vx = e.vy = 0;

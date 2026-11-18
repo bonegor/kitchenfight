@@ -58,6 +58,8 @@ export class Enemy {
   buff = 0; // speed buff timer (garlic aura)
   /** how much faster it acts while buffed: GARLIC_BUFF, less where the dish's speed factor has used up the room (Run.spawnEnemy) */
   buffMul = 1;
+  /** how much quicker than its own pace it walks in this dish (the dish's speed factor after the cap; Run.spawnEnemy). A hopper rests that much less */
+  pace = 1;
   slamR = 0; // boss leap impact radius
   bossStep = 0; // index into the boss attack rotation
   /** boss: seconds a slow would have cost the running attack, owed to the pause after it (Run.updateEnemies) */

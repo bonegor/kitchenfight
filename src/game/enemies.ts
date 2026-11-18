@@ -93,11 +93,15 @@ export const GARLIC_BUFF = 1.35;
 
 /**
  * The devourer (La Pentola Unica) grows with every crime it swallows: ×scale in size up to maxScale,
- * ×hp in health, ×dmg in damage.
+ * ×hp in health, ×dmg in damage. Its touch does not grow (dmg 1): it is a heavy body, and a heavy
+ * body needs five touches to bring down a chef with no pantry at any size (the hit-size rule in
+ * stages.ts checks touchGrowth); a fed pot is wider and tougher, not harder-hitting.
  */
-export const DEVOUR = { scale: 1.1, maxScale: 1.9, hp: 1.25, dmg: 1.035 };
+export const DEVOUR = { scale: 1.1, maxScale: 1.9, hp: 1.25, dmg: 1 };
+/** Every enemy's walk speed is spread by ± this share when it spawns (Run.spawnEnemy); the speed caps in stages.ts leave room for it. */
+export const SPEED_JITTER = 0.08;
 
-/** The most a touch can grow after spawning: a fully fed devourer (×1.27); 1 for everything else. */
+/** The most a touch can grow after spawning: a fully fed devourer (DEVOUR.dmg a meal); 1 for everything else. */
 export function touchGrowth(def: EnemyDef): number {
   if (def.behavior !== 'devourer') return 1;
   // it hunts while its scale is below maxScale, so the last meal may take it past the cap
@@ -176,7 +180,7 @@ E({
 });
 E({
   id: 'ananas', name: 'Ananas Corazzato', en: 'Armoured Pineapple', sprite: 'enemy.ananas',
-  radius: 22, hp: 60, speed: 38, damage: 11, xp: 5, behavior: 'chase', knockResist: 0.6, heavy: true,
+  radius: 22, hp: 60, speed: 38, damage: 10, xp: 5, behavior: 'chase', knockResist: 0.6, heavy: true,
   color: 'yellow', juice: '#ffd23f', chunk: 'pineapple', split: { into: 'ananas_pezzo', count: 4 },
   info: { crime: 'Pineapple on pizza', why: 'Sweet tinned fruit wrecks the savoury balance of tomato and mozzarella. Italians rate it −63. (Plot twist: a famous Naples pizzaiolo put pineapple on his menu in 2023 — and Italy split in half.)', severity: 5, quote: '"Pineapple, a fruit, on a pizza?" — Gino D\'Acampo on British TV (as reported)' },
 });

@@ -17,7 +17,7 @@
 import type { MusicId } from '../audio/audio';
 import { RECIPES, recipeById, intruderIn, type Course, type RecipeDef } from './recipes';
 import type { StageAmbient } from '../gfx/stageenv';
-import { ELITE_DMG, ENEMIES, GARLIC_BUFF, REGULAR_ENEMY_IDS, SHOT_DMG, touchGrowth, type EnemyDef } from './enemies';
+import { ELITE_DMG, ENEMIES, GARLIC_BUFF, REGULAR_ENEMY_IDS, SHOT_DMG, SPEED_JITTER, touchGrowth, type EnemyDef } from './enemies';
 import { baseStats, CHEF_SPEED } from './types';
 
 export interface WaveMinute {
@@ -93,19 +93,25 @@ export interface Tier {
 //   dish, at any time; a dish's dmgBase only decides how early its waves get there (2.2: about
 //   9:15, 2.4: 8:40, 2.6: 8:10). Against a chef with no pantry (120 HP, no armor) that makes the
 //   touch of an ordinary walker 19 % of the bar at most (17 % for the cream, butter and clams
-//   that carry most dishes), a heavy body's 31 %, an elite's 40 %, a cursed can's blast 39 %, a
-//   shot 15 %; three walkers on a standing chef need six touches (2.7 s) to bring him down.
-//   hitRuleProblems() checks all of it against HIT_CAP and SURVIVES_TOUCHES for every dish, so
-//   a retune of this table cannot bring the big hits back.
+//   that carry most dishes), a heavy body's 24 %, an elite's 36 %, a cursed can's blast 39 %, a
+//   shot 15 %. Ordinary walkers on a standing chef need six touches (2.7 s) to bring him down;
+//   a heavy body (frozen lasagne, armoured pineapple, Alfredo the Gluey, the single pot at any
+//   size) needs five (2.1 s) and walks at a quarter to two fifths of his pace; only an elite heavy
+//   body, a single announced event, can do it in three. hitRuleProblems() checks all of it against
+//   HIT_CAP, SURVIVES_TOUCHES and SURVIVES_HEAVY_TOUCHES for every dish, so a retune of this
+//   table cannot bring the big hits back.
 // - hpBase, dmgBase, bossDmg, max and speed rise (or hold) from T1 to T6. hpGrowth and rate rise
 //   from T1 to T5 and step back for T6 on purpose: the finale's own crowd (frozen lasagne,
 //   devouring pots, cursed cans, chargers, squeeze bottles) presses hardest by itself.
 // - `speed` is what took over from the hit size (the waves of T4 and T5 used to carry a dmgBase
 //   of 3.5 and 3.8, a third of a bar a touch): everything a dish spawns walks ×speed, phased in
 //   from 3:00 to 8:00 (SPEED_RAMP). waveSpeed() caps it: no walker is taken past 85 % of the
-//   chef's pace (WALKER_SPEED_CAP), not even under the garlic's aura (buffFactor); what is faster
-//   by design keeps its own speed (the rolling meatball, the orbiting pepper), and so do the
-//   heavy bodies and the bosses. At ×1.4 a cream carton walks at half the chef's pace.
+//   chef's pace (WALKER_SPEED_CAP, 112 px/s), the ±8 % spread of a spawn included, so a capped
+//   kind walks at 96–112 px/s, 79 % of his pace on average; the garlic's aura stays under the
+//   same cap (buffFactor). What is faster by design keeps its own speed (the rolling meatball,
+//   the orbiting pepper), and so do the heavy bodies and the bosses. A hopper's hop keeps its
+//   own speed too: the factor shortens its rest between hops instead (Enemy.pace). At ×1.4 a
+//   cream carton walks at half the chef's pace.
 // - The waves of T3–T5 carry far more hpGrowth and rate than the old stage each tier is measured
 //   against, for two reasons. The Il Menù intruders are softer than the old crowd (puddlers, a
 //   swarm, strafers, lobbers). And the old stages owed most of their pressure to boss fights of
@@ -113,8 +119,10 @@ export interface Tier {
 //   the waves carry the pressure.
 // - The openings stay gentle: hpBase phases in over the first 7 minutes (Director), a rate above
 //   1 over minutes 2–8 (RATE_RAMP, waves()), a speed above 1 from 3:00 to 8:00 and a dmgBase or
-//   bossDmg above 1 from 4:00 to 10:00 (DMG_RAMP). Up to 3:00 the dishes of T2–T6 differ only
-//   in who comes.
+//   bossDmg above 1 from 4:00 to 10:00 (DMG_RAMP). Up to 3:00 the dishes of T2–T6 hit and walk
+//   alike; they already differ in who comes, in numbers (max is not phased; rate from 2:00) and
+//   in toughness: hpGrowth counts from 0:00, so at 3:00 a T5 crime has 4× its base HP where a
+//   T2 crime has 1.3×.
 // - A boss hits by its tier's bossDmg, not by dmgBase (1.45–1.75 at full ramp is what the old
 //   stages' bosses hit with, the base damage in enemies.ts having been cut by a fifth), and so
 //   does everything it calls to its side (summon(): the Ragù's cursed cans cost a third of a
@@ -130,7 +138,8 @@ export interface Tier {
 //   (Director.spawnBoss). It is set for fights of about a minute and a half with the test bot in
 //   every tier: the bot's damage does not grow with the tier, so bossHp × hpBase is about level
 //   from T3 to T6 and bossHp itself falls. BOSS_HP_FACTOR evens out the bosses that are slow to
-//   bring down anywhere, and a dish scales single slots with StageSpec.bossHpMul.
+//   bring down anywhere, and a dish scales single slots with StageSpec.bossHpMul (the Vongole's
+//   5:00 Butter Block has ×0.75: at ×0.9 the bot beat it without a revive in 2 runs of 24).
 // - A dish whose intruders are softer than its tier-mates' asks for more of them
 //   (StageSpec.rateMul, phased in like `rate`) or for a quicker step (StageSpec.speedMul: the
 //   Pesto's cream, butter and oil); the Margherita's armoured pineapples and ketchup bursts ask
@@ -138,23 +147,30 @@ export interface Tier {
 // - Measured with the test bot (Enzo, a mid pantry of Olio 2, San Marzano 2, Grembiule 1 and
 //   Minestrone 1; 24 runs per dish and setting). The sim has no seeds and the deaths are bimodal:
 //   read a dish's figure as ±3.
-//   · deaths in minutes 5–15 with auto-revive: T1 0.1 · T2 0.2 · T3 6.1 · T4 8.3 · T5 11.8 ·
-//     T6 24.6 (the old stages with the same bot: kitchen 1.7 · trattoria 8.1 · streets 17.8 ·
-//     food court 29.7). By dish: Alfredo 7.4, Amatriciana 4.4, Margherita 6.5, Cacio e Pepe 9.7,
-//     Marinara 6.9, Ragù 12.5, Pesto 10.5, Vongole 12.3. T3 sits a quarter under its old stage,
-//     T6 a sixth, T5 a third, and T4 level with the trattoria (before the cap: 6.2 · 12.5 ·
-//     15.9 · 22.8). That is what capping the hits cost; speed, toughness and numbers have not
-//     bought all of it back. Every dish sits at or above the dishes that unlock it within that
-//     ±3; the Pesto measured 2 under the Ragù.
-//   · the 5:00 boss dies before the chef (no revive) in 58 % of the T3 runs, 42 % of T4, 33 % of
-//     T5 and 21 % of T6. The first death comes at a median of 7:05 in T3, 6:15 in T4, 6:03 in T5
-//     and 5:19 in T6.
-//   · a boss fight lasts 73–129 s on average from T3 up (51–81 s in T1 and T2); about one fight
-//     in eight goes over 150 s, mostly in runs the bot is losing badly, and none is under 20 s.
-//   · with no pantry, 3 runs of 264 ended before 2:30 (two in the Pomodoro, one in Cacio e Pepe)
-//     and 15 before 3:20. The first three minutes of every dish are as they were before the
-//     hit-size rule (96 runs of the Pomodoro and 96 of Cacio e Pepe on either build: 3 and 2
-//     ended before 2:30).
+//   · deaths in minutes 5–15 with auto-revive: T1 0.1 · T2 0.3 · T3 6.4 · T4 8.0 · T5 10.3 ·
+//     T6 24.2 (the old stages with the same bot: kitchen 1.7 · trattoria 8.1 · streets 17.8 ·
+//     food court 29.7). By dish: Alfredo 9.8, Amatriciana 4.0, Margherita 5.4, Cacio e Pepe 9.7,
+//     Marinara 6.4, Ragù 9.7, Pesto 9.7, Vongole 11.4. T3 and T6 sit a fifth under their old
+//     stage, T5 two fifths, and T4 level with the trattoria (before the cap: 6.2 · 12.5 · 15.9 ·
+//     22.8). That is what capping the hits cost.
+//   · T4 and T5 are one band on this count, and no wave knob moves it: with the hits capped the
+//     bot's deaths in T5 stayed within the ±3 for speed ×1.2 or ×1.4, hpGrowth ×1.25, rateMul
+//     up to 1.5 and a cap of live enemies ×1.2 or ×1.4 (the crowd of T4 and T5 sits at 85–95 %
+//     of `max` from 6:00 on, so a higher rate adds nothing). T5 is the tougher tier in what the
+//     bot cannot shrug off: its first boss falls in 28 % of the runs against 48 %, and its
+//     crimes carry more HP. Telling the two apart by deaths needs a new pattern in the T5
+//     crowds, not a number in this table.
+//   · the 5:00 boss dies before the chef (no revive) in 74 % of the T3 runs, 48 % of T4, 28 % of
+//     T5 and 4 % of T6 (single dishes swing by ±15 points between rounds of 24). The first death
+//     comes at a median of 7:14 in T3, 6:06 in T4, 6:17 in T5 and 5:08 in T6.
+//   · a boss fight lasts 66–138 s on average from T3 up (54–89 s in T1 and T2); about one fight
+//     in eight goes over 150 s, mostly in runs the bot is losing badly. A strong build ends a
+//     fight in 16–25 s now and then, and a weak one leaves the finale's 10:00 Influencer or the
+//     Pesto's Frullatore standing in about one run of 24.
+//   · with no pantry, 1 run of 264 ended before 2:30 (Cacio e Pepe, the weaker bot, at 1:46) and
+//     14 before 3:20; over 480 more such runs of four dishes about 1 % ended before 2:30. The
+//     hit-size rule left the first three minutes of T1–T3 as they were; in T4 and T5 the
+//     crimes are 5–11 % tougher there than before it (hpGrowth 0.42 → 0.5 and 0.5 → 0.55).
 // =====================================================================================
 export const TIERS: Record<TierId, Tier> = {
   T1: { label: 'pomodoro ≈ La Cucina ×0.9', hpBase: 0.9, hpGrowth: 0.1, dmgBase: 0.85, bossDmg: 0.85, rate: 0.74, max: 0.8, speed: 1, bossHp: [1300, 2100, 3300] },
@@ -198,10 +214,12 @@ export function dmgFactor(base: number, time: number): number {
 
 /** A dish's speed factor above 1 is ×1 up to the first second here and phases in linearly to full at the second. */
 export const SPEED_RAMP: [number, number] = [180, 480];
-/** The speed factor of a dish never takes a walker past this share of the chef's base pace. */
+/** The speed factor of a dish never takes a walker past this share of the chef's base pace, the spawn jitter (SPEED_JITTER) included. */
 export const WALKER_SPEED_CAP = 0.85;
 /** A heavy body (EnemyDef.heavy) walks at no more than this share of the chef's base pace, in every dish. */
 export const HEAVY_SPEED_CAP = 0.4;
+/** The fastest nominal walk the speed factor may give: the quickest of a type (+SPEED_JITTER) then walks at exactly WALKER_SPEED_CAP. */
+export const WALKER_SPEED_MAX = (CHEF_SPEED * WALKER_SPEED_CAP) / (1 + SPEED_JITTER);
 
 /** A dish's speed factor at `time` seconds: a factor above 1 phases in over SPEED_RAMP (the openings stay as they are). */
 export function speedFactor(mul: number, time: number): number {
@@ -210,27 +228,33 @@ export function speedFactor(mul: number, time: number): number {
 }
 
 /**
- * Walk speed of a non-boss enemy in a dish whose speed factor is `factor`: its own speed × the factor,
- * but never past WALKER_SPEED_CAP of the chef's base pace. What is that fast by design (the rolling
- * meatball, the orbiting pepper) keeps its own speed, and so does a heavy body: its harder hit is
- * fair because it is slow. Dashes, leaps and stampedes have their own speeds and are not touched; a
- * hopper's hop scales with its walk.
+ * Nominal walk speed of a non-boss enemy in a dish whose speed factor is `factor` (Run.spawnEnemy
+ * spreads it by ±SPEED_JITTER): its own speed × the factor, but never past WALKER_SPEED_MAX, so that
+ * even the quickest of its kind stays within WALKER_SPEED_CAP of the chef's base pace. What is that
+ * fast by design (the rolling meatball, the orbiting pepper) keeps its own speed, and so does a heavy
+ * body: its harder hit is fair because it is slow. Dashes, leaps, stampedes and a hopper's hop have
+ * their own speeds and are not touched (a hopper rests less instead: paceFactor).
  */
 export function waveSpeed(def: EnemyDef, factor: number): number {
   if (factor <= 1) return def.speed * factor;
   if (def.heavy) return def.speed;
-  return Math.min(def.speed * factor, Math.max(def.speed, CHEF_SPEED * WALKER_SPEED_CAP));
+  return Math.min(def.speed * factor, Math.max(def.speed, WALKER_SPEED_MAX));
+}
+
+/** How much quicker than its own pace an enemy walks in a dish (1 for a heavy body; what waveSpeed left of the dish's factor for the rest). */
+export function paceFactor(def: EnemyDef, factor: number): number {
+  return def.speed > 0 ? waveSpeed(def, factor) / def.speed : 1;
 }
 
 /**
  * How much faster a crime acts under the garlic's aura in a dish whose speed factor is `factor`: the
- * aura's GARLIC_BUFF, as long as that leaves a walker under WALKER_SPEED_CAP of the chef's pace. Past
- * it, the dish's factor and the aura together give no more than the larger of the cap and what the
- * aura alone gives that crime (a buffed pasta-snapper was at 80 % of the chef's pace before any factor).
+ * aura's GARLIC_BUFF, as long as that leaves a walker under WALKER_SPEED_MAX. Past it, the dish's
+ * factor and the aura together give no more than the larger of that and what the aura alone gives
+ * that crime (a buffed pasta-snapper was at 80 % of the chef's pace before any factor).
  */
 export function buffFactor(def: EnemyDef, factor: number): number {
   const inDish = waveSpeed(def, factor);
-  const allowed = Math.max(def.speed * GARLIC_BUFF, Math.min(inDish * GARLIC_BUFF, CHEF_SPEED * WALKER_SPEED_CAP));
+  const allowed = Math.max(def.speed * GARLIC_BUFF, Math.min(inDish * GARLIC_BUFF, WALKER_SPEED_MAX));
   return Math.max(1, Math.min(GARLIC_BUFF, allowed / inDish));
 }
 
@@ -772,7 +796,7 @@ const SPECS: StageSpec[] = [
   },
   // ------------------------------------------------------------------ Dal Sud e dal Mare
   {
-    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], bossHpMul: [0.9, 1, 1], rateMul: 1.5, unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
+    id: 'vongole', env: 'streets', tier: 'T5', bosses: ['b_burro', 'b_panna', 'b_grattugiato'], bossHpMul: [0.75, 1, 1], rateMul: 1.5, unlock: { anyOf: ['marinara', 'pesto'] }, accent: '#3f7fd8',
     variant: { label: 'seaside morning', tint: '#dcecff', darkness: 0.04, darkColor: '#0c1a30', vignette: 0.3, particles: 'dust', decor: 'sea' },
     minutes: [
       // the clams lead, butter and cream join early; the grated cheese waits for minute 3 and takes over late
@@ -999,6 +1023,8 @@ export const HIT_CAP = {
 const LATE = 1500;
 /** An ordinary walker must need more than this many touches to bring down a chef at full health. */
 export const SURVIVES_TOUCHES = 5;
+/** A heavy body (EnemyDef.heavy, at any size) must need more than this many: the fifth touch may kill, the fourth never. */
+export const SURVIVES_HEAVY_TOUCHES = 4;
 
 /** Where and when a dish spawns a crime: wave minutes count at their end (the hardest moment), events at their time. */
 export interface StageSpawn { id: string; t: number; elite: boolean; where: string }
@@ -1031,10 +1057,11 @@ export function hitClass(def: EnemyDef, elite = false): 'walker' | 'heavy' {
 /**
  * The hit-size rule and its companions (empty = OK), for every dish:
  * - no touch, blast or shot of anything the waves and events spawn passes its HIT_CAP at any time, and
- *   SURVIVES_TOUCHES touches of an ordinary walker never bring down a chef at full health;
+ *   SURVIVES_TOUCHES touches of an ordinary walker never bring down a chef at full health, nor do
+ *   SURVIVES_HEAVY_TOUCHES of a heavy body (a fully fed pot included; elites are bounded by HIT_CAP only);
  * - nothing a boss could call to its side passes HIT_CAP.heavy (adds hit by bossDmg);
  * - a heavy body stays slow (HEAVY_SPEED_CAP), and the dish's speed factor takes no walker past
- *   WALKER_SPEED_CAP of the chef's pace, with or without the garlic's aura;
+ *   WALKER_SPEED_CAP of the chef's pace, with or without the garlic's aura, the spawn jitter included;
  * - no inversion: the waves' damage factor never falls from one tier to the next, and no walker
  *   out-hits the touch of its dish's own 10:00 boss.
  */
@@ -1060,10 +1087,12 @@ export function hitRuleProblems(): string[] {
       if (shot) note(sp.id + (sp.elite ? '+' : '') + ' shot', v * shot, HIT_CAP.shot, `${st.id} ${sp.where}: the shot of ${what} hits for ${(v * shot).toFixed(1)} = ${pc(v * shot)} of the chef's ${hp} HP (shots and lobs: at most ${100 * HIT_CAP.shot}%)`);
       if (!sp.elite && def.behavior !== 'kamikaze' && v > walker) { walker = v; walkerId = sp.id; }
       if (cls === 'walker' && v * SURVIVES_TOUCHES >= hp - 1e-9) note(sp.id + ' touches', v, 0, `${st.id} ${sp.where}: ${SURVIVES_TOUCHES} touches of ${sp.id} (${v.toFixed(1)} each) bring down a chef with ${hp} HP: he must survive ${SURVIVES_TOUCHES}`);
+      if (def.heavy && !sp.elite && v * SURVIVES_HEAVY_TOUCHES >= hp - 1e-9) note(sp.id + ' touches', v, 0, `${st.id} ${sp.where}: ${SURVIVES_HEAVY_TOUCHES} touches of the heavy ${sp.id} (${v.toFixed(1)} each) bring down a chef with ${hp} HP: he must survive ${SURVIVES_HEAVY_TOUCHES}`);
       if (def.heavy && waveSpeed(def, st.speed) > CHEF_SPEED * HEAVY_SPEED_CAP + 1e-9) note(sp.id + ' speed', Infinity, 0, `${st.id}: the heavy ${sp.id} walks at ${waveSpeed(def, st.speed).toFixed(0)} px/s, over ${100 * HEAVY_SPEED_CAP}% of the chef's ${CHEF_SPEED}`);
-      // the guard rail of the speed factor: nothing slower than the cap is taken past it, with or without the garlic's aura
-      const cap = CHEF_SPEED * WALKER_SPEED_CAP, sped = waveSpeed(def, st.speed), buffed = sped * buffFactor(def, st.speed);
-      if (sped > Math.max(def.speed, cap) + 1e-9 || buffed > Math.max(def.speed * GARLIC_BUFF, cap) + 1e-9) note(sp.id + ' pace', Infinity, 0, `${st.id}: ${sp.id} walks at ${sped.toFixed(0)} px/s (${buffed.toFixed(0)} under the garlic's aura), past ${100 * WALKER_SPEED_CAP}% of the chef's ${CHEF_SPEED}`);
+      // the guard rail of the speed factor: nothing slower than the cap is taken past it, with or without the garlic's aura,
+      // and that holds for the quickest of a type (the spawn jitter is counted in)
+      const J = 1 + SPEED_JITTER, cap = CHEF_SPEED * WALKER_SPEED_CAP, sped = waveSpeed(def, st.speed) * J, buffed = sped * buffFactor(def, st.speed);
+      if (sped > Math.max(def.speed * J, cap) + 1e-9 || buffed > Math.max(def.speed * J * GARLIC_BUFF, cap) + 1e-9) note(sp.id + ' pace', Infinity, 0, `${st.id}: the quickest ${sp.id} walks at ${sped.toFixed(0)} px/s (${buffed.toFixed(0)} under the garlic's aura), past ${100 * WALKER_SPEED_CAP}% of the chef's ${CHEF_SPEED}`);
     }
     for (const w of worst.values()) out.push(w.msg);
     // anything a boss might call (summon) hits by bossDmg, however long the fight lasts
