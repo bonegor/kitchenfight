@@ -16,7 +16,8 @@
  *
  * Editorial calls where the spec left a choice:
  *  - the Pomodoro has no sugar intruder: the research supports "Zucchero" (contested), but no
- *    enemy fits it;
+ *    enemy fits it. Its page says nothing about sugar in the sauce, so its `sources` hold no
+ *    article on that either, as a chef credit or as a plain source (they are in docs/RECIPES.md);
  *  - Alfredo's 'parmesan' (imitation 'Parmesan') and the Marinara's 'cheddar' are required by
  *    the spec, but the research has no dish-specific evidence for them: their texts are adapted
  *    from its pizza entries (Coldiretti on imitation 'Parmesan' and 'Anglo-Saxon cheddar') and

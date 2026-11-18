@@ -1126,6 +1126,11 @@ two, its popularity is **inherited** from those entries, not separately research
 - **No sugar enemy in the Pomodoro.** The research supports sugar (4, contested), but no enemy fits it.
   Other researched intruders with no fitting enemy are left out too (tomato and pancetta in the Carbonara,
   vinegar in the Amatriciana…); each dish's "Also researched" list names them.
+- **No sugar sources on the Pomodoro's page.** The page says nothing about sugar in the sauce, so the
+  two articles against it (Il Fatto Quotidiano on Antonino Cannavacciuolo, Trend Online with Irina
+  Steccanella) are not in the dish's `sources`, neither under *Gli chef* nor as plain *Fonti*: there
+  they would back a claim the page does not make. Both are cited in the Pomodoro's
+  ["Also researched" entry](#1-spaghetti-al-pomodoro).
 - **Alfredo's imitation "Parmesan" and the Marinara's cheddar** are required by the level design, but the
   research has no dish-specific evidence for them. Their texts are adapted from the pizza research
   (Coldiretti on imitation "Parmesan" and "Anglo-Saxon cheddar") and cite that pizza source. Their
