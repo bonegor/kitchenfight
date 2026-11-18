@@ -1338,7 +1338,8 @@ function populateStreets(cx: number, cy: number, rnd: () => number): PropPlaceme
   const nd = L.int(3, 6);
   for (let i = 0; i < nd; i++) {
     const s = L.weighted([['prop.streets.leaves', 2], ['prop.streets.petals', 2], ['prop.common.puddle', 1.3], ['prop.common.puddle_small', 1.3], ['prop.streets.newspaper', 0.6], ['prop.streets.crumbs', 0.8], ['prop.streets.hopscotch', 0.25]]);
-    L.floor(s, ...L.pt(60), L.chance(0.5));
+    // chalk numerals and a masthead are never mirrored (the coin is still tossed: every layout stays as it was)
+    L.floor(s, ...L.pt(60), L.chance(0.5) && s !== 'prop.streets.hopscotch' && s !== 'prop.streets.newspaper');
   }
   return L.out;
 }
