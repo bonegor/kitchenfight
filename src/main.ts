@@ -18,7 +18,8 @@ import { Run, RunHooks } from './game/run';
 import { Renderer } from './game/render';
 import { UI } from './ui/ui';
 import { stageById, STAGES, isDishUnlocked, refreshUnlocks } from './game/stages';
-import { charById, CHARACTERS } from './game/passives';
+import { charById, CHARACTERS, refreshChefs } from './game/passives';
+import { awardSaveMedals } from './game/medals';
 import { WEAPONS, BASE_WEAPON_IDS } from './game/weapons';
 import type { Enemy } from './game/entities';
 import { awardMedals } from './game/medals';
@@ -27,6 +28,15 @@ import { awardMedals } from './game/medals';
 function prepareSave(s: SaveData): SaveData {
   refreshUnlocks(s);
   if (!isDishUnlocked(s, s.lastStage)) s.lastStage = STAGES[0].id;
+  // The same for the chefs and the medals the save alone has earned (a migrated save's carried-over
+  // wins count), so the chef picker and the Record tab agree with the menu from the first screen
+  // on. Quietly: these are not this session's doing, and no results screen should announce them.
+  try {
+    refreshChefs(s);
+    awardSaveMedals(s);
+  } catch {
+    /* a damaged save: left as it is */
+  }
   return s;
 }
 
@@ -276,13 +286,7 @@ class App {
       this.save.lastStage = fresh[0].id;
       this.ui.selectedStage = fresh[0].id;
     }
-    for (const c of CHARACTERS) {
-      if (this.save.unlockedChars.includes(c.id) || !c.unlock?.check) continue;
-      if (c.unlock.check(this.save)) {
-        this.save.unlockedChars.push(c.id);
-        unlocks.push({ icon: c.sprite, text: `New chef unlocked: ${c.name}, ${c.title}!` });
-      }
-    }
+    for (const c of refreshChefs(this.save)) unlocks.push({ icon: c.sprite, text: `New chef unlocked: ${c.name}, ${c.title}!` });
     for (const m of awardMedals(this.save, run, victory)) unlocks.push({ icon: m.icon, text: `Medal: ${m.name} — ${m.desc}` });
     this.persist();
     audio.setMusicMuffled(false);

@@ -110,3 +110,14 @@ export const CHARACTERS: CharacterDef[] = [
 export function charById(id: string): CharacterDef {
   return CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0];
 }
+
+/** Unlock every chef whose rule the save meets (the rules read the save alone). Returns the newly unlocked chefs. */
+export function refreshChefs(s: SaveData): CharacterDef[] {
+  const out: CharacterDef[] = [];
+  for (const c of CHARACTERS) {
+    if (s.unlockedChars.includes(c.id) || !c.unlock?.check?.(s)) continue;
+    s.unlockedChars.push(c.id);
+    out.push(c);
+  }
+  return out;
+}

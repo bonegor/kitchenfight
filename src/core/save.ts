@@ -43,7 +43,14 @@ export interface SaveData {
   settings: Settings;
 }
 
-const KEY = 'kitchenfight.save.v1';
+/**
+ * Each save format has a storage key of its own. The build before Il Menù reads and writes only
+ * the v1 key and cannot play a v2 save (it would show all of its stages locked), so this build
+ * keeps its saves under the v2 key and treats the v1 key as the old build's: read to carry a
+ * player's progress over, never written, never removed.
+ */
+const KEY = 'kitchenfight.save.v2';
+const LEGACY_KEY = 'kitchenfight.save.v1';
 /** Save format version: 2 = Il Menù (dishes replace the four stages). */
 export const SAVE_VERSION = 2;
 
@@ -118,6 +125,8 @@ function merge<T extends object>(base: T, loaded: Partial<T>): T {
  * unlocked list restarts from the first dish (+ the finale if it was already open: it
  * is never taken away), and lastStage moves to the mapped dish. The caller then adds
  * every dish whose unlock rule the carried-over wins satisfy (stages.ts refreshUnlocks).
+ * The 'giro' medal is handed back: it meant "all four stages" and now means all the dishes,
+ * and a v1 save carries wins for five of them at most. It is earned again on the full menu.
  */
 export function migrateSave(s: SaveData): SaveData {
   if ((s.version ?? 1) >= SAVE_VERSION) return s;
@@ -135,13 +144,16 @@ export function migrateSave(s: SaveData): SaveData {
   const hadFinale = s.unlockedStages.includes('foodcourt');
   s.unlockedStages = ['pomodoro', ...(hadFinale ? ['foodcourt'] : [])];
   if (LEGACY_LAST[s.lastStage]) s.lastStage = LEGACY_LAST[s.lastStage];
+  if (Array.isArray(s.achievements)) s.achievements = s.achievements.filter((id) => id !== 'giro');
   s.version = SAVE_VERSION;
   return s;
 }
 
 export function loadSave(): SaveData {
   try {
-    const raw = localStorage.getItem(KEY);
+    // no v2 save yet: carry over the old build's save (it is migrated below and stays as it is;
+    // the first write puts the result under the v2 key)
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
     if (!raw) return defaultSave();
     const parsed = JSON.parse(raw);
     // a v1 save has no 'version' 2: the defaults must not mask its legacy fields
@@ -163,11 +175,13 @@ export function writeSave(s: SaveData) {
   }
 }
 
+/**
+ * Start over. The fresh save is written at once: with the v2 key present, an old v1 save is not
+ * carried over again on the next load. The v1 key itself is left alone: it is the old build's
+ * save, and that build may still be played in this browser.
+ */
 export function resetSave(): SaveData {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* ignore */
-  }
-  return defaultSave();
+  const s = defaultSave();
+  writeSave(s);
+  return s;
 }
