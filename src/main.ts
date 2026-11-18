@@ -218,7 +218,7 @@ class App {
         onGameOver: () => this.finishRun(false),
         onVictory: () => this.finishRun(true),
         onRevive: () => this.ui.toast('Bis! A second helping of life.', 'good'),
-        onToast: (t, k) => this.ui.toast(t, k),
+        onToast: (t, k, ico) => this.ui.toast(t, k, ico),
         onIngredient: (index: number, complete: boolean) => {
           // the HUD recipe strip pops its ✓ by itself (it watches run.recipeGot)
           const r = run.recipe;

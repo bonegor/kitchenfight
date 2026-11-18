@@ -6,30 +6,38 @@
  * real names, and contested items keep their nuance ("purists", "the row simmers").
  * Toasts read "<it> <inDish>? NO! <reason>" and stay within ~80 characters, so they fit
  * on one or two lines on a phone. The full reasons are in the Ricettario.
+ *
+ * Every toast says in English what the intruder is: in its reason ("chicken is a second course"),
+ * or, where the reason has no room for it, as a gloss after the Italian name ("Piselli (peas)
+ * nella Carbonara? NO!", see GLOSS).
+ *
+ * The dish's extras (the snapped spaghetti, the cold pot…) are not intruders: their toast names a
+ * crime of method, never an ingredient "in" the dish (see EXTRA).
  */
+import { ENEMIES } from './enemies';
 import type { RecipeDef, RecipeIntruder } from './recipes';
 
 /** dish id → enemy id → short reason */
 const SIGHTING: Record<string, Record<string, string>> = {
   pomodoro: {
     ketchup: "Voted Italy's worst food crime of all.",
-    polpetta: "In Italy they're a second course.",
+    polpetta: 'A second course in Italy.',
     pollo: 'In Italy chicken is a second course.',
   },
   carbonara: {
     panna: 'Yolk, Pecorino and pasta water make it creamy.',
-    cipolla: "Guanciale, egg, Pecorino, pepper. That's all.",
+    cipolla: 'Just guanciale, egg, Pecorino and pepper.',
     bacon: 'It wants guanciale: cured pork cheek.',
     aglio: "Purists ban it (though 1954's recipe had a clove).",
     parmesan: 'Pecorino leads; a little blend is fine.',
     pollo: 'Guanciale is the only meat.',
     piselli: 'A classic fake-carbonara add-on.',
-    funghi: 'A foreign add-on with no place in the Roman dish.',
+    funghi: 'Not Roman: a frequent foreign add-on.',
     prosciutto: 'Cooked ham is not guanciale.',
     burro: 'The fat is rendered guanciale.',
   },
   alfredo: {
-    panna: 'Real Alfredo is butter and Parmigiano.',
+    panna: "It's just butter and Parmigiano.",
     pollo: "'Chicken Alfredo' is unknown in Rome.",
     alfredo: "That's the US chain version.",
     broccoli: 'Lovely in other pasta, not here.',
@@ -39,7 +47,7 @@ const SIGHTING: Record<string, Record<string, string>> = {
   },
   amatriciana: {
     aglio: 'The EU recipe rules (STG) exclude it.',
-    cipolla: 'Excluded by the 2020 EU rules. The row simmers.',
+    cipolla: "2020's EU rules say no. The row simmers.",
     bacon: 'The EU recipe rules (STG) want guanciale.',
     parmesan: "It's finished with pecorino.",
   },
@@ -47,7 +55,7 @@ const SIGHTING: Record<string, Record<string, string>> = {
     burro: 'Pecorino, pepper, pasta water. Basta.',
     panna: 'The cream is Pecorino whipped with water.',
     parmesan: "'Cacio' here means Pecorino Romano.",
-    olio: 'Purists say the fat comes from the cheese.',
+    olio: 'Purists say no oil: the cheese is the fat.',
   },
   margherita: {
     ananas: 'Not in the EU or AVPN rules.',
@@ -87,6 +95,22 @@ const SIGHTING: Record<string, Record<string, string>> = {
 };
 
 /**
+ * dish id → enemy id → English gloss, for the toasts whose reason never says in English what the
+ * intruder is: "Burro (butter) nel Pesto? NO! Today's Genoese pesto uses olive oil only."
+ */
+const GLOSS: Record<string, Record<string, string>> = {
+  pomodoro: { polpetta: 'meatballs' },
+  carbonara: { cipolla: 'onion', pollo: 'chicken', piselli: 'peas', funghi: 'mushrooms', burro: 'butter' },
+  alfredo: { panna: 'cream', gamberi: 'shrimp', aglio: 'garlic' },
+  amatriciana: { aglio: 'garlic', cipolla: 'onion' },
+  cacioepepe: { burro: 'butter' },
+  margherita: { pollo: 'chicken' },
+  ragu: { aglio: 'garlic' },
+  pesto: { burro: 'butter' },
+  vongole: { burro: 'butter' },
+};
+
+/**
  * Toast-sized names, where dropping the explanation would change the meaning: the crime in a
  * carbonara is Parmigiano *instead of* pecorino (a little in the blend is fine).
  */
@@ -104,9 +128,61 @@ export function shortIntruderName(i: RecipeIntruder, home?: RecipeDef): string {
  * `home` is the dish the crime is about (the finale's intruders come from other dishes).
  */
 export function sightingToast(home: RecipeDef, i: RecipeIntruder): string {
-  const head = `${shortIntruderName(i, home)} ${home.inDish}? NO!`;
+  const gloss = GLOSS[home.id]?.[i.enemy];
+  const head = `${shortIntruderName(i, home)}${gloss ? ` (${gloss})` : ''} ${home.inDish}? NO!`;
   const reason = SIGHTING[home.id]?.[i.enemy];
   if (reason) return head + ' ' + reason;
   // no short line yet: the dataset line when it is short enough, else just the head
   return i.line.length + head.length < 90 ? head + ' ' + i.line : head;
+}
+
+/**
+ * The extras of the dishes (RecipeDef.extras): enemy id → [the crime in Italian, short reason].
+ * They are crimes of method (how not to cook or eat it) or other crimes around the dish, not
+ * ingredients that do not belong in it, so the toast reads "<crime>? NO! <reason>" with no dish.
+ * Every reason is a condensed form of the enemy's card (info.crime / info.why in enemies.ts): no
+ * new facts. The same ~80 characters as the intruders' toasts.
+ */
+const EXTRA: Record<string, [it: string, reason: string]> = {
+  spezzato: ['Spezzare gli spaghetti', 'Never snap long pasta: it softens into the pot.'],
+  forbici: ['Tagliare gli spaghetti', 'Twirl them on a fork: no knife, no scissors.'],
+  scotta: ['Pasta scotta', 'Overcooked and mushy. Pasta should be al dente, with a bite.'],
+  scotta_mini: ['Sciacquare la pasta', 'Rinsing washes off the starch that makes sauce cling.'],
+  pentola: ['Pasta in acqua fredda', 'Never cold water: it goes in at a rolling boil.'],
+  pentolaunica: ['Tutto in una pentola', 'One-pot pasta: Italians build the sauce separately.'],
+  scatoletta: ['Carbonara in scatola', 'Canned? Carbonara is an emulsion made to order.'],
+  surgelata: ['Lasagna surgelata', 'A Sunday ritual: hours in the oven, not a frozen brick.'],
+  ananas_pezzo: ['Ananas in scatola', 'Tinned pineapple chunks: not even in small pieces.'],
+  polpetta: ['Spaghetti con polpette', 'In Italy meatballs are a main course on their own.'],
+  smartphone: ['Ricette virali', 'Every year a viral video sends Italians to the comment box.'],
+  cappuccino: ['Cappuccino a pranzo', 'Breakfast only, though Italians argue how strictly.'],
+  frappe: ['Frappè gigante', 'Italian coffee is an espresso, not a dessert in disguise.'],
+  glassa: ['Glassa balsamica', 'Real balsamic is aged 12 years or more, a drop at a time.'],
+  pastachips: ['Patatine di pasta', 'A 2021 trend: pasta air-fried into crisps. Minor crime.'],
+  alfredo: ['Salsa Alfredo in barattolo', 'Jarred cream-and-chicken Alfredo is American.'],
+  macchiata: ['Ketchup sulla pizza', "The pizza version of Italians' number one food crime."],
+  hawaiana: ['Pizza hawaiana', 'Ham and pineapple: born in Ontario, Canada, in 1962.'],
+  pepperoni: ['Pizza "pepperoni"', 'In Italian, peperoni are bell peppers. Order a diavola.'],
+};
+
+/** Extras that are crimes of method: how the dish is cooked or eaten, not what is put in it. */
+const METHOD = new Set(['spezzato', 'forbici', 'scotta', 'scotta_mini', 'pentola', 'pentolaunica', 'scatoletta', 'surgelata']);
+
+/** Are all of these extras crimes of method ("Crimini di metodo"), or a mixed lot ("Altri crimini")? */
+export function allMethodCrimes(extras: string[]): boolean {
+  return extras.every((id) => METHOD.has(id));
+}
+
+/** An extra's crime in Italian, as its toast names it: "Spezzare gli spaghetti" (else the enemy's name). */
+export function extraName(enemyId: string): string {
+  return EXTRA[enemyId]?.[0] ?? ENEMIES[enemyId]?.name ?? enemyId;
+}
+
+/**
+ * First-sighting toast of an extra: "Spezzare gli spaghetti? NO! Never snap long pasta: it softens
+ * into the pot." An extra with no line of its own gets its card's crime.
+ */
+export function extraToast(enemyId: string): string {
+  const x = EXTRA[enemyId];
+  return x ? `${x[0]}? NO! ${x[1]}` : `${ENEMIES[enemyId]?.info.crime ?? extraName(enemyId)}? NO!`;
 }

@@ -16,7 +16,7 @@ import type { StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
 import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
-import { sightingToast } from './sightings';
+import { sightingToast, extraToast } from './sightings';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
 import type { SaveData } from '../core/save';
@@ -39,6 +39,8 @@ export interface ChestReward {
   amount?: number;
 }
 
+interface QueuedToast { text: string; kind: 'info' | 'warn' | 'good'; icon?: string }
+
 export interface RunHooks {
   onLevelUp(): void;
   onChest(rewards: ChestReward[], gold: boolean): void;
@@ -47,7 +49,8 @@ export interface RunHooks {
   onGameOver(): void;
   onVictory(): void;
   onRevive(): void;
-  onToast(text: string, kind?: 'info' | 'warn' | 'good'): void;
+  /** @param icon a sprite shown beside the text (the intruder just sighted, the ingredient on the map) */
+  onToast(text: string, kind?: 'info' | 'warn' | 'good', icon?: string): void;
   /** a real ingredient was collected (index into run.recipe.ingredients); `complete` = it was the last one */
   onIngredient(index: number, complete: boolean): void;
 }
@@ -145,11 +148,14 @@ export class Run {
   recipeComplete = false;
   /** stat bonuses from collected ingredients (+ the recipe-complete reward) */
   ingredientMods: StatMod[] = [];
-  /** intruders already announced this run (first sighting toast) */
+  /** intruders and extras already announced this run (first sighting toast) */
   private sighted = new Set<string>();
   /** friend-or-foe notes already shown this run */
   private fofShown = new Set<string>();
-  private toastQueue: { text: string; kind: 'info' | 'warn' | 'good' }[] = [];
+  private toastQueue: QueuedToast[] = [];
+  /** first sightings of the dish's extras (method crimes): they wait for the intruders' toasts */
+  private extraToasts: QueuedToast[] = [];
+  private intruderSighted = false;
   private toastT = 4;
   private sightT = 0;
 
@@ -422,7 +428,10 @@ export class Run {
       hidden = true;
     }
     this.dropPickup('ingredient', x, y, index, false);
-    this.hooks.onToast(`${ing.it} is on the map! Follow the green arrow.`, 'good');
+    // the green arrow is only drawn while the badge is off screen (render.ts drawIndicators, same margin):
+    // a badge that appears in view is named as what there is to see
+    const inView = this.onScreen(x, y, -10);
+    this.hooks.onToast(`${ing.it} is on the map! ${inView ? 'Grab the golden badge.' : 'Follow the green arrow.'}`, 'good', ing.sprite);
   }
 
   /** How many real ingredients have been collected. */
@@ -1082,10 +1091,14 @@ export class Run {
       this.sightT = 0.4;
       this.checkSightings();
     }
-    if ((this.toastT -= dt) <= 0 && this.toastQueue.length) {
-      const t = this.toastQueue.shift()!;
-      this.hooks.onToast(t.text, t.kind);
-      this.toastT = 5;
+    if ((this.toastT -= dt) <= 0) {
+      // the intruders are the lesson: a method crime's toast is shown when none of theirs is waiting,
+      // and not before the first intruder has been named (or 30 s have passed)
+      const t = this.toastQueue.shift() ?? (this.intruderSighted || this.time > 30 ? this.extraToasts.shift() : undefined);
+      if (t) {
+        this.hooks.onToast(t.text, t.kind, t.icon);
+        this.toastT = 5;
+      }
     }
 
     if (this.freezeT > 0) this.freezeT -= dt;
@@ -1802,30 +1815,41 @@ export class Run {
   }
 
   /** Queue a toast (rate-limited so sightings and notes do not flood the screen). False = queue full, dropped. */
-  queueToast(text: string, kind: 'info' | 'warn' | 'good' = 'info'): boolean {
+  queueToast(text: string, kind: 'info' | 'warn' | 'good' = 'info', icon?: string): boolean {
     if (this.toastQueue.length >= Run.TOAST_QUEUE) return false;
-    this.toastQueue.push({ text, kind });
+    this.toastQueue.push({ text, kind, icon });
     return true;
   }
 
   /** At most this many toasts wait in the queue (one is shown every 5 s). */
   static readonly TOAST_QUEUE = 6;
 
-  /** First sighting of each intruder of this dish: "<it> nella Carbonara? NO! <line>". */
+  /**
+   * First sighting of each intruder of this dish: "<it> nella Carbonara? NO! <line>", with the enemy's icon.
+   * The dish's extras (method crimes) get a toast of their own, "Spezzare gli spaghetti? NO! <line>",
+   * in a second queue that never takes a slot or a turn from the intruders.
+   */
   private checkSightings() {
     const r = this.recipe;
     if (!r) return;
     for (const e of this.enemies) {
-      // an intruder only counts as sighted once its toasts are queued: with no room
-      // (both toasts need a slot) it waits for a later check instead of being lost
-      if (this.toastQueue.length > Run.TOAST_QUEUE - 2) return;
       if (!e.alive || e.boss || !this.onScreen(e.x, e.y, -30)) continue;
       const intr = intruderIn(r, e.def.id);
-      if (!intr || this.sighted.has(intr.enemy)) continue;
+      if (!intr) {
+        if (!this.sighted.has(e.def.id) && r.extras.includes(e.def.id)) {
+          this.sighted.add(e.def.id);
+          this.extraToasts.push({ text: extraToast(e.def.id), kind: 'warn', icon: e.def.sprite });
+        }
+        continue;
+      }
+      // an intruder only counts as sighted once its toasts are queued: with no room
+      // (both toasts need a slot) it waits for a later check instead of being lost
+      if (this.sighted.has(intr.enemy) || this.toastQueue.length > Run.TOAST_QUEUE - 2) continue;
       this.sighted.add(intr.enemy);
+      this.intruderSighted = true;
       const home = intr.fromDish ? recipeById(intr.fromDish) ?? r : r;
       // short and punchy (≤ ~80 chars): the full reason is in the Ricettario
-      this.queueToast(sightingToast(home, intr), 'warn');
+      this.queueToast(sightingToast(home, intr), 'warn', e.def.sprite);
       const f = FRIEND_OR_FOE.find((x) => x.enemy === intr.enemy && x.foeIn.includes(r.id));
       if (f && !this.fofShown.has('e:' + f.enemy)) {
         this.fofShown.add('e:' + f.enemy);

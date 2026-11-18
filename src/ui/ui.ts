@@ -12,7 +12,7 @@ import { PASSIVES, POWERUPS, CHARACTERS, powerupCost, charById } from '../game/p
 import { ENEMIES, REGULAR_ENEMY_IDS, BOSS_IDS } from '../game/enemies';
 import { STAGES, COURSES, stageById, isDishUnlocked, unlockText, dishesWon, type StageDef } from '../game/stages';
 import { RECIPES, FRIEND_OR_FOE, recipeById, dishesForIntruder, intruderIn, type RecipeDef, type RecipeIntruder, type RecipeSource } from '../game/recipes';
-import { shortIntruderName } from '../game/sightings';
+import { shortIntruderName, extraName, allMethodCrimes } from '../game/sightings';
 import { shortOrigin, COURSE_EN, hostOf, shortDishName } from './recipetext';
 import type { Run, Choice, ChestReward } from '../game/run';
 import type { Enemy } from '../game/entities';
@@ -48,6 +48,9 @@ function foeIcon(id: string): string {
 }
 
 const COIN = () => icon('icon.coin');
+
+/** A section heading of a recipe page: Italian, with the English beside it. */
+const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
 
 type CollTab = 'recipes' | 'crimes' | 'weapons' | 'passives' | 'records';
 
@@ -963,21 +966,27 @@ export class UI {
     } else r.fps.classList.add('hidden');
   }
 
-  toast(text: string, kind: 'info' | 'warn' | 'good' = 'info') {
+  /** @param ico a sprite shown beside the text: the intruder just sighted, the ingredient on the map */
+  toast(text: string, kind: 'info' | 'warn' | 'good' = 'info', ico?: string) {
     if (!this.toastsEl) return;
     // the run-start dish banner covers the toast area: wait for it (then one every 0.7 s)
     if (this.hudClock < this.toastHoldUntil || this.toastWait.length) {
-      if (this.toastWait.length < 6) this.toastWait.push({ text, kind });
+      if (this.toastWait.length < 6) this.toastWait.push({ text, kind, ico });
       return;
     }
-    this.putToast(text, kind);
+    this.putToast(text, kind, ico);
   }
 
-  private putToast(text: string, kind: 'info' | 'warn' | 'good') {
+  private putToast(text: string, kind: 'info' | 'warn' | 'good', ico?: string) {
     if (!this.toastsEl) return;
     // first sightings: "Panna nella Carbonara? NO!" in bold, the reason after it
     const m = /^(.{2,60}\? NO!)\s+(.+)$/.exec(text);
-    const t = h('div', { class: 'toast ' + kind }, m ? [h('b', {}, m[1]), ' ', m[2]] : text);
+    const body = m ? [h('b', {}, m[1]), ' ', m[2]] : text;
+    // …and the enemy itself beside the sentence (the same icon as on the menu card's ✗ row), so the name is
+    // tied to a sprite on screen; an ingredient's toast shows its badge
+    const ingr = !!ico && ico.startsWith('ingr.');
+    const pic = ico && hasSprite(ico) ? img(ingr ? icon(ico) : foeIcon(ico), ingr ? 'ingr' : '') : null;
+    const t = h('div', { class: 'toast ' + kind + (pic ? ' pic' : '') }, pic ? [pic, h('span', {}, body)] : body);
     this.toastsEl.appendChild(t);
     // a short (landscape phone) screen keeps two: a third would reach down to the chef
     const max = window.innerHeight / (parseFloat(this.root.style.getPropertyValue('--z')) || 1) <= 520 ? 2 : 3;
@@ -996,7 +1005,7 @@ export class UI {
     }
     if (this.toastWait.length && c >= this.toastHoldUntil && c >= this.nextToastAt) {
       const t = this.toastWait.shift()!;
-      this.putToast(t.text, t.kind);
+      this.putToast(t.text, t.kind, t.ico);
       this.nextToastAt = c + 0.7;
     }
     if (this.bannerCur && c >= this.bannerCur.endT) {
@@ -1090,7 +1099,7 @@ export class UI {
   private bannerQ: { make: () => HTMLElement; ms: number; kind: 'plain' | 'hold' | 'boss' }[] = [];
   private bannerCur: { el: HTMLElement; endT: number } | null = null;
   private toastList: { el: HTMLElement; endT: number }[] = [];
-  private toastWait: { text: string; kind: 'info' | 'warn' | 'good' }[] = [];
+  private toastWait: { text: string; kind: 'info' | 'warn' | 'good'; ico?: string }[] = [];
   private toastHoldUntil = 0;
   private nextToastAt = 0;
 
@@ -1745,7 +1754,6 @@ export class UI {
     const rec = this.app.save.records[r.id];
     const link = (src: { url: string; name: string }, text = src.name, nav = false) =>
       h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', title: src.name, ...(nav ? { 'data-nav': '' } : {}) }, text);
-    const sec = (it: string, en: string) => h('h4', { class: 'rc-sec' }, it, h('span', {}, en));
     // the Italian chefs and creators behind the sources (recipe + intruder sources), one row each
     const chefs = new Map<string, RecipeSource[]>();
     const credit = (who: string, src: RecipeSource) => {
@@ -1803,6 +1811,7 @@ export class UI {
       h('p', { class: 'rc-method', 'data-nav': '' }, r.method),
       sec('Gli intrusi', 'What does not belong, and why'),
       r.intruders.map((i) => this.intruderRow(i, r)),
+      this.extrasRow(r),
       quote,
       h('div', { class: 'rc-fact', 'data-nav': '' }, h('b', {}, '💡 Lo sapevi? '), r.funFact),
       chefs.size
@@ -1854,6 +1863,35 @@ export class UI {
     );
     this.innerOnActivate(row);
     return row;
+  }
+
+  /**
+   * The dish's extras, the other enemies of its waves: crimes of method (snapped spaghetti, the cold pot),
+   * not ingredients that do not belong. A small row of their own: the enemy, the crime in Italian and in
+   * English (its card's words), and its crime card once it has been met.
+   */
+  private extrasRow(r: RecipeDef): HTMLElement[] {
+    const extras = r.extras.filter((id) => ENEMIES[id]);
+    if (!extras.length) return [];
+    const row = h('div', { class: 'rc-ings rc-extras', 'data-nav': '' }, extras.map((id) => {
+      const d = ENEMIES[id];
+      let card: HTMLElement | null = null;
+      if (this.app.save.seen.includes('e:' + id)) {
+        card = h('span', { class: 'tag crime-link', 'data-nav': '', title: 'Open its card in Crimini' }, '⚖ Crimine ›');
+        card.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audio.sfx('ui_click');
+          this.showCollection('crimes', id, { tab: 'recipes', focus: r.id });
+        });
+      }
+      return h('div', { class: 'rc-ing' },
+        img(foeIcon(d.sprite), 'foe', d.name),
+        h('div', {}, h('b', {}, extraName(id)), h('span', { class: 'en' }, d.info.crime), card),
+      );
+    }));
+    this.innerOnActivate(row);
+    const method = allMethodCrimes(extras);
+    return [sec(method ? 'Crimini di metodo' : 'Altri crimini', method ? 'Not ingredients: how not to cook it' : 'Other crimes that turn up in the waves'), row];
   }
 
   /**

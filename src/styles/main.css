@@ -314,6 +314,10 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .toast.warn { background: #ffd2c9; }
 .toast.good { background: #d6f5c9; }
 .toast b { color: var(--red-d); font-weight: normal; }
+/* a first sighting shows the enemy beside its sentence, an ingredient's toast its golden badge */
+.toast.pic { display: flex; align-items: center; gap: 9px; text-align: left; padding-left: 9px; }
+.toast.pic img { flex: none; width: 36px; height: 36px; margin: -5px 0; object-fit: contain; filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.3)); }
+.toast.pic img.ingr { width: 30px; height: 30px; margin: -3px 0; padding: 2px; border-radius: 50%; border: 2.5px solid var(--ink); background: radial-gradient(circle at 40% 35%, #fffef4, #ffe08a); filter: none; }
 /* a level-up, a chest or the pause menu: banners and toasts wait (ui.ts times them on game time) */
 #hud.frozen .big-banner, #hud.frozen .toast { animation-play-state: paused; }
 
@@ -537,6 +541,10 @@ table.dmg td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .rc-ing b { font-weight: normal; font-size: 16px; display: block; line-height: 1.1; }
 .rc-ing .en { font-size: 13px; color: var(--muted); display: block; }
 .rc-ing .note { font-family: var(--font-serif); font-style: italic; font-size: 13px; line-height: 1.3; color: var(--ink2); }
+/* the dish's extras (crimes of method): the same small grid, with the enemy instead of a golden badge */
+.rc-extras .foe { flex: none; width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.25)); }
+.rc-extras b { color: var(--red-d); }
+.rc-extras .tag { font-size: 11px; padding: 0 7px; margin-top: 2px; }
 .rc-method { font-family: var(--font-serif); font-size: 16px; line-height: 1.5; margin: 0; padding: 4px 6px; }
 .rc-intr { display: flex; gap: 10px; align-items: flex-start; padding: 8px 6px; border-bottom: 1px dashed rgba(43, 23, 18, 0.2); }
 .rc-intr .foe { width: 52px; height: 52px; object-fit: contain; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.25)); }
@@ -800,6 +808,8 @@ table.dmg td.star { color: var(--gold-d); font-size: 18px; -webkit-text-stroke: 
   .toasts, #hud.has-recipe .toasts { top: auto; bottom: calc(6px + var(--safe-bottom)); }
   .toasts { width: min(calc(92vw / var(--z, 1)), 760px); gap: 5px; }
   .toast { font-size: 15px; padding: 5px 12px; }
+  .toast.pic img { width: 30px; height: 30px; margin: -4px 0; }
+  .toast.pic img.ingr { width: 26px; height: 26px; margin: -3px 0; }
   .recipe-strip { padding: 2px 7px 2px 4px; gap: 3px; }
   .recipe-strip .rs-dish { width: 33px; height: 22px; }
   .recipe-strip .ri { width: 23px; height: 23px; }
