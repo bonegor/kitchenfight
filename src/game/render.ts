@@ -250,6 +250,8 @@ export class Renderer {
     this.drawShots(run);
     run.fx.drawParticles(ctx, 1, x0, y0, x1, y1);
     for (const p of vis) if (p.layer === 'overhead') this.drawProp(p, true);
+    // real ingredients float above every prop: a shelf, a tree or an awning never hides the one thing to find
+    for (const p of run.pickups) if (p.alive && p.kind === 'ingredient' && p.x > x0 - 30 && p.x < x1 + 30 && p.y > y0 - 30 && p.y < y1 + 40) this.drawIngredient(p);
     this.emitPropFx(run, vis, dt);
 
     this.mark('air');
@@ -503,7 +505,7 @@ export class Renderer {
       ctx.globalCompositeOperation = 'source-over';
     }
     if (p.kind === 'ingredient') {
-      this.drawIngredient(p);
+      this.drawIngredientRing(p); // the badge itself floats in the air layer
       return;
     }
     const big = p.kind === 'xp' && p.value >= 25;
@@ -532,18 +534,22 @@ export class Renderer {
     }
   }
 
-  /** A real ingredient: golden glow, pulsing ground ring, gold-rimmed badge, bobbing sprite. */
-  private drawIngredient(p: Pickup) {
+  /** A real ingredient's mark on the floor (drawn with the other pickups, under props and characters): a pulsing ring. */
+  private drawIngredientRing(p: Pickup) {
     const ctx = this.ctx;
-    const bob = Math.sin(p.t * 3.2) * 3 - 6;
-    const y = p.y - p.z + bob - 8;
-    // pulsing ring on the ground
     const k = (p.t * 0.8) % 1;
     ctx.strokeStyle = `rgba(255,214,90,${0.7 * (1 - k)})`;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.ellipse(p.x, p.y + 6, 14 + k * 26, (14 + k * 26) * 0.42, 0, 0, TAU);
     ctx.stroke();
+  }
+
+  /** A real ingredient (air layer, above every prop): golden glow, gold-rimmed badge, bobbing sprite. */
+  private drawIngredient(p: Pickup) {
+    const ctx = this.ctx;
+    const bob = Math.sin(p.t * 3.2) * 3 - 6;
+    const y = p.y - p.z + bob - 8;
     // golden glow
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.55 + Math.sin(p.t * 5) * 0.15;
