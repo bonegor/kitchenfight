@@ -26,7 +26,7 @@ XP ingredients → level up → choose 1 of 3–4 upgrades → elites & bosses d
 runs buy permanent upgrades in **La Dispensa** (the pantry).
 
 ## Il Menù: the levels
-Ten dishes and a finale, in six courses, 15:00 each (mid-bosses at 5:00 and 10:00, final boss at 15:00).
+Thirteen dishes and a finale, in seven courses, 15:00 each (mid-bosses at 5:00 and 10:00, final boss at 15:00).
 Each plays in one of the four environments below with its own light and a little extra decor.
 The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.md).
 
@@ -39,21 +39,31 @@ The proper recipes, the intruders and their sources are in [RECIPES.md](RECIPES.
 | 5 | **Tonnarelli Cacio e Pepe** (`cacioepepe`) | Primi Romani | La Trattoria · late night | L'Influencer / Il Barattolo Alfredo | **Il Panetto Supremo** (new) | win the Alfredo or the Amatriciana |
 | 6 | **Pizza Margherita** (`margherita`) | Le Pizze | I Vicoli di Napoli · sunset to night | Il Barone del Ketchup / Il Pizzone Abissale | Il Re Ananas | win the Carbonara |
 | 7 | **Pizza Marinara** (`marinara`) | Le Pizze | I Vicoli di Napoli · night | **Il Sacco del Grattugiato** (new) / Il Campanile del Cappuccino | Il Pizzone Abissale | win the Margherita |
-| 8 | **Tagliatelle al Ragù** (`ragu`) | Dal Nord | La Trattoria · Bologna afternoon | Lo Scatolone / Il Microonde Maledetto | **Lo Spaghettone alla Bolognese** (new) | win the Cacio e Pepe or the Marinara |
-| 9 | **Trofie al Pesto Genovese** (`pesto`) | Dal Nord | I Vicoli di Napoli · Ligurian day (green tint) | Il Panetto Supremo / L'Influencer | **Il Frullatore Rovente** (new) | win the Ragù |
-| 10 | **Spaghetti alle Vongole** (`vongole`) | Dal Sud e dal Mare | I Vicoli di Napoli · seaside morning (blue tint) | Il Panetto Supremo / Il Colosso di Panna | **Il Sacco del Grattugiato** (new) | win the Marinara or the Pesto |
-| 11 | **Il Menù degli Orrori** (`foodcourt`) — the finale | Il Gran Finale | La Food Court | Il Campanile del Cappuccino / L'Influencer | Il Mostro della Fusione | win any 6 different dishes |
+| 8 | **Pizza Diavola** (`diavola`) | Le Pizze | I Vicoli di Napoli · hot summer night (red night ramp, embers) | Il Pizzone Abissale / Il Re Ananas | **Il Salamone Americano** (new) | win the Margherita |
+| 9 | **Tagliatelle al Ragù** (`ragu`) | Dal Nord | La Trattoria · Bologna afternoon | Lo Scatolone / Il Microonde Maledetto | **Lo Spaghettone alla Bolognese** (new) | win the Cacio e Pepe or the Marinara |
+| 10 | **Trofie al Pesto Genovese** (`pesto`) | Dal Nord | I Vicoli di Napoli · Ligurian day (green tint) | Il Panetto Supremo / L'Influencer | **Il Frullatore Rovente** (new) | win the Ragù |
+| 11 | **Spaghetti alle Vongole** (`vongole`) | Dal Sud e dal Mare | I Vicoli di Napoli · seaside morning (blue tint) | Il Panetto Supremo / Il Colosso di Panna | **Il Sacco del Grattugiato** (new) | win the Marinara or the Pesto |
+| 12 | **Cannoli Siciliani** (`cannoli`) | I Dolci | La Trattoria · Palermo pasticceria at Carnival (confetti) | Il Colosso di Panna / Il Campanile del Cappuccino | **Il Cannolone Tarocco** (new) | win the Marinara or the Cacio e Pepe |
+| 13 | **Panettone** (`panettone`) | I Dolci | La Cucina · Milan, Christmas Eve (snow, festoon lights) | Lo Scatolone / L'Influencer | **Il Panettone Industriale** (new) | win the Cannoli or the Pesto |
+| 14 | **Il Menù degli Orrori** (`foodcourt`) — the finale | Il Gran Finale | La Food Court | Il Campanile del Cappuccino / L'Influencer | Il Mostro della Fusione | win any 6 different dishes |
 
+- **The Diavola and the dolci** (added later) branch off the menu without changing any older rule: the
+  Diavola follows the Margherita; the Cannoli follow the T4 dishes (like the Ragù), the Panettone the Cannoli
+  or the Pesto. The finale still asks for any 6 different dishes of the 13: every route to it is as long as
+  before, and the dolci are a branch, not a gate. A save that has already won a dish's unlocker opens it when
+  it loads (`refreshUnlocks()`): a save with all eleven dishes won finds all three open.
 - **Unlock rules** (`StageDef.unlock`): `null` (from the start), `{ anyOf: [...] }` (win any of these
   dishes) or `{ wins: n }` (win n different dishes). Locked cards say why ("Win Pizza Marinara or Trofie
   al Pesto Genovese to unlock").
 - **Difficulty** comes from the dish's tier, one of six, tuned against the old stages (see
   [Difficulty](#difficulty) below). A dish's waves choose *who* comes; its tier sets how many, how fast
   and how tough. How hard they hit is capped for every dish.
-- **Music** is the environment's track (kitchen, trattoria, streets, food court).
+- **Music** is the environment's track (kitchen, trattoria, streets, food court): the Diavola plays the
+  streets' track, the Cannoli the trattoria's, the Panettone the kitchen's.
 - **Variants** (`src/gfx/envvariants.ts`) change only the light (tint, darkness, vignette, a night ramp)
-  and the particles (dust, flour, embers, fireflies), and add a little decor made of existing props (tomato
-  crates and sauce stains, a flour-dusted pantry, lemon crates, wine crates, basil pots, sea-side puddles).
+  and the particles (dust, flour, embers, fireflies, snow, Carnival confetti), and add a little decor made of
+  existing props (tomato crates and sauce stains, a flour-dusted pantry, lemon crates, wine crates, basil pots,
+  sea-side puddles, chilli-oil stains, dessert carts, strings of lights hung overhead in the bakery).
   The paths and the spawn area stay those of the base environment, and decor that would stand in or
   through a base prop (the oven, a counter, a stall, the fountain) is left out.
 - **Old saves** (four stages, save version 1) migrate to version 2: La Cucina's records and wins carry
@@ -80,8 +90,8 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
 | T1 | Pomodoro | the old kitchen ×0.9 | 0.9 | 0.10 | 0.85 | 0.85 | 0.74 | 0.8 | 1 | 1300 / 2100 / 3300 |
 | T2 | Carbonara | the old kitchen | 1.0 | 0.11 | 1.0 | 1.0 | 0.93 | 0.94 | 1 | 1400 / 2300 / 3600 |
 | T3 | Alfredo, Amatriciana, Margherita | the old trattoria | 1.6 | 0.21 | 2.2 | 1.45 | 1.4 | 1.05 | 1.15 | 800 / 1750 / 2400 |
-| T4 | Cacio e Pepe, Marinara | between the trattoria and the streets | 1.9 | 0.50 | 2.4 | 1.5 | 1.8 | 1.2 | 1.3 | 800 / 1800 / 2400 |
-| T5 | Ragù, Pesto, Vongole | the old streets | 2.2 | 0.55 | 2.6 | 1.55 | 1.9 | 1.2 | 1.4 | 1200 / 1350 / 2200 |
+| T4 | Cacio e Pepe, Marinara, Diavola, Cannoli | between the trattoria and the streets | 1.9 | 0.50 | 2.4 | 1.5 | 1.8 | 1.2 | 1.3 | 800 / 1800 / 2400 |
+| T5 | Ragù, Pesto, Vongole, Panettone | the old streets | 2.2 | 0.55 | 2.6 | 1.55 | 1.9 | 1.2 | 1.4 | 1200 / 1350 / 2200 |
 | T6 | the finale | the old food court | 2.9 | 0.26 | 2.6 | 1.75 | 1.6 | 1.2 | 1.4 | 700 / 680 / 1550 |
 
 - **The columns.** `hpBase` multiplies enemy HP and phases in over the first 7 minutes (`Director`);
@@ -247,6 +257,9 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
 | Ragù | 1.15 | — | 0.5 / 0.45 / 0.7 | — |
 | Pesto | 1.35 | 1.2 | 1 / 0.9 / 0.8 | — |
 | Vongole | 1.5 | — | 0.75 / 1 / 1 | — |
+| Diavola | — | — | 0.75 / 0.6 / 0.65 | — |
+| Cannoli | 1.1 | 1.1 | 0.75 / 1 / 0.7 | — |
+| Panettone | 1.5 | 1.3 | 0.6 / 0.75 / 0.85 | — |
 
   The Pesto's cashews are worth 2 XP (they were 1: half of that dish's crowd, they starved the chef of
   levels and made it harder than the Vongole it unlocks).
@@ -269,12 +282,27 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
 | Ragù | T5 | 9.7 ±1.3 | 6:21 | 10/24 | 95 / 102 / 92 | 41 |
 | Pesto | T5 | 9.7 ±1.5 | 6:30 | 5/24 | 110 / 119 / 107 (not killed in 1 of 24 runs) | 36 |
 | Vongole | T5 | 11.4 ±1.8 | 6:11 | 5/24 | 89 / 93 / 81 | 35 |
+| *Diavola* ⁽ⁿ⁾ | T4 | 8.1 ±0.7 | 5:42 | 1/12 | 59 / 85 / 99 | 43 |
+| *Cannoli* ⁽ⁿ⁾ | T4 | 11.3 ±1.2 | 5:18 | 1/12 | 61 / 98 / 109 | 39 |
+| *Panettone* ⁽ⁿ⁾ | T5 | 17.9 ±1.9 (12.6 ±1.2 in a round with its 5:00 boss at ×0.8) | 5:09 | 3/24 | 74 / 88 / 94 | 45 |
 | the finale | T6 | 24.2 ±2.6 | 5:08 | 1/24 | 88 / 116 / 107 | 38 |
 | *old kitchen* | | 1.7 ±0.5 | none by 15:00 | 10/12 | 156 / 93 / 87 | |
 | *old trattoria* | | 8.1 ±1.1 | 7:16 | 0/12 | 253 / 184 / 223 | |
 | *old streets* | | 17.8 ±1.2 | 5:48 | 0/12 | 566 / 280 / 341 (the last one killed in 12 of 24 runs) | |
 | *old food court* | | 29.7 ±2.1 | 4:24 | 0/12 | 892 / 522 / 478 (the last one killed in 3 of 24 runs) | |
 
+  - ⁽ⁿ⁾ *The Diavola and the dolci* were measured later, on the same bot and pantry with `sim5.mjs` (24 runs a
+    dish with auto-revive, 12 with no revive, 48 with no pantry at skill 1 and 0.6). In the same session the
+    dishes that unlock them measured: Margherita 5.2, Marinara 6.6, Cacio e Pepe 9.7, Pesto 9.6 and Vongole
+    10.8 (±0.8–1.7), so every new dish sits at or above its unlockers: Diavola 8.1 ≥ Margherita; Cannoli 11.3
+    ≥ Marinara and Cacio e Pepe; Panettone 12.6–17.9 ≥ Cannoli and Pesto. No-pantry runs that ended before
+    2:30: 1 of 144 (a Cannoli run at 2:10); before 3:20: 10 of 144 (the older dishes: none of 96 in the same
+    session). Their openings are softened per minute (the first two or three minutes at ×0.6–0.85 of the
+    tier's rate) because their crowds chase harder than their tier-mates': cream and puff pastry, chargers,
+    margarine slicks. The Cannoli are a T4 dish: on T5 its tankier opening crowd killed the bot before 2:30 in
+    a tenth of the no-pantry runs, and the dish's deaths in minutes 5–15 reach the Vongole's band anyway.
+    Their 5:00 fights are short (about a minute) and their first boss falls with no revive in 1–4 runs of
+    12 (between rounds this swings as much as the older dishes' does).
   - *By tier,* deaths in minutes 5–15: T1 0.1, T2 0.3, T3 6.4, T4 8.0, T5 10.3, T6 24.2. The climb is
     there, but T4 and T5 are lower than before the cap (T3–T6 were 6.2, 12.5, 15.9, 22.8): T3 and T6
     come out a fifth under the old trattoria and the old food court, T5 two fifths under the old
@@ -324,13 +352,13 @@ Every dish has one of six tiers (`TIERS` in `src/game/stages.ts`), each measured
 ### Environments
 | Environment | Look | Dishes |
 |-------------|------|--------|
-| **La Cucina** — trattoria kitchen | black/white checkered floor, steel counters, stoves with bubbling pots, copper pans, garlic braids, flour sacks, tomato crates | Pomodoro, Carbonara, Amatriciana |
-| **La Trattoria** — dining room | herringbone parquet, round tables with red/white checked cloths, candles in Chianti bottles, lemon trees, wine racks | Alfredo, Cacio e Pepe, Ragù |
-| **I Vicoli di Napoli** — Naples alleys | basalt cobblestones, scooters, laundry lines overhead, fountains, street lamps, café tables, market stalls, pigeons | Margherita, Marinara, Pesto, Vongole |
+| **La Cucina** — trattoria kitchen | black/white checkered floor, steel counters, stoves with bubbling pots, copper pans, garlic braids, flour sacks, tomato crates | Pomodoro, Carbonara, Amatriciana, Panettone (as a Milanese bakery on Christmas Eve) |
+| **La Trattoria** — dining room | herringbone parquet, round tables with red/white checked cloths, candles in Chianti bottles, lemon trees, wine racks | Alfredo, Cacio e Pepe, Ragù, Cannoli (as a Palermo pasticceria) |
+| **I Vicoli di Napoli** — Naples alleys | basalt cobblestones, scooters, laundry lines overhead, fountains, street lamps, café tables, market stalls, pigeons | Margherita, Marinara, Diavola, Pesto, Vongole |
 | **La Food Court** — the crimes' lair | glossy linoleum, plastic tables, neon fast-food counters, soda machines, wet-floor signs, fluorescent light | the finale |
 
 ## The recipe mechanic
-Every dish has 4–6 **real ingredients** (`RecipeDef.ingredients` in `src/game/recipes.ts`, 27 different
+Every dish has 4–6 **real ingredients** (`RecipeDef.ingredients` in `src/game/recipes.ts`, 36 different
 ones in all, sprites `ingr.<id>`). The finale's six are "Nonna's pantry", one sacred ingredient from
 each corner of Italy.
 
@@ -352,20 +380,23 @@ each corner of Italy.
 
 | Category | Ingredients | Buff |
 |---|---|---|
-| pasta, dough | spaghetti, fettuccine, tonnarelli, tagliatelle, Neapolitan dough | +8% Duration |
+| pasta, dough | spaghetti, fettuccine, tonnarelli, tagliatelle, Neapolitan dough, the cannolo's scorza, flour | +8% Duration |
 | tomato, egg | tomatoes, passata, egg yolks | +10% Max HP |
 | oil | extra-virgin olive oil | +5% Might |
-| meat | guanciale, pancetta, beef | +6% Might |
+| meat | guanciale, pancetta, beef, salame piccante | +6% Might |
 | aroma | garlic, oregano | +5% Area |
 | water | starchy pasta water | +8% Area |
 | herb | basil, parsley | +0.2 HP/s |
-| cheese | pecorino, Parmigiano, mozzarella | +1 Armor |
+| cheese | pecorino, Parmigiano, mozzarella, sheep's ricotta | +1 Armor |
 | spice | black pepper, chili | −5% Cooldown |
 | fat | butter | +15% Magnet |
 | wine | wine | +8% Luck |
 | veg | soffritto | +5% Move speed |
-| nut | pine nuts | +8% Growth |
+| nut | pine nuts, pistachio | +8% Growth |
 | sea | clams | +10% Projectile speed |
+| sweet | chocolate chips | +10% Coins |
+| fruit | candied peel, raisins | +8% Luck |
+| leaven | lievito madre (sourdough starter) | +8% Growth |
 
 - **RICETTA COMPLETA!** All of a dish's ingredients in one run: full heal, +10% Might, +50 coins,
   confetti and the dinner bell. The dish's record gets **★ Ricetta completa** on its menu card (saved even
@@ -380,7 +411,7 @@ each corner of Italy.
   when no intruder's toast is waiting, and not before the first intruder has been named (or 0:30). The
   recipe page in Il Ricettario lists them under "Crimini di metodo" (or "Altri crimini" where the lot is
   mixed), each with a link to its crime card once met. **Friend or
-  foe:** butter, garlic, pancetta, Parmigiano, mozzarella and onion belong in some dishes and are crimes in others; a one-off toast says so when you
+  foe:** butter, garlic, pancetta, Parmigiano, mozzarella, onion and brewer's yeast belong in some dishes and are crimes in others; a one-off toast says so when you
   collect one where it belongs or meet it where it does not ("Garlic! In pesto it belongs. Not here!").
   At most 6 toasts wait in the queue; one is shown every 5 s.
 - **Waves.** In every minute at least 80 % of the spawn weight comes from the dish's intruders; the rest
@@ -462,7 +493,7 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 |---|---|---|---|---|
 | Lo Spezzaspaghetti | The Spaghetti-Snapper | swarm | Breaking spaghetti to fit the pot | method crime (Pomodoro, Amatriciana) |
 | Spruzzatore Rosso | The Red Squirter | ranged | Ketchup on pasta | Pomodoro |
-| Panna Invasora | Invading Cream | puddler | Cream where it does not belong | Carbonara, Alfredo, Cacio e Pepe, Ragù, Pesto, Vongole |
+| Panna Invasora | Invading Cream | puddler | Cream where it does not belong | Carbonara, Alfredo, Cacio e Pepe, Ragù, Pesto, Vongole, Cannoli (whipped) |
 | Forbici Furiose | Furious Scissors | charger | Cutting spaghetti with scissors (or a knife) | method crime (Pomodoro) |
 | Pasta Scotta | Mushy Pasta | hopper | Overcooked, mushy pasta | method crime (Pomodoro, Alfredo, Amatriciana, Cacio e Pepe) |
 | Lo Sciacquapasta | The Pasta-Rinser | hopper | Rinsing cooked pasta (splits off Mushy Pasta) | method crime (wherever Mushy Pasta is: Pomodoro, Alfredo, Amatriciana, Cacio e Pepe) |
@@ -470,10 +501,10 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | Aglio in Camicia | Garlic in Its Shirt | support | Garlic where it does not belong | Carbonara, Alfredo, Amatriciana, Ragù |
 | Bacon Abusivo | Unlicensed Bacon | slither | Bacon (or smoked pancetta) instead of guanciale | Carbonara, Amatriciana, Ragù |
 | Piselli Ribelli | Rebel Peas | swarm | Peas in carbonara | Carbonara |
-| Ananas Corazzato | Armoured Pineapple | chase | Pineapple on pizza | Margherita |
+| Ananas Corazzato | Armoured Pineapple | chase | Pineapple on pizza | Margherita, Diavola |
 | Pezzo d'Ananas | Pineapple Chunk | chase | Tinned pineapple chunks | Margherita (extra on the Marinara) |
 | Pollo Infiltrato | Undercover Chicken | leaper | Chicken in pasta (and on pizza) | Pomodoro, Carbonara, Alfredo, Margherita |
-| Peperone Equivoco | The Misunderstood Pepper | orbiter | "Pepperoni" pizza | Margherita |
+| Peperone Equivoco | The Misunderstood Pepper | orbiter | "Pepperoni" pizza | Margherita, Diavola (as the bell peppers of the mix-up) |
 | Polpetta Rotolante | Rolling Meatball | roller | Spaghetti and meatballs | Pomodoro (extra in the Ragù) |
 | Fetta Hawaiana | Hawaiian Slice | chase | Ham & pineapple "Hawaiian" pizza | Margherita |
 | Cappuccino Ritardatario | Latecomer Cappuccino | chase | Cappuccino after 11 a.m. (or with a meal) | only in the finale |
@@ -498,8 +529,16 @@ it does not belong in each dish is in the recipe's intruder entry (`src/game/rec
 | **Anacardo Abusivo** (new) | Bootleg Cashew | swarm | Cashews in pesto | Pesto |
 | **Olio Sbagliato** (new) | Wrong Oil | puddler (seed-oil slick) | The wrong oil | Cacio e Pepe, Pesto |
 | **La Filante Abusiva** (new) | Rogue Cheese Pull | slither | Cheese on a Marinara | Marinara |
-| **Cheddar Arancione** (new) | Orange Cheddar | strafe | Cheddar on pizza | Margherita, Marinara |
-| **Salsa Barbecue** (new) | BBQ Sauce | ranged | BBQ sauce on pizza | Margherita |
+| **Cheddar Arancione** (new) | Orange Cheddar | strafe | Cheddar on pizza | Margherita, Marinara, Diavola |
+| **Salsa Barbecue** (new) | BBQ Sauce | ranged | BBQ sauce on pizza | Margherita, Diavola |
+| **Pepperoni Industriale** (new) | Factory Pepperoni | charger | American "pepperoni" on a diavola | Diavola |
+| **Cannolo di Sfoglia** (new) | The Puff-Pastry Fake | chase, three layers that flake off | Puff pastry passed off as a cannolo | Cannoli |
+| **Cannolo Fluo** (new) | The Neon Cannolo | burster (neon blobs) | Neon-coloured cannoli fillings | Cannoli |
+| **Cannolo Ammuddato** (new) | The Soggy Cannolo | hopper | Cannoli filled in advance | method crime (Cannoli) |
+| **Margarina Travestita** (new) | Margarine in Disguise | puddler (butter slick) | Margarine in a panettone | Panettone |
+| **Grasso di Palma** (new) | Palm Fat | lobber (seed-oil slick) | Palm oil and vegetable fats in a panettone | Panettone |
+| **Lievito di Birra** (new) | Baker's Yeast | swarm | A panettone raised on yeast alone | Panettone |
+| **Il Conservante** (new) | The Preservative | aura (slows) | Preservatives in a panettone | Panettone |
 
 The finale mixes crimes from the whole menu, and every enemy above appears in one of its minutes or events.
 Its waves are exempt from the 80 % and order rules; `stageRuleProblems()` checks that every intruder and
@@ -509,12 +548,12 @@ extra its recipe lists spawns.
 |---|---|---|---|---|
 | Il Barone del Ketchup | The Ketchup Baron | Ketchup on pasta — Italy's #1 food crime | Pomodoro | Margherita |
 | Il Barattolo Alfredo | The Alfredo Jar | Jarred "Alfredo" sauce | Alfredo | Carbonara, Cacio e Pepe |
-| Il Colosso di Panna | The Cream Colossus | Cream in carbonara — the original sin | Carbonara | Alfredo, Vongole |
-| Lo Scatolone | The Big Can | Canned spaghetti in sweet sauce | — | Pomodoro, Amatriciana, Ragù |
-| Il Pizzone Abissale | The Abyssal Deep-Dish | Chicago deep-dish "pizza" | Marinara | Margherita |
-| Il Re Ananas | The Pineapple King | The King of all pizza crimes | Margherita | — |
-| Il Campanile del Cappuccino | The Cappuccino Clock Tower | Cappuccino after lunch, with dinner, with pizza… | — | Marinara, the finale |
-| L'Influencer della Padella Unica | The One-Pan Influencer | The viral recipe factory | — | Carbonara, Amatriciana, Cacio e Pepe, Pesto, the finale |
+| Il Colosso di Panna | The Cream Colossus | Cream in carbonara — the original sin | Carbonara | Alfredo, Vongole, Cannoli |
+| Lo Scatolone | The Big Can | Canned spaghetti in sweet sauce | — | Pomodoro, Amatriciana, Ragù, Panettone |
+| Il Pizzone Abissale | The Abyssal Deep-Dish | Chicago deep-dish "pizza" | Marinara | Margherita, Diavola |
+| Il Re Ananas | The Pineapple King | The King of all pizza crimes | Margherita | Diavola |
+| Il Campanile del Cappuccino | The Cappuccino Clock Tower | Cappuccino after lunch, with dinner, with pizza… | — | Marinara, Cannoli, the finale |
+| L'Influencer della Padella Unica | The One-Pan Influencer | The viral recipe factory | — | Carbonara, Amatriciana, Cacio e Pepe, Pesto, Panettone, the finale |
 | Il Microonde Maledetto | The Cursed Microwave | Microwaving pasta | — | Pomodoro, Alfredo, Ragù |
 | Il Mostro della Fusione | The Fusion Abomination | Every crime at once | the finale | — |
 | **Il Re dell'Aglio** (new) | The Garlic King | Garlic in amatriciana | Amatriciana | — |
@@ -522,6 +561,9 @@ extra its recipe lists spawns.
 | **Lo Spaghettone alla Bolognese** (new) | The Great Spaghetti Bolognese | Spaghetti bolognese | Ragù | — |
 | **Il Frullatore Rovente** (new) | The Red-Hot Blender | Instant pesto with cream and cashews | Pesto | — |
 | **Il Sacco del Grattugiato** (new) | The Bag of Pre-Grated Cheese | Pre-grated cheese on clams | Vongole | Marinara |
+| **Il Salamone Americano** (new) | The Great American Pepperoni | The "pepperoni pizza" | Diavola | — |
+| **Il Cannolone Tarocco** (new) | The Fake Mega-Cannolo | Fake "Sicilian" cannoli | Cannoli | — |
+| **Il Panettone Industriale** (new) | The Factory Panettone | The fake factory panettone | Panettone | — |
 
 The five new bosses (patterns in `src/game/bosses/b_*.ts`):
 - **Il Re dell'Aglio** — a crowned garlic bulb: fans of garlic cloves, stink clouds that slow (a green pool
@@ -537,11 +579,29 @@ The five new bosses (patterns in `src/game/bosses/b_*.ts`):
 - **Il Sacco del Grattugiato** — a torn bag of pre-grated "parmesan": cheese snow cones, slowing cheese
   clouds, a belly-flop, cheesy clams. *"Formaggio sulle vongole? Abbondante!"*
 
+Three more for the Diavola and the dolci, each with the shared entrance gate of `brain()` and its adds hitting
+by the dish's `bossDmg` like everyone's:
+- **Il Salamone Americano** — a giant stick of American pepperoni with a pizza cutter: staggered rings of
+  spinning slices, a roll down a marked lane that leaves a grease slick (twice when enraged), lobbed hot
+  grease that burns where the warning rings were, factory-pepperoni chargers. Enraged: *"PICCANTE!"*, quicker,
+  dripping hot grease. *"Pepperoni! Not peppers… PEPPERONI!"*
+- **Il Cannolone Tarocco** — a giant puff-pastry horn heaped with whipped cream and neon sprinkles, in a
+  gondolier's boater, with a piping bag: a fixed, marked cone of cream squirts, rings of pastry flakes, a
+  marked belly-flop that leaves cream, neon cannoli. Enraged: *"AMMUDDATO!"*, soggy, quicker, leaving cream
+  puddles. *"Cannolo siciliano? Certo… made in Venezia!"*
+- **Il Panettone Industriale** — a cellophane-wrapped factory panettone with a margarine tub: aimed fans of
+  raisins from its cross cut, lobbed margarine that lands as marked slippery slicks, a marked upside-down
+  flip slam (a panettone is cooled hanging upside down) with a ring of raisins, clumps of baker's yeast.
+  Enraged: *"SGONFIO!"*, the dome sinks (smaller, quicker). *"Panettone in due ore! Chi ha bisogno del lievito madre?"*
+
 A boss that visits another dish as a mid-boss says a line about that dish, not about its home dish
 (`BOSS_LINES` in `src/game/recipes.ts`): the Cream Colossus shouts *"Alfredo needs CREAM!"* in the Alfredo
 and *"Clams need CREAM!"* in the Vongole, the Bag of Pre-Grated Cheese *"Formaggio sulla Marinara?
 Abbondante!"* on the Marinara, and the One-Pan Influencer sells a one-pan amatriciana with onion, cacio e
-pepe with cream and pesto with cream. The bubble and the spoken line use the same text.
+pepe with cream and pesto with cream. On the Diavola the Deep-Dish is *"Five centimetres of PEPPERONI!"*; in the
+Cannoli the Cream Colossus wants whipped cream and the Clock Tower fills the cannoli at dawn to sell them at dusk;
+in the Panettone the Big Can boasts of preservatives and the Influencer of a two-hour panettone with no lievito
+madre. The bubble and the spoken line use the same text.
 
 A boss shouts its line in a speech bubble as it arrives at the edge of the screen. The bubble is kept in
 view, below the HUD's top band, and takes the nearest place clear of the toasts and the boss banner: over,
@@ -570,9 +630,13 @@ Checked at the end of every run (`src/game/medals.ts`).
 | **Primi Romani** (new) | Win Carbonara, Alfredo, Amatriciana and Cacio e Pepe. |
 | **Pizzaiolo DOC** (new) | Win the Margherita and the Marinara. |
 | **Il Quaderno della Nonna** (new) | Complete 5 different recipes (★ on 5 dishes, won or not). |
+| **Dolce Vita** (new) | Win the Cannoli and the Panettone. |
+
+*Giro d'Italia* counts every dish on the menu, the Diavola and the dolci included. A medal once earned is never
+taken away: a save that earned it on eleven dishes keeps it. *Pizzaiolo DOC* stays the two STG pizzas.
 
 The medals that the save alone earns (`saved` in `medals.ts`: the two "in total" ones, Tutti a Tavola, Giro
-d'Italia, Primi Romani, Pizzaiolo DOC, Il Quaderno della Nonna) are also checked when a save loads, without
+d'Italia, Primi Romani, Pizzaiolo DOC, Il Quaderno della Nonna, Dolce Vita) are also checked when a save loads, without
 a message. The others need a run and are only checked at its end.
 
 ## Meta progression — La Dispensa (permanent power-ups, bought with coins)

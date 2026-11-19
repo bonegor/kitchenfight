@@ -9,7 +9,8 @@ Written for players who want to know *why* the cream carton is attacking them, a
 future editors of `src/game/recipes.ts`. The food crimes in general (technique, coffee, table
 manners…) are in [RESEARCH.md](RESEARCH.md); the game rules are in [DESIGN.md](DESIGN.md).
 
-Research compiled 11 November 2026. Read [How this was researched](#how-this-was-researched-and-its-limits)
+Research compiled 11 November 2026; the Diavola, Cannoli and Panettone come from a research extension of
+18 November 2026 (desk review only, see [the limits](#how-this-was-researched-and-its-limits)). Read [How this was researched](#how-this-was-researched-and-its-limits)
 before quoting anything from this file: no source page could be opened during the research.
 
 ## Contents
@@ -20,10 +21,11 @@ before quoting anything from this file: no source page could be opened during th
    - Le Basi: [1. Spaghetti al Pomodoro](#1-spaghetti-al-pomodoro)
    - Primi Romani: [2. Carbonara](#2-spaghetti-alla-carbonara) · [3. Fettuccine Alfredo](#3-fettuccine-alfredo) ·
      [4. Amatriciana](#4-bucatini-allamatriciana) · [5. Cacio e Pepe](#5-tonnarelli-cacio-e-pepe)
-   - Le Pizze: [6. Margherita](#6-pizza-margherita) · [7. Marinara](#7-pizza-marinara)
-   - Dal Nord: [8. Tagliatelle al Ragù](#8-tagliatelle-al-ragù) · [9. Pesto Genovese](#9-trofie-al-pesto-genovese)
-   - Dal Sud e dal Mare: [10. Spaghetti alle Vongole](#10-spaghetti-alle-vongole)
-   - Il Gran Finale: [11. Il Menù degli Orrori](#11-il-menù-degli-orrori-the-finale)
+   - Le Pizze: [6. Margherita](#6-pizza-margherita) · [7. Marinara](#7-pizza-marinara) · [8. Diavola](#8-pizza-diavola)
+   - Dal Nord: [9. Tagliatelle al Ragù](#9-tagliatelle-al-ragù) · [10. Pesto Genovese](#10-trofie-al-pesto-genovese)
+   - Dal Sud e dal Mare: [11. Spaghetti alle Vongole](#11-spaghetti-alle-vongole)
+   - I Dolci: [12. Cannoli Siciliani](#12-cannoli-siciliani) · [13. Panettone](#13-panettone)
+   - Il Gran Finale: [14. Il Menù degli Orrori](#14-il-menù-degli-orrori-the-finale)
 3. [Friend or foe: one ingredient, two verdicts](#friend-or-foe-one-ingredient-two-verdicts)
 4. [Accepted in Italy: never an enemy](#accepted-in-italy-never-an-enemy)
 5. [The most-cited complaints (top 20)](#the-most-cited-complaints-top-20)
@@ -76,10 +78,13 @@ before quoting anything from this file: no source page could be opened during th
 | 5 | Tonnarelli Cacio e Pepe (`cacioepepe`) | Primi Romani | tonnarelli, pecorino, black pepper, pasta water | butter, cream, Parmesan **C**, olive oil **C** | full ¹ |
 | 6 | Pizza Margherita (`margherita`) | Le Pizze | Neapolitan dough, tomato, mozzarella, basil, olive oil | pineapple **C**, "Hawaiian" **C**, ketchup, chicken, BBQ sauce, cheddar, "pepperoni" **C** | lenses ² |
 | 7 | Pizza Marinara (`marinara`) | Le Pizze | Neapolitan dough, tomato, garlic, oregano, olive oil | any cheese, prawns, clams, grated cheese, cheddar | lenses ² |
-| 8 | Tagliatelle al Ragù (`ragu`) | Dal Nord | beef, fresh pancetta, soffritto, passata, wine, egg tagliatelle | spaghetti **C**, garlic, cream **C**, smoked pancetta | lenses + posts ³ |
-| 9 | Trofie al Pesto Genovese (`pesto`) | Dal Nord | basil, pine nuts, garlic, olive oil, Parmigiano, pecorino | cream, cashews, seed oil, butter **C**, generic cheese **C** | lenses + posts ³ |
-| 10 | Spaghetti alle Vongole (`vongole`) | Dal Sud e dal Mare | spaghetti, clams, garlic, olive oil, parsley, chili | cheese on clams **C**, grated Parmesan **C**, butter **C**, cream | full ¹ |
-| 11 | Il Menù degli Orrori (`foodcourt`) | Il Gran Finale | guanciale, Parmigiano, basil, clams, tomato, olive oil ("Nonna's pantry") | the best-known crimes of the menu, plus method crimes and drinks | — |
+| 8 | Pizza Diavola (`diavola`) | Le Pizze | dough, tomato, mozzarella, salame piccante, olive oil, chili | "pepperoni" **C**, bell peppers, pineapple **C**, BBQ sauce, cheddar | extension ⁴ |
+| 9 | Tagliatelle al Ragù (`ragu`) | Dal Nord | beef, fresh pancetta, soffritto, passata, wine, egg tagliatelle | spaghetti **C**, garlic, cream **C**, smoked pancetta | lenses + posts ³ |
+| 10 | Trofie al Pesto Genovese (`pesto`) | Dal Nord | basil, pine nuts, garlic, olive oil, Parmigiano, pecorino | cream, cashews, seed oil, butter **C**, generic cheese **C** | lenses + posts ³ |
+| 11 | Spaghetti alle Vongole (`vongole`) | Dal Sud e dal Mare | spaghetti, clams, garlic, olive oil, parsley, chili | cheese on clams **C**, grated Parmesan **C**, butter **C**, cream | full ¹ |
+| 12 | Cannoli Siciliani (`cannoli`) | I Dolci | fried scorza, sheep's ricotta, chocolate chips, candied peel, pistachio | whipped cream, puff pastry, neon fillings **C** (+ the cannolo filled in advance, a crime of method) | extension ⁴ |
+| 13 | Panettone (`panettone`) | I Dolci | flour, lievito madre, butter, egg yolks, raisins, candied peel | margarine, palm oil, yeast alone **C**, preservatives **C** | extension ⁴ |
+| 14 | Il Menù degli Orrori (`foodcourt`) | Il Gran Finale | guanciale, Parmigiano, basil, clams, tomato, olive oil ("Nonna's pantry") | the best-known crimes of the menu, plus method crimes and drinks | — |
 
 ¹ researcher + sources lens + culinary lens + influencer-chef sweep + popular-posts sweep.
 ² researcher + sources lens + culinary lens for the Margherita and Marinara entries themselves (the two
@@ -89,6 +94,10 @@ cheddar, come from the research's Neapolitan-toppings entry, which went through 
 The chef credits in the Margherita's sources were found by the researcher, for the Margherita or for
 those toppings entries.
 ³ researcher + sources lens + culinary lens + popular-posts sweep.
+⁴ the November 2026 research extension: one sweep, desk review only, no second checker. Its popularity
+scale is 1–3, mapped here to 1–5 as 3 → 4, 2 → 2 (3 for margarine and palm fat, which break a legal
+definition), 1 → 1. The Diavola's pineapple, BBQ sauce and cheddar are inherited from the reviewed
+pizza-toppings entry.
 
 Collecting an ingredient gives a small buff for the rest of the run; collecting all of them is
 **RICETTA COMPLETA** (rules in [DESIGN.md](DESIGN.md#the-recipe-mechanic)).
@@ -713,7 +722,89 @@ for Italian pizza in general, but not on a Marinara, which has no cheese.
 
 ---
 
-## 8. Tagliatelle al Ragù
+## 8. Pizza Diavola
+
+*Spicy salami pizza, Italy's answer to "pepperoni pizza"* · **Le Pizze** · Origin: no documented birthplace;
+a standard on pizzeria menus all over Italy, its spicy salami recalling Neapolitan and Calabrian cured meats
+· Base: standard Italian pizzeria dough (Neapolitan-style or thinner regional styles), baked in a hot oven
+
+> *In-game blurb:* Italy's spicy salami pizza, the 'she-devil'. Abroad they call it 'pepperoni pizza', but in Italy 'peperoni' are bell peppers: the heat comes from salame piccante and chilli.
+
+**A light-hearted level.** Apart from pineapple, Italians answer the Diavola's intruders with jokes and
+explainers more than with fury. The theme is a language trap: abroad the diavola is sold as "pepperoni
+pizza", while in Italian *peperoni* are bell peppers.
+
+**The proper recipe:** crushed peeled tomatoes (San Marzano, for instance); **fior di latte** or
+mozzarella; **salame piccante**, the defining ingredient (salamino piccante, spianata calabra or salame
+napoletano; some Campania pizzerias swap in spreadable 'nduja di Spilinga); **extra virgin olive oil**,
+plain or as chilli oil; optional **chilli** for more heat; optional oregano or basil.
+
+*Method.* A Margherita-style base of tomato and mozzarella is topped with thin slices of spicy salami and
+baked until the salami curls and releases its red, peppery fat. Chilli oil or flakes go on at the end.
+
+**Collect in the game:** Impasto napoletano · Pomodoro · Mozzarella · Salame piccante · Olio extravergine ·
+Peperoncino.
+
+**Authority sources:** [Scatti di Gusto: the best diavole in Campania](https://www.scattidigusto.it/migliori-pizze-diavola-in-campania)
+(paraphrase: salame piccante, 'nduja, San Marzano, oregano, EVO oil); [Cookist (it)](https://www.cookist.it/pizza-pepperoni-cos-e/)
+and [Agrodolce](https://www.agrodolce.it/pepperoni-salame) (Italian explainers: American pepperoni is a
+smoked, mildly spicy pork-and-beef salami, not a pepper; the closest Italian pizza is the diavola);
+[La Voce di New York, 2 Nov 2026](https://lavocedinewyork.com/food/2026/11/02/pepperoni-pizza-la-regina-americana-che-confonde-gli-italiani/);
+[Ooni](https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni),
+[Tasting Table](https://www.tastingtable.com/2041004/why-no-pepperoni-pizza-italy/),
+[Mashed](https://www.mashed.com/438182/the-difference-between-pepperoni-in-italy-and-the-us),
+[Gambero Rosso International](https://www.gamberorossointernational.com/?p=398165).
+✓ [Cookist (en)](https://www.cookist.com/the-history-of-pepperoni-pizza-the-u-s-born-adaptation-of-neapolitan-pizza):
+"pepperoni pizza is indeed reminiscent of diavola, which traditionally calls for spicy Neapolitan salami"
+(the in-game quote). No chef or creator is credited for the Diavola: the research found none.
+
+**Intruders in the game**
+
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `salame_usa` Pepperoni Industriale (new) | "Pepperoni" (the American sausage, and the word) | ●●●●○ 4 | C | There is no "pepperoni" in Italy: the American topping is an industrial pork-and-beef sausage seasoned with paprika, born among Italian immigrants in the US. On a diavola Italians put salame piccante. *Other side:* a close cousin of southern Italian spicy salami; Italians mostly joke about the name and the industrial product. |
+| `pepperoni` Peperone Equivoco | Bell peppers (the "pepperoni" mix-up) | ●●○○○ 2 | | Order a "pepperoni pizza" in Italy and you can be served sweet peppers. The diavola's heat comes from salami and chilli. A language trap, not an outrage: peppers are a normal topping on other Italian pizzas. |
+| `ananas` Ananas Corazzato (and its chunks) | Pineapple (the "pepperoni & pineapple" combo) | ●●●●○ 4 | C | Italy's most famous pizza "crime": a sweet fruit on a savoury pizza; the "Hawaiian" was invented in Canada in 1962. *Other side:* since about 2017 some top pizzaioli have served pineapple creations, and food sites have published pro-pineapple pieces. |
+| `bbq` Salsa Barbecue | BBQ sauce | ●●○○○ 2 | | A foreign topping Italian pizzerias simply do not use; in early 2022 the only chain offering BBQ chicken pizza in Italy was American, and it left that August. |
+| `cheddar` Cheddar Arancione | Cheddar | ●●○○○ 2 | | A diavola melts fior di latte; Coldiretti puts "Anglo-Saxon cheddar" among the wrong cheeses used on pizza abroad. |
+
+*Sources:*
+
+- **"Pepperoni":** [Cookist (it)](https://www.cookist.it/pizza-pepperoni-cos-e/); [Agrodolce](https://www.agrodolce.it/pepperoni-salame); [La Voce di New York 2026](https://lavocedinewyork.com/food/2026/11/02/pepperoni-pizza-la-regina-americana-che-confonde-gli-italiani/); [Ooni](https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni); [Explore](https://explore.com/1549092/popular-type-pizza-pepperoni-never-find-italy-unless-tourist-trap); [Tasting Table](https://www.tastingtable.com/2041004/why-no-pepperoni-pizza-italy/); [Mashed](https://www.mashed.com/438182/the-difference-between-pepperoni-in-italy-and-the-us)
+- **Bell peppers:** [Tasting Table](https://tastingtable.com/1015040/why-you-might-be-confused-buying-pepperoni-in-italy); [Mashed](https://www.mashed.com/438182/the-difference-between-pepperoni-in-italy-and-the-us); [Islands](https://www.islands.com/1631971/reason-why-might-not-want-order-pepperoni-pizza-bell-peppers-italy/); [Explore](https://www.explore.com/1549092/popular-type-pizza-pepperoni-never-find-italy-unless-tourist-trap/); [Ooni](https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni); [Cookist (it)](https://www.cookist.it/pizza-pepperoni-cos-e/)
+- **Pineapple:** inherited from the reviewed pizza-toppings entry: [YouGov 2022](https://yougov.co.uk/international/articles/40810-italian-food-crimes); [Euronews 2022](https://www.euronews.com/culture/2022/02/18/angry-chef-reacts-to-the-11-worst-crimes-committed-against-italian-food) (chef: Vincenzo's Plate); [Gambero Rosso 2024](https://www.gamberorosso.it/attualita/pizza-ananas-cannavacciuolo-masterchef/) (chef: Antonino Cannavacciuolo); [Gambero Rosso](https://www.gamberorosso.it/ristoranti/ananas-pizza-franco-pepe/) (chef: Franco Pepe); [Gambero Rosso: three pizzaioli break a taboo](https://www.gamberorosso.it/ristoranti/pizza-con-ananas-si-puo-tre-grandi-pizzaioli-hanno-con-successo-smontato-un-tabu/)
+- **BBQ sauce:** [Il Post 2022](https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/); [Il Post, August 2022](https://www.ilpost.it/2022/08/10/chiusura-dominos-pizza-italia-fallimento-franchising/)
+- **Cheddar:** [MeteoWeb 2023](https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/); [Sky TG24 2023](https://tg24.sky.it/lifestyle/2023/12/07/pizza-zebra-yogurt-dati); [heidelberg24 2023](https://www.heidelberg24.de/verbraucher/ausstellung-galerie-pizza-italien-verband-pizzeria-des-schreckens-belag-zr-92732162.html) (German)
+
+**Dropped from the research:** ranch dressing as a dip (1): the weakest item, with no Italian-language
+source or Italian voice (one unsourced US FAQ page claims Italians react with horror). Not an enemy.
+
+**Accepted in Italy:** 'nduja instead of, or with, the salame ([Scatti di Gusto](https://www.scattidigusto.it/migliori-pizze-diavola-in-campania));
+chilli oil, fresh or dried chilli, oregano or basil (same source); bell peppers on *other* pizzas, even
+with spicy salami ([GialloZafferano blog](https://blog.giallozafferano.it/nonsolodolcedilorena/pizza-ai-peperoni-e-salame-piccante/));
+honey or hot honey with spicy salami, which Gambero Rosso treats as a trend, not a crime
+([2024](https://www.gamberorosso.it/attualita/hot-honey-miele-piccante/)).
+
+**Extra in the waves:** none.
+
+**Fun facts**
+
+- *Diavola* means "she-devil", for the heat. To get something like a pepperoni pizza in Italy, ask for a
+  diavola or a *pizza al salame piccante*.
+- La Voce di New York (2026) calls pepperoni America's most-ordered pizza; New Haven's The Spot claims to
+  have invented it (the article calls that claim approximate).
+- Coldiretti's 2023 "Pizzeria degli Orrori" showed foreign pizzas with pineapple, ketchup and cheddar;
+  Dissapore answered that the stunt shows how intolerant Italians can be
+  ([Dissapore](https://www.dissapore.com/notizie/la-pizzeria-degli-orrori-di-coldiretti-e-il-sintomo-di-quanto-riusciamo-a-essere-intolleranti/),
+  [AGI](https://www.agi.it/cronaca/news/2023-12-07/pizza-banane-serpente-zebra-galleria-orrori-coldiretti-24330572/)).
+
+**Coverage:** the research's lens-reviewed Diavola entry, widened by the November 2026 extension sweep
+(desk review only, no second checker); pineapple, BBQ sauce and cheddar inherited from the reviewed
+pizza-toppings entry.
+
+---
+
+## 9. Tagliatelle al Ragù
 
 *Tagliatelle with Bolognese meat ragù* · **Dal Nord** · Origin: Bologna, Emilia-Romagna; the recipe was
 registered by the Accademia Italiana della Cucina in 1982 and updated in 2023 · Pasta: fresh egg
@@ -809,7 +900,7 @@ here), dried porcini; cream when the ragù dresses *dry* pasta.
 
 ---
 
-## 9. Trofie al Pesto Genovese
+## 10. Trofie al Pesto Genovese
 
 *Trofie with Genoese basil pesto* · **Dal Nord** · Origin: Genoa, Liguria · Pasta: trofie, trenette (often
 "avvantaggiate" with potatoes and green beans), mandilli de sea, testaroli, gnocchi
@@ -892,7 +983,7 @@ Fiore Sardo; garlic in any amount; rocket pesto and walnut sauce *as their own r
 
 ---
 
-## 10. Spaghetti alle Vongole
+## 11. Spaghetti alle Vongole
 
 *Spaghetti with clams* · **Dal Sud e dal Mare** · Origin: Naples, Campania · Pasta: spaghetti (also vermicelli or linguine)
 
@@ -968,7 +1059,170 @@ here. Chef twists (Cannavacciuolo's creamy version with milk) are not mocked.
 
 ---
 
-## 11. Il Menù degli Orrori (the finale)
+## 12. Cannoli Siciliani
+
+*Sicilian cannoli* · **I Dolci** · Origin: Sicily, traditionally Palermo and Carnival; listed among Italy's
+traditional agri-food products (PAT), per Italy Magazine · Shape: a fried tube of crisp dough, the
+*scorza*, filled with sweetened ricotta
+
+> *In-game blurb:* Sicily's crunchy tube: a fried scorza filled at the last moment with sweet sheep's ricotta, chocolate chips and candied orange.
+
+**The proper recipe**
+
+- **The scorza:** a thin dough of flour, lard, sugar and Marsala or wine (a little cocoa or vinegar in some
+  towns), wrapped round metal tubes and fried until bubbly and crisp. Never puff pastry. Exact dough recipes
+  vary by town (not re-verified).
+- **Sheep's milk ricotta**, well drained and lightly sweetened (over-sweetening is a listed error). Cow's
+  ricotta is a common, tolerated fallback outside Sicily.
+- **Chocolate chips** in the filling: traditional, not mandatory (Caffè Sicilia in Noto serves a plain one).
+- **Candied orange peel or candied cherry** at the ends; optional **chopped pistachio**.
+
+*Method.* Fry the shells; drain the ricotta, sieve it with sugar and fold in the chocolate chips. Fill only
+at the last moment so the shell stays crunchy, then decorate the ends.
+
+**Collect in the game:** Scorza · Ricotta di pecora · Gocce di cioccolato · Canditi · Pistacchio.
+
+**Authority sources:** [Scatti di Gusto: cannolo siciliano, ricetta perfetta (2015)](https://www.scattidigusto.it/2015/04/02/cannolo-siciliano-ricetta-perfetta);
+✓ [Gazzetta del Gusto](https://gazzettadelgusto.it/cibo/storia-del-cannolo-siciliano/?print=pdf):
+"La spettacolarità del cannolo comincia dalla sua scorza o "scorcia" in dialetto." (the in-game quote:
+the cannolo's spectacle begins with its shell); [Sale&Pepe](https://www.salepepe.it/ricette/dolci-dessert/pasticceria/dolcetti/cannoli-siciliani/)
+(paraphrase from a search summary: fresh, lightly sweetened sheep's ricotta, no pastry cream or whipped
+cream, filled at the last moment; which of the returned pages said it is not certain);
+[Italy Magazine (2013, year inferred)](https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano);
+[GialloZafferano blog](https://blog.giallozafferano.it/mastercheffa/cannoli-siciliani-di-ricotta/).
+More: [Scatti di Gusto: the five best cannoli (2016)](https://www.scattidigusto.it/5-migliori-cannoli-siciliani-classifica),
+[30 perfect cannoli](https://www.scattidigusto.it/30-migliori-cannoli-siciliani),
+[Dissapore: the best cannoli in Palermo](https://www.dissapore.com/locali/palermo-cannoli-siciliani-migliori/).
+
+*Chefs credited (sources only):* **Corrado Assenza** (Caffè Sicilia, Noto): ✓ "Nessun orpello addolciva
+la ricotta di pecora: un cannolo senza aromi, senza cioccolato." ([Scatti di Gusto](https://www.scattidigusto.it/caffe-sicilia-chiuso-3-dolci-di-corrado-assenza-per-ricordare-il-bar-di-noto));
+a bakery blog's "5 mistakes" guide attributes its rules to him ([Mado Pasticceria](https://madopasticceria.com/cannoli-siciliani-fatti-in-casa-la-guida-con-5-errori-da-evitare-secondo-corrado-assenza/),
+attribution not verified with Assenza). **Ciccio Sultano** (Duomo, Ragusa Ibla): his home recipe against
+the traditional one ([Scatti di Gusto](https://www.scattidigusto.it/cannoli-siciliani-fatti-in-casa-ricetta-tradizionale-vs-quella-di-ciccio-sultano)).
+
+**Intruders in the game**
+
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `panna` Panna Invasora | Whipped cream filling | ●●●●○ 4 | | A cannolo is filled with sweetened sheep's ricotta. "Sicilian" cannoli filled with whipped cream, sold to tourists in Venice, became news in Sicily, and Italian recipe guides rule out whipped cream and other creams. |
+| `sfoglia` Cannolo di Sfoglia (new) | Puff pastry instead of the fried shell | ●●○○○ 2 | | The scorza is fried until it blisters and crunches; the fakes in Venice were puff-pastry horns, not even the right shape. Puff-pastry cream horns (*cannoncini*) are a pastry of their own: the crime is the name. |
+| `fluo` Cannolo Fluo (new) | Neon-coloured fillings (artificial colours) | ●●○○○ 2 | C | Gambero Rosso describes Venice flooded with "Sicilian" cannoli whose flashy fillings have little to do with the real ones. *Other side:* pistachio and other flavoured fillings exist in Sicily; the complaint is artificial colours and tourist traps. |
+
+*Sources:*
+
+- **Whipped cream:** ✓ [LiveSicilia](https://livesicilia.it/?p=202358): "Succede a Venezia dove nelle vetrine di bar vicini alla Stazione ferroviaria Santa Lucia vengono esposti dei dolci "spacciati" per cannoli siciliani." (a Sicilian pastry association spokesman suggests calling them "Venetian cannoli"); [Italy Magazine](https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano) (a reader sent La Repubblica Palermo the photo); [Sale&Pepe](https://www.salepepe.it/ricette/dolci-dessert/pasticceria/dolcetti/cannoli-siciliani/); ✓ [Agrofood.it (en)](https://www.agrofood.it/en/foods/cannoli): "No whipped cream, no mascarpone, no pastry cream, no vanilla pudding."
+- **Puff pastry:** [Italy Magazine](https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano); [LiveSicilia](https://livesicilia.it/?p=202358)
+- **Neon fillings:** ✓ [Gambero Rosso](https://www.gamberorosso.it/notizie/perche-venezia-e-invasa-da-una-marea-di-cannoli-siciliani-colorati/): "…un proliferare di cannoli siciliani, o meglio di cannoli dai ripieni colorati e sgargianti che poco hanno a che fare con quelli autentici." (quoted on the crime card); [Gambero Rosso 2024](https://www.gamberorosso.it/notizie/migliori-gelaterie-venezia) (teaser)
+
+**Crime of method (extra in the waves):** `ammuddato` Cannolo Ammuddato (new), the cannolo **filled in
+advance** (2). The research lists it among the intruders; the game makes it the dish's extra, a crime of
+timing, not an ingredient ("Cannoli farciti in anticipo? NO!"). Italian guides insist on filling at the
+last moment, or the ricotta's moisture turns the scorza soggy (*ammuddare*, in Sicilian). Some guides allow
+20–30 minutes. Sources: ✓ [Mado Pasticceria](https://madopasticceria.com/cannoli-siciliani-fatti-in-casa-la-guida-con-5-errori-da-evitare-secondo-corrado-assenza/):
+"se li preparate troppo in anticipo, rischiate di farli ammuddare" (quoted on the crime card, credited to
+the guide); [Sale&Pepe](https://www.salepepe.it/ricette/dolci-dessert/pasticceria/dolcetti/cannoli-siciliani/);
+[Agrofood.it](https://www.agrofood.it/en/foods/cannoli) (the American bakery version is filled hours or
+days ahead); ✓ [Scatti di Gusto, Piana degli Albanesi (2023)](https://www.scattidigusto.it/2023/01/28/cannoli-piana-degli-albanesi-fatti-in-casa-extrabar/):
+"Il motivo –spiega Nicola– è che i nostri cannoli sono farciti al momento".
+
+**Dropped from the research:** mascarpone in place of ricotta (1): the weakest item, English-language
+sources only (Agrofood's English page, US recipe blogs), no Italian voice. Not an enemy; Agrofood's line
+above still names it.
+
+**Accepted in Italy:** cow's-milk ricotta ([Culinary Ginger](https://culinaryginger.com/traditional-sicilian-cannoli/));
+*cannoli alla crema* with pastry cream, plain or chocolate, sold in Sicily and contested only among purists
+([Sale&Pepe](https://www.salepepe.it/ricette/dolci-dessert/pasticceria/dolcetti/cannoli-siciliani/));
+pistachio, candied orange, candied cherry and chocolate chips ([Scatti di Gusto](https://www.scattidigusto.it/2015/04/02/cannolo-siciliano-ricetta-perfetta)).
+
+**Fun facts**
+
+- The shell is the *scorza* ("scorcia" in dialect). Cannoli were first a Carnival pastry (Gambero Rosso
+  notes the Venice ones too were first made for Carnival).
+- Sicilian shops fill cannoli to order so the shell stays crunchy.
+- Corrado Assenza calls blind tradition "una grande fregatura" (a big letdown), yet his plain sheep-ricotta
+  cannolo is famous ([Gambero Rosso interview](https://www.gamberorosso.it/notizie/tradizione-fregatura-intervista-corrado-assenza/)).
+
+**Coverage:** the November 2026 extension sweep only (15+ sources; desk review, no second checker).
+
+---
+
+## 13. Panettone
+
+*Panettone, Milan's Christmas bread* · **I Dolci** · Origin: Milan, Lombardy; since 2005 an Italian
+ministerial decree (DM 22 July 2005, amended 16 May 2017) defines what may be sold as "panettone" ·
+Shape: a tall dome of soft sweet bread leavened with sourdough, baked in a paper mould
+
+> *In-game blurb:* Milan's Christmas giant: a sourdough bread rich in butter, yolks, raisins and candied peel. In Italy the law itself says what a panettone must contain.
+
+**The proper recipe** (the decree, as read from search snippets of its text; the exact percentages were not
+re-verified)
+
+- **Wheat flour**, **sugar**, category-A **eggs or yolks**.
+- **Butter**, at least 16 %: the only fat allowed in the dough.
+- **Raisins and candied citrus peel**, at least 20 %. Variants (chocolate, no peel, fillings) are allowed
+  under art. 7, as long as no other fat is added.
+- **Natural sourdough** (*pasta acida*, lievito madre): mandatory. Baker's yeast is allowed only as an extra,
+  up to 1 %. Salt. Optional: milk, honey, malt, cocoa butter, natural flavourings, emulsifiers.
+
+*Method.* A sourdough starter is refreshed for days, then the dough is built in two or more long stages with
+flour, sugar, yolks and lots of butter, and finally loaded with raisins and candied orange and citron. It
+rises for many hours in paper moulds, is baked, and is hung upside down to cool so the dome does not sink.
+
+**Collect in the game:** Farina di frumento · Lievito madre · Burro · Tuorli d'uovo · Uvetta · Canditi.
+The in-game notes leave out the percentages (see the caveat above).
+
+**Authority sources:** [DM 22 July 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf)
+(the decree's text, hosted by Frareg; read from snippets); [DM 16 May 2017, InformaImpresa](https://informaimpresa.it/item/alimentazione-decreto-16-05-2017-modifiche-alle-norme-su-panettone-pandoro-e-colombe);
+[Dissapore 2026](https://www.dissapore.com/spesa/il-panettone-potrebbe-cambiare-legge-scollandosi-di-dosso-tutta-questa-tradizione/)
+(a 2026 "Manifesto per il Panettone Italiano" proposes changes; not law);
+[Gambero Rosso: the Academy's decalogue](https://www.gamberorosso.it/notizie/il-decalogo-del-panettone-perfetto-secondo-laccademia-dei-maestri-del-lievito-madre-e-del-panettone-italiano/)
+(voluntary rules stricter than the law: live sourdough, no preservatives, no synthetic flavourings);
+[Camera di Commercio di Torino](https://www.to.camcom.it/sites/default/files/export-internazionalizzazione/Prodotti_da_forno.pdf);
+✓ [Il Fatto Alimentare](https://ilfattoalimentare.it/?p=93243): "Grazie a questa norma nessuno può
+commercializzare panettoni preparati con margarina al posto del burro o con altri ingredienti di minor
+pregio." (the in-game quote).
+
+*Credited (sources only):* the **Accademia dei Maestri del Lievito Madre e del Panettone Italiano** (its
+decalogue); **Conpait** and **Federcuochi**, the pastry-chef and cooks' associations asking to set
+artisanal panettone apart ([ItaliaOggi 2022](https://www.italiaoggi.it/news/alimentare-appello-di-conpait-e-federcuochi-diamo-un-nuovo-nome-al-panettone-202212231804265492)).
+No influencer outrage was found: the complaints come from the law, consumer media and pastry associations.
+
+**Intruders in the game**
+
+| Enemy | Intruder | Popularity | C | Why Italians object |
+|---|---|---|---|---|
+| `margarina` Margarina Travestita (new) | Margarine instead of butter | ●●●○○ 3 | | By law butter is the only fat in the dough. Il Fatto Alimentare: nobody may sell as "panettone" a cake made with margarine; it called out discount-store "fake panettoni". Not taste, a legal definition. |
+| `palma` Grasso di Palma (new) | Palm oil and vegetable fats | ●●●○○ 3 | | Not allowed in the dough; consumer media flagged even "artisanal" panettoni, and filled panettoni whose creams used palm fat (the creams are a grey area). |
+| `lievito` Lievito di Birra (new) | Baker's yeast instead of sourdough | ●○○○○ 1 | C | Panettone must be naturally fermented with sourdough. *Other side:* up to 1 % of baker's yeast IS legal alongside it; only a sourdough-free product is an intruder. |
+| `conservante` Il Conservante (new) | Preservatives | ●○○○○ 1 | C | Not on the decree's list of optional ingredients, and banned outright by the pastry chefs' Academy. *Other side:* industrial panettoni use permitted additives such as emulsifiers, and whether preservatives are strictly excluded was read from snippets only: a purists' complaint. |
+
+*Sources:*
+
+- **Margarine:** [DM 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf); ✓ [Il Fatto Alimentare](https://ilfattoalimentare.it/?p=93243) (above); ✓ [Il Fatto Alimentare, the discount-store "fake panettoni"](https://ilfattoalimentare.it/ecco-i-finti-panettoni-proposti-da-lidl.-la-legge-vieta-la-vendita-di-questi-dolci.-segnalateci-altri-casi.html): "margarina al posto del pregiato burro, ottenuta con oli e grassi vegetali ( in genere palma e palmisto)" (the first words are quoted on the crime card)
+- **Palm oil:** [DM 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf); ✓ [GreenMe](https://www.greenme.it/lifestyle/sai-cosa-compri/additivi-e-zuccheri-nel-panettone-da-motta-a-tre-marie-questi-sono-i-piu-utilizzati-anche-in-alcuni-prodotti-artigianali/): "non è consentito dalla normativa del 2005 per la preparazione del panettone" (said of palm oil; quoted on the crime card); [Il Fatto Alimentare, filled panettoni](https://ilfattoalimentare.it/panettone-pandoro-farciti-olio-di-palma.html)
+- **Baker's yeast:** [DM 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf); [Gambero Rosso, the Academy's decalogue](https://www.gamberorosso.it/notizie/il-decalogo-del-panettone-perfetto-secondo-laccademia-dei-maestri-del-lievito-madre-e-del-panettone-italiano/); [ItaliaOggi 2022](https://www.italiaoggi.it/news/alimentare-appello-di-conpait-e-federcuochi-diamo-un-nuovo-nome-al-panettone-202212231804265492)
+- **Preservatives:** [DM 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf); [Gambero Rosso, the decalogue](https://www.gamberorosso.it/notizie/il-decalogo-del-panettone-perfetto-secondo-laccademia-dei-maestri-del-lievito-madre-e-del-panettone-italiano/); [ItaliaOggi 2022](https://www.italiaoggi.it/economia-e-politica/economia-e-finanza/alimentare-appello-di-conpait-e-federcuochi-diamo-un-nuovo-nome-al-panettone-fpugstal)
+
+**Accepted in Italy:** chocolate, no candied peel, filled or glazed variants (art. 7, provided no fat other
+than butter is added: [Il Fatto Alimentare](https://ilfattoalimentare.it/panettone-pandoro-farciti-olio-di-palma.html));
+baker's yeast up to 1 % alongside the sourdough, natural flavourings, emulsifiers ([DM 2005](https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf));
+the savoury *panettone gastronomico*, an artisanal party food (the 2025 industrial "panettone salato" drew
+naming doubts, not mass outrage: [Dissapore 2025](https://www.dissapore.com/spesa/panettone-salato-barbieri-motta-recensione/)).
+
+**Extra in the waves:** none.
+
+**Fun facts**
+
+- Panettone is one of the few desserts whose recipe is fixed by an Italian ministerial decree.
+- It is cooled hanging upside down so the soft dome does not sink (the boss's "flip" attack).
+- Raisins and candied peel must make up at least a fifth of a classic panettone (per the decree's snippets).
+
+**Coverage:** the November 2026 extension sweep only (desk review, no second checker). A strong legal canon
+and weak influencer outrage: the report called it the optional third dolce.
+
+---
+
+## 14. Il Menù degli Orrori (the finale)
 
 *The Menu of Horrors* · **Il Gran Finale** · Not a dish: the food court, where every crime is born.
 
@@ -981,7 +1235,8 @@ extravergine (from every corner of Italy).
 **Intruders** (in `recipes.ts`): the best-known crimes of the menu, each shown with the dish it comes from
 ("Panna nella Carbonara? NO!"): cream, smoked bacon, onion, Parmesan instead of Pecorino, peas and mushrooms
 (from the Carbonara); ketchup (Pomodoro); pineapple (Margherita); butter (Cacio e Pepe); garlic
-(Amatriciana); spaghetti bolognese (Ragù); chicken (Alfredo); cheese on clams (Vongole).
+(Amatriciana); spaghetti bolognese (Ragù); chicken (Alfredo); cheese on clams (Vongole); "pepperoni"
+(Diavola); puff pastry (Cannoli); margarine (Panettone).
 
 **In the waves.** The finale's waves are mixed by hand from the whole menu and exempt from the 80 % and
 order rules; `stageRuleProblems()` only checks that every intruder and extra listed for it spawns in some
@@ -990,8 +1245,9 @@ method crimes (snapped spaghetti, scissors, overcooked pasta, the pasta-rinser, 
 the cursed can, frozen lasagna), the drinks (the frappé, and the cappuccino, which turns up after the 11:00
 event), the viral phone, balsamic glaze, pasta crisps, Alfredo the Gluey, the stained Margherita, the
 Hawaiian slice, "pepperoni", the rolling meatball and intruders of other dishes (cashews, BBQ sauce,
-broccoli, cheddar, the cheese pull, shrimp, the wrong oil, cooked ham, pineapple chunks): every enemy of the
-game except the bosses turns up at least once.
+broccoli, cheddar, the cheese pull, shrimp, the wrong oil, cooked ham, pineapple chunks, and the crimes of
+the Diavola and the dolci at a low weight: the neon cannolo, the cannolo filled in advance, palm fat, baker's
+yeast and the preservative): every enemy of the game except the bosses turns up at least once.
 
 > *Fun fact (in-game):* In a 2022 YouGov survey, Italians rated ketchup on pasta at −82, pineapple on pizza
 > at −63 and cream in carbonara at −45. They were far kinder to ragù on spaghetti: +81.
@@ -1005,17 +1261,20 @@ toast, when you collect it where it belongs or meet it where it does not (`FRIEN
 
 | Ingredient | Belongs in | Intruder in | Game enemy |
 |---|---|---|---|
-| Burro (butter) | Fettuccine Alfredo | Cacio e Pepe, Vongole, Pesto, Carbonara | `burro` |
+| Burro (butter) | Fettuccine Alfredo, Panettone (by law its only fat) | Cacio e Pepe, Vongole, Pesto, Carbonara | `burro` |
 | Aglio (garlic) | Pomodoro, Marinara, Pesto, Vongole | Amatriciana, Carbonara, Ragù, Alfredo | `aglio` |
 | Pancetta | Ragù (fresh) | Amatriciana | `bacon` |
 | Parmigiano | Alfredo, Pesto | Carbonara, Amatriciana, Cacio e Pepe (as a replacement for Pecorino), Vongole (on clams) | `parmesan` |
-| Mozzarella | Margherita | Marinara | `filante` |
+| Mozzarella | Margherita, Diavola | Marinara | `filante` |
 | Onion (soffritto) | Ragù | Carbonara, Amatriciana | `cipolla` |
+| Brewer's yeast (in the Neapolitan dough) | Margherita, Marinara | Panettone (yeast alone, without sourdough) | `lievito` |
 
 More cross-dish reminders from the research: peas are mocked in carbonara but accepted in ragù; cream is
 mocked in carbonara, Alfredo, cacio e pepe, pesto and vongole, and on tagliatelle al ragù (Bolognese custom
 allows it when the ragù dresses dry pasta), yet it is common on Italian pizza and fine in penne panna e
-pomodoro; Parmigiano is correct in Alfredo, ragù (at the table) and lasagne.
+pomodoro; Parmigiano is correct in Alfredo, ragù (at the table) and lasagne. Whipped cream is the cannolo's
+crime too, but the cannolo's sweet ricotta is its own ingredient; bell peppers are fine on any pizza but the
+diavola's "pepperoni" order; margarine is only ever the panettone's fake butter.
 
 ## Accepted in Italy: never an enemy
 
@@ -1036,6 +1295,9 @@ Each item is followed by its source; "culinary lens" means the culinary lens add
 | Alfredo | Parmigiano, lots of butter, pasta water, black pepper ([Gambero Rosso](https://www.gamberorosso.it/notizie/la-storia-delle-fettuccine-alfredo)) |
 | Ragù | Milk, olive oil, light broth, nutmeg ([Accademia](https://accademiaitalianadellacucina.it/en/node/62013)); mixed beef and pork, knife-chopped meat, red or white wine ([Bologna Chamber of Commerce press review, 2023](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/Rassegna/Carlino21042023.pdf)); chicken livers, sausage, peas, dried porcini ([Bologna Chamber of Commerce press review](https://www.bo.camcom.gov.it/sites/default/files/comunicazione/comunicati/Rassegna/Corriere1.pdf)); cream on *dry* pasta ([Bologna heritage sheet 2022](https://assets.culturabologna.it/ddbb8840-5178-4a44-b17b-de32ecf6f74e-2022-tagliatella-al-ragu.pdf)) |
 | Pesto | Garlic in any amount ([Scatti di Gusto](https://www.scattidigusto.it/pesto-al-mortaio-la-ricetta-di-roberto-panizza-da-fare-a-casa/)); potatoes and green beans; Grana Padano; Pecorino Romano, Sardo or Fiore Sardo; rocket pesto and walnut sauce as their own recipes (culinary lens) |
+| Diavola | 'Nduja instead of or with the salame; chilli oil, chilli, oregano or basil ([Scatti di Gusto](https://www.scattidigusto.it/migliori-pizze-diavola-in-campania)); bell peppers on other pizzas; hot honey (a trend: [Gambero Rosso 2024](https://www.gamberorosso.it/attualita/hot-honey-miele-piccante/)) |
+| Cannoli | Cow's-milk ricotta; *cannoli alla crema* with pastry cream; pistachio, candied orange, candied cherry, chocolate chips (sources in [the Cannoli section](#12-cannoli-siciliani)) |
+| Panettone | Chocolate, no peel, filled or glazed variants; baker's yeast up to 1 % with the sourdough; natural flavourings, emulsifiers; the savoury *panettone gastronomico* (sources in [the Panettone section](#13-panettone)) |
 | Vongole | A few cherry tomatoes, white wine, chili, lupini clams ([Dissapore](https://www.dissapore.com/grande-notizia/antonino-cannavacciuolo-spaghetti-alle-vongole-con-o-senza-pomodoro/)); a chef's creamy version with milk, as a twist ([Centro Meteo Italiano](https://www.centrometeoitaliano.it/attualita/spaghetti-alle-vongole-di-antonino-cannavacciuolo-il-segreto-per-farli-cremosi-la-ricetta-173794/)) |
 
 ## The most-cited complaints (top 20)
@@ -1096,6 +1358,14 @@ pizzaiolo". Several appear on both sides of a debate, which is why they are usef
 | **Luca Marchini** | Starred restaurant | Defends fish with cheese: the counter-voice to the vongole rule. [First Online](https://www.firstonline.info/en/parmigiano-sul-pesce-e-chi-ha-detto-che-non-si-puo/) |
 | **Gianfranco Vissani** (with Cristina Bowerman, Alessandro Pipero) | Restaurants, press | Against the 2024 canned carbonara ("shameful" is in a headline; the other remarks are unverified). [Il Sole 24 Ore](https://en.ilsole24ore.com/art/and-controversy-the-can-carbonara-proposed-by-heinz-vissani-destroys-italian-culture-AFtCnSbD) |
 
+For the Diavola and the dolci (November 2026 extension): **Corrado Assenza** (Caffè Sicilia, Noto; his plain
+sheep-ricotta cannolo, and a bakery blog's attributed "5 mistakes", [Scatti di Gusto](https://www.scattidigusto.it/caffe-sicilia-chiuso-3-dolci-di-corrado-assenza-per-ricordare-il-bar-di-noto));
+**Ciccio Sultano** (Duomo, Ragusa Ibla; his home cannoli, [Scatti di Gusto](https://www.scattidigusto.it/cannoli-siciliani-fatti-in-casa-ricetta-tradizionale-vs-quella-di-ciccio-sultano));
+the **Accademia dei Maestri del Lievito Madre e del Panettone Italiano** (its decalogue); and, for the
+tiramisù that did not make the menu, the Le Beccherie family and Roberto Linguanotto (the reference recipe),
+Iginio Massari and Valter Crema (counter-voices: cream and Marsala are accepted). No influencer was found
+behind the panettone complaints, and none for the Diavola.
+
 Also consulted for tone, not facts: the outrage accounts @italians_mad_at_food and @ItalianComments.
 Not reached for these dishes: Benedetta Rossi, Giorgio Locatelli, Gabriele Bonci, Enzo Coccia, Davide Civitiello.
 
@@ -1112,11 +1382,19 @@ are kept for future levels (popularity of the top intruders in brackets):
 - **Spaghetti aglio, olio e peperoncino** (Naples): grated cheese (3, C), chicken (2), black pepper (2, C).
 - **Spaghetti alla puttanesca** (Campania): grated cheese (2, C), canned pre-pitted olives (1).
 - **Pasta alla Norma** (Catania): mozzarella (3), fresh ricotta (3), Parmesan (2, C).
-- **Pizza Diavola**: "pepperoni" (2, C), bell peppers (1). **Capricciosa / Quattro Stagioni**: würstel (2, C), pineapple (2, C).
+- **Pizza Diavola**: now a level (section 8). **Capricciosa / Quattro Stagioni**: würstel (2, C), pineapple (2, C);
+  the extension found only these two (würstel rests on one viral Salerno row) and an accepted egg, so no level.
+  **Quattro formaggi**: no Italian outrage found.
 - **Neapolitan toppings pool**: pineapple (5, C), ketchup (3), chicken (3), BBQ sauce (2), cheddar (2), banana (2),
   imitation "Parmesan" (1), exotic meats and insects (1), kiwi (1).
-- **Tiramisù**: whipped cream instead of mascarpone (2). THIN: one sweep, one source, no checker review.
-  Do not ship as a level without more research.
+- **Tiramisù**: the extension made it the best-sourced dessert (Coldiretti 2016 and 2022, Dissapore,
+  GialloZafferano, Scatti di Gusto; a six-ingredient canon of eggs, sugar, mascarpone, savoiardi, coffee and
+  cocoa): cream *instead of* mascarpone (3 on its 1–3 scale), yogurt instead of eggs (2), sponge instead of
+  savoiardi (2, C), shortbread (1), potato starch (1, C), cream cheese (1, weak). Accepted, never to mock:
+  cream folded *into* the mascarpone, Marsala or liqueur, whipped whites, pandoro, strawberry or pistachio
+  tiramisù. Not on the menu: the owner chose the cannoli and the panettone.
+- **Other dolci** (extension): panna cotta and cassata (technique errors only), babà and maritozzo (variants
+  accepted, no controversy); sfogliatella and gelato were not searched.
 
 Candidates never merged (unsourced or unreviewed): gummy-sweet and baked-bean pizzas, eggs in ragù,
 pre-cooked sugared pizza sauce, onion or canned clams in vongole, dried "Italian seasoning" in pomodoro.
@@ -1180,6 +1458,25 @@ two, its popularity is **inherited** from those entries, not separately research
   smoked" became "cured pork cheek, not smoked bacon", and mushrooms no longer "sparked a Roman revolt"
   (reasons in the [Carbonara caveats](#2-spaghetti-alla-carbonara)).
 
+- **The Diavola and the dolci** (November 2026):
+  - The `pepperoni` enemy (the winged bell pepper) is the Diavola's "Peperoni", the mix-up itself; the
+    American salami got its own enemy, `salame_usa`. The Margherita keeps its "pepperoni" intruder on the
+    bell pepper, as before.
+  - The cannoli's whipped cream is the cream carton, `panna`: one enemy, several creams.
+  - The cannolo **filled in advance** is an intruder in the research (2) but a crime of method in the game,
+    the dish's one extra (`ammuddato`), like overcooked pasta elsewhere.
+  - **Dropped as the weakest items:** ranch on the Diavola and mascarpone in the cannoli (English sources only).
+  - The panettone's legal percentages (butter at least 16 %, raisins and peel at least 20 %) are left out
+    of the in-game notes: they were read from snippets of the decree.
+  - The finale lists one crime of each new dish (pepperoni, puff pastry, margarine) and the soggy cannolo
+    among its extras, and spawns all eight new crimes at a low weight.
+  - Bosses away from home: the Deep-Dish shouts "Five centimetres of PEPPERONI!" on the Diavola; the
+    Cream Colossus "Cannoli need WHIPPED CREAM!"; the Clock Tower times the cannoli filled at dawn and sold
+    at dusk (the dish's crime of method); the Big Can boasts of PRESERVATIVES and the Influencer of a
+    two-hour panettone with no lievito madre.
+  - The crime cards quote only verified wordings, credited to the publication (Gambero Rosso, Il Fatto
+    Alimentare, GreenMe, a bakery's cannoli guide), with no person named.
+
 ## How this was researched, and its limits
 
 **Process.** Each dish group (Roman pastas, Northern dishes, Southern dishes, pizza) went through three passes:
@@ -1209,11 +1506,12 @@ the sources lens showed to be unsupported; intruders kept when the culinary lens
   Every other quote became a paraphrase, with the reported Italian wording kept for later checking. The
   editor's searches did **not** confirm the Dissapore carbonara garlic and onion line, a Monosilio line on cream
   as a "consuetudine del passato", the wording of Cracco's apology, or the Il Post chicken-pizza line.
-  **No pizza quote is verified.**
+  **No pizza quote is verified** (the Diavola's Cookist line comes from the 2026 extension).
 - **In-game quotes.** `recipes.ts` carries a `quote` only where the wording was verified: Pomodoro
   (Dissapore), Carbonara (Vincenzo's Plate), Alfredo (The Pasta Queen), Amatriciana (the STG), Ragù (the
-  Bologna heritage sheet), Pesto (Internazionale) and Vongole (Vincenzo's Plate). Cacio e Pepe, the two
-  pizzas and the finale have none.
+  Bologna heritage sheet), Pesto (Internazionale), Vongole (Vincenzo's Plate), Diavola (Cookist), Cannoli
+  (Gazzetta del Gusto) and Panettone (Il Fatto Alimentare). Cacio e Pepe, the Margherita, the Marinara and
+  the finale have none.
 - **Popularity is an editorial estimate** (1–5, the lower of the two lens scores), not a measured count.
   The only survey numbers behind it are YouGov's 2022 net scores among Italians (ketchup on pasta −82,
   pineapple on pizza −63, cream in carbonara −45, cheese on seafood pasta −39, Bolognese sauce on spaghetti
@@ -1235,6 +1533,15 @@ the sources lens showed to be unsupported; intruders kept when the culinary lens
 - **The working files** (the research dataset `recipes_dataset.json` and the full dossier, with every
   evidence entry and the "+N more" sources) were produced during the research and are not in the repository.
   This file is the edited record; `src/game/recipes.ts` holds the in-game subset.
+
+**The November 2026 extension** (Diavola, Cannoli, Panettone, and the tiramisù that was not used) had the
+same limits, and more: one sweep, desk review only, no second checker lens; no page opened (fetching was
+blocked again); ✓ means the wording appeared as quoted snippet text. Not verified: the exact DM 2005
+percentages and whether it excludes preservatives; the Corrado Assenza attribution of the cannoli guide
+(third-party blog); the year of the Italy Magazine / Repubblica cannoli story (2013 is inferred); the
+tiramisù's invention date and the Roberto Boggio cream-cheese quote. La Voce di New York (2 Nov 2026) is
+too recent to re-check. Weakest items: ranch (dropped), mascarpone in cannoli (dropped), cream cheese in
+tiramisù; preservatives and yeast-only panettone rest on the decree's snippets and the Academy's rules.
 
 **To finish verification:** allow the source hosts in the network settings (or raise the search budget),
 open each cited page, and check every quote against the live page before printing it verbatim in-game or in
@@ -1260,7 +1567,7 @@ When you change `src/game/recipes.ts`:
 5. **Never mock what Italians accept** ([list above](#accepted-in-italy-never-an-enemy)).
 6. **Intruders must be enemies.** `enemy` is an `ENEMIES` id; the waves in `stages.ts` must keep ≥ 80 % of
    each minute's weight on the dish's intruders, follow the intruder order and spawn every intruder.
-   `stageRuleProblems()` checks all three for dishes 1–10 (garlic, a support enemy, is left out of the order
+   `stageRuleProblems()` checks all three for every dish but the finale (garlic, a support enemy, is left out of the order
    check only), and `scripts/validate.mjs` prints any problem. **The finale** is mixed by hand and skips the
    80 % and order rules, but the check still makes sure every intruder and extra listed for it spawns in
    some minute or event.
