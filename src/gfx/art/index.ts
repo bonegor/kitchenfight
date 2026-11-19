@@ -21,6 +21,8 @@ import './recipes_bosses_a';
 import './recipes_bosses_b';
 import './recipes_ingredients';
 import './recipes_dishes';
+import './recipes_enemies_c';
+import './recipes_bosses_c';
 // MUST stay last: stand-ins for every Il Menù sprite no module above has defined yet
 import './placeholders';
 

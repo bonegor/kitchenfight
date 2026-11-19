@@ -1711,3 +1711,310 @@ ingr('mozzarella', (ctx) => {
   // a basil leaf at its side
   basilLeaf(ctx, 7.4, 5.0, -0.5, 5.6, 3.4, 1.0);
 });
+
+// ===========================================================================
+// THE DIAVOLA AND THE DOLCI: spicy salami; the cannolo's shell, sheep's ricotta, chocolate chips,
+// candied peel, pistachios; the panettone's flour, raisins and lievito madre
+// (butter, egg yolks, dough, tomato, mozzarella, oil and chili are the icons above)
+// ===========================================================================
+
+/** Salame piccante: a short, chubby spicy salami, tied at one end, cut at the other, two slices in front. */
+ingr('salame', (ctx) => {
+  rot(ctx, -1.2, -2.6, -0.42, () => {
+    const body = (c: Ctx) => {
+      c.moveTo(7.6, -4.4);
+      c.lineTo(-6.2, -4.6);
+      c.quadraticCurveTo(-10.6, -4.4, -10.6, 0);
+      c.quadraticCurveTo(-10.6, 4.4, -6.2, 4.6);
+      c.lineTo(7.6, 4.4);
+      c.closePath();
+    };
+    S(ctx, body, { fill: radial(ctx, -3, -3, 12, [[0, '#d24a30'], [0.6, '#a62a1c'], [1, '#741a10']]), ink: K, shadow: '#5e140c', shadowOffset: [-1.2, -1.6], gloss: [{ x: -3, y: -3, rx: 4.4, ry: 0.8, alpha: 0.45 }] });
+    inside(ctx, body, () => {
+      speckle(ctx, -1, 0, 8, 4, 16, '#f6c6a6', 0.55, 61, 0.85);
+      // the hint of a net round the casing
+      for (let x = -9; x <= 7; x += 3) line(ctx, [[x, -5], [x + 2.6, 5]], 0.3, '#3a0c08', false, 0.45);
+    });
+    // the string tie at the back
+    S(ctx, (c) => roundRectPath(c, -12.4, -1.4, 2.2, 2.8, 0.6), { fill: '#efe2c2', ink: 0.8, shadow: 'none' });
+    line(ctx, [[-12.2, 0], [-13.8, -2.2], [-13.2, -4]], 0.7, '#efe2c2', true, 1);
+    // the cut face
+    const cut = (c: Ctx) => ellipsePath(c, 7.6, 0, 2.2, 4.4);
+    S(ctx, cut, { fill: '#e2482c', ink: 1.1, shadow: 'none' });
+    inside(ctx, cut, () => {
+      speckle(ctx, 7.6, 0, 1.8, 3.8, 8, '#fbd6c0', 0.5, 62, 1);
+      speckle(ctx, 7.6, 0, 1.8, 3.8, 6, '#ffb000', 0.35, 63, 0.9);
+    });
+  });
+  // two slices in front: deep red, fat dots, chilli flecks
+  for (const [x, y, r] of [[2.4, 6.4, 3.8], [8, 5.4, 3.4]] as [number, number, number][]) {
+    const sl = (c: Ctx) => ellipsePath(c, x, y, r, r * 0.62);
+    S(ctx, sl, { fill: '#d63c26', ink: 1.1, shadow: '#9a2416', shadowOffset: [-0.6, -0.7] });
+    inside(ctx, sl, () => {
+      speckle(ctx, x, y, r * 0.8, r * 0.5, 7, '#fbd6c0', 0.42, Math.round(x * 9), 1);
+      speckle(ctx, x, y, r * 0.8, r * 0.5, 5, '#ffb000', 0.3, Math.round(x * 9) + 1, 0.9);
+    });
+    glint(ctx, x - r * 0.35, y - r * 0.25, r * 0.3, r * 0.12, -0.2, 0.75);
+  }
+});
+
+/** The scorza: an empty fried cannolo shell, golden and blistered. */
+ingr('scorza', (ctx) => {
+  rot(ctx, 0, 0.4, -0.5, () => {
+    const L = 21, r = 3.6, fl = 1.3;
+    // a thin tube flaring a little at both open ends
+    const tube = (c: Ctx) => {
+      c.moveTo(-L / 2, -r - fl);
+      c.quadraticCurveTo(-L / 2 + 3, -r, 0, -r + 0.2);
+      c.quadraticCurveTo(L / 2 - 3, -r, L / 2, -r - fl);
+      c.lineTo(L / 2, r + fl);
+      c.quadraticCurveTo(L / 2 - 3, r, 0, r - 0.2);
+      c.quadraticCurveTo(-L / 2 + 3, r, -L / 2, r + fl);
+      c.closePath();
+    };
+    S(ctx, tube, { fill: radial(ctx, -4, -3, 14, [[0, '#f6c886'], [0.55, '#d08a40'], [1, '#9a5a22']]), ink: K, shadow: '#8a5222', shadowOffset: [-0.8, -1.4] });
+    inside(ctx, tube, () => {
+      const R = rng(71);
+      for (let i = 0; i < 18; i++) {
+        const x = -L / 2 + 1.5 + R() * (L - 3), y = -r + 0.6 + R() * (r * 2 - 1.2), br = 0.5 + R() * 0.7;
+        ctx.beginPath();
+        circlePath(ctx, x, y, br);
+        ctx.fillStyle = 'rgba(100,50,14,0.6)';
+        ctx.fill();
+        ctx.beginPath();
+        circlePath(ctx, x - br * 0.3, y - br * 0.3, br * 0.5);
+        ctx.fillStyle = 'rgba(255,226,170,0.95)';
+        ctx.fill();
+      }
+      line(ctx, [[-L / 2 + 2, -r * 0.5], [L / 2 - 2, -r * 0.55]], 0.7, '#fff2d0', false, 0.6);
+    });
+    // both ends open and hollow (it is filled only at the last moment)
+    for (const sd of [-1, 1]) {
+      S(ctx, (c) => ellipsePath(c, sd * (L / 2 - 0.3), 0, 1.5, r + fl - 0.2), { fill: '#7a3c12', ink: 1, shadow: 'none' });
+      S(ctx, (c) => ellipsePath(c, sd * (L / 2 - 0.1), 0, 0.8, r + fl - 1.3), { fill: '#3a1a08', ink: 0, shadow: 'none' });
+    }
+  });
+});
+
+/** Sheep's ricotta: a snowy dome with the weave of its basket mould. */
+ingr('ricotta', (ctx) => {
+  const body = (c: Ctx) => {
+    c.moveTo(-8.6, 6.4);
+    c.lineTo(-9.4, -1.6);
+    c.quadraticCurveTo(-9.2, -8.4, 0, -8.6);
+    c.quadraticCurveTo(9.2, -8.4, 9.4, -1.6);
+    c.lineTo(8.6, 6.4);
+    c.quadraticCurveTo(0, 8.6, -8.6, 6.4);
+    c.closePath();
+  };
+  S(ctx, body, { fill: radial(ctx, -3, -5, 14, [[0, '#ffffff'], [0.6, '#fbf8ee'], [1, '#e2dccb']]), ink: K, shadow: '#d6cfbc', shadowOffset: [-2.2, -2] , gloss: [{ x: -3.6, y: -5.4, rx: 2.6, ry: 1.2, rot: -0.4, alpha: 0.9 }] });
+  inside(ctx, body, () => {
+    // the basket weave pressed into its sides
+    for (let row = 0; row < 4; row++) {
+      for (let k = -4; k <= 4; k++) {
+        const x = k * 2.2 + (row % 2) * 1.1, y = -2.6 + row * 2.4;
+        ctx.beginPath();
+        ellipsePath(ctx, x, y, 0.75, 0.5);
+        ctx.fillStyle = 'rgba(190,178,150,0.6)';
+        ctx.fill();
+      }
+    }
+  });
+  // a spoon of it taken out, glistening
+  S(ctx, (c) => ellipsePath(c, 2.2, -6.2, 3.2, 1.4, -0.1), { fill: '#f2eee2', ink: 0.7, shadow: 'none' });
+  glint(ctx, 1.4, -6.6, 1.2, 0.4, -0.1, 0.9);
+});
+
+/** Gocce di cioccolato: a little heap of dark chocolate drops. */
+ingr('cioccolato', (ctx) => {
+  const drops: [number, number, number, number][] = [
+    [-4.6, -4.6, 3.6, -0.3], [1.4, -6.0, 3.4, 0.25], [6.2, -2.8, 3.2, 0.5],
+    [-7.6, 1.2, 3.4, -0.5], [-1.8, 0.4, 3.8, 0.05], [4.6, 2.6, 3.6, 0.35],
+    [-4.6, 6.2, 3.4, -0.2], [1.6, 6.8, 3.2, 0.3],
+  ];
+  for (const [x, y, s, a] of drops) {
+    rot(ctx, x, y, a, () => {
+      const d = (c: Ctx) => {
+        c.moveTo(0, -s * 1.15);
+        c.quadraticCurveTo(s * 0.45, -s * 0.2, s, s * 0.45);
+        c.quadraticCurveTo(s * 0.9, s * 0.8, 0, s * 0.82);
+        c.quadraticCurveTo(-s * 0.9, s * 0.8, -s, s * 0.45);
+        c.quadraticCurveTo(-s * 0.45, -s * 0.2, 0, -s * 1.15);
+        c.closePath();
+      };
+      S(ctx, d, { fill: '#5a2e1a', ink: 1.1, shadow: '#2e140a', shadowOffset: [-s * 0.25, -s * 0.25], gloss: [{ x: -s * 0.3, y: -s * 0.2, rx: s * 0.18, ry: s * 0.4, rot: 0.4, alpha: 0.55, color: '#c08060' }] });
+    });
+  }
+});
+
+/** Canditi: glossy strips and cubes of candied orange peel, sparkling with sugar. */
+ingr('canditi', (ctx) => {
+  const strip = (x: number, y: number, a: number, L: number, w: number) => rot(ctx, x, y, a, () => {
+    const b = (c: Ctx) => {
+      c.moveTo(-L / 2, -w / 2);
+      c.quadraticCurveTo(0, -w / 2 - 1.4, L / 2, -w / 2);
+      c.lineTo(L / 2, w / 2);
+      c.quadraticCurveTo(0, w / 2 - 1.4, -L / 2, w / 2);
+      c.closePath();
+    };
+    S(ctx, b, { fill: radial(ctx, -L * 0.2, -w * 0.3, L, [[0, '#ffc860'], [0.6, '#f68a1a'], [1, '#c85a0e']]), ink: K * 0.85, shadow: '#b8500a', shadowOffset: [-0.6, -0.9], gloss: [{ x: -L * 0.15, y: -w * 0.25, rx: L * 0.22, ry: w * 0.14, alpha: 0.85 }] });
+    // the pale pith side showing along one edge
+    line(ctx, [[-L / 2 + 0.6, w / 2 - 0.5], [0, w / 2 - 1.8], [L / 2 - 0.6, w / 2 - 0.5]], 0.6, '#fff0b8', true, 0.85);
+  });
+  strip(-2, -4.6, -0.45, 15, 3.6);
+  strip(1.4, 0.6, 0.2, 16, 3.8);
+  for (const [x, y, s, col] of [[-6.6, 5.8, 2.6, '#f68a1a'], [-1.2, 7.2, 2.4, '#7ac04a'], [5, 6.6, 2.6, '#f2a21e']] as [number, number, number, string][]) {
+    rot(ctx, x, y, x * 0.05, () => S(ctx, (c) => roundRectPath(c, -s, -s, s * 2, s * 2, s * 0.35), { fill: col, ink: 1, shadow: '#a8500a', shadowOffset: [-s * 0.3, -s * 0.3], gloss: [{ x: -s * 0.3, y: -s * 0.4, rx: s * 0.4, ry: s * 0.2, alpha: 0.9 }] }));
+  }
+  // sugar sparkles
+  speckle(ctx, 0, -1, 9, 7, 12, '#ffffff', 0.3, 81, 0.95);
+});
+
+/** Pistacchio: pistachios in their split shells, the green nut showing, and some chopped grains. */
+ingr('pistacchio', (ctx) => {
+  // chopped grains (granella) spilled in front
+  const R = rng(91);
+  for (let i = 0; i < 12; i++) {
+    const x = -7 + R() * 14, y = 5 + R() * 3.6;
+    rot(ctx, x, y, R() * 3, () => S(ctx, (c) => polyPath(c, [[-0.9, -0.6], [0.8, -0.8], [1, 0.5], [-0.6, 0.8]]), { fill: R() < 0.7 ? '#7cc04a' : '#c8a0b8', ink: 0.45, shadow: 'none' }));
+  }
+  const nut = (x: number, y: number, a: number, s: number) => rot(ctx, x, y, a, () => {
+    const shell = (c: Ctx) => { c.moveTo(-s * 1.45, 0); c.quadraticCurveTo(-s * 0.9, -s * 1.15, s * 0.4, -s); c.quadraticCurveTo(s * 1.5, -s * 0.6, s * 1.45, 0.1); c.quadraticCurveTo(s * 1.5, s * 0.7, s * 0.4, s); c.quadraticCurveTo(-s * 0.9, s * 1.15, -s * 1.45, 0); c.closePath(); };
+    S(ctx, shell, { fill: '#e9d6b0', ink: K * 0.85, shadow: '#c4a878', shadowOffset: [-s * 0.25, -s * 0.25] });
+    // the split, with the green kernel and its purple skin
+    const k = (c: Ctx) => ellipsePath(c, s * 0.15, -s * 0.05, s * 0.95, s * 0.55);
+    S(ctx, k, { fill: '#7ec04a', ink: 0.7, shadow: '#9a4a6a', shadowOffset: [-0.6, -0.6], gloss: [{ x: -s * 0.1, y: -s * 0.25, rx: s * 0.3, ry: s * 0.12, alpha: 0.8 }] });
+  });
+  nut(-4.4, -4.2, -0.4, 3.8);
+  nut(3.6, -3.4, 0.5, 3.6);
+  nut(-0.4, 1.6, 0.1, 4.0);
+});
+
+/** Farina: a little cloth sack of flour, open, with flour spilled and an ear of wheat. */
+ingr('farina', (ctx) => {
+  // the spill
+  ctx.save();
+  ctx.beginPath();
+  blobPath(ctx, 2, 7, 9.6, 2.4, 0.2, 12, 6);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+  speckle(ctx, 2, 7, 10, 2.6, 14, '#ffffff', 0.32, 93, 1);
+  const sack = (c: Ctx) => {
+    c.moveTo(-7.6, 6.6);
+    c.quadraticCurveTo(-9.6, 0, -6.4, -5.4);
+    c.lineTo(-7.6, -8.2);
+    c.quadraticCurveTo(-1, -6.4, 5.6, -8.4);
+    c.lineTo(4.8, -5.4);
+    c.quadraticCurveTo(8.6, 0, 6.6, 6.6);
+    c.quadraticCurveTo(-0.6, 8.6, -7.6, 6.6);
+    c.closePath();
+  };
+  S(ctx, sack, { fill: radial(ctx, -3, -2, 14, [[0, '#f6ead0'], [0.6, '#e2cfa6'], [1, '#bfa87a']]), ink: K, shadow: '#b8a070', shadowOffset: [-1.8, -1.6] });
+  inside(ctx, sack, () => {
+    // a red stripe woven into the cloth
+    ctx.fillStyle = '#c8402e';
+    ctx.beginPath();
+    ctx.moveTo(-10, 1);
+    ctx.quadraticCurveTo(0, 2.6, 10, 1);
+    ctx.lineTo(10, 2.6);
+    ctx.quadraticCurveTo(0, 4.2, -10, 2.6);
+    ctx.closePath();
+    ctx.fill();
+    for (let x = -8; x <= 8; x += 1.6) line(ctx, [[x, -8], [x + 0.4, 8]], 0.25, '#a8946a', false, 0.5);
+  });
+  // the flour heaped in its open mouth
+  S(ctx, (c) => { c.moveTo(-6.6, -6.6); c.quadraticCurveTo(-2, -10.6, 4.6, -6.8); c.quadraticCurveTo(-1, -5.2, -6.6, -6.6); c.closePath(); }, { fill: '#ffffff', ink: 0.9, shadow: '#e8e2d4', shadowOffset: [-0.8, -0.8] });
+  // an ear of wheat leaning on it
+  rot(ctx, 7.6, -3, 0.35, () => {
+    line(ctx, [[0, 9], [0, -6]], 1.6, INK, false);
+    line(ctx, [[0, 9], [0, -6]], 0.7, '#d8a84a', false);
+    for (let k = 0; k < 5; k++) {
+      const y = -7 + k * 1.9;
+      for (const sd of [-1, 1]) S(ctx, (c) => ellipsePath(c, sd * 1.1, y, 1.1, 1.7, sd * 0.5), { fill: '#e8b852', ink: 0.6, shadow: '#b8862a', shadowOffset: [-0.3, -0.3] });
+    }
+  });
+});
+
+/** Uvetta: a little heap of plump golden-brown sultanas, wrinkled and glossy. */
+ingr('uvetta', (ctx) => {
+  const R = rng(97);
+  const pts: [number, number, number][] = [
+    [-3.6, -5.4, 3.4], [2.6, -5.6, 3.2], [-6.8, -0.6, 3.4], [-0.6, -0.8, 3.8], [5.6, -0.4, 3.4],
+    [-4.6, 4.8, 3.6], [1.6, 4.6, 3.6], [7.2, 5, 3],
+  ];
+  for (const [x, y, r] of pts) {
+    const col = R() < 0.5 ? '#8a4a24' : '#a85e2a';
+    const b = (c: Ctx) => blobPath(c, x, y, r * 1.15, r * 0.85, 0.2, 9, Math.round(x * 7 + y));
+    S(ctx, b, { fill: col, ink: 1.1, shadow: '#4e2210', shadowOffset: [-r * 0.25, -r * 0.25], gloss: [{ x: x - r * 0.35, y: y - r * 0.35, rx: r * 0.3, ry: r * 0.16, rot: -0.5, alpha: 0.7, color: '#ffd8a0' }] });
+    inside(ctx, b, () => {
+      line(ctx, [[x - r * 0.7, y - r * 0.1], [x - r * 0.1, y + r * 0.2], [x + r * 0.6, y - r * 0.15]], 0.5, '#3a1808', true, 0.75);
+      line(ctx, [[x - r * 0.4, y + r * 0.5], [x + r * 0.4, y + r * 0.45]], 0.4, '#3a1808', true, 0.6);
+    });
+  }
+});
+
+/** Lievito madre: a jar of bubbly sourdough starter, risen to the top, a cloth tied over the rim. */
+ingr('lievito_madre', (ctx) => {
+  const jar = (c: Ctx) => roundRectPath(c, -7.2, -6.6, 14.4, 15.6, [2.6, 2.6, 3.4, 3.4]);
+  S(ctx, jar, { fill: '#eaf4f8', ink: K, shadow: 'none' });
+  inside(ctx, jar, () => {
+    // the starter: creamy, risen, full of bubbles
+    ctx.beginPath();
+    ctx.moveTo(-8, -3.4);
+    ctx.quadraticCurveTo(-3, -5.4, 0, -4.2);
+    ctx.quadraticCurveTo(4, -5.8, 8, -3.6);
+    ctx.lineTo(8, 10);
+    ctx.lineTo(-8, 10);
+    ctx.closePath();
+    ctx.fillStyle = radial(ctx, -2, 0, 12, [[0, '#fbf2dc'], [0.6, '#efdfba'], [1, '#d6c290']]);
+    ctx.fill();
+    const R = rng(99);
+    for (let i = 0; i < 16; i++) {
+      const x = -6 + R() * 12, y = -3 + R() * 11, r = 0.45 + R() * 0.9;
+      ctx.beginPath();
+      circlePath(ctx, x, y, r);
+      ctx.fillStyle = 'rgba(160,130,80,0.55)';
+      ctx.fill();
+      ctx.beginPath();
+      circlePath(ctx, x - r * 0.3, y - r * 0.3, r * 0.4);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fill();
+    }
+    // the line it has risen past (a rubber band marks where it started)
+    line(ctx, [[-8, 4.2], [8, 4.2]], 1.1, '#e0533a', false, 0.95);
+    // glass gloss
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(-5.8, -5, 1.4, 12);
+  });
+  // re-ink the jar
+  ctx.save();
+  ctx.beginPath();
+  jar(ctx);
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.restore();
+  // a checked cloth tied over the rim with string
+  const cloth = (c: Ctx) => {
+    c.moveTo(-9.4, -5.4);
+    c.quadraticCurveTo(-8.6, -10.4, 0, -10.6);
+    c.quadraticCurveTo(8.6, -10.4, 9.4, -5.4);
+    c.lineTo(8.6, -3.2);
+    c.lineTo(6.4, -5);
+    c.lineTo(4.4, -3.4);
+    c.lineTo(1.8, -5);
+    c.lineTo(-1, -3.4);
+    c.lineTo(-3.8, -5);
+    c.lineTo(-6.2, -3.4);
+    c.lineTo(-8.4, -5);
+    c.closePath();
+  };
+  S(ctx, cloth, { fill: '#fbf6ee', ink: 1.2, shadow: '#d8cfc0', shadowOffset: [-1, -1] });
+  inside(ctx, cloth, () => {
+    ctx.fillStyle = 'rgba(210,58,50,0.75)';
+    for (let x = -10; x <= 10; x += 3.2) ctx.fillRect(x, -12, 1.4, 10);
+    for (let y = -11; y <= -3; y += 3.2) ctx.fillRect(-10, y, 20, 1.2);
+  });
+  line(ctx, [[-8.4, -5.8], [0, -6.6], [8.4, -5.8]], 0.9, '#c9a46a', true, 1);
+});

@@ -1958,6 +1958,244 @@ function drawFoodcourt(ctx: Ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Pizza Diavola and the dolci
+// ---------------------------------------------------------------------------
+
+/** A slice of salame piccante baked on a pizza: cupped, its rim charred, a pool of red fat inside. */
+function salameSlice(ctx: Ctx, x: number, y: number, r: number, seed: number) {
+  const R = rng(seed);
+  const b: Build = (c) => blobPath(c, x, y, r, r * 0.62, 0.08, 10, seed);
+  fillP(ctx, (c) => ellipsePath(c, x + 0.7, y + 0.9, r * 1.05, r * 0.66), rgba('#7a1a0a', 0.35));
+  shape(ctx, b, { fill: rgrad(ctx, x - r * 0.3, y - r * 0.3, 0.3, r * 1.2, [[0, '#e24a2c'], [0.65, '#c2321c'], [1, '#7a1a0c']]), ink: 0.95, inkColor: '#4a0e06', shadow: 'none' });
+  clip(ctx, b, () => {
+    // the cup: a darker rim, a glossy pool of orange fat in the middle, fat freckles
+    strokeP(ctx, b, r * 0.35, rgba('#5a1206', 0.55));
+    fillP(ctx, (c) => ellipsePath(c, x + r * 0.1, y + r * 0.05, r * 0.45, r * 0.26), rgba('#ff8a2a', 0.65));
+    for (let i = 0; i < 6; i++) fillP(ctx, (c) => ellipsePath(c, x + (R() - 0.5) * r * 1.3, y + (R() - 0.5) * r * 0.8, 0.6, 0.45), '#fbd0b4', 0.9);
+  });
+  glint(ctx, x - r * 0.15, y - r * 0.05, r * 0.25, r * 0.09, -0.2, 0.9);
+}
+
+/** A little cruet of chilli oil (olio piccante): red-gold oil, chillies inside. */
+function chiliOil(ctx: Ctx, x: number, y: number, h: number) {
+  const w = h * 0.4;
+  const body: Build = (c) => {
+    c.moveTo(x - w * 0.5, y);
+    c.lineTo(x - w * 0.5, y - h * 0.45);
+    c.quadraticCurveTo(x - w * 0.5, y - h * 0.62, x - w * 0.15, y - h * 0.68);
+    c.lineTo(x - w * 0.15, y - h * 0.9);
+    c.lineTo(x + w * 0.15, y - h * 0.9);
+    c.lineTo(x + w * 0.15, y - h * 0.68);
+    c.quadraticCurveTo(x + w * 0.5, y - h * 0.62, x + w * 0.5, y - h * 0.45);
+    c.lineTo(x + w * 0.5, y);
+    c.quadraticCurveTo(x, y + w * 0.2, x - w * 0.5, y);
+    c.closePath();
+  };
+  contact(ctx, x + 2, y + 0.5, w * 0.8, w * 0.28, 0.35);
+  shape(ctx, body, { fill: rgba('#eaf2f0', 0.9), ink: 1.8, shadow: 'none' });
+  clip(ctx, body, () => {
+    fillP(ctx, (c) => c.rect(x - w, y - h * 0.58, w * 2, h), vgrad(ctx, y - h * 0.58, y, [[0, '#f2902a'], [0.6, '#d8501a'], [1, '#a8300e']]));
+    rot(ctx, x - w * 0.05, y - h * 0.25, 1.35, () => chili(ctx, 0, 0, h * 0.42, 0, 0.6));
+    fillP(ctx, (c) => c.rect(x + w * 0.22, y - h * 0.58, w * 0.3, h), rgba('#5a1a0a', 0.3));
+  });
+  line(ctx, [[x - w * 0.3, y - h * 0.08], [x - w * 0.3, y - h * 0.48]], 0.9, 'rgba(255,255,255,0.85)');
+  shape(ctx, (c) => c.rect(x - w * 0.2, y - h * 0.98, w * 0.4, h * 0.1), { fill: '#c9955a', ink: 1.1, shadow: '#9a6a36', shadowOffset: [-0.6, -0.3] });
+}
+
+function drawDiavola(ctx: Ctx) {
+  ctx.translate(0, -1.5);
+  // behind: a cruet of chilli oil and two dried chillies
+  chiliOil(ctx, 47, -10, 28);
+  chili(ctx, -44, -24, 15, 0.3, 1);
+  chili(ctx, -30, -27, 13, -0.2, -0.8);
+  napkin(ctx, [-56, 6], [-30, 2], [-26, 36], [-55, 36], '#d23a32', 6);
+  const pl = { x: 4, y: 11 };
+  contact(ctx, pl.x + 2.5, pl.y + 3.6, 53, 25, 0.32);
+  group(ctx, [
+    { build: (c) => ellipsePath(c, pl.x, pl.y + 2.4, 51.5, 23.5), style: { fill: '#d6cbb6', shadow: 'none' } },
+    { build: (c) => ellipsePath(c, pl.x, pl.y, 52, 23.5), style: { fill: rgrad(ctx, pl.x - 20, pl.y - 14, 2, 70, [[0, '#ffffff'], [0.5, '#fbf8f1'], [1, '#e9e1d0']]), shadow: 'none' } },
+  ], OUT);
+  strokeP(ctx, (c) => ellipsePath(c, pl.x, pl.y, 49, 21.6), 1.4, '#c0392b');
+  const g = pizzaBase(ctx, 1, 5, 48, 25.5, 1201, '#d23a1c');
+  // melted fior di latte, then the salame piccante on top
+  const R = rng(1202);
+  for (const [dx, dy, rx, ry] of [[-18, -4, 7, 3.8], [6, -9, 6.6, 3.6], [22, 1, 7, 3.8], [-6, 8, 7.4, 4], [14, 11, 6, 3.4]] as [number, number, number, number][]) {
+    const mx = g.sx + dx, my = g.sy + dy;
+    const b: Build = (c) => blobPath(c, mx, my, rx, ry, 0.25, 11, Math.round(dx * 11 + dy));
+    shape(ctx, b, { fill: '#fff6e4', ink: 0.85, inkColor: '#9a6a4a', shadow: '#efd9b4', shadowOffset: [-1, -0.9] });
+    clip(ctx, b, () => speckle(ctx, mx, my, rx * 0.7, ry * 0.7, 3, '#e8a45a', 0.9, Math.round(R() * 99), 0.6));
+  }
+  for (const [dx, dy, r] of [[-26, 2, 5.6], [-12, -10, 5.4], [-14, 5, 5.8], [2, -2, 6], [12, -11, 5.4], [26, -4, 5.6], [18, 7, 5.8], [3, 12, 5.4], [-28, -7, 4.8], [33, 6, 4.6]] as [number, number, number][]) {
+    salameSlice(ctx, g.sx + dx, g.sy + dy, r, Math.round(dx * 7 + dy * 3 + 50));
+  }
+  // a drizzle of chilli oil and a pinch of chilli flakes
+  oilGlints(ctx, g, 5, 1203);
+  chiliFlakes(ctx, g.sx, g.sy, g.srx * 0.85, g.sry * 0.8, 26, 1204);
+}
+
+/** One cannolo seen in 3/4: fried blistered shell, sheep's ricotta at both ends with chocolate chips, and a garnish. */
+function cannolo(ctx: Ctx, x: number, y: number, L: number, a: number, garnish: 'pistacchio' | 'arancia' | 'ciliegia', seed: number) {
+  rot(ctx, x, y, a, () => {
+    const r = L * 0.145, fl = r * 0.3;
+    const R = rng(seed);
+    // the ricotta bulging out of both ends, rolled in the garnish
+    for (const sd of [-1, 1]) {
+      const fx = sd * (L / 2 - 0.5);
+      const fil: Build = (c) => blobPath(c, fx + sd * r * 0.5, 0, r * 0.95, r * 1.2, 0.12, 9, seed + sd);
+      shape(ctx, fil, { fill: '#fbf8ee', ink: 1.2, shadow: '#e2dccb', shadowOffset: [-0.8, -0.8] });
+      clip(ctx, fil, () => {
+        speckle(ctx, fx + sd * r * 0.35, 0, r * 0.6, r * 0.8, 5, '#3a1e12', 0.55, seed + 3 + sd, 0.95);
+        if (garnish === 'pistacchio') speckle(ctx, fx + sd * r * 0.6, 0, r * 0.5, r * 0.9, 14, '#6cb83a', 0.55, seed + 5 + sd, 1);
+      });
+      if (garnish === 'arancia') {
+        rot(ctx, fx + sd * r * 0.75, -r * 0.1, sd * 0.4, () => shape(ctx, (c) => roundRectPath(c, -1.4, -r * 0.55, 2.8, r * 1.1, 0.8), { fill: '#f6901e', ink: 0.8, shadow: '#c85a0e', shadowOffset: [-0.4, -0.4], gloss: [{ x: -0.4, y: -r * 0.3, rx: 0.5, ry: r * 0.25, alpha: 0.85 }] }));
+      } else if (garnish === 'ciliegia') {
+        shape(ctx, (c) => circlePath(c, fx + sd * r * 0.75, -r * 0.05, r * 0.42), { fill: '#d8202e', ink: 0.8, shadowOffset: [-0.5, -0.5], gloss: [{ x: fx + sd * r * 0.75 - 0.6, y: -r * 0.3, rx: 0.6, ry: 0.35, alpha: 0.95 }] });
+      }
+    }
+    const tube: Build = (c) => {
+      c.moveTo(-L / 2, -r - fl);
+      c.quadraticCurveTo(-L / 4, -r, 0, -r + 0.2);
+      c.quadraticCurveTo(L / 4, -r, L / 2, -r - fl);
+      c.lineTo(L / 2, r + fl);
+      c.quadraticCurveTo(L / 4, r, 0, r - 0.2);
+      c.quadraticCurveTo(-L / 4, r, -L / 2, r + fl);
+      c.closePath();
+    };
+    const cyl = ctx.createLinearGradient(0, -r - fl, 0, r + fl);
+    cyl.addColorStop(0, '#d8924a');
+    cyl.addColorStop(0.28, '#f6cc88');
+    cyl.addColorStop(0.55, '#d08a40');
+    cyl.addColorStop(1, '#8a4a18');
+    shape(ctx, tube, { fill: cyl, ink: 1.6, shadow: 'none' });
+    clip(ctx, tube, () => {
+      for (let i = 0; i < Math.round(L * 1.1); i++) {
+        const bx = -L / 2 + R() * L, by = -r + R() * r * 2, br = 0.35 + R() * 0.6;
+        fillP(ctx, (c) => circlePath(c, bx, by, br), 'rgba(100,50,14,0.55)');
+        fillP(ctx, (c) => circlePath(c, bx - br * 0.3, by - br * 0.3, br * 0.45), 'rgba(255,226,170,0.9)');
+      }
+      line(ctx, [[-L / 2 + 1, -r * 0.5], [L / 2 - 1, -r * 0.55]], 0.7, '#fff2d0', false, 0.55);
+    });
+    // a dusting of icing sugar
+    speckle(ctx, 0, -r * 0.4, L * 0.4, r * 0.6, 14, '#ffffff', 0.45, seed + 9, 0.9);
+  });
+}
+
+function drawCannoli(ctx: Ctx) {
+  // behind: a bowl of sheep's ricotta and a candied orange slice
+  const bx = -40, by = -21;
+  contact(ctx, bx + 1.5, by + 6, 13, 4, 0.32);
+  group(ctx, [
+    { build: (c) => { c.moveTo(bx - 12, by); c.quadraticCurveTo(bx - 11, by + 8, bx, by + 8.6); c.quadraticCurveTo(bx + 11, by + 8, bx + 12, by); c.closePath(); }, style: { fill: '#2d6fb5', shadow: 'none' } },
+    { build: (c) => ellipsePath(c, bx, by, 12, 4.6), style: { fill: '#f4efe4', shadow: 'none' } },
+  ], 1.6);
+  shape(ctx, (c) => blobPath(c, bx, by - 1.2, 9.6, 4.4, 0.18, 10, 31), { fill: '#fffdf6', ink: 1, shadow: '#e2dccb', shadowOffset: [-1, -1] });
+  rot(ctx, 44, -24, 0.2, () => {
+    shape(ctx, (c) => circlePath(c, 0, 0, 7), { fill: '#f6901e', ink: 1.4, shadow: '#c85a0e', shadowOffset: [-1, -1] });
+    shape(ctx, (c) => circlePath(c, 0, 0, 5.4), { fill: '#ffc85a', ink: 0, shadow: 'none' });
+    for (let i = 0; i < 8; i++) line(ctx, [[0, 0], [Math.cos((i / 8) * TAU) * 5.2, Math.sin((i / 8) * TAU) * 5.2]], 0.6, '#f6901e', false, 0.9);
+    glint(ctx, -2.4, -2.4, 1.6, 0.8, -0.6, 0.85);
+  });
+  // a lace doily on a white plate, the three cannoli on it
+  napkin(ctx, [-56, 8], [-34, 4], [-30, 36], [-55, 36], '#2d6fb5', 6);
+  const w = plate(ctx, 4, 10, 52, 24, { band: '#2d6fb5', well: 0.7 });
+  ctx.save();
+  ctx.beginPath();
+  blobPath(ctx, w.x, w.y, w.rx * 1.12, w.ry * 1.1, 0.06, 26, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+  for (let i = 0; i < 26; i++) {
+    const t = (i / 26) * TAU;
+    fillP(ctx, (c) => circlePath(c, w.x + Math.cos(t) * w.rx * 1.0, w.y + Math.sin(t) * w.ry * 0.98, 1.1), '#e8e4dc');
+  }
+  cannolo(ctx, -11, 13, 44, -0.06, 'pistacchio', 1301);
+  cannolo(ctx, 19, 13, 44, 0.06, 'arancia', 1302);
+  cannolo(ctx, 4, 0, 46, -0.02, 'ciliegia', 1303);
+  // icing sugar snowing over the plate
+  speckle(ctx, 4, 8, 36, 12, 30, '#ffffff', 0.4, 1304, 0.85);
+}
+
+function drawPanettone(ctx: Ctx) {
+  // behind: a few raisins and candied peel spilled on the table, a sprig of... no: only its own ingredients
+  for (const [x, y, k] of [[-44, -18, 0], [-38, -14, 1], [-47, -11, 0], [40, -22, 1], [46, -18, 0], [36, -16, 0]] as [number, number, number][]) {
+    if (k) shape(ctx, (c) => roundRectPath(c, x - 1.8, y - 1.8, 3.6, 3.6, 0.6), { fill: '#f6901e', ink: 1, shadow: '#c85a0e', shadowOffset: [-0.5, -0.5] });
+    else shape(ctx, (c) => blobPath(c, x, y, 2.4, 1.8, 0.2, 7, Math.round(x * 3)), { fill: '#5a2a3a', ink: 1, shadow: '#36141e', shadowOffset: [-0.5, -0.5] });
+  }
+  // a wooden board on a red napkin
+  napkin(ctx, [-56, 10], [-36, 6], [-32, 36], [-55, 36], '#d23a32', 6);
+  woodBoard(ctx, 2, 14, 46, 18, 1401, { handle: 'R', r: 7 });
+  // the panettone, with a wedge cut out at the front right showing the crumb
+  const cx = -2, base = 20;
+  const W = 26, BAND = 21, DOME = 30;
+  contact(ctx, cx + 3, base + 2, W * 1.1, 6, 0.4);
+  // paper mould band (a cylinder seen in 3/4)
+  const band: Build = (c) => {
+    c.moveTo(cx - W, base - BAND);
+    c.lineTo(cx - W, base);
+    c.ellipse(cx, base, W, 7, 0, Math.PI, 0, true);
+    c.lineTo(cx + W, base - BAND);
+    c.closePath();
+  };
+  shape(ctx, band, { fill: '#8a5a30', ink: OUT, shadow: 'none' });
+  clip(ctx, band, () => {
+    for (let i = -6; i <= 6; i++) line(ctx, [[cx + i * 4.6, base - BAND - 2], [cx + i * 4.6, base + 8]], 1.2, '#b07a46', false, 0.6);
+    fillP(ctx, (c) => c.rect(cx + W * 0.45, base - BAND - 2, W, BAND + 12), rgba('#2a1406', 0.3));
+  });
+  // the dome: golden-brown, glossy, darker on top
+  const dome: Build = (c) => {
+    c.moveTo(cx - W - 2.4, base - BAND + 1);
+    c.bezierCurveTo(cx - W - 5, base - BAND - 14, cx - W * 0.6, base - BAND - DOME, cx, base - BAND - DOME - 1);
+    c.bezierCurveTo(cx + W * 0.6, base - BAND - DOME, cx + W + 5, base - BAND - 14, cx + W + 2.4, base - BAND + 1);
+    c.quadraticCurveTo(cx, base - BAND + 8, cx - W - 2.4, base - BAND + 1);
+    c.closePath();
+  };
+  shape(ctx, dome, { fill: rgrad(ctx, cx - 10, base - BAND - 24, 2, 44, [[0, '#f0b45a'], [0.5, '#c8822e'], [1, '#8a4a16']]), ink: OUT, shadow: 'none' });
+  clip(ctx, dome, () => {
+    fillP(ctx, (c) => ellipsePath(c, cx, base - BAND - DOME + 4, W * 0.75, 9), rgba('#6a3410', 0.5));
+    const R = rng(1402);
+    for (let i = 0; i < 9; i++) {
+      const x = cx - W + 4 + R() * (W * 2 - 8), y = base - BAND - 4 - R() * 20;
+      if (i % 3) shape(ctx, (c) => blobPath(c, x, y, 1.8, 1.3, 0.2, 7, i), { fill: '#4a2030', ink: 0.7, shadow: 'none' });
+      else shape(ctx, (c) => roundRectPath(c, x - 1.3, y - 1.3, 2.6, 2.6, 0.4), { fill: '#f6901e', ink: 0.7, shadow: 'none' });
+    }
+    fillP(ctx, (c) => ellipsePath(c, cx - 12, base - BAND - 20, 8, 3, -0.5), rgba('#ffffff', 0.35));
+  });
+  crescent(ctx, dome, [-3.4, -3], '#3a1804', 0.25);
+  // the cross cut on top
+  const cy = base - BAND - DOME + 4;
+  shape(ctx, (c) => { c.moveTo(cx - 13, cy); c.quadraticCurveTo(cx, cy - 5, cx + 13, cy); c.quadraticCurveTo(cx, cy + 4, cx - 13, cy); c.closePath(); }, { fill: '#f6dc8e', ink: 1.2, shadow: '#d8b060', shadowOffset: [-1, -1] });
+  for (const s of [-1, 1]) shape(ctx, (c) => { c.moveTo(cx + s * 2, cy - 1); c.quadraticCurveTo(cx + s * 9, cy - 7, cx + s * 15, cy - 3); c.quadraticCurveTo(cx + s * 9, cy - 2, cx + s * 2, cy - 1); c.closePath(); }, { fill: '#7a4414', ink: 1, shadow: 'none' });
+  // a slice lying on the board in front: tall, airy, golden crumb studded with raisins and peel
+  rot(ctx, 31, 20, 0.05, () => {
+    const sl: Build = (c) => {
+      c.moveTo(-10, 8);
+      c.lineTo(-10, -6);
+      c.quadraticCurveTo(-9, -20, 4, -22);
+      c.lineTo(10, 8);
+      c.closePath();
+    };
+    contact(ctx, 1, 9, 13, 3.4, 0.35);
+    shape(ctx, sl, { fill: rgrad(ctx, -4, -8, 1, 22, [[0, '#fff0b0'], [0.6, '#f6d878'], [1, '#e2b44a']]), ink: 1.8, shadow: 'none' });
+    clip(ctx, sl, () => {
+      // airy holes stretched upward (the long rise)
+      const R = rng(1403);
+      for (let i = 0; i < 18; i++) {
+        const x = -9 + R() * 18, y = -18 + R() * 24;
+        fillP(ctx, (c) => ellipsePath(c, x, y, 0.6, 1.4, 0.2), rgba('#c89a3a', 0.7));
+      }
+      for (const [x, y] of [[-5, -4], [2, 2], [-2, -12], [5, -6]] as Pt[]) shape(ctx, (c) => blobPath(c, x, y, 1.9, 1.4, 0.2, 7, x * 5), { fill: '#4a2030', ink: 0.6, shadow: 'none' });
+      for (const [x, y] of [[-6, 4], [4, -14], [0, -6]] as Pt[]) shape(ctx, (c) => roundRectPath(c, x - 1.3, y - 1.3, 2.6, 2.6, 0.4), { fill: '#f6901e', ink: 0.6, shadow: 'none' });
+      // the crust edge and the paper strip at the bottom
+      strokeP(ctx, (c) => { c.moveTo(-10, -6); c.quadraticCurveTo(-9, -20, 4, -22); }, 2.6, '#a8642a');
+      fillP(ctx, (c) => c.rect(-11, 3, 22, 6), '#8a5a30');
+    });
+  });
+  // a dusting of icing sugar on the dome
+  speckle(ctx, cx, base - BAND - DOME + 8, W * 0.6, 6, 18, '#ffffff', 0.45, 1404, 0.85);
+}
+
+// ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
 
@@ -1973,6 +2211,9 @@ const DISHES: [string, (ctx: Ctx) => void][] = [
   ['pesto', drawPesto],
   ['vongole', drawVongole],
   ['foodcourt', drawFoodcourt],
+  ['diavola', drawDiavola],
+  ['cannoli', drawCannoli],
+  ['panettone', drawPanettone],
 ];
 
 for (const [id, draw] of DISHES) {

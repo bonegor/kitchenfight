@@ -7,6 +7,7 @@
  *   &frames=1                               show every animation frame (default 1 = yes)
  *   &flash=1                                also show hit-flash silhouette
  *   &cols=8                                 columns
+ *   &ids=enemy.fluo,ingr.                   only these ids / id prefixes, in this order
  *   /gallery.html?stage=kitchen&zoom=1      stage environment preview (tiles + props)
  *   /gallery.html?stage=carbonara           a dish's environment variant (decor; ambient light is not applied here)
  */
@@ -36,7 +37,9 @@ function gallery() {
   const showFrames = q.get('frames') !== '0';
   const showFlash = q.get('flash') === '1';
   const cols = parseInt(q.get('cols') ?? '6');
-  const ids = spriteIds(prefix).sort();
+  // &ids=a,b,c: only these sprites (each entry is an id or an id prefix), in this order
+  const only = q.get('ids');
+  const ids = only ? [...new Set(only.split(',').flatMap((p) => spriteIds(p).sort()))] : spriteIds(prefix).sort();
   const cells: { id: string; frames: number; w: number; h: number }[] = ids.map((id) => {
     const s = getSprite(id);
     return { id, frames: showFrames ? s.frames.length : 1, w: s.w, h: s.h };
