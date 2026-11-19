@@ -377,6 +377,59 @@ E({
 });
 
 // ---------------------------------------------------------------------------
+// The crimes of the Pizza Diavola and of the dolci (reasons from the research extension, docs/RECIPES.md)
+// ---------------------------------------------------------------------------
+
+E({
+  id: 'salame_usa', name: 'Pepperoni Industriale', en: 'Factory Pepperoni', sprite: 'enemy.salame_usa',
+  radius: 13, hp: 14, speed: 58, damage: 6, xp: 2, behavior: 'charger', params: { range: 210, windup: 0.8, dash: 320, dashTime: 0.4, cd: 2.8 },
+  color: 'red', juice: '#c8321e', chunk: 'tomato',
+  info: { crime: 'American "pepperoni" on a diavola', why: 'There is no "pepperoni" in Italy. The American topping is an industrial pork-and-beef sausage seasoned with paprika, born among Italian immigrants in the US. On a diavola Italians put salame piccante, spicy Italian salami.', severity: 3 },
+});
+E({
+  id: 'sfoglia', name: 'Cannolo di Sfoglia', en: 'The Puff-Pastry Fake', sprite: 'enemy.sfoglia',
+  radius: 14, hp: 18, speed: 42, damage: 6, xp: 3, behavior: 'chase', layers: 3, knockResist: 0.3, params: { peel: '#fbdc96' },
+  color: 'cream', juice: '#efb35a', chunk: 'bread',
+  info: { crime: 'Puff pastry passed off as a cannolo', why: 'A cannolo\'s shell, the scorza, is a thin dough fried until it blisters and crunches. The "Sicilian" cannoli reported in a Venice shop window were puff-pastry horns filled with cream. Puff-pastry horns are a pastry of their own: the crime is selling them as Sicilian cannoli.', severity: 3 },
+});
+E({
+  id: 'fluo', name: 'Cannolo Fluo', en: 'The Neon Cannolo', sprite: 'enemy.fluo',
+  radius: 13, hp: 14, speed: 46, damage: 5, xp: 2, behavior: 'burster', params: { cd: 4, count: 5, shot: 'proj.e_neon', shotSpeed: 135, min: 150, max: 250 },
+  color: 'pink', juice: '#ff3fb8', chunk: 'bread',
+  info: { crime: 'Neon-coloured cannoli fillings', why: 'Gambero Rosso described Venice flooded with "Sicilian" cannoli whose colourful, flashy fillings have little to do with the authentic ones. A real cannolo gets its colours from ricotta, chocolate, candied fruit and pistachio. (Pistachio and other flavoured fillings exist in Sicily too: the complaint is the artificial colours.)', severity: 2, quote: '"cannoli dai ripieni colorati e sgargianti che poco hanno a che fare con quelli autentici" — Gambero Rosso' },
+});
+E({
+  id: 'ammuddato', name: 'Cannolo Ammuddato', en: 'The Soggy Cannolo', sprite: 'enemy.ammuddato',
+  radius: 15, hp: 22, speed: 56, damage: 6, xp: 2, behavior: 'hopper', params: { rest: 0.75, hop: 0.45, hopSpeed: 140, height: 14 },
+  color: 'cream', juice: '#fbf6ea', chunk: 'bread',
+  info: { crime: 'Cannoli filled in advance', why: 'A cannolo is filled at the last moment: the ricotta\'s moisture turns the crunchy scorza soggy ("ammuddato", in Sicilian). Pre-filled bakery cannoli are the typical foreign version. Some guides allow filling 20-30 minutes ahead.', severity: 2, quote: '"se li preparate troppo in anticipo, rischiate di farli ammuddare" — a cannoli guide attributed to a Sicilian pastry chef (Mado Pasticceria)' },
+});
+E({
+  id: 'margarina', name: 'Margarina Travestita', en: 'Margarine in Disguise', sprite: 'enemy.margarina',
+  radius: 14, hp: 16, speed: 48, damage: 7, xp: 2, behavior: 'puddler', params: { puddle: 'butter', interval: 2.8, r: 26, life: 5, slow: 0.3 },
+  color: 'yellow', juice: '#ffe36a', chunk: 'plastic',
+  info: { crime: 'Margarine in a panettone', why: 'By Italian law (a 2005 decree) the only fat in a panettone dough is butter. Il Fatto Alimentare says nobody may sell as "panettone" a cake made with margarine, and called out discount-store "fake panettoni".', severity: 3, quote: '"margarina al posto del pregiato burro" — Il Fatto Alimentare' },
+});
+E({
+  id: 'palma', name: 'Grasso di Palma', en: 'Palm Fat', sprite: 'enemy.palma',
+  radius: 14, hp: 20, speed: 46, damage: 3, xp: 3, behavior: 'lobber', params: { min: 150, max: 250, cd: 5.5, shot: 'proj.e_palm', area: 'oil', r: 22, slow: 0.25 },
+  color: 'orange', juice: '#f08a32', chunk: 'cheese',
+  info: { crime: 'Palm oil and vegetable fats in a panettone', why: 'Palm and other vegetable fats are not allowed in a panettone dough under the 2005 decree. Italian consumer media flagged even "artisanal" panettoni, and filled panettoni whose creams used palm fat (the creams are a grey area; the dough rule is clear).', severity: 3, quote: '"non è consentito dalla normativa del 2005 per la preparazione del panettone" — GreenMe, on palm oil in a panettone' },
+});
+E({
+  id: 'lievito', name: 'Lievito di Birra', en: "Baker's Yeast", sprite: 'enemy.lievito',
+  radius: 9, hp: 5, speed: 82, damage: 3, xp: 2, behavior: 'swarm', params: { wobble: 0.8 },
+  color: 'cream', juice: '#dccb9c', chunk: 'bread',
+  info: { crime: 'A panettone raised on yeast alone', why: 'A panettone must be naturally fermented with sourdough (lievito madre). Baker\'s yeast is allowed only as a small extra, up to 1 %: a yeast-only "panettone" breaks the legal definition. (In pizza dough brewer\'s yeast is perfectly normal.)', severity: 2 },
+});
+E({
+  id: 'conservante', name: 'Il Conservante', en: 'The Preservative', sprite: 'enemy.conservante',
+  radius: 14, hp: 26, speed: 42, damage: 6, xp: 3, behavior: 'aura', params: { r: 90, slow: 0.25, colors: ['#e2ffb8', '#a6f070'] }, knockResist: 0.3,
+  color: 'green', juice: '#8ef03a', chunk: 'glass',
+  info: { crime: 'Preservatives in a panettone', why: 'Preservatives are not in the 2005 decree\'s list of optional panettone ingredients, and the pastry chefs\' Academy of the mother yeast bans them outright: sourdough, butter and sugar keep a panettone fresh. (Read from the decree\'s summaries: industrial panettoni do use permitted additives such as emulsifiers.)', severity: 2 },
+});
+
+// ---------------------------------------------------------------------------
 // Bosses
 // ---------------------------------------------------------------------------
 
@@ -486,6 +539,27 @@ E({
   color: 'cream', juice: '#f5ecc8', chunk: 'plastic', shadow: 1.15,
   boss: { title: 'Il Sacco del Grattugiato', taunt: 'Formaggio sulle vongole? Abbondante!', final: true, pattern: 'grattugiato' },
   info: { crime: 'Pre-grated cheese on clams', why: 'Italians widely follow an unwritten rule: no grated aged cheese on fish and shellfish pasta, because it covers the delicate taste of the clams. In a 2022 YouGov survey Italians gave cheese on seafood pasta a net −39. A bag of imitation "Parmesan" makes it worse still.', severity: 5 },
+});
+E({
+  id: 'b_pepperoni', name: 'Il Salamone Americano', en: 'The Great American Pepperoni', sprite: 'boss.pepperoni',
+  radius: 56, hp: 8000, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'red', juice: '#c8321e', chunk: 'tomato', shadow: 1.1,
+  boss: { title: 'Il Salamone Americano', taunt: 'Pepperoni! Not peppers… PEPPERONI!', final: true, pattern: 'pepperoni' },
+  info: { crime: 'The "pepperoni pizza"', why: 'Abroad the diavola is sold as "pepperoni pizza", but in Italian "peperoni" are bell peppers, and American pepperoni is an industrial salami born in the US. The diavola gets its heat from salame piccante and chilli. Italians mostly laugh about it: this is the light-hearted crime of the menu.', severity: 3 },
+});
+E({
+  id: 'b_cannolo', name: 'Il Cannolone Tarocco', en: 'The Fake Mega-Cannolo', sprite: 'boss.cannolo',
+  radius: 56, hp: 8000, speed: 40, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'cream', juice: '#fffdf6', chunk: 'bread', shadow: 1.1,
+  boss: { title: 'Il Cannolone Tarocco', taunt: 'Cannolo siciliano? Certo… made in Venezia!', final: true, pattern: 'cannolo' },
+  info: { crime: 'Fake "Sicilian" cannoli', why: 'A real cannolo is a crunchy fried scorza filled at the last moment with sweetened sheep\'s ricotta. The "Sicilian" cannoli in a Venice shop window were puff-pastry horns filled with whipped cream: Sicilian media called them fakes, and a pastry association suggested calling them "Venetian cannoli".', severity: 4 },
+});
+E({
+  id: 'b_panettone', name: 'Il Panettone Industriale', en: 'The Factory Panettone', sprite: 'boss.panettone',
+  radius: 58, hp: 8400, speed: 38, damage: 19, xp: 0, behavior: 'boss', knockResist: 1,
+  color: 'yellow', juice: '#f2c24a', chunk: 'bread', shadow: 1.15,
+  boss: { title: 'Il Panettone Industriale', taunt: 'Panettone in due ore! Chi ha bisogno del lievito madre?', final: true, pattern: 'panettone' },
+  info: { crime: 'The fake factory panettone', why: 'Since 2005 an Italian decree says what may be sold as "panettone": a dough naturally fermented with sourdough, with butter as its only fat, egg yolks, sugar, raisins and candied citrus peel. Margarine, palm fat or a yeast-only dough mean it must be sold under another name.', severity: 4 },
 });
 
 export const REGULAR_ENEMY_IDS = Object.values(ENEMIES)

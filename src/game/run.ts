@@ -15,7 +15,7 @@ import { Director } from './director';
 import { buffFactor, paceFactor, waveSpeed, type StageDef } from './stages';
 import { STAGE_ENVS } from '../gfx/stageenv';
 import { envForStage } from '../gfx/envvariants';
-import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
+import { recipeById, intruderIn, FRIEND_OR_FOE, foeLineFor, friendLineFor, RECIPE_COMPLETE, type RecipeDef } from './recipes';
 import { sightingToast, extraToast } from './sightings';
 import { RNG, TAU, clamp } from '../core/math';
 import { audio, SfxId, SfxOpts } from '../audio/audio';
@@ -570,7 +570,7 @@ export class Run {
     // onion layer peel
     if (e.layers > 0 && e.hp < e.maxHp * (e.layers / ((e.def.layers ?? 1) + 1))) {
       e.layers--;
-      this.fx.burst(e.x, e.y, 6, { color: '#e8d5f0', speed: 160, size: 3, life: 0.5 });
+      this.fx.burst(e.x, e.y, 6, { color: e.def.params?.peel ?? '#e8d5f0', speed: 160, size: 3, life: 0.5 });
       e.speed *= 1.12;
     }
     if (e.hp <= 0) {
@@ -1817,7 +1817,7 @@ export class Run {
     const f = FRIEND_OR_FOE.find((x) => x.ingredient === ing.id && x.friendIn.includes(r.id));
     if (f && !this.fofShown.has('i:' + f.ingredient)) {
       this.fofShown.add('i:' + f.ingredient);
-      this.toastQueue.unshift({ text: f.friendLine, kind: 'info' });
+      this.toastQueue.unshift({ text: friendLineFor(f, r.id), kind: 'info' });
     }
   }
 

@@ -56,7 +56,7 @@ export interface StageAmbient {
   /** vignette strength 0..1 */
   vignette: number;
   /** ambient floating particles across the screen */
-  particles?: 'dust' | 'flour' | 'fireflies' | 'embers' | 'petals' | 'rain' | 'none';
+  particles?: 'dust' | 'flour' | 'fireflies' | 'embers' | 'petals' | 'rain' | 'snow' | 'confetti' | 'none';
 }
 
 export interface StageEnv {

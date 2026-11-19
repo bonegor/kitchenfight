@@ -84,6 +84,9 @@ function getLightBrush() {
   return c;
 }
 
+/** Carnival confetti colours (the Cannoli's ambient particles). */
+const CONFETTI = ['rgba(255,90,140,', 'rgba(255,214,60,', 'rgba(80,200,255,', 'rgba(120,220,110,', 'rgba(200,120,255,'];
+
 export class Renderer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -1141,16 +1144,24 @@ export class Renderer {
       else if (kind === 'embers') { vx = Math.sin(m.t) * 8; vy = -22; col = 'rgba(255,150,60,'; }
       else if (kind === 'petals') { vx = 18 + Math.sin(m.t * 1.3) * 10; vy = 12; col = 'rgba(255,200,215,'; size = 2.4 * m.s * this.dpr; }
       else if (kind === 'rain') { vx = -40; vy = 520; col = 'rgba(190,210,255,'; }
+      else if (kind === 'snow') { vx = 8 + Math.sin(m.t * 0.8 + m.a * 6) * 12; vy = 30; col = 'rgba(255,255,255,'; size = 2.2 * m.s * this.dpr; }
+      else if (kind === 'confetti') { vx = 14 + Math.sin(m.t * 1.6 + m.a * 6) * 12; vy = 24; col = CONFETTI[Math.floor(m.a * CONFETTI.length) % CONFETTI.length]; size = 2.2 * m.s * this.dpr; }
       m.x += vx * dt * this.dpr * m.s - camDX;
       m.y += vy * dt * this.dpr * m.s - camDY;
       if (m.x < -10) m.x += W + 20;
       if (m.x > W + 10) m.x -= W + 20;
       if (m.y < -10) m.y += H + 20;
       if (m.y > H + 10) m.y -= H + 20;
-      const alpha = (0.25 + 0.35 * Math.abs(Math.sin(m.t * 0.8 + m.a * 6))) * (kind === 'fireflies' ? 1.4 : 1);
+      const alpha = (0.25 + 0.35 * Math.abs(Math.sin(m.t * 0.8 + m.a * 6))) * (kind === 'fireflies' ? 1.4 : kind === 'snow' || kind === 'confetti' ? 1.3 : 1);
       ctx.fillStyle = col + alpha.toFixed(3) + ')';
       if (kind === 'rain') {
         ctx.fillRect(m.x, m.y, 1 * this.dpr, 10 * this.dpr);
+      } else if (kind === 'confetti') {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(m.t * 3 + m.a * 6);
+        ctx.fillRect(-size, -size * 0.45, size * 2, size * 0.9);
+        ctx.restore();
       } else if (kind === 'petals') {
         ctx.beginPath();
         ctx.ellipse(m.x, m.y, size, size * 0.55, m.t * 2, 0, TAU);

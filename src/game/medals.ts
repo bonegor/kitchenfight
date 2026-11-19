@@ -34,6 +34,7 @@ export const MEDALS: Medal[] = [
   { id: 'perfetta', name: 'Ricetta Perfetta', desc: 'Collect every real ingredient and win the dish.', icon: 'icon.star', check: (_s, r, v) => v && r.recipeComplete },
   { id: 'romani', name: 'Primi Romani', desc: 'Win Carbonara, Alfredo, Amatriciana and Cacio e Pepe.', icon: 'icon.w.forchette', saved: (s) => ['carbonara', 'alfredo', 'amatriciana', 'cacioepepe'].every((id) => dishWon(s, id)) },
   { id: 'pizzaiolo', name: 'Pizzaiolo DOC', desc: 'Win the Margherita and the Marinara.', icon: 'icon.w.pizza', saved: (s) => ['margherita', 'marinara'].every((id) => dishWon(s, id)) },
+  { id: 'dolcevita', name: 'Dolce Vita', desc: 'Win the Cannoli and the Panettone.', icon: 'pickup.cannolo', saved: (s) => ['cannoli', 'panettone'].every((id) => dishWon(s, id)) },
   { id: 'quaderno', name: 'Il Quaderno della Nonna', desc: 'Complete 5 different recipes.', icon: 'icon.p.ricettario', saved: (s) => STAGES.filter((st) => s.records[st.id]?.perfect).length >= 5 },
 ];
 

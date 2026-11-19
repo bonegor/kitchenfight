@@ -51,7 +51,7 @@ export function shoot(run: Run, e: Enemy, angle: number, speed: number, sprite: 
   s.life = 2.8;
   s.sprite = sprite;
   s.rot = angle;
-  s.spin = sprite === 'proj.e_pepperoni' || sprite === 'proj.e_seed' ? 8 : 0;
+  s.spin = sprite === 'proj.e_pepperoni' || sprite === 'proj.e_seed' || sprite === 'proj.e_flake' ? 8 : 0;
   return s;
 }
 
@@ -428,7 +428,7 @@ export function updateEnemy(run: Run, e: Enemy, dt: number) {
       }
       if (Math.random() < dt * 8) {
         const a = Math.random() * TAU, dd = Math.random() * r;
-        run.fx.burst(e.x + Math.cos(a) * dd, e.y + Math.sin(a) * dd * 0.7, 1, { colors: ['#dff4ff', '#a9dcff'], speed: 15, size: 2.5, life: 0.8, layer: 0 });
+        run.fx.burst(e.x + Math.cos(a) * dd, e.y + Math.sin(a) * dd * 0.7, 1, { colors: P.colors ?? ['#dff4ff', '#a9dcff'], speed: 15, size: 2.5, life: 0.8, layer: 0 });
       }
       break;
     }

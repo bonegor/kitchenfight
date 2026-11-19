@@ -10,7 +10,7 @@ import { spriteSpec } from './sprites';
 import type { StageDef, StageVariant } from '../game/stages';
 
 /** Decor sets: [sprite, weight, layer, breakable hp?, debris?] — all existing props. */
-type Decor = [string, number, 'floor' | 'sorted', number?, string?];
+type Decor = [string, number, 'floor' | 'sorted' | 'overhead', number?, string?];
 const DECOR: Record<NonNullable<StageVariant['decor']>, Decor[]> = {
   // Pomodoro: morning sun through the windows, basil on the sills (the base kitchen has a sun patch in about one chunk in three)
   morning: [['prop.kitchen.sunpatch', 2.2, 'floor'], ['prop.common.basil_pot', 1.4, 'sorted'], ['prop.common.puddle_small', 0.6, 'floor']],
@@ -24,10 +24,18 @@ const DECOR: Record<NonNullable<StageVariant['decor']>, Decor[]> = {
   embers: [['prop.common.crate_tomato', 1.5, 'sorted', 2, 'tomato'], ['prop.kitchen.peels', 1.4, 'floor'], ['prop.kitchen.sauce_b', 1, 'floor'], ['prop.common.crumbs', 1, 'floor']],
   // Carbonara: the larder, wheels of cheese and stacked crates (both rare in the base kitchen)
   pantry: [['prop.kitchen.parmigiano', 1.5, 'sorted'], ['prop.common.crate_stack', 1, 'sorted', 3, 'wood'], ['prop.kitchen.flour_a', 1.2, 'floor']],
+  // Diavola: a hot night outside the pizzeria, tomato crates, chilli-oil and sauce stains on the cobbles
+  diavola: [['prop.common.crate_tomato', 1.4, 'sorted', 2, 'tomato'], ['prop.streets.oil', 1.4, 'floor'], ['prop.kitchen.sauce_b', 1.2, 'floor'], ['prop.common.barrel', 0.7, 'sorted', 3, 'wood']],
+  // Cannoli: a Palermo pasticceria at Carnival: dessert carts, Sicilian lemons, flowers, petals
+  pasticceria: [['prop.trattoria.dessert_cart', 1.6, 'sorted', 2, 'wood'], ['prop.common.crate_lemon', 1, 'sorted', 2, 'wood'], ['prop.trattoria.flower_vase', 1, 'sorted', 1, 'glass'], ['prop.trattoria.petals', 1.3, 'floor']],
+  // Panettone: a Milanese bakery on Christmas Eve: flour on the floor, sacks, strings of lights overhead
+  natale: [['prop.kitchen.flour_a', 1.4, 'floor'], ['prop.kitchen.flour_b', 1.2, 'floor'], ['prop.kitchen.sacks', 0.8, 'sorted'], ['prop.streets.festoon_0', 0.7, 'overhead'], ['prop.streets.festoon_1', 0.7, 'overhead']],
 };
 /** Decor that is a light where the base environment places it lights the dark the same way here. */
 const DECOR_LIGHT: Record<string, PropLight> = {
   'prop.trattoria.candelabra': { r: 190, color: '#ffb35a', intensity: 0.9, flicker: 0.45, oy: -118 },
+  'prop.streets.festoon_0': { r: 300, color: '#ffc874', intensity: 0.85, flicker: 0.08, oy: 0 },
+  'prop.streets.festoon_1': { r: 300, color: '#ffc874', intensity: 0.85, flicker: 0.08, oy: 0 },
 };
 
 function pick(list: Decor[], r: number): Decor {
@@ -93,7 +101,7 @@ function makeVariant(base: StageEnv, st: StageDef): StageEnv {
           continue;
         }
         const p: PropPlacement = { sprite: d[0], x, y, flip };
-        if (d[2] === 'floor') p.layer = 'floor';
+        if (d[2] !== 'sorted') p.layer = d[2];
         if (d[3]) p.breakable = { hp: d[3], debris: d[4] ?? 'wood' };
         if (DECOR_LIGHT[d[0]]) p.light = { ...DECOR_LIGHT[d[0]] };
         out.push(p);

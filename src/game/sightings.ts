@@ -92,6 +92,24 @@ const SIGHTING: Record<string, Record<string, string>> = {
     burro: 'Neapolitan vongole use only olive oil.',
     panna: 'Clam juice and pasta starch make it creamy.',
   },
+  diavola: {
+    salame_usa: "Born in the US. Here: salame piccante.",
+    pepperoni: 'Bell peppers: the "pepperoni" mix-up.',
+    ananas: "Italy's most famous pizza crime.",
+    bbq: "Italian pizzerias simply don't use it.",
+    cheddar: 'A diavola melts fior di latte.',
+  },
+  cannoli: {
+    panna: 'A cannolo holds sweet ricotta.',
+    sfoglia: 'The scorza is fried and crunchy.',
+    fluo: 'Ricotta-white, not neon.',
+  },
+  panettone: {
+    margarina: 'The law says butter, or it is a fake.',
+    palma: 'Butter only: Italian law is clear.',
+    lievito: 'The law wants sourdough.',
+    conservante: 'Sourdough keeps it fresh.',
+  },
 };
 
 /**
@@ -108,6 +126,9 @@ const GLOSS: Record<string, Record<string, string>> = {
   ragu: { aglio: 'garlic' },
   pesto: { burro: 'butter' },
   vongole: { burro: 'butter' },
+  diavola: { ananas: 'pineapple', pepperoni: 'peppers' },
+  cannoli: { panna: 'whipped cream', sfoglia: 'puff pastry', fluo: 'neon fillings' },
+  panettone: { margarina: 'margarine', palma: 'palm oil', lievito: "baker's yeast", conservante: 'preservatives' },
 };
 
 /**
@@ -163,10 +184,11 @@ const EXTRA: Record<string, [it: string, reason: string]> = {
   macchiata: ['Ketchup sulla pizza', "The pizza version of Italians' number one food crime."],
   hawaiana: ['Pizza hawaiana', 'Ham and pineapple: born in Ontario, Canada, in 1962.'],
   pepperoni: ['Pizza "pepperoni"', 'In Italian, peperoni are bell peppers. Order a diavola.'],
+  ammuddato: ['Cannoli farciti in anticipo', 'Filled ahead, the crunchy shell goes soggy.'],
 };
 
 /** Extras that are crimes of method: how the dish is cooked or eaten, not what is put in it. */
-const METHOD = new Set(['spezzato', 'forbici', 'scotta', 'scotta_mini', 'pentola', 'pentolaunica', 'scatoletta', 'surgelata']);
+const METHOD = new Set(['spezzato', 'forbici', 'scotta', 'scotta_mini', 'pentola', 'pentolaunica', 'scatoletta', 'surgelata', 'ammuddato']);
 
 /** Are all of these extras crimes of method ("Crimini di metodo"), or a mixed lot ("Altri crimini")? */
 export function allMethodCrimes(extras: string[]): boolean {

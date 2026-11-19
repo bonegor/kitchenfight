@@ -16,6 +16,9 @@ const ORIGIN: Record<string, string> = {
   ragu: 'Bologna, Emilia-Romagna',
   pesto: 'Genoa, Liguria',
   vongole: 'Naples, Campania',
+  diavola: 'All over Italy',
+  cannoli: 'Sicily',
+  panettone: 'Milan, Lombardy',
   foodcourt: 'The food court',
 };
 
@@ -35,6 +38,9 @@ const SHORT_DISH: Record<string, string> = {
   ragu: 'Ragù',
   pesto: 'Pesto',
   vongole: 'Vongole',
+  diavola: 'Diavola',
+  cannoli: 'Cannoli',
+  panettone: 'Panettone',
   foodcourt: 'Menù degli Orrori',
 };
 
@@ -48,6 +54,7 @@ export const COURSE_EN: Record<Course, string> = {
   'Le Pizze': 'The pizzas',
   'Dal Nord': 'From the North',
   'Dal Sud e dal Mare': 'From the South and the sea',
+  'I Dolci': 'The desserts',
   'Il Gran Finale': 'The grand finale',
 };
 

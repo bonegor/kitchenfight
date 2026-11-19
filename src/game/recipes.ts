@@ -30,7 +30,7 @@
  */
 import type { StatMod } from './types';
 
-export type Course = 'Le Basi' | 'Primi Romani' | 'Le Pizze' | 'Dal Nord' | 'Dal Sud e dal Mare' | 'Il Gran Finale';
+export type Course = 'Le Basi' | 'Primi Romani' | 'Le Pizze' | 'Dal Nord' | 'Dal Sud e dal Mare' | 'I Dolci' | 'Il Gran Finale';
 
 /** A cited source (article, official text, chef's recipe). */
 export interface RecipeSource {
@@ -44,7 +44,7 @@ export interface RecipeSource {
   publisher?: string;
 }
 
-export type IngredientCategory = 'pasta' | 'tomato' | 'oil' | 'aroma' | 'herb' | 'meat' | 'egg' | 'cheese' | 'spice' | 'fat' | 'water' | 'wine' | 'veg' | 'nut' | 'sea' | 'dough';
+export type IngredientCategory = 'pasta' | 'tomato' | 'oil' | 'aroma' | 'herb' | 'meat' | 'egg' | 'cheese' | 'spice' | 'fat' | 'water' | 'wine' | 'veg' | 'nut' | 'sea' | 'dough' | 'sweet' | 'fruit' | 'leaven';
 
 /** A real ingredient (collectible): registry entry. */
 export interface IngredientDef {
@@ -129,7 +129,7 @@ export interface RecipeDef {
 }
 
 // ---------------------------------------------------------------------------
-// The 27 real ingredients
+// The real ingredients (27 for the pasta and pizza menu, 9 more for the Diavola and the dolci)
 // ---------------------------------------------------------------------------
 
 const ING = (id: string, it: string, en: string, category: IngredientCategory, color: string): IngredientDef => {
@@ -155,6 +155,9 @@ export const BUFFS: Record<IngredientCategory, { mods: StatMod[]; text: string }
   veg: { mods: [{ stat: 'moveSpeed', add: 0.05 }], text: '+5% Move speed' },
   nut: { mods: [{ stat: 'growth', add: 0.08 }], text: '+8% Growth' },
   sea: { mods: [{ stat: 'speed', add: 0.1 }], text: '+10% Projectile speed' },
+  sweet: { mods: [{ stat: 'greed', add: 0.1 }], text: '+10% Coins' },
+  fruit: { mods: [{ stat: 'luck', add: 0.08 }], text: '+8% Luck' },
+  leaven: { mods: [{ stat: 'growth', add: 0.08 }], text: '+8% Growth' },
 };
 
 /** Reward for collecting every real ingredient of the dish. */
@@ -189,6 +192,16 @@ for (const d of [
   ING('impasto', 'Impasto napoletano', 'Neapolitan dough', 'dough', '#f3e3c0'),
   ING('mozzarella', 'Mozzarella', 'Mozzarella (fior di latte or bufala)', 'cheese', '#fbfbf4'),
   ING('origano', 'Origano', 'Oregano', 'aroma', '#6f8a3a'),
+  // Pizza Diavola and the dolci (research extension)
+  ING('salame', 'Salame piccante', 'Spicy Italian salami', 'meat', '#c2321c'),
+  ING('scorza', 'Scorza', 'The fried cannolo shell', 'dough', '#d08a40'),
+  ING('ricotta', 'Ricotta di pecora', "Sheep's milk ricotta", 'cheese', '#fbf8ee'),
+  ING('cioccolato', 'Gocce di cioccolato', 'Chocolate chips', 'sweet', '#5a2e1a'),
+  ING('canditi', 'Canditi', 'Candied orange and citrus peel', 'fruit', '#f68a1a'),
+  ING('pistacchio', 'Pistacchio', 'Chopped pistachio', 'nut', '#7ec04a'),
+  ING('farina', 'Farina di frumento', 'Wheat flour', 'dough', '#f6ead0'),
+  ING('uvetta', 'Uvetta', 'Raisins', 'fruit', '#8a4a24'),
+  ING('lievito_madre', 'Lievito madre', 'Sourdough starter', 'leaven', '#efdfba'),
 ]) INGREDIENTS[d.id] = d;
 
 function ingr(id: string, note?: string): RecipeIngredient {
@@ -815,6 +828,89 @@ export const RECIPES: RecipeDef[] = [
     sprite: "dish.marinara",
   },
   {
+    id: "diavola",
+    it: "Pizza Diavola",
+    en: "Spicy salami pizza (Italy's 'pepperoni pizza')",
+    course: "Le Pizze",
+    origin: "No documented birthplace: a standard on pizzeria menus all over Italy. Its spicy salami recalls Neapolitan and Calabrian cured meats",
+    shape: "Standard Italian pizzeria dough (Neapolitan-style or thinner regional styles), baked in a hot oven.",
+    inDish: "sulla Diavola",
+    blurb: "Italy's spicy salami pizza, the 'she-devil'. Abroad they call it 'pepperoni pizza', but in Italy 'peperoni' are bell peppers: the heat comes from salame piccante and chilli.",
+    method: "Spread crushed tomatoes on the stretched dough and add mozzarella or fior di latte. Lay on thin slices of spicy Italian salami and bake until they curl and release their red fat. Finish with chilli oil or chilli flakes for more heat.",
+    ingredients: [ingr("impasto", "Neapolitan-style or a thinner regional dough"), ingr("pomodoro", "Crushed peeled tomatoes, such as San Marzano"), ingr("mozzarella", "Fior di latte or mozzarella"), ingr("salame", "Salamino piccante, spianata calabra or salame napoletano; some Campania pizzerias use spreadable 'nduja"), ingr("olio", "Plain, or as chilli oil"), ingr("peperoncino", "Optional: flakes or chilli oil, for extra heat")],
+    intruders: [
+      {
+        enemy: "salame_usa",
+        it: "\"Pepperoni\"",
+        en: "Pepperoni (the American sausage, and the word)",
+        why: "There is no 'pepperoni' in Italy. The American topping is an industrial pork-and-beef sausage seasoned with paprika, born among Italian immigrants in the US. Italians put salame piccante on a diavola instead.",
+        line: "'Pepperoni' was born in America. In Italy the diavola wears salame piccante.",
+        popularity: 4,
+        contested: true,
+        note: "American pepperoni is a close cousin of southern Italian spicy salami, and Italian explainers treat it with curiosity, not fury. Italians mostly joke about the name and the industrial product; spicy salami on pizza is the norm.",
+        source: { name: "Pizza pepperoni: cos'è, da dove nasce e perché non c'entra nulla con i peperoni (Cookist)", url: "https://www.cookist.it/pizza-pepperoni-cos-e/", lang: "it" },
+      },
+      {
+        enemy: "pepperoni",
+        it: "Peperoni",
+        en: "Bell peppers (the 'pepperoni' mix-up)",
+        why: "'Peperoni' is Italian for bell peppers. Tourists who order a 'pepperoni pizza' in Italy can be served sweet peppers. A diavola gets its heat from spicy salami and chilli, never from peppers.",
+        line: "Order 'pepperoni' in Italy and you may get bell peppers. The diavola's fire is salami and chilli.",
+        popularity: 2,
+        contested: false,
+        note: "A language trap, not an Italian outrage: bell peppers are a normal topping on other Italian pizzas, even with spicy salami. They are only the wrong answer to a 'pepperoni' order.",
+        source: { name: "Tasting Table: Why you might be confused buying pepperoni in Italy", url: "https://tastingtable.com/1015040/why-you-might-be-confused-buying-pepperoni-in-italy", lang: "en" },
+      },
+      {
+        enemy: "ananas",
+        alias: ["ananas_pezzo"],
+        it: "Ananas",
+        en: "Pineapple (the 'pepperoni & pineapple' combo)",
+        why: "Pineapple is the most famous 'crime' against pizza in Italian eyes: a sweet fruit on a savoury pizza. The 'Hawaiian' pizza was invented in Canada in 1962. Italian TV chefs, pizzaioli and social media have mocked it for years.",
+        line: "Pineapple on pizza is Italy's most famous food crime. A diavola wants fire, not fruit.",
+        popularity: 4,
+        contested: true,
+        note: "Since about 2017 some top Italian pizzaioli have broken the taboo with pineapple creations, and food sites have published pro-pineapple pieces. Most Italians still reject it.",
+        source: { name: "YouGov: You're doing Italian food all wrong, say Italians (pineapple on pizza: -63 net among Italians)", url: "https://yougov.co.uk/international/articles/40810-italian-food-crimes", lang: "en", year: "2022" },
+      },
+      {
+        enemy: "bbq",
+        it: "Salsa barbecue",
+        en: "BBQ sauce",
+        why: "Barbecue sauce, usually with chicken, is a foreign topping that Italian pizzerias simply do not use. In early 2022 Il Post noted that the only pizzeria chain in Italy offering barbecue chicken pizza was an American one, which left Italy that August.",
+        line: "BBQ sauce is an American pizza base. Italian pizzerias simply don't use it.",
+        popularity: 2,
+        contested: false,
+        source: { name: "Il Post: Le pizze degli altri", url: "https://www.ilpost.it/2022/02/18/pizze-straniere-ingredienti/", lang: "it", year: "2022" },
+      },
+      {
+        enemy: "cheddar",
+        it: "Cheddar",
+        en: "Cheddar",
+        why: "Italian pizza uses mozzarella or fior di latte. Coldiretti singles out 'Anglo-Saxon cheddar', together with fake Italian cheeses, as wrong cheeses used on pizza abroad.",
+        line: "A diavola melts fior di latte. Coldiretti puts 'Anglo-Saxon cheddar' among foreign pizza horrors.",
+        popularity: 2,
+        contested: false,
+        source: { name: "Pizza, i condimenti horror nel mondo, da carne zebra a yogurt. L'analisi Coldiretti-Ipsos (Sky TG24)", url: "https://tg24.sky.it/lifestyle/2023/12/07/pizza-zebra-yogurt-dati", lang: "it", year: "2023" },
+      },
+    ],
+    extras: [],
+    sources: [
+      { name: "Le migliori pizze diavola in Campania (Scatti di Gusto)", url: "https://www.scattidigusto.it/migliori-pizze-diavola-in-campania", lang: "it" },
+      { name: "Pizza pepperoni: cos'è, da dove nasce e perché non c'entra nulla con i peperoni (Cookist)", url: "https://www.cookist.it/pizza-pepperoni-cos-e/", lang: "it" },
+      { name: "Pepperoni: cosa sono e perché stanno sulla pizza (Agrodolce)", url: "https://www.agrodolce.it/pepperoni-salame", lang: "it" },
+      { name: "Pepperoni pizza, la regina americana che confonde gli italiani (La Voce di New York)", url: "https://lavocedinewyork.com/food/2026/11/02/pepperoni-pizza-la-regina-americana-che-confonde-gli-italiani/", lang: "it", year: "2026" },
+      { name: "Ooni: Why Italians don't eat pepperoni on their pizza (or at all)", url: "https://uk.ooni.com/blogs/ooni-insights/why-italians-dont-eat-pepperoni", lang: "en" },
+      { name: "Tasting Table: Why you shouldn't expect pepperoni pizza on menus in Italy", url: "https://www.tastingtable.com/2041004/why-no-pepperoni-pizza-italy/", lang: "en" },
+      { name: "Mashed: The difference between pepperoni in Italy and the US", url: "https://www.mashed.com/438182/the-difference-between-pepperoni-in-italy-and-the-us", lang: "en" },
+      { name: "Gambero Rosso International: how the classic pizzas most loved by Italians were born", url: "https://www.gamberorossointernational.com/?p=398165", lang: "en" },
+      { name: "Dall'ananas ai grilli, ecco la 'Pizzeria degli Orrori' (MeteoWeb, Coldiretti)", url: "https://www.meteoweb.eu/2023/12/dallananas-ai-grilli-ecco-la-pizzeria-degli-orrori/1001335834/", lang: "it", year: "2023" },
+    ],
+    quote: { text: "pepperoni pizza is indeed reminiscent of diavola, which traditionally calls for spicy Neapolitan salami", by: "Cookist", source: { name: "The history of pepperoni pizza, the U.S.-born adaptation of Neapolitan pizza (Cookist)", url: "https://www.cookist.com/the-history-of-pepperoni-pizza-the-u-s-born-adaptation-of-neapolitan-pizza", lang: "en" } },
+    funFact: "'Diavola' means 'she-devil', for the heat. To get something like a pepperoni pizza in Italy, ask for a diavola or a pizza al salame piccante: 'peperoni' are bell peppers.",
+    sprite: "dish.diavola",
+  },
+  {
     id: "ragu",
     it: "Tagliatelle al Ragù",
     en: "Tagliatelle with Bolognese meat ragù",
@@ -1037,6 +1133,141 @@ export const RECIPES: RecipeDef[] = [
     sprite: "dish.vongole",
   },
   {
+    id: "cannoli",
+    it: "Cannoli Siciliani",
+    en: "Sicilian cannoli",
+    course: "I Dolci",
+    origin: "Sicily, traditionally Palermo and Carnival. Listed among Italy's traditional agri-food products (PAT)",
+    shape: "A thin dough of flour, lard, sugar and Marsala or wine, wrapped round metal tubes and fried until bubbly and crisp: the scorza. Never puff pastry.",
+    inDish: "nei Cannoli",
+    blurb: "Sicily's crunchy tube: a fried scorza filled at the last moment with sweet sheep's ricotta, chocolate chips and candied orange.",
+    method: "Fry thin dough round metal tubes until crisp. Sieve drained sheep's ricotta with sugar and chocolate chips. Fill just before serving and garnish with candied orange and pistachio.",
+    ingredients: [ingr("scorza", "Fried, never puff pastry; the dough varies from town to town"), ingr("ricotta", "Well drained and lightly sweetened. Cow's-milk ricotta is a common fallback outside Sicily"), ingr("cioccolato", "Traditional in the filling, though not mandatory"), ingr("canditi", "Candied orange peel or a candied cherry at the ends"), ingr("pistacchio", "Chopped, at the ends: optional")],
+    intruders: [
+      {
+        enemy: "panna",
+        it: "Panna montata",
+        en: "Whipped cream filling",
+        why: "A cannolo is filled with sweetened sheep's ricotta. 'Sicilian' cannoli filled with whipped cream, sold to tourists in Venice, became a news story in Sicily, and Italian recipe guides rule out whipped cream and other creams.",
+        line: "A cannolo holds sweet ricotta. Whipped cream is the Venice tourist fake.",
+        popularity: 4,
+        contested: false,
+        note: "Some Sicilian pastry shops make cannoli alla crema with pastry cream, and they are never an intruder here. Whipped cream in place of the ricotta is defended by no one.",
+        source: { name: "C'è anche il cannolo 'tarocco': turisti gabbati a Venezia (LiveSicilia)", url: "https://livesicilia.it/?p=202358", lang: "it" },
+      },
+      {
+        enemy: "sfoglia",
+        it: "Pasta sfoglia",
+        en: "Puff pastry instead of the fried shell",
+        why: "The cannolo's shell is a thin dough fried until it blisters and crunches. The fake 'Sicilian' cannoli reported in Venice were puff-pastry horns, not even the right shape.",
+        line: "The scorza is fried and crunchy. A puff-pastry horn is not a cannolo.",
+        popularity: 2,
+        contested: false,
+        note: "Puff-pastry cream horns (cannoncini) are a pastry of their own in Italy. The crime is selling them as Sicilian cannoli.",
+        source: { name: "Working Against Fakes: The Case of the Cannolo Siciliano (Italy Magazine)", url: "https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano", lang: "en", year: "2013" },
+      },
+      {
+        enemy: "fluo",
+        it: "Ripieni colorati",
+        en: "Neon-coloured fillings (artificial colours)",
+        why: "Gambero Rosso describes a flood of 'Sicilian' cannoli in Venice with colourful, flashy fillings that have little to do with the authentic ricotta. A cannolo's colour comes from ricotta, chocolate, candied fruit and pistachio.",
+        line: "Real cannoli are ricotta-white with green pistachio. Neon fillings are a tourist trick.",
+        popularity: 2,
+        contested: true,
+        note: "Pistachio, chocolate-ricotta and other flavoured fillings exist in Sicily too. The complaint is about flashy artificial colours and tourist-trap products, and Gambero Rosso itself says the look worries it more than the trend.",
+        source: { name: "Perché Venezia è invasa da una marea di cannoli siciliani colorati (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/perche-venezia-e-invasa-da-una-marea-di-cannoli-siciliani-colorati/", lang: "it" },
+      },
+    ],
+    extras: ["ammuddato"],
+    sources: [
+      { name: "Cannolo siciliano, ricetta perfetta (Scatti di Gusto)", url: "https://www.scattidigusto.it/2015/04/02/cannolo-siciliano-ricetta-perfetta", lang: "it", year: "2015" },
+      { name: "Storia del cannolo siciliano (Gazzetta del Gusto)", url: "https://gazzettadelgusto.it/cibo/storia-del-cannolo-siciliano/?print=pdf", lang: "it" },
+      { name: "I cannoli siciliani (Sale&Pepe)", url: "https://www.salepepe.it/ricette/dolci-dessert/pasticceria/dolcetti/cannoli-siciliani/", lang: "it" },
+      { name: "Cannoli siciliani di ricotta, ricetta tradizionale (GialloZafferano blog)", url: "https://blog.giallozafferano.it/mastercheffa/cannoli-siciliani-di-ricotta/", lang: "it" },
+      { name: "Working Against Fakes: The Case of the Cannolo Siciliano (Italy Magazine)", url: "https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano", lang: "en", year: "2013" },
+      { name: "Cannoli siciliani fatti in casa: la guida con 5 errori da evitare (Mado Pasticceria)", url: "https://madopasticceria.com/cannoli-siciliani-fatti-in-casa-la-guida-con-5-errori-da-evitare-secondo-corrado-assenza/", lang: "it", chef: "Corrado Assenza (attributed by the guide)" },
+      { name: "3 dolci di Corrado Assenza per ricordare il bar di Noto (Scatti di Gusto)", url: "https://www.scattidigusto.it/caffe-sicilia-chiuso-3-dolci-di-corrado-assenza-per-ricordare-il-bar-di-noto", lang: "it", chef: "Corrado Assenza" },
+      { name: "Cannoli siciliani fatti in casa: ricetta tradizionale vs quella di Ciccio Sultano (Scatti di Gusto)", url: "https://www.scattidigusto.it/cannoli-siciliani-fatti-in-casa-ricetta-tradizionale-vs-quella-di-ciccio-sultano", lang: "it", chef: "Ciccio Sultano" },
+      { name: "I migliori cannoli siciliani di Palermo (Dissapore)", url: "https://www.dissapore.com/locali/palermo-cannoli-siciliani-migliori/", lang: "it" },
+    ],
+    quote: { text: "La spettacolarità del cannolo comincia dalla sua scorza o \"scorcia\" in dialetto.", translation: "The cannolo's spectacle begins with its shell, the scorza, or \"scorcia\" in dialect.", by: "Gazzetta del Gusto", source: { name: "Storia del cannolo siciliano (Gazzetta del Gusto)", url: "https://gazzettadelgusto.it/cibo/storia-del-cannolo-siciliano/?print=pdf", lang: "it" } },
+    funFact: "Cannoli were originally a Carnival pastry. Sicilian shops fill them to order so the shell stays crunchy.",
+    sprite: "dish.cannoli",
+  },
+  {
+    id: "panettone",
+    it: "Panettone",
+    en: "Panettone (Milanese Christmas bread)",
+    course: "I Dolci",
+    origin: "Milan, Lombardy. Since 2005 an Italian ministerial decree (amended in 2017) says what may be sold as 'panettone'",
+    shape: "A tall dome of soft sweet bread leavened with sourdough, baked in a paper mould and cooled hanging upside down.",
+    inDish: "nel Panettone",
+    blurb: "Milan's Christmas giant: a sourdough bread rich in butter, yolks, raisins and candied peel. In Italy the law itself says what a panettone must contain.",
+    method: "Feed the lievito madre, knead flour, sugar, yolks and plenty of butter in long stages, fold in raisins and candied peel, let it rise for hours, bake, then hang it upside down to cool.",
+    ingredients: [ingr("farina", "Wheat flour"), ingr("lievito_madre", "Mandatory. Baker's yeast is allowed only as an extra, up to 1 %"), ingr("burro", "By law the only fat in the dough"), ingr("tuorli", "Eggs or egg yolks"), ingr("uvetta", "Raisins, and plenty of them: with the peel, the decree sets a minimum"), ingr("canditi", "Candied orange and citron peel; chocolate and filled variants are allowed too")],
+    intruders: [
+      {
+        enemy: "margarina",
+        it: "Margarina",
+        en: "Margarine instead of butter",
+        why: "By Italian law the only fat in a panettone dough is butter. Il Fatto Alimentare says no one may sell as 'panettone' a cake made with margarine, and called out discount-store 'fake panettoni'.",
+        line: "The law says butter. Margarine makes it a 'fake panettone'.",
+        popularity: 3,
+        contested: false,
+        note: "Not a matter of taste but a legal definition: cakes made with margarine must be sold under another name.",
+        source: { name: "Il Fatto Alimentare on the 2005 panettone rule", url: "https://ilfattoalimentare.it/?p=93243", lang: "it" },
+      },
+      {
+        enemy: "palma",
+        it: "Olio di palma",
+        en: "Palm oil and vegetable fats",
+        why: "Palm and other vegetable fats are not allowed in the panettone dough. Italian consumer media flagged even 'artisanal' panettoni and filled panettoni whose creams used palm fat.",
+        line: "Butter, not palm oil. Italian law is clear on that.",
+        popularity: 3,
+        contested: false,
+        note: "The creams of filled panettoni are a grey area; the rule for the dough is clear.",
+        source: { name: "Panettoni e pandori farciti e olio di palma (Il Fatto Alimentare)", url: "https://ilfattoalimentare.it/panettone-pandoro-farciti-olio-di-palma.html", lang: "it" },
+      },
+      {
+        enemy: "lievito",
+        it: "Lievito di birra",
+        en: "Baker's yeast instead of sourdough",
+        why: "Panettone must be naturally fermented with sourdough (pasta acida). Baker's yeast is allowed only as a small extra, up to 1%: a yeast-only 'panettone' breaks the legal definition.",
+        line: "Panettone rises on lievito madre. Yeast alone is a shortcut the law forbids.",
+        popularity: 1,
+        contested: true,
+        note: "Contested in degree: up to 1% baker's yeast IS legal alongside sourdough. Only a sourdough-free product is an intruder.",
+        source: { name: "DM 22 luglio 2005 (text of the decree on panettone, pandoro and colomba; hosted by Frareg)", url: "https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf", lang: "it", year: "2005" },
+      },
+      {
+        enemy: "conservante",
+        it: "Conservanti",
+        en: "Preservatives",
+        why: "Preservatives are not in the decree's list of permitted optional ingredients, and the pastry chefs' Academy of the Mother Yeast bans them outright: sourdough, butter and sugar keep a panettone fresh.",
+        line: "Sourdough keeps panettone fresh. Preservatives are not on the list.",
+        popularity: 1,
+        contested: true,
+        note: "Industrial panettoni use permitted additives such as emulsifiers, and whether preservatives are strictly excluded was read from summaries of the decree, not its full text. Treat it as the purists' complaint.",
+        source: { name: "Il decalogo del panettone perfetto secondo l'Accademia dei Maestri del Lievito Madre e del Panettone Italiano (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/il-decalogo-del-panettone-perfetto-secondo-laccademia-dei-maestri-del-lievito-madre-e-del-panettone-italiano/", lang: "it", publisher: "gamberorosso.it" },
+        chef: "Accademia dei Maestri del Lievito Madre e del Panettone Italiano",
+      },
+    ],
+    extras: [],
+    sources: [
+      { name: "DM 22 luglio 2005 (text of the decree on panettone, pandoro and colomba; hosted by Frareg)", url: "https://www.frareg.com/cms/wp-content/uploads/DM_22072005.pdf", lang: "it", year: "2005" },
+      { name: "Decreto 16/05/2017: modifiche alle norme su panettone, pandoro e colombe (InformaImpresa)", url: "https://informaimpresa.it/item/alimentazione-decreto-16-05-2017-modifiche-alle-norme-su-panettone-pandoro-e-colombe", lang: "it", year: "2017" },
+      { name: "Il panettone potrebbe cambiare legge (Dissapore)", url: "https://www.dissapore.com/spesa/il-panettone-potrebbe-cambiare-legge-scollandosi-di-dosso-tutta-questa-tradizione/", lang: "it", year: "2026" },
+      { name: "Il Fatto Alimentare on the 2005 panettone rule", url: "https://ilfattoalimentare.it/?p=93243", lang: "it" },
+      { name: "Panettoni e pandori farciti e olio di palma (Il Fatto Alimentare)", url: "https://ilfattoalimentare.it/panettone-pandoro-farciti-olio-di-palma.html", lang: "it" },
+      { name: "Il decalogo del panettone perfetto (Gambero Rosso)", url: "https://www.gamberorosso.it/notizie/il-decalogo-del-panettone-perfetto-secondo-laccademia-dei-maestri-del-lievito-madre-e-del-panettone-italiano/", lang: "it", chef: "Accademia dei Maestri del Lievito Madre e del Panettone Italiano", publisher: "gamberorosso.it" },
+      { name: "Appello di Conpait e Federcuochi: diamo un nuovo nome al panettone (ItaliaOggi)", url: "https://www.italiaoggi.it/news/alimentare-appello-di-conpait-e-federcuochi-diamo-un-nuovo-nome-al-panettone-202212231804265492", lang: "it", year: "2022", chef: "Conpait; Federcuochi" },
+      { name: "Prodotti da forno (Camera di Commercio di Torino guide)", url: "https://www.to.camcom.it/sites/default/files/export-internazionalizzazione/Prodotti_da_forno.pdf", lang: "it" },
+    ],
+    quote: { text: "Grazie a questa norma nessuno può commercializzare panettoni preparati con margarina al posto del burro o con altri ingredienti di minor pregio.", translation: "Thanks to this rule nobody can sell panettoni made with margarine instead of butter or with other lower-grade ingredients.", by: "Il Fatto Alimentare", source: { name: "Il Fatto Alimentare on the 2005 panettone rule", url: "https://ilfattoalimentare.it/?p=93243", lang: "it" } },
+    funFact: "Panettone is one of the few desserts whose recipe is fixed by an Italian ministerial decree, and it is cooled hanging upside down so the soft dome does not sink.",
+    sprite: "dish.panettone",
+  },
+  {
     id: "foodcourt",
     it: "Il Menù degli Orrori",
     en: "The Menu of Horrors",
@@ -1199,8 +1430,42 @@ export const RECIPES: RecipeDef[] = [
         source: { name: "Gordon's Carbonara in Under 10 Minutes (official recipe)", url: "https://gordonramsay.com/gr/recipes/gordons-carbonara-in-under-10-minutes/amp", lang: "en" },
         fromDish: "carbonara",
       },
+      {
+        enemy: "salame_usa",
+        it: "\"Pepperoni\"",
+        en: "Pepperoni (the American sausage, and the word)",
+        why: "There is no 'pepperoni' in Italy. The American topping is an industrial pork-and-beef sausage seasoned with paprika, born among Italian immigrants in the US. Italians put salame piccante on a diavola instead.",
+        line: "'Pepperoni' was born in America. In Italy the diavola wears salame piccante.",
+        popularity: 4,
+        contested: true,
+        note: "American pepperoni is a close cousin of southern Italian spicy salami. Italians mostly joke about the name and the industrial product.",
+        source: { name: "Pizza pepperoni: cos'è, da dove nasce e perché non c'entra nulla con i peperoni (Cookist)", url: "https://www.cookist.it/pizza-pepperoni-cos-e/", lang: "it" },
+        fromDish: "diavola",
+      },
+      {
+        enemy: "sfoglia",
+        it: "Pasta sfoglia",
+        en: "Puff pastry instead of the fried shell",
+        why: "The cannolo's shell is a thin dough fried until it blisters and crunches. The fake 'Sicilian' cannoli reported in Venice were puff-pastry horns, not even the right shape.",
+        line: "The scorza is fried and crunchy. A puff-pastry horn is not a cannolo.",
+        popularity: 2,
+        contested: false,
+        source: { name: "Working Against Fakes: The Case of the Cannolo Siciliano (Italy Magazine)", url: "https://www.italymagazine.com/featured-story/working-against-fakes-case-cannolo-siciliano", lang: "en", year: "2013" },
+        fromDish: "cannoli",
+      },
+      {
+        enemy: "margarina",
+        it: "Margarina",
+        en: "Margarine instead of butter",
+        why: "By Italian law the only fat in a panettone dough is butter. Il Fatto Alimentare says no one may sell as 'panettone' a cake made with margarine, and called out discount-store 'fake panettoni'.",
+        line: "The law says butter. Margarine makes it a 'fake panettone'.",
+        popularity: 3,
+        contested: false,
+        source: { name: "Il Fatto Alimentare on the 2005 panettone rule", url: "https://ilfattoalimentare.it/?p=93243", lang: "it" },
+        fromDish: "panettone",
+      },
     ],
-    extras: ["spezzato", "forbici", "scotta", "scotta_mini", "pentola", "pentolaunica", "scatoletta", "surgelata", "cappuccino", "frappe", "smartphone", "glassa", "pastachips", "alfredo", "macchiata", "hawaiana", "pepperoni", "polpetta"],
+    extras: ["spezzato", "forbici", "scotta", "scotta_mini", "pentola", "pentolaunica", "scatoletta", "surgelata", "ammuddato", "cappuccino", "frappe", "smartphone", "glassa", "pastachips", "alfredo", "macchiata", "hawaiana", "pepperoni", "polpetta"],
     sources: [
       { name: "You're doing Italian food all wrong, say Italians (YouGov)", url: "https://business.yougov.com/content/40810-italian-food-crimes", lang: "en", year: "2022" },
     ],
@@ -1239,10 +1504,17 @@ export interface FriendOrFoe {
   foeIn: string[];
   /** toast when the ingredient is collected (it is a crime elsewhere) */
   friendLine: string;
+  /** per-dish friend toast where the plain one names the wrong dish */
+  friendLines?: Record<string, string>;
   /** toast when the intruder is met in a dish where it is a foe */
   foeLine: string;
   /** per-dish foe toast where the plain one would be too absolute (the item is contested there) */
   foeLines?: Record<string, string>;
+}
+
+/** The friend toast for this ingredient in this dish. */
+export function friendLineFor(f: FriendOrFoe, dishId: string): string {
+  return f.friendLines?.[dishId] ?? f.friendLine;
 }
 
 /** The foe toast for this intruder in this dish. */
@@ -1252,8 +1524,9 @@ export function foeLineFor(f: FriendOrFoe, dishId: string): string {
 
 export const FRIEND_OR_FOE: FriendOrFoe[] = [
   {
-    ingredient: 'burro', enemy: 'burro', friendIn: ['alfredo'], foeIn: ['cacioepepe', 'vongole', 'pesto', 'carbonara'],
+    ingredient: 'burro', enemy: 'burro', friendIn: ['alfredo', 'panettone'], foeIn: ['cacioepepe', 'vongole', 'pesto', 'carbonara'],
     friendLine: 'Burro! In Fettuccine Alfredo it IS the sauce. In cacio e pepe it would be a crime.',
+    friendLines: { panettone: 'Burro! By law the only fat in a panettone. In cacio e pepe it would be a crime.' },
     foeLine: 'Butter? In Fettuccine Alfredo it belongs. Not here!',
     foeLines: {
       pesto: 'Butter? In Fettuccine Alfredo it belongs. Today\'s Genoese pesto uses olive oil only.',
@@ -1285,8 +1558,9 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     },
   },
   {
-    ingredient: 'mozzarella', enemy: 'filante', friendIn: ['margherita'], foeIn: ['marinara'],
+    ingredient: 'mozzarella', enemy: 'filante', friendIn: ['margherita', 'diavola'], foeIn: ['marinara'],
     friendLine: 'Mozzarella! On a Margherita it belongs. The Marinara has no cheese at all.',
+    friendLines: { diavola: 'Mozzarella! On a diavola it belongs. The Marinara has no cheese at all.' },
     foeLine: 'Cheese? On a Margherita, sì. The Marinara has none!',
   },
   {
@@ -1296,6 +1570,12 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
     foeLines: {
       amatriciana: 'Onion? In a Bolognese soffritto, sì. The Amatriciana rules leave it out.',
     },
+  },
+  {
+    // brewer's yeast is in the Neapolitan pizza dough (the AVPN rules); a panettone must rise on sourdough
+    ingredient: 'impasto', enemy: 'lievito', friendIn: ['margherita', 'marinara'], foeIn: ['panettone'],
+    friendLine: "Impasto! Brewer's yeast suits pizza dough. Panettone rises on lievito madre.",
+    foeLine: "Baker's yeast? In pizza dough, sì. A panettone rises on lievito madre!",
   },
 ];
 
@@ -1308,7 +1588,8 @@ export const FRIEND_OR_FOE: FriendOrFoe[] = [
  * dish id → boss id → line. Without an entry it uses its own taunt (enemies.ts), which names
  * its home dish. Every line claims a crime that is an intruder of the dish it is said in:
  * cream in the Alfredo, the Vongole, the Cacio e Pepe and the Pesto, grated cheese on the
- * Marinara, onion in the Amatriciana.
+ * Marinara, onion in the Amatriciana; pepperoni on the Diavola, whipped cream and the cannolo filled
+ * hours ahead (its method crime) in the Cannoli, preservatives and a yeast-only dough in the Panettone.
  */
 export const BOSS_LINES: Record<string, Record<string, string>> = {
   alfredo: { b_panna: 'Alfredo needs CREAM!' },
@@ -1317,4 +1598,7 @@ export const BOSS_LINES: Record<string, Record<string, string>> = {
   amatriciana: { b_influencer: 'Smash that like! One-pan amatriciana with onion!' },
   cacioepepe: { b_influencer: 'Smash that like! One-pan cacio e pepe with cream!' },
   pesto: { b_influencer: 'Smash that like! One-pan pesto with cream!' },
+  diavola: { b_deepdish: 'I AM pizza! Five centimetres of PEPPERONI!' },
+  cannoli: { b_panna: 'Cannoli need WHIPPED CREAM!', b_campanile: 'DONG! Fill them at dawn, sell them at dusk!' },
+  panettone: { b_scatolone: 'Panettone… with PRESERVATIVES! It keeps for years!', b_influencer: 'Smash that like! Panettone in two hours, no lievito madre!' },
 };

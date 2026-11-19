@@ -1813,7 +1813,7 @@ export class UI {
       h('p', { class: 'rc-blurb' }, r.blurb),
       h('div', { class: 'rc-facts' },
         h('div', {}, h('b', {}, 'Origine '), r.origin),
-        h('div', {}, h('b', {}, r.course === 'Le Pizze' ? 'Impasto ' : r.id === 'foodcourt' ? 'Dispensa ' : 'Pasta '), r.shape),
+        h('div', {}, h('b', {}, r.course === 'Le Pizze' ? 'Impasto ' : r.course === 'I Dolci' ? 'Forma ' : r.id === 'foodcourt' ? 'Dispensa ' : 'Pasta '), r.shape),
       ),
       sec('Gli ingredienti veri', 'The real ingredients'),
       h('div', { class: 'rc-ings', 'data-nav': '' }, r.ingredients.map((i) => {
