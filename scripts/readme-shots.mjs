@@ -44,7 +44,7 @@ const tidy = async () => {
 await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.press-start', { timeout: 120000 });
 await page.mouse.click(5, 5);
-await page.evaluate(() => { const kf = window.__kf; kf.save.runs = 4; kf.save.coins = 2750; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['pomodoro','carbonara','alfredo','amatriciana','cacioepepe','margherita','marinara','ragu','pesto','vongole','foodcourt']; for (const id of ['spezzato','ketchup','panna','forbici','cipolla','aglio','ananas','pollo','cappuccino','b_ananas','b_panna','fantasma','pentola']) kf.save.seen.push('e:' + id); kf.ui.showTitle(); });
+await page.evaluate(() => { const kf = window.__kf; kf.save.runs = 4; kf.save.coins = 2750; kf.save.unlockedChars = ['enzo','nonna','peppe','sofia','tommaso','concetta','micio']; kf.save.unlockedStages = ['pomodoro','carbonara','alfredo','amatriciana','cacioepepe','margherita','marinara','diavola','ragu','pesto','vongole','cannoli','panettone','foodcourt']; for (const id of ['spezzato','ketchup','panna','forbici','cipolla','aglio','ananas','pollo','cappuccino','b_ananas','b_panna','fantasma','pentola']) kf.save.seen.push('e:' + id); kf.ui.showTitle(); });
 await page.waitForTimeout(2500);
 await shot('title');
 await page.evaluate(() => window.__kf.ui.showCharSelect());
